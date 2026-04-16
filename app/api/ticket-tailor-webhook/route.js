@@ -135,16 +135,9 @@ async function upsertGroupForTicket(supabase, ticket, order) {
   if (!eventId) return null
 
   const pickupLabel = ticket.description || order.event_summary?.name || 'Pickup'
-  const startIso = order.event_summary?.start_date?.iso
-  const eventDate = startIso ? startIso.slice(0, 10) : null
-  const pickupTime = startIso
-    ? new Date(startIso).toLocaleTimeString('en-US', {
-        hour: 'numeric',
-        minute: '2-digit',
-        timeZone: 'America/Indiana/Indianapolis',
-      })
-    : null
-
+  const start = order.event_summary?.start_date || {}
+  const eventDate = start.date || null
+  const pickupTime = formatTime(start.time)
   const name = eventDate
     ? `${pickupLabel} — ${formatDate(eventDate)}`
     : pickupLabel
@@ -214,6 +207,18 @@ function splitName(full) {
   if (!full) return { first: '', last: '' }
   const parts = String(full).trim().split(/\s+/)
   return { first: parts[0] || '', last: parts.slice(1).join(' ') }
+}
+
+function formatTime(hhmm) {
+  if (!hhmm) return null
+  const [hStr, mStr] = String(hhmm).split(':')
+  const h = Number(hStr)
+  const m = Number(mStr)
+  if (!Number.isFinite(h) || !Number.isFinite(m)) return null
+  const suffix = h >= 12 ? 'PM' : 'AM'
+  const hour12 = ((h + 11) % 12) + 1
+  const mm = String(m).padStart(2, '0')
+  return `${hour12}:${mm} ${suffix}`
 }
 
 function formatDate(iso) {
