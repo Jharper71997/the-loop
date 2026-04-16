@@ -36,11 +36,12 @@ export default function Groups() {
   const [stopMessage, setStopMessage] = useState({})
   const [sending, setSending] = useState({})
   const [expanded, setExpanded] = useState(null)
+  const [openStop, setOpenStop] = useState(null) // `${group.id}:${stopIdx}`
   const [dragging, setDragging] = useState(null)
 
   const sensors = useSensors(
-    useSensor(PointerSensor, { activationConstraint: { distance: 6 } }),
-    useSensor(TouchSensor, { activationConstraint: { delay: 180, tolerance: 8 } })
+    useSensor(PointerSensor, { activationConstraint: { distance: 4 } }),
+    useSensor(TouchSensor, { activationConstraint: { delay: 120, tolerance: 6 } })
   )
 
   useEffect(() => {
@@ -331,52 +332,76 @@ export default function Groups() {
                       </div>
                     )}
 
-                    {schedule.map((stop, i) => {
-                      const atStop = membersByStop.get(i) || []
-                      const key = `${group.id}:${i}`
-                      const isActive = i === currentIdx
-                      return (
-                        <StopDropZone key={i} id={`${group.id}:${i}`} isActive={isActive} hasRiders={atStop.length > 0}>
-                          <div className="row">
-                            <div>
-                              <p style={{ fontWeight: 600, color: isActive ? '#d4a333' : '#e8e8ea', fontSize: '14px' }}>
-                                {stop.name}
-                              </p>
-                              <p className="tiny">{formatStopTime(stop.start_time)}</p>
+                    <div style={{ marginTop: '10px' }}>
+                      {schedule.map((stop, i) => {
+                        const atStop = membersByStop.get(i) || []
+                        const key = `${group.id}:${i}`
+                        const isActive = i === currentIdx
+                        const isOpen = openStop === key
+                        return (
+                          <StopDropZone key={i} id={key} isActive={isActive}>
+                            <div
+                              onClick={() => setOpenStop(isOpen ? null : key)}
+                              style={{
+                                cursor: 'pointer',
+                                display: 'flex',
+                                justifyContent: 'space-between',
+                                alignItems: 'center',
+                                gap: '8px',
+                              }}
+                            >
+                              <div>
+                                <p style={{ fontWeight: 600, color: isActive ? '#d4a333' : '#e8e8ea', fontSize: '14px' }}>
+                                  {stop.name}
+                                </p>
+                                <p className="tiny">{formatStopTime(stop.start_time)}</p>
+                              </div>
+                              <div style={{ display: 'flex', gap: '6px', alignItems: 'center' }}>
+                                <span className="chip">{atStop.length}</span>
+                                <span className="muted" style={{ fontSize: '12px' }}>{isOpen ? '▾' : '▸'}</span>
+                              </div>
                             </div>
-                            <span className="chip">{atStop.length}</span>
-                          </div>
 
-                          {atStop.length === 0 && (
-                            <p className="tiny" style={{ marginTop: '6px' }}>
-                              Drop a rider here
-                            </p>
-                          )}
+                            {isOpen && (
+                              <div style={{ marginTop: '10px', paddingTop: '8px', borderTop: '1px solid #1a1a1f' }}>
+                                {atStop.length === 0 ? (
+                                  <p className="muted" style={{ fontSize: '13px', padding: '8px 0' }}>
+                                    No one at this stop yet. Drag a rider onto this card to assign.
+                                  </p>
+                                ) : (
+                                  <>
+                                    <p className="tiny" style={{ marginBottom: '4px' }}>Starting here · drag to another stop to reassign</p>
+                                    {atStop.map(m => (
+                                      <DraggableRider key={m.id} member={m} schedule={schedule} onMove={moveRider} />
+                                    ))}
+                                  </>
+                                )}
 
-                          {atStop.map(m => (
-                            <DraggableRider key={m.id} member={m} />
-                          ))}
-
-                          {atStop.length > 0 && (
-                            <div style={{ marginTop: '10px' }}>
-                              <textarea
-                                rows={2}
-                                placeholder={`Hey {first_name}, we're at ${stop.name}...`}
-                                value={stopMessage[key] || ''}
-                                onChange={e => setStopMessage({ ...stopMessage, [key]: e.target.value })}
-                              />
-                              <button
-                                className="btn-primary"
-                                onClick={() => sendStopSMS(group, i, atStop)}
-                                disabled={sending[key]}
-                              >
-                                {sending[key] ? 'Sending…' : `Text ${atStop.length} at ${stop.name}`}
-                              </button>
-                            </div>
-                          )}
-                        </StopDropZone>
-                      )
-                    })}
+                                <div style={{ marginTop: '14px', paddingTop: '10px', borderTop: '1px solid #1a1a1f' }}>
+                                  <h3 style={{ marginBottom: '6px' }}>Text this group</h3>
+                                  <p className="tiny" style={{ marginBottom: '6px' }}>
+                                    Use <code>{'{first_name}'}</code> to personalize.
+                                  </p>
+                                  <textarea
+                                    rows={2}
+                                    placeholder={`Hey {first_name}, we're at ${stop.name}...`}
+                                    value={stopMessage[key] || ''}
+                                    onChange={e => setStopMessage({ ...stopMessage, [key]: e.target.value })}
+                                  />
+                                  <button
+                                    className="btn-primary"
+                                    onClick={() => sendStopSMS(group, i, atStop)}
+                                    disabled={sending[key] || atStop.length === 0}
+                                  >
+                                    {sending[key] ? 'Sending…' : `Send to ${atStop.length} at ${stop.name}`}
+                                  </button>
+                                </div>
+                              </div>
+                            )}
+                          </StopDropZone>
+                        )
+                      })}
+                    </div>
 
                     <div style={{ marginTop: '10px' }}>
                       <AutoDropZone id={`${group.id}:auto`} />
@@ -420,13 +445,10 @@ export default function Groups() {
   )
 }
 
-function DraggableRider({ member }) {
+function DraggableRider({ member, schedule, onMove }) {
   const { attributes, listeners, setNodeRef, isDragging } = useDraggable({ id: member.id })
   return (
     <div
-      ref={setNodeRef}
-      {...listeners}
-      {...attributes}
       style={{
         padding: '8px 0',
         borderTop: '1px solid #1a1a1f',
@@ -435,20 +457,47 @@ function DraggableRider({ member }) {
         alignItems: 'center',
         gap: '8px',
         fontSize: '13px',
-        cursor: 'grab',
-        touchAction: 'none',
         opacity: isDragging ? 0.35 : 1,
       }}
     >
-      <span style={{ minWidth: 0, flex: 1, color: '#e8e8ea' }}>
-        {member.contacts?.first_name} {member.contacts?.last_name}
-        {member.current_stop_index != null && (
-          <span className="chip chip-gold" style={{ marginLeft: '6px', fontSize: '10px', padding: '1px 6px' }}>
-            override
-          </span>
-        )}
-      </span>
-      <span className="muted" style={{ fontSize: '11px' }}>⋮⋮</span>
+      <div
+        ref={setNodeRef}
+        {...listeners}
+        {...attributes}
+        style={{
+          minWidth: 0,
+          flex: 1,
+          color: '#e8e8ea',
+          cursor: 'grab',
+          touchAction: 'none',
+          padding: '2px 4px',
+          margin: '-2px -4px',
+          display: 'flex',
+          alignItems: 'center',
+          gap: '6px',
+        }}
+      >
+        <span className="muted" style={{ fontSize: '14px' }}>⋮⋮</span>
+        <span style={{ minWidth: 0, flex: 1 }}>
+          {member.contacts?.first_name} {member.contacts?.last_name}
+        </span>
+      </div>
+      {member.current_stop_index != null && (
+        <span className="chip chip-gold" style={{ fontSize: '10px', padding: '1px 6px' }}>
+          moved
+        </span>
+      )}
+      <select
+        value={member.current_stop_index ?? ''}
+        onChange={e => onMove(member.id, e.target.value === '' ? null : Number(e.target.value))}
+        onPointerDown={e => e.stopPropagation()}
+        style={{ width: 'auto', marginBottom: 0, fontSize: '11px', padding: '2px 4px' }}
+      >
+        <option value="">auto</option>
+        {schedule.map((s, si) => (
+          <option key={si} value={si}>{s.name}</option>
+        ))}
+      </select>
     </div>
   )
 }
@@ -473,20 +522,18 @@ function AutoDropZone({ id }) {
   )
 }
 
-function StopDropZone({ id, isActive, hasRiders, children }) {
+function StopDropZone({ id, isActive, children }) {
   const { setNodeRef, isOver } = useDroppable({ id })
   return (
     <div
       ref={setNodeRef}
       style={{
-        marginTop: '12px',
-        paddingTop: '12px',
-        paddingBottom: hasRiders ? '0' : '6px',
-        borderTop: '1px solid #1e1e23',
-        borderRadius: '6px',
-        background: isOver ? 'rgba(212, 163, 51, 0.08)' : 'transparent',
-        outline: isOver ? '1px dashed #d4a333' : 'none',
-        transition: 'background 0.12s',
+        padding: '12px 14px',
+        marginBottom: '6px',
+        borderRadius: '10px',
+        border: isOver ? '1px dashed #d4a333' : isActive ? '1px solid #d4a333' : '1px solid #1e1e23',
+        background: isOver ? 'rgba(212, 163, 51, 0.08)' : '#121215',
+        transition: 'background 0.12s, border-color 0.12s',
       }}
     >
       {children}
