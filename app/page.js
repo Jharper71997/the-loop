@@ -10,6 +10,8 @@ export default function Home() {
   const [selected, setSelected] = useState(null)
   const [message, setMessage] = useState('')
   const [assignedGroup, setAssignedGroup] = useState('')
+  const [editing, setEditing] = useState(false)
+  const [editForm, setEditForm] = useState({})
 
   useEffect(() => {
     fetchContacts()
@@ -41,6 +43,24 @@ export default function Home() {
     alert('Rider assigned to group!')
   }
 
+  async function saveEdit() {
+    await supabase
+      .from('contacts')
+      .update(editForm)
+      .eq('id', selected.id)
+    setSelected({ ...selected, ...editForm })
+    setEditing(false)
+    fetchContacts()
+  }
+
+  async function deleteContact() {
+    if (!confirm('Delete this rider?')) return
+    await supabase.from('group_members').delete().eq('contact_id', selected.id)
+    await supabase.from('contacts').delete().eq('id', selected.id)
+    setSelected(null)
+    fetchContacts()
+  }
+
   const filtered = contacts.filter(c =>
     `${c.first_name} ${c.last_name} ${c.phone}`.toLowerCase().includes(search.toLowerCase())
   )
@@ -49,16 +69,63 @@ export default function Home() {
     return (
       <main>
         <button
-          onClick={() => setSelected(null)}
+          onClick={() => { setSelected(null); setEditing(false) }}
           style={{ color: '#f0c040', background: 'none', marginBottom: '16px', fontSize: '15px' }}
         >
           ← Back
         </button>
 
         <div className="card">
-          <p className="rider-name">{selected.first_name} {selected.last_name}</p>
-          <p className="rider-phone">📞 {selected.phone}</p>
-          <p className="rider-phone">✉️ {selected.email}</p>
+          {editing ? (
+            <>
+              <h3 style={{ marginBottom: '12px' }}>Edit Rider</h3>
+              <input
+                placeholder="First name"
+                value={editForm.first_name || ''}
+                onChange={e => setEditForm({ ...editForm, first_name: e.target.value })}
+              />
+              <input
+                placeholder="Last name"
+                value={editForm.last_name || ''}
+                onChange={e => setEditForm({ ...editForm, last_name: e.target.value })}
+              />
+              <input
+                placeholder="Phone"
+                value={editForm.phone || ''}
+                onChange={e => setEditForm({ ...editForm, phone: e.target.value })}
+              />
+              <input
+                placeholder="Email"
+                value={editForm.email || ''}
+                onChange={e => setEditForm({ ...editForm, email: e.target.value })}
+              />
+              <button className="btn-primary" onClick={saveEdit}>Save Changes</button>
+              <button
+                onClick={() => setEditing(false)}
+                style={{ background: 'none', color: '#888', marginTop: '8px', width: '100%' }}
+              >
+                Cancel
+              </button>
+            </>
+          ) : (
+            <>
+              <p className="rider-name">{selected.first_name} {selected.last_name}</p>
+              <p className="rider-phone">📞 {selected.phone}</p>
+              <p className="rider-phone">✉️ {selected.email}</p>
+              <button
+                onClick={() => { setEditing(true); setEditForm(selected) }}
+                style={{ background: 'none', color: '#f0c040', marginTop: '12px', fontSize: '14px' }}
+              >
+                Edit Rider
+              </button>
+              <button
+                onClick={deleteContact}
+                style={{ background: 'none', color: '#ff4444', marginTop: '4px', fontSize: '14px' }}
+              >
+                Delete Rider
+              </button>
+            </>
+          )}
         </div>
 
         <div className="card">
@@ -85,7 +152,21 @@ export default function Home() {
             value={message}
             onChange={e => setMessage(e.target.value)}
           />
-          <button className="btn-primary">Send Text</button>
+          <button className="btn-primary" onClick={async () => {
+            if (!message || !selected?.phone) return
+            const res = await fetch('/api/send-sms', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ to: selected.phone, message })
+            })
+            const data = await res.json()
+            if (data.success) {
+              alert('Text sent!')
+              setMessage('')
+            } else {
+              alert('Error: ' + data.error)
+            }
+          }}>Send Text</button>
         </div>
       </main>
     )
