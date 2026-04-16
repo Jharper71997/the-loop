@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react'
 import { supabase } from '@/lib/supabase'
+import { personalize } from '@/lib/personalize'
 
 export default function Groups() {
   const [groups, setGroups] = useState([])
@@ -61,32 +62,37 @@ export default function Groups() {
   }
 
   async function sendGroupSMS(group) {
-    const message = groupMessage[group.id]
-    if (!message) return alert('Type a message first')
-    const phones = group.group_members
-      .map(m => m.contacts?.phone)
-      .filter(Boolean)
-    if (phones.length === 0) return alert('No riders with phone numbers in this group')
+    const template = groupMessage[group.id]
+    if (!template) return alert('Type a message first')
+
+    const riders = (group.group_members || [])
+      .map(m => m.contacts)
+      .filter(r => r && r.phone)
+
+    if (riders.length === 0) return alert('No riders with phone numbers in this group')
+
+    const count = riders.length
+    if (!confirm(`Send a personalized text to ${count} rider${count === 1 ? '' : 's'}?\n\nEach person gets their own text from your number.`)) return
 
     setSending({ ...sending, [group.id]: true })
 
     const results = await Promise.all(
-      phones.map(phone =>
+      riders.map(rider =>
         fetch('/api/send-sms', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ to: phone, message })
-        }).then(r => r.json())
+          body: JSON.stringify({ to: rider.phone, message: personalize(template, rider) })
+        }).then(r => r.json()).catch(e => ({ success: false, error: e.message }))
       )
     )
 
     setSending({ ...sending, [group.id]: false })
     const failed = results.filter(r => !r.success).length
     if (failed === 0) {
-      alert(`Text sent to ${phones.length} riders!`)
+      alert(`Sent to ${count} rider${count === 1 ? '' : 's'}!`)
       setGroupMessage({ ...groupMessage, [group.id]: '' })
     } else {
-      alert(`Sent to ${phones.length - failed} riders. ${failed} failed.`)
+      alert(`Sent to ${count - failed} of ${count}. ${failed} failed.`)
     }
   }
 
@@ -176,9 +182,12 @@ export default function Groups() {
 
           <div style={{ marginTop: '12px', borderTop: '1px solid #2a2a2a', paddingTop: '12px' }}>
             <h3>Text This Group</h3>
+            <p style={{ color: '#888', fontSize: '12px', marginBottom: '6px' }}>
+              Each rider gets their own text. Use <code>{'{first_name}'}</code> to personalize.
+            </p>
             <textarea
               rows={2}
-              placeholder="Type a message to all riders in this group..."
+              placeholder="Hey {first_name}, your pickup is in 10 min..."
               value={groupMessage[g.id] || ''}
               onChange={e => setGroupMessage({ ...groupMessage, [g.id]: e.target.value })}
             />
