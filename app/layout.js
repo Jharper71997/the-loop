@@ -21,6 +21,7 @@ export default function RootLayout({ children }) {
             The Loop
           </span>
           <a href="/" style={{ color: '#f0f0f0', textDecoration: 'none', fontSize: '14px' }}>Riders</a>
+          <a href="/contacts" style={{ color: '#f0f0f0', textDecoration: 'none', fontSize: '14px' }}>Contacts</a>
           <a href="/groups" style={{ color: '#f0f0f0', textDecoration: 'none', fontSize: '14px' }}>Groups</a>
         </nav>
         {children}

@@ -2,58 +2,31 @@
 
 import { useEffect, useMemo, useState } from 'react'
 import { supabase } from '@/lib/supabase'
+import { personalize } from '@/lib/personalize'
 
 export default function Home() {
-  const [contacts, setContacts] = useState([])
   const [groups, setGroups] = useState([])
   const [members, setMembers] = useState([])
+  const [contacts, setContacts] = useState([])
   const [search, setSearch] = useState('')
-  const [selected, setSelected] = useState(null)
-  const [message, setMessage] = useState('')
-  const [assignedGroup, setAssignedGroup] = useState('')
-  const [editing, setEditing] = useState(false)
-  const [editForm, setEditForm] = useState({})
   const [importing, setImporting] = useState(false)
   const [importResult, setImportResult] = useState(null)
+  const [groupMessage, setGroupMessage] = useState({})
+  const [sending, setSending] = useState({})
 
   useEffect(() => {
     refresh()
   }, [])
 
   async function refresh() {
-    const [c, g, m] = await Promise.all([
-      supabase.from('contacts').select('*').order('last_name'),
+    const [g, m, c] = await Promise.all([
       supabase.from('groups').select('*').order('event_date'),
       supabase.from('group_members').select('id, group_id, contact_id'),
+      supabase.from('contacts').select('id, first_name, last_name, phone'),
     ])
-    setContacts(c.data || [])
     setGroups(g.data || [])
     setMembers(m.data || [])
-  }
-
-  async function assignToGroup() {
-    if (!assignedGroup || !selected) return
-    await supabase.from('group_members').insert([{
-      group_id: assignedGroup,
-      contact_id: selected.id,
-    }])
-    alert('Rider assigned to group!')
-    refresh()
-  }
-
-  async function saveEdit() {
-    await supabase.from('contacts').update(editForm).eq('id', selected.id)
-    setSelected({ ...selected, ...editForm })
-    setEditing(false)
-    refresh()
-  }
-
-  async function deleteContact() {
-    if (!confirm('Delete this rider?')) return
-    await supabase.from('group_members').delete().eq('contact_id', selected.id)
-    await supabase.from('contacts').delete().eq('id', selected.id)
-    setSelected(null)
-    refresh()
+    setContacts(c.data || [])
   }
 
   async function runImport() {
@@ -72,126 +45,62 @@ export default function Home() {
     }
   }
 
+  async function sendGroupSMS(night) {
+    const template = groupMessage[night.group.id]
+    if (!template) return alert('Type a message first')
+    const riders = night.riders.filter(r => r.phone)
+    if (!riders.length) return alert('No riders with phones.')
+    if (!confirm(`Send a personalized text to ${riders.length} rider${riders.length === 1 ? '' : 's'}?`)) return
+
+    setSending(s => ({ ...s, [night.group.id]: true }))
+    const results = await Promise.all(
+      riders.map(r =>
+        fetch('/api/send-sms', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ to: r.phone, message: personalize(template, r) }),
+        }).then(r => r.json()).catch(e => ({ success: false, error: e.message }))
+      )
+    )
+    setSending(s => ({ ...s, [night.group.id]: false }))
+    const failed = results.filter(r => !r.success).length
+    if (failed === 0) {
+      alert(`Sent to ${riders.length} rider${riders.length === 1 ? '' : 's'}!`)
+      setGroupMessage(m => ({ ...m, [night.group.id]: '' }))
+    } else {
+      alert(`Sent to ${riders.length - failed} of ${riders.length}. ${failed} failed.`)
+    }
+  }
+
   const today = new Date().toISOString().slice(0, 10)
 
-  const sections = useMemo(() => {
+  const upcoming = useMemo(() => {
     const contactById = new Map(contacts.map(c => [c.id, c]))
-    const groupById = new Map(groups.map(g => [g.id, g]))
-
     const ridersByGroup = new Map()
-    const groupDatesByContact = new Map()
 
     for (const m of members) {
       const rider = contactById.get(m.contact_id)
-      const group = groupById.get(m.group_id)
-      if (!rider || !group) continue
-
+      if (!rider) continue
       if (!ridersByGroup.has(m.group_id)) ridersByGroup.set(m.group_id, [])
       ridersByGroup.get(m.group_id).push(rider)
-
-      if (!groupDatesByContact.has(rider.id)) groupDatesByContact.set(rider.id, [])
-      groupDatesByContact.get(rider.id).push(group.event_date)
-    }
-
-    const rideStats = new Map()
-    for (const [contactId, dates] of groupDatesByContact) {
-      const pastDates = dates.filter(d => d && d < today).sort()
-      const upcomingDates = dates.filter(d => !d || d >= today).sort()
-      rideStats.set(contactId, {
-        rideCount: pastDates.length,
-        lastRide: pastDates.length ? pastDates[pastDates.length - 1] : null,
-        hasUpcoming: upcomingDates.length > 0,
-      })
     }
 
     const q = search.trim().toLowerCase()
     const matches = (r) =>
-      !q || `${r.first_name || ''} ${r.last_name || ''} ${r.phone || ''} ${r.email || ''}`
+      !q || `${r.first_name || ''} ${r.last_name || ''} ${r.phone || ''}`
         .toLowerCase().includes(q)
 
-    const upcoming = Array.from(ridersByGroup.entries())
-      .map(([groupId, riders]) => ({
-        group: groupById.get(groupId),
-        riders: riders
+    return groups
+      .filter(g => !g.event_date || g.event_date >= today)
+      .map(g => ({
+        group: g,
+        riders: (ridersByGroup.get(g.id) || [])
           .filter(matches)
           .sort((a, b) => (a.last_name || '').localeCompare(b.last_name || '')),
       }))
-      .filter(n => n.group && (!n.group.event_date || n.group.event_date >= today) && n.riders.length)
+      .filter(n => n.riders.length || !search)
       .sort((a, b) => (a.group.event_date || '').localeCompare(b.group.event_date || ''))
-
-    const allRiders = contacts
-      .filter(matches)
-      .map(c => ({ ...c, ...(rideStats.get(c.id) || { rideCount: 0, lastRide: null, hasUpcoming: false }) }))
-      .sort((a, b) => {
-        if (a.lastRide && b.lastRide) return b.lastRide.localeCompare(a.lastRide)
-        if (a.lastRide) return -1
-        if (b.lastRide) return 1
-        return (a.last_name || '').localeCompare(b.last_name || '')
-      })
-
-    return { upcoming, allRiders, total: contacts.length }
-  }, [contacts, groups, members, search, today])
-
-  if (selected) {
-    return (
-      <main>
-        <button
-          onClick={() => { setSelected(null); setEditing(false) }}
-          style={{ color: '#f0c040', background: 'none', marginBottom: '16px', fontSize: '15px' }}
-        >
-          ← Back
-        </button>
-
-        <div className="card">
-          {editing ? (
-            <>
-              <h3 style={{ marginBottom: '12px' }}>Edit Rider</h3>
-              <input placeholder="First name" value={editForm.first_name || ''} onChange={e => setEditForm({ ...editForm, first_name: e.target.value })} />
-              <input placeholder="Last name" value={editForm.last_name || ''} onChange={e => setEditForm({ ...editForm, last_name: e.target.value })} />
-              <input placeholder="Phone" value={editForm.phone || ''} onChange={e => setEditForm({ ...editForm, phone: e.target.value })} />
-              <input placeholder="Email" value={editForm.email || ''} onChange={e => setEditForm({ ...editForm, email: e.target.value })} />
-              <button className="btn-primary" onClick={saveEdit}>Save Changes</button>
-              <button onClick={() => setEditing(false)} style={{ background: 'none', color: '#888', marginTop: '8px', width: '100%' }}>Cancel</button>
-            </>
-          ) : (
-            <>
-              <p className="rider-name">{selected.first_name} {selected.last_name}</p>
-              <p className="rider-phone">📞 {selected.phone}</p>
-              <p className="rider-phone">✉️ {selected.email}</p>
-              <button onClick={() => { setEditing(true); setEditForm(selected) }} style={{ background: 'none', color: '#f0c040', marginTop: '12px', fontSize: '14px' }}>Edit Rider</button>
-              <button onClick={deleteContact} style={{ background: 'none', color: '#ff4444', marginTop: '4px', fontSize: '14px' }}>Delete Rider</button>
-            </>
-          )}
-        </div>
-
-        <div className="card">
-          <h3>Assign to Group</h3>
-          <select value={assignedGroup} onChange={e => setAssignedGroup(e.target.value)}>
-            <option value="">Select a group...</option>
-            {groups.map(g => (
-              <option key={g.id} value={g.id}>{g.name}{g.pickup_time ? ` — ${g.pickup_time}` : ''}</option>
-            ))}
-          </select>
-          <button className="btn-green" onClick={assignToGroup}>Assign Rider</button>
-        </div>
-
-        <div className="card">
-          <h3>Send SMS</h3>
-          <textarea rows={3} placeholder="Type your message..." value={message} onChange={e => setMessage(e.target.value)} />
-          <button className="btn-primary" onClick={async () => {
-            if (!message || !selected?.phone) return
-            const res = await fetch('/api/send-sms', {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({ to: selected.phone, message }),
-            })
-            const data = await res.json()
-            if (data.success) { alert('Text sent!'); setMessage('') } else { alert('Error: ' + data.error) }
-          }}>Send Text</button>
-        </div>
-      </main>
-    )
-  }
+  }, [groups, members, contacts, search, today])
 
   return (
     <main>
@@ -217,133 +126,85 @@ export default function Home() {
         <div className="card" style={{ fontSize: '13px', color: importResult.error ? '#ff6666' : '#a0e0a0' }}>
           {importResult.error
             ? `Error: ${importResult.error}${importResult.detail ? ' — ' + importResult.detail : ''}`
-            : `Imported: ${importResult.ridersUpserted} riders across ${importResult.ordersProcessed} orders (${importResult.pages} pages). ${importResult.ticketsSkipped || 0} voided tickets skipped.${importResult.errorCount ? ` ${importResult.errorCount} errors.` : ''}`}
+            : `Imported: ${importResult.ridersUpserted} riders across ${importResult.ordersProcessed} orders.${importResult.errorCount ? ` ${importResult.errorCount} errors.` : ''}`}
         </div>
       )}
 
       <input
-        placeholder="Search by name, phone, or email..."
+        placeholder="Search by name or phone..."
         value={search}
         onChange={e => setSearch(e.target.value)}
       />
 
-      <div style={{ color: '#888', fontSize: '13px', margin: '4px 0 16px' }}>
-        {sections.total} total riders
-      </div>
+      <h2 style={{ fontSize: '14px', textTransform: 'uppercase', letterSpacing: '0.5px', color: '#f0c040', marginTop: '16px' }}>
+        🟢 Active — Upcoming
+      </h2>
 
-      {sections.upcoming.length > 0 && (
-        <section style={{ marginBottom: '24px' }}>
-          <h2 style={{ fontSize: '14px', textTransform: 'uppercase', letterSpacing: '0.5px', color: '#f0c040' }}>
-            🟢 Active — Upcoming
-          </h2>
-          {sections.upcoming.map(n => (
-            <NightSection key={n.group.id} night={n} onSelect={setSelected} />
-          ))}
-        </section>
-      )}
-
-      {sections.allRiders.length > 0 && (
-        <section style={{ marginBottom: '20px' }}>
-          <h2 style={{ fontSize: '14px', textTransform: 'uppercase', letterSpacing: '0.5px', color: '#888' }}>
-            All Riders ({sections.allRiders.length})
-          </h2>
-          {sections.allRiders.map(r => (
-            <RiderRow key={r.id} rider={r} onSelect={setSelected} />
-          ))}
-        </section>
-      )}
-
-      {sections.upcoming.length === 0 && sections.allRiders.length === 0 && (
-        <p style={{ color: '#aaa', textAlign: 'center', marginTop: '40px' }}>
-          {search ? 'No riders match that search.' : 'No riders yet. Try importing from Ticket Tailor above.'}
+      {upcoming.length === 0 && (
+        <p style={{ color: '#888', textAlign: 'center', fontSize: '14px', margin: '20px 0' }}>
+          No upcoming nights with riders yet.
         </p>
       )}
-    </main>
-  )
-}
 
-function NightSection({ night, onSelect }) {
-  const { group, riders } = night
-  return (
-    <div className="card">
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: '8px' }}>
-        <div>
-          <p style={{ fontWeight: 600, color: '#f0c040', fontSize: '15px' }}>
-            {formatEventDate(group.event_date) || group.name}
-          </p>
-          {group.pickup_time && (
-            <p style={{ color: '#888', fontSize: '13px' }}>Pickup {group.pickup_time}</p>
-          )}
-        </div>
-        <span style={{ color: '#888', fontSize: '13px' }}>
-          {riders.length} rider{riders.length === 1 ? '' : 's'}
-        </span>
-      </div>
-      <div style={{ borderTop: '1px solid #2a2a2a', marginTop: '4px' }}>
-        {riders.map(r => (
-          <div
-            key={r.id}
-            onClick={() => onSelect(r)}
-            style={{
-              cursor: 'pointer',
-              padding: '8px 0',
-              borderBottom: '1px solid #222',
-              display: 'flex',
-              justifyContent: 'space-between',
-              alignItems: 'center',
-            }}
-          >
-            <span className="rider-name" style={{ fontSize: '15px' }}>
-              {r.first_name} {r.last_name}
+      {upcoming.map(n => (
+        <div key={n.group.id} className="card">
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: '8px' }}>
+            <div>
+              <p style={{ fontWeight: 600, color: '#f0c040', fontSize: '15px' }}>
+                {formatEventDate(n.group.event_date) || n.group.name}
+              </p>
+              {n.group.pickup_time && (
+                <p style={{ color: '#888', fontSize: '13px' }}>Pickup {n.group.pickup_time}</p>
+              )}
+            </div>
+            <span style={{ color: '#888', fontSize: '13px' }}>
+              {n.riders.length} rider{n.riders.length === 1 ? '' : 's'}
             </span>
-            <span className="rider-phone" style={{ marginTop: 0 }}>{r.phone}</span>
           </div>
-        ))}
-      </div>
-    </div>
-  )
-}
 
-function RiderRow({ rider, onSelect }) {
-  const tag = rider.hasUpcoming
-    ? { label: 'Booked', color: '#4aa84a', bg: '#1a2a1a' }
-    : rider.rideCount > 0
-      ? { label: `${rider.rideCount} ride${rider.rideCount === 1 ? '' : 's'}`, color: '#f0c040', bg: '#2a2316' }
-      : { label: 'New', color: '#888', bg: '#1f1f1f' }
+          {n.riders.length > 0 && (
+            <div style={{ borderTop: '1px solid #2a2a2a', marginTop: '4px' }}>
+              {n.riders.map(r => (
+                <div
+                  key={r.id}
+                  style={{
+                    padding: '8px 0',
+                    borderBottom: '1px solid #222',
+                    display: 'flex',
+                    justifyContent: 'space-between',
+                    alignItems: 'center',
+                  }}
+                >
+                  <span className="rider-name" style={{ fontSize: '15px' }}>
+                    {r.first_name} {r.last_name}
+                  </span>
+                  <span className="rider-phone" style={{ marginTop: 0 }}>{r.phone}</span>
+                </div>
+              ))}
+            </div>
+          )}
 
-  return (
-    <div
-      className="card"
-      onClick={() => onSelect(rider)}
-      style={{ cursor: 'pointer', padding: '12px 14px' }}
-    >
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '8px' }}>
-        <div style={{ minWidth: 0, flex: 1 }}>
-          <p className="rider-name" style={{ fontSize: '15px' }}>
-            {rider.first_name} {rider.last_name}
-          </p>
-          <p className="rider-phone">
-            {rider.phone}
-            {rider.lastRide && (
-              <span style={{ color: '#666', marginLeft: '8px' }}>
-                · last rode {formatEventDate(rider.lastRide)}
-              </span>
-            )}
-          </p>
+          <div style={{ marginTop: '12px', borderTop: '1px solid #2a2a2a', paddingTop: '12px' }}>
+            <p style={{ color: '#888', fontSize: '12px', marginBottom: '6px' }}>
+              Text this night. Use <code>{'{first_name}'}</code> to personalize.
+            </p>
+            <textarea
+              rows={2}
+              placeholder="Hey {first_name}, pickup in 10 min..."
+              value={groupMessage[n.group.id] || ''}
+              onChange={e => setGroupMessage({ ...groupMessage, [n.group.id]: e.target.value })}
+            />
+            <button
+              className="btn-primary"
+              onClick={() => sendGroupSMS(n)}
+              disabled={sending[n.group.id] || n.riders.length === 0}
+            >
+              {sending[n.group.id] ? 'Sending…' : `Send to ${n.riders.length} rider${n.riders.length === 1 ? '' : 's'}`}
+            </button>
+          </div>
         </div>
-        <span style={{
-          background: tag.bg,
-          color: tag.color,
-          fontSize: '11px',
-          fontWeight: 600,
-          padding: '3px 8px',
-          borderRadius: '10px',
-          whiteSpace: 'nowrap',
-        }}>
-          {tag.label}
-        </span>
-      </div>
-    </div>
+      ))}
+    </main>
   )
 }
 
