@@ -5,99 +5,191 @@
 }
 
 body {
-  background: #0d0d0d;
-  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
-  color: #f0f0f0;
+  background: #0a0a0b;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
+  color: #e8e8ea;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
 }
 
 main {
-  padding: 24px 16px;
-  max-width: 600px;
+  padding: 20px 16px 40px;
+  max-width: 640px;
   margin: 0 auto;
 }
 
 h1 {
-  font-size: 22px;
+  font-size: 24px;
   font-weight: 700;
-  margin-bottom: 16px;
-  color: #f0c040;
+  letter-spacing: -0.02em;
+  margin-bottom: 4px;
+  color: #f5f5f7;
 }
 
 h2 {
-  font-size: 18px;
+  font-size: 12px;
   font-weight: 600;
-  margin-bottom: 12px;
-  color: #f0c040;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  margin: 20px 0 10px;
+  color: #8a8a90;
 }
 
 h3 {
-  font-size: 16px;
+  font-size: 14px;
   font-weight: 600;
-  margin-bottom: 8px;
-  color: #f0c040;
+  margin-bottom: 10px;
+  color: #e8e8ea;
+}
+
+p { line-height: 1.4; }
+
+code {
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 12px;
+  background: #1c1c1f;
+  padding: 1px 5px;
+  border-radius: 4px;
+  color: #c8a74a;
 }
 
 input, textarea, select {
   width: 100%;
-  border: 1px solid #333;
-  border-radius: 8px;
+  border: 1px solid #24242a;
+  border-radius: 10px;
   padding: 10px 12px;
-  font-size: 15px;
+  font-size: 14px;
   margin-bottom: 10px;
-  background: #1a1a1a;
-  color: #f0f0f0;
+  background: #121215;
+  color: #e8e8ea;
   outline: none;
+  transition: border-color 0.15s;
+  font-family: inherit;
+}
+
+input::placeholder, textarea::placeholder {
+  color: #55555c;
 }
 
 input:focus, textarea:focus, select:focus {
-  border-color: #f0c040;
+  border-color: #d4a333;
 }
+
+textarea { resize: vertical; min-height: 44px; }
 
 button {
   border: none;
-  border-radius: 8px;
-  padding: 10px 20px;
-  font-size: 15px;
-  font-weight: 600;
+  border-radius: 10px;
+  padding: 10px 16px;
+  font-size: 14px;
+  font-weight: 500;
   cursor: pointer;
+  font-family: inherit;
+  transition: background 0.15s, border-color 0.15s, opacity 0.15s;
+}
+
+button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
 }
 
 .btn-primary {
-  background: #f0c040;
-  color: #0d0d0d;
+  background: #d4a333;
+  color: #0a0a0b;
   width: 100%;
+  font-weight: 600;
 }
 
-.btn-primary:hover {
-  background: #e0b030;
-}
+.btn-primary:hover:not(:disabled) { background: #c99a2e; }
 
 .btn-green {
-  background: #f0c040;
-  color: #0d0d0d;
+  background: #d4a333;
+  color: #0a0a0b;
   width: 100%;
+  font-weight: 600;
 }
 
+.btn-subtle {
+  background: #16161a;
+  color: #c8c8cc;
+  border: 1px solid #24242a;
+  font-size: 13px;
+}
+
+.btn-subtle:hover:not(:disabled) {
+  border-color: #34343a;
+  background: #1a1a1f;
+}
+
+.btn-link {
+  background: none;
+  color: #8a8a90;
+  font-size: 13px;
+  padding: 4px 0;
+}
+
+.btn-link:hover { color: #c8c8cc; }
+
 .card {
-  background: #1a1a1a;
+  background: #121215;
   border-radius: 12px;
-  padding: 16px;
-  margin-bottom: 12px;
-  border: 1px solid #2a2a2a;
+  padding: 14px 16px;
+  margin-bottom: 10px;
+  border: 1px solid #1e1e23;
+}
+
+.card-compact {
+  padding: 10px 14px;
 }
 
 .rider-name {
-  font-weight: 600;
-  font-size: 16px;
-  color: #f0f0f0;
+  font-weight: 500;
+  font-size: 15px;
+  color: #e8e8ea;
 }
 
 .rider-phone {
-  color: #888;
-  font-size: 14px;
+  color: #6f6f76;
+  font-size: 13px;
   margin-top: 2px;
 }
 
-nav a:hover {
-  color: #f0c040 !important;
+.row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.muted { color: #6f6f76; font-size: 13px; }
+.tiny { font-size: 11px; color: #55555c; }
+
+.divider {
+  border: none;
+  border-top: 1px solid #1e1e23;
+  margin: 10px 0;
+}
+
+nav a:hover { color: #d4a333 !important; }
+
+.chip {
+  display: inline-block;
+  background: #1a1a1f;
+  color: #c8c8cc;
+  border: 1px solid #24242a;
+  font-size: 11px;
+  font-weight: 500;
+  padding: 3px 8px;
+  border-radius: 999px;
+  white-space: nowrap;
+}
+.chip-gold {
+  background: #2a2116;
+  color: #d4a333;
+  border-color: #3a2d1a;
+}
+.chip-green {
+  background: #152218;
+  color: #6fbf7f;
+  border-color: #1f3527;
 }

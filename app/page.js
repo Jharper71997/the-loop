@@ -105,28 +105,20 @@ export default function Home() {
   return (
     <main>
       <h1>Riders</h1>
+      <p className="muted" style={{ marginBottom: '16px' }}>Upcoming pickups and who&apos;s on each.</p>
 
       <div style={{ display: 'flex', gap: '8px', marginBottom: '12px' }}>
-        <button
-          onClick={runImport}
-          disabled={importing}
-          style={{ flex: 1, background: '#1a1a1a', color: '#f0c040', border: '1px solid #2a2a2a', fontSize: '13px' }}
-        >
-          {importing ? 'Importing…' : '⬇ Import from Ticket Tailor'}
+        <button className="btn-subtle" onClick={runImport} disabled={importing} style={{ flex: 1 }}>
+          {importing ? 'Importing…' : 'Import from Ticket Tailor'}
         </button>
-        <button
-          onClick={refresh}
-          style={{ background: '#1a1a1a', color: '#888', border: '1px solid #2a2a2a', fontSize: '13px' }}
-        >
-          ↻
-        </button>
+        <button className="btn-subtle" onClick={refresh}>Refresh</button>
       </div>
 
       {importResult && (
-        <div className="card" style={{ fontSize: '13px', color: importResult.error ? '#ff6666' : '#a0e0a0' }}>
+        <div className="card card-compact" style={{ fontSize: '13px', color: importResult.error ? '#e07a7a' : '#8fc99a' }}>
           {importResult.error
             ? `Error: ${importResult.error}${importResult.detail ? ' — ' + importResult.detail : ''}`
-            : `Imported: ${importResult.ridersUpserted} riders across ${importResult.ordersProcessed} orders.${importResult.errorCount ? ` ${importResult.errorCount} errors.` : ''}`}
+            : `Imported ${importResult.ridersUpserted} riders across ${importResult.ordersProcessed} orders.${importResult.errorCount ? ` ${importResult.errorCount} errors.` : ''}`}
         </div>
       )}
 
@@ -136,9 +128,7 @@ export default function Home() {
         onChange={e => setSearch(e.target.value)}
       />
 
-      <h2 style={{ fontSize: '14px', textTransform: 'uppercase', letterSpacing: '0.5px', color: '#f0c040', marginTop: '16px' }}>
-        🟢 Active — Upcoming
-      </h2>
+      <h2>Upcoming</h2>
 
       {upcoming.length === 0 && (
         <p style={{ color: '#888', textAlign: 'center', fontSize: '14px', margin: '20px 0' }}>
@@ -148,45 +138,43 @@ export default function Home() {
 
       {upcoming.map(n => (
         <div key={n.group.id} className="card">
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: '8px' }}>
+          <div className="row" style={{ marginBottom: '6px' }}>
             <div>
-              <p style={{ fontWeight: 600, color: '#f0c040', fontSize: '15px' }}>
+              <p style={{ fontWeight: 600, fontSize: '15px', color: '#e8e8ea' }}>
                 {formatEventDate(n.group.event_date) || n.group.name}
               </p>
               {n.group.pickup_time && (
-                <p style={{ color: '#888', fontSize: '13px' }}>Pickup {n.group.pickup_time}</p>
+                <p className="muted" style={{ fontSize: '12px' }}>Pickup {n.group.pickup_time}</p>
               )}
             </div>
-            <span style={{ color: '#888', fontSize: '13px' }}>
-              {n.riders.length} rider{n.riders.length === 1 ? '' : 's'}
-            </span>
+            <span className="chip">{n.riders.length} rider{n.riders.length === 1 ? '' : 's'}</span>
           </div>
 
           {n.riders.length > 0 && (
-            <div style={{ borderTop: '1px solid #2a2a2a', marginTop: '4px' }}>
-              {n.riders.map(r => (
+            <div style={{ marginTop: '8px' }}>
+              {n.riders.map((r, idx) => (
                 <div
                   key={r.id}
                   style={{
                     padding: '8px 0',
-                    borderBottom: '1px solid #222',
+                    borderTop: idx === 0 ? '1px solid #1e1e23' : '1px solid #1a1a1f',
                     display: 'flex',
                     justifyContent: 'space-between',
                     alignItems: 'center',
                   }}
                 >
-                  <span className="rider-name" style={{ fontSize: '15px' }}>
+                  <span style={{ fontSize: '14px', color: '#e8e8ea' }}>
                     {r.first_name} {r.last_name}
                   </span>
-                  <span className="rider-phone" style={{ marginTop: 0 }}>{r.phone}</span>
+                  <span className="muted" style={{ fontSize: '12px' }}>{r.phone}</span>
                 </div>
               ))}
             </div>
           )}
 
-          <div style={{ marginTop: '12px', borderTop: '1px solid #2a2a2a', paddingTop: '12px' }}>
-            <p style={{ color: '#888', fontSize: '12px', marginBottom: '6px' }}>
-              Text this night. Use <code>{'{first_name}'}</code> to personalize.
+          <div style={{ marginTop: '12px', paddingTop: '12px', borderTop: '1px solid #1e1e23' }}>
+            <p className="tiny" style={{ marginBottom: '6px' }}>
+              Use <code>{'{first_name}'}</code> to personalize.
             </p>
             <textarea
               rows={2}
@@ -199,7 +187,7 @@ export default function Home() {
               onClick={() => sendGroupSMS(n)}
               disabled={sending[n.group.id] || n.riders.length === 0}
             >
-              {sending[n.group.id] ? 'Sending…' : `Send to ${n.riders.length} rider${n.riders.length === 1 ? '' : 's'}`}
+              {sending[n.group.id] ? 'Sending…' : `Send to ${n.riders.length}`}
             </button>
           </div>
         </div>

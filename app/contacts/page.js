@@ -194,43 +194,43 @@ export default function Contacts() {
         {enriched.length} contact{enriched.length === 1 ? '' : 's'}
       </div>
 
-      {enriched.map(c => (
-        <div
-          key={c.id}
-          className="card"
-          onClick={() => setSelected(c)}
-          style={{ cursor: 'pointer' }}
-        >
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', gap: '8px' }}>
-            <div style={{ minWidth: 0, flex: 1 }}>
-              <p className="rider-name">{c.first_name} {c.last_name}</p>
-              <p className="rider-phone">{c.phone}</p>
+      <div style={{ background: '#121215', borderRadius: '12px', border: '1px solid #1e1e23', overflow: 'hidden' }}>
+        {enriched.map((c, idx) => {
+          const rides = c.past.length
+          const hasUpcoming = c.upcoming.length > 0
+          return (
+            <div
+              key={c.id}
+              onClick={() => setSelected(c)}
+              style={{
+                cursor: 'pointer',
+                padding: '12px 14px',
+                borderTop: idx === 0 ? 'none' : '1px solid #1a1a1f',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                gap: '10px',
+              }}
+            >
+              <div style={{ minWidth: 0, flex: 1 }}>
+                <p style={{ fontSize: '14px', fontWeight: 500, color: '#e8e8ea' }}>
+                  {c.first_name} {c.last_name}
+                </p>
+                <p style={{ fontSize: '12px', color: '#6f6f76', marginTop: '2px' }}>
+                  {c.phone}
+                  {c.past[0]?.event_date && (
+                    <span style={{ color: '#55555c' }}> · last {formatEventDate(c.past[0].event_date)}</span>
+                  )}
+                </p>
+              </div>
+              <div style={{ display: 'flex', gap: '6px', alignItems: 'center' }}>
+                {hasUpcoming && <span className="chip chip-green">Booked</span>}
+                {rides > 0 && <span className="chip chip-gold">{rides}</span>}
+              </div>
             </div>
-            <span style={{ color: '#888', fontSize: '12px', whiteSpace: 'nowrap' }}>
-              {c.past.length} ride{c.past.length === 1 ? '' : 's'}
-            </span>
-          </div>
-          {(c.past.length > 0 || c.upcoming.length > 0) && (
-            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '4px', marginTop: '8px' }}>
-              {c.upcoming.slice(0, 2).map(g => (
-                <span key={g.id} style={{ ...rideChipStyle, background: '#1a2a1a', color: '#4aa84a', borderColor: '#2a3f2a', fontSize: '11px' }}>
-                  ↗ {formatEventDate(g.event_date) || g.name}
-                </span>
-              ))}
-              {c.past.slice(0, 4).map(g => (
-                <span key={g.id} style={{ ...rideChipStyle, fontSize: '11px' }}>
-                  {formatEventDate(g.event_date)}
-                </span>
-              ))}
-              {c.past.length > 4 && (
-                <span style={{ color: '#666', fontSize: '11px', alignSelf: 'center' }}>
-                  +{c.past.length - 4} more
-                </span>
-              )}
-            </div>
-          )}
-        </div>
-      ))}
+          )
+        })}
+      </div>
 
       {enriched.length === 0 && (
         <p style={{ color: '#aaa', textAlign: 'center', marginTop: '40px' }}>

@@ -10,19 +10,22 @@ export default function RootLayout({ children }) {
     <html lang="en">
       <body>
         <nav style={{
-          background: '#0d0d0d',
-          borderBottom: '1px solid #f0c040',
-          padding: '12px 24px',
+          background: '#0a0a0b',
+          borderBottom: '1px solid #1e1e23',
+          padding: '14px 20px',
           display: 'flex',
           gap: '24px',
-          alignItems: 'center'
+          alignItems: 'center',
+          position: 'sticky',
+          top: 0,
+          zIndex: 10,
         }}>
-          <span style={{ color: '#f0c040', fontWeight: 'bold', fontSize: '18px' }}>
+          <span style={{ color: '#d4a333', fontWeight: 700, fontSize: '16px', letterSpacing: '-0.01em' }}>
             The Loop
           </span>
-          <a href="/" style={{ color: '#f0f0f0', textDecoration: 'none', fontSize: '14px' }}>Riders</a>
-          <a href="/contacts" style={{ color: '#f0f0f0', textDecoration: 'none', fontSize: '14px' }}>Contacts</a>
-          <a href="/groups" style={{ color: '#f0f0f0', textDecoration: 'none', fontSize: '14px' }}>Groups</a>
+          <a href="/" style={{ color: '#c8c8cc', textDecoration: 'none', fontSize: '14px' }}>Riders</a>
+          <a href="/contacts" style={{ color: '#c8c8cc', textDecoration: 'none', fontSize: '14px' }}>Contacts</a>
+          <a href="/groups" style={{ color: '#c8c8cc', textDecoration: 'none', fontSize: '14px' }}>Loops</a>
         </nav>
         {children}
       </body>

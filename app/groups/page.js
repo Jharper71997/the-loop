@@ -11,15 +11,22 @@ import {
   todayInTZ,
 } from '@/lib/schedule'
 
+const DAY_TABS = [
+  { key: 'friday', label: 'Friday', weekday: 5 },
+  { key: 'saturday', label: 'Saturday', weekday: 6 },
+]
+
 export default function Groups() {
   const [groups, setGroups] = useState([])
   const [now, setNow] = useState(() => nowInTZ())
   const [today] = useState(() => todayInTZ())
+  const [activeDay, setActiveDay] = useState(() => initialDay())
   const [editingSchedule, setEditingSchedule] = useState(null)
   const [scheduleDraft, setScheduleDraft] = useState([])
   const [stopMessage, setStopMessage] = useState({})
   const [sending, setSending] = useState({})
   const [movingRider, setMovingRider] = useState(null)
+  const [expanded, setExpanded] = useState(null)
 
   useEffect(() => {
     fetchGroups()
@@ -75,7 +82,7 @@ export default function Groups() {
     if (!template) return alert('Type a message first')
     const withPhones = riders.filter(r => r.contacts?.phone)
     if (!withPhones.length) return alert('No riders with phones at this stop.')
-    if (!confirm(`Send to ${withPhones.length} rider${withPhones.length === 1 ? '' : 's'} at this stop?`)) return
+    if (!confirm(`Send to ${withPhones.length} rider${withPhones.length === 1 ? '' : 's'}?`)) return
 
     setSending(s => ({ ...s, [key]: true }))
     const results = await Promise.all(
@@ -93,27 +100,85 @@ export default function Groups() {
     if (failed === 0) setStopMessage(m => ({ ...m, [key]: '' }))
   }
 
-  const upcoming = useMemo(
-    () => groups.filter(g => !g.event_date || g.event_date >= today),
-    [groups, today]
-  )
+  const filtered = useMemo(() => {
+    const target = DAY_TABS.find(d => d.key === activeDay)?.weekday
+    return groups
+      .filter(g => {
+        if (!g.event_date) return false
+        if (g.event_date < today) return false
+        const d = new Date(`${g.event_date}T12:00:00-05:00`).getDay()
+        return d === target
+      })
+      .sort((a, b) => (a.event_date || '').localeCompare(b.event_date || ''))
+  }, [groups, activeDay, today])
+
+  const counts = useMemo(() => {
+    const out = {}
+    for (const day of DAY_TABS) {
+      out[day.key] = groups
+        .filter(g => {
+          if (!g.event_date || g.event_date < today) return false
+          return new Date(`${g.event_date}T12:00:00-05:00`).getDay() === day.weekday
+        })
+        .reduce((sum, g) => sum + (g.group_members?.length || 0), 0)
+    }
+    return out
+  }, [groups, today])
 
   return (
     <main>
-      <h1>Tonight&apos;s Loops</h1>
-      <p style={{ color: '#888', fontSize: '13px', marginBottom: '16px' }}>
-        Clock: {now} · {today}
+      <h1>Loops</h1>
+      <p className="muted" style={{ marginBottom: '14px' }}>
+        Upcoming pickups by night · {now}
       </p>
 
-      {upcoming.length === 0 && (
-        <p style={{ color: '#888', textAlign: 'center', marginTop: '40px' }}>
-          No upcoming loops. New ones appear here when someone buys a ticket.
+      <div style={{
+        display: 'flex',
+        gap: '6px',
+        background: '#121215',
+        border: '1px solid #1e1e23',
+        borderRadius: '10px',
+        padding: '4px',
+        marginBottom: '16px',
+      }}>
+        {DAY_TABS.map(day => {
+          const active = activeDay === day.key
+          return (
+            <button
+              key={day.key}
+              onClick={() => setActiveDay(day.key)}
+              style={{
+                flex: 1,
+                background: active ? '#d4a333' : 'transparent',
+                color: active ? '#0a0a0b' : '#c8c8cc',
+                padding: '8px 12px',
+                fontWeight: active ? 600 : 500,
+                fontSize: '14px',
+              }}
+            >
+              {day.label}
+              <span style={{
+                marginLeft: '8px',
+                fontSize: '12px',
+                opacity: 0.7,
+              }}>
+                {counts[day.key] || 0}
+              </span>
+            </button>
+          )
+        })}
+      </div>
+
+      {filtered.length === 0 && (
+        <p className="muted" style={{ textAlign: 'center', marginTop: '40px' }}>
+          No upcoming {DAY_TABS.find(d => d.key === activeDay)?.label} loops yet.
         </p>
       )}
 
-      {upcoming.map(group => {
+      {filtered.map(group => {
         const schedule = Array.isArray(group.schedule) ? group.schedule : []
-        const currentIdx = currentStopIndex(schedule, now, group.event_date, today)
+        const isTonight = group.event_date === today
+        const currentIdx = isTonight ? currentStopIndex(schedule, now, group.event_date, today) : -1
         const members = group.group_members || []
         const membersByStop = new Map()
         for (const m of members) {
@@ -123,197 +188,199 @@ export default function Groups() {
           membersByStop.get(bucket).push(m)
         }
         const isEditing = editingSchedule === group.id
+        const isExpanded = expanded === group.id
 
         return (
           <div key={group.id} className="card">
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline' }}>
+            <div
+              onClick={() => setExpanded(isExpanded ? null : group.id)}
+              style={{ cursor: 'pointer' }}
+              className="row"
+            >
               <div>
-                <p style={{ fontWeight: 600, color: '#f0c040', fontSize: '15px' }}>{group.name}</p>
-                <p style={{ color: '#888', fontSize: '13px' }}>
-                  {group.event_date || 'No date'} · Pickup {group.pickup_time || 'TBD'}
+                <p style={{ fontWeight: 600, fontSize: '15px', color: '#e8e8ea' }}>
+                  {formatEventDate(group.event_date)}
+                  {isTonight && <span className="chip chip-gold" style={{ marginLeft: '8px' }}>LIVE</span>}
+                </p>
+                <p className="muted" style={{ fontSize: '12px' }}>
+                  Pickup {group.pickup_time || 'TBD'}
                 </p>
               </div>
-              <span style={{ color: '#888', fontSize: '13px' }}>
-                {members.length} rider{members.length === 1 ? '' : 's'}
-              </span>
+              <div style={{ display: 'flex', gap: '6px', alignItems: 'center' }}>
+                <span className="chip">{members.length} rider{members.length === 1 ? '' : 's'}</span>
+                <span className="muted" style={{ fontSize: '14px' }}>{isExpanded ? '▾' : '▸'}</span>
+              </div>
             </div>
 
-            {schedule.length === 0 ? (
-              <div style={{ marginTop: '10px' }}>
-                <button
-                  onClick={() => generateScheduleFor(group)}
-                  style={{ background: '#1a1a1a', color: '#f0c040', border: '1px solid #2a2a2a', fontSize: '13px', width: '100%' }}
-                >
-                  Generate 5-stop schedule from pickup time
-                </button>
-              </div>
-            ) : (
+            {isExpanded && (
               <>
-                <div style={{ display: 'flex', gap: '4px', margin: '12px 0 4px', overflowX: 'auto' }}>
-                  {schedule.map((stop, i) => {
-                    const active = i === currentIdx
-                    const past = currentIdx > i
-                    return (
-                      <div
-                        key={i}
-                        style={{
-                          flex: 1,
-                          minWidth: '80px',
-                          textAlign: 'center',
-                          padding: '8px 6px',
-                          borderRadius: '8px',
-                          background: active ? '#f0c040' : past ? '#1a2216' : '#1a1a1a',
-                          color: active ? '#0d0d0d' : past ? '#4aa84a' : '#888',
-                          border: active ? '1px solid #f0c040' : '1px solid #2a2a2a',
-                          fontSize: '11px',
-                          fontWeight: active ? 700 : 500,
-                        }}
-                      >
-                        <div style={{ fontSize: '10px', textTransform: 'uppercase' }}>{formatStopTime(stop.start_time)}</div>
-                        <div style={{ marginTop: '2px' }}>{stop.name}</div>
-                      </div>
-                    )
-                  })}
-                </div>
-                <button
-                  onClick={() => isEditing ? setEditingSchedule(null) : startEditSchedule(group)}
-                  style={{ background: 'none', color: '#888', fontSize: '12px', padding: '4px 0', marginBottom: '8px' }}
-                >
-                  {isEditing ? 'Cancel edit' : '✎ Edit schedule'}
-                </button>
-
-                {isEditing && (
-                  <div style={{ border: '1px solid #2a2a2a', borderRadius: '8px', padding: '10px', marginBottom: '12px' }}>
-                    {scheduleDraft.map((stop, i) => (
-                      <div key={i} style={{ display: 'flex', gap: '6px', marginBottom: '6px' }}>
-                        <input
-                          style={{ flex: 2, marginBottom: 0, fontSize: '13px' }}
-                          value={stop.name}
-                          onChange={e => {
-                            const next = [...scheduleDraft]
-                            next[i] = { ...next[i], name: e.target.value }
-                            setScheduleDraft(next)
-                          }}
-                        />
-                        <input
-                          style={{ flex: 1, marginBottom: 0, fontSize: '13px' }}
-                          placeholder="HH:MM"
-                          value={stop.start_time}
-                          onChange={e => {
-                            const next = [...scheduleDraft]
-                            next[i] = { ...next[i], start_time: e.target.value }
-                            setScheduleDraft(next)
-                          }}
-                        />
-                      </div>
-                    ))}
-                    <button className="btn-primary" onClick={() => saveSchedule(group)}>Save Schedule</button>
+                {schedule.length === 0 ? (
+                  <div style={{ marginTop: '12px' }}>
+                    <button className="btn-subtle" style={{ width: '100%' }} onClick={() => generateScheduleFor(group)}>
+                      Generate 5-stop schedule
+                    </button>
                   </div>
-                )}
-
-                {schedule.map((stop, i) => {
-                  const atStop = membersByStop.get(i) || []
-                  const key = `${group.id}:${i}`
-                  const isActive = i === currentIdx
-                  return (
-                    <div
-                      key={i}
-                      style={{
-                        marginTop: '10px',
-                        borderTop: '1px solid #2a2a2a',
-                        paddingTop: '10px',
-                      }}
+                ) : (
+                  <>
+                    <div style={{ display: 'flex', gap: '4px', margin: '12px 0 4px', overflowX: 'auto' }}>
+                      {schedule.map((stop, i) => {
+                        const active = i === currentIdx
+                        const past = currentIdx > i
+                        return (
+                          <div
+                            key={i}
+                            style={{
+                              flex: 1,
+                              minWidth: '72px',
+                              textAlign: 'center',
+                              padding: '8px 6px',
+                              borderRadius: '8px',
+                              background: active ? '#d4a333' : past ? '#152218' : '#16161a',
+                              color: active ? '#0a0a0b' : past ? '#6fbf7f' : '#8a8a90',
+                              border: active ? '1px solid #d4a333' : '1px solid #1e1e23',
+                              fontSize: '11px',
+                              fontWeight: active ? 700 : 500,
+                            }}
+                          >
+                            <div className="tiny" style={{ color: active ? '#0a0a0b' : undefined }}>{formatStopTime(stop.start_time)}</div>
+                            <div style={{ marginTop: '2px', color: active ? '#0a0a0b' : past ? '#6fbf7f' : '#c8c8cc' }}>{stop.name}</div>
+                          </div>
+                        )
+                      })}
+                    </div>
+                    <button
+                      className="btn-link"
+                      onClick={() => isEditing ? setEditingSchedule(null) : startEditSchedule(group)}
                     >
-                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline' }}>
-                        <div>
-                          <p style={{ fontWeight: 600, color: isActive ? '#f0c040' : '#f0f0f0', fontSize: '14px' }}>
-                            {isActive && '🟢 '}{stop.name}
-                          </p>
-                          <p style={{ color: '#666', fontSize: '12px' }}>{formatStopTime(stop.start_time)}</p>
-                        </div>
-                        <span style={{ color: '#666', fontSize: '12px' }}>
-                          {atStop.length} here
-                        </span>
-                      </div>
+                      {isEditing ? 'Cancel edit' : 'Edit schedule'}
+                    </button>
 
-                      {atStop.map(m => (
+                    {isEditing && (
+                      <div style={{ border: '1px solid #1e1e23', borderRadius: '8px', padding: '10px', margin: '8px 0 12px' }}>
+                        {scheduleDraft.map((stop, i) => (
+                          <div key={i} style={{ display: 'flex', gap: '6px', marginBottom: '6px' }}>
+                            <input
+                              style={{ flex: 2, marginBottom: 0, fontSize: '13px' }}
+                              value={stop.name}
+                              onChange={e => {
+                                const next = [...scheduleDraft]
+                                next[i] = { ...next[i], name: e.target.value }
+                                setScheduleDraft(next)
+                              }}
+                            />
+                            <input
+                              style={{ flex: 1, marginBottom: 0, fontSize: '13px' }}
+                              placeholder="HH:MM"
+                              value={stop.start_time}
+                              onChange={e => {
+                                const next = [...scheduleDraft]
+                                next[i] = { ...next[i], start_time: e.target.value }
+                                setScheduleDraft(next)
+                              }}
+                            />
+                          </div>
+                        ))}
+                        <button className="btn-primary" onClick={() => saveSchedule(group)}>Save Schedule</button>
+                      </div>
+                    )}
+
+                    {schedule.map((stop, i) => {
+                      const atStop = membersByStop.get(i) || []
+                      if (!isTonight && atStop.length === 0) return null
+                      const key = `${group.id}:${i}`
+                      const isActive = i === currentIdx
+                      return (
                         <div
-                          key={m.id}
+                          key={i}
                           style={{
-                            padding: '6px 0',
-                            borderBottom: '1px solid #222',
-                            fontSize: '14px',
-                            display: 'flex',
-                            justifyContent: 'space-between',
-                            alignItems: 'center',
-                            gap: '8px',
+                            marginTop: '12px',
+                            paddingTop: '12px',
+                            borderTop: '1px solid #1e1e23',
                           }}
                         >
-                          <span style={{ minWidth: 0, flex: 1 }}>
-                            <span style={{ fontWeight: 500 }}>
-                              {m.contacts?.first_name} {m.contacts?.last_name}
-                            </span>
-                            {m.current_stop_index != null && (
-                              <span style={{ marginLeft: '6px', fontSize: '10px', color: '#f0c040', border: '1px solid #3a3220', padding: '1px 5px', borderRadius: '8px' }}>
-                                override
+                          <div className="row">
+                            <div>
+                              <p style={{ fontWeight: 600, color: isActive ? '#d4a333' : '#e8e8ea', fontSize: '14px' }}>
+                                {stop.name}
+                              </p>
+                              <p className="tiny">{formatStopTime(stop.start_time)}</p>
+                            </div>
+                            <span className="chip">{atStop.length}</span>
+                          </div>
+
+                          {atStop.map(m => (
+                            <div
+                              key={m.id}
+                              style={{
+                                padding: '8px 0',
+                                borderTop: '1px solid #1a1a1f',
+                                display: 'flex',
+                                justifyContent: 'space-between',
+                                alignItems: 'center',
+                                gap: '8px',
+                                fontSize: '13px',
+                              }}
+                            >
+                              <span style={{ minWidth: 0, flex: 1, color: '#e8e8ea' }}>
+                                {m.contacts?.first_name} {m.contacts?.last_name}
+                                {m.current_stop_index != null && (
+                                  <span className="chip chip-gold" style={{ marginLeft: '6px', fontSize: '10px', padding: '1px 6px' }}>
+                                    override
+                                  </span>
+                                )}
                               </span>
-                            )}
-                          </span>
-                          {movingRider === m.id ? (
-                            <select
-                              autoFocus
-                              onBlur={() => setMovingRider(null)}
-                              onChange={e => moveRider(m.id, e.target.value === '' ? null : Number(e.target.value))}
-                              style={{ width: 'auto', marginBottom: 0, fontSize: '12px', padding: '4px 6px' }}
-                            >
-                              <option value="">— auto (follow group) —</option>
-                              {schedule.map((s, si) => (
-                                <option key={si} value={si}>{s.name} ({formatStopTime(s.start_time)})</option>
-                              ))}
-                            </select>
-                          ) : (
-                            <button
-                              onClick={() => setMovingRider(m.id)}
-                              style={{ background: 'none', color: '#888', fontSize: '12px', padding: '2px 6px' }}
-                            >
-                              Move →
-                            </button>
+                              {movingRider === m.id ? (
+                                <select
+                                  autoFocus
+                                  onBlur={() => setMovingRider(null)}
+                                  onChange={e => moveRider(m.id, e.target.value === '' ? null : Number(e.target.value))}
+                                  style={{ width: 'auto', marginBottom: 0, fontSize: '12px', padding: '4px 6px' }}
+                                >
+                                  <option value="">— auto —</option>
+                                  {schedule.map((s, si) => (
+                                    <option key={si} value={si}>{s.name}</option>
+                                  ))}
+                                </select>
+                              ) : (
+                                <button className="btn-link" onClick={() => setMovingRider(m.id)}>
+                                  Move
+                                </button>
+                              )}
+                            </div>
+                          ))}
+
+                          {isTonight && atStop.length > 0 && (
+                            <div style={{ marginTop: '10px' }}>
+                              <textarea
+                                rows={2}
+                                placeholder={`Hey {first_name}, we're at ${stop.name}...`}
+                                value={stopMessage[key] || ''}
+                                onChange={e => setStopMessage({ ...stopMessage, [key]: e.target.value })}
+                              />
+                              <button
+                                className="btn-primary"
+                                onClick={() => sendStopSMS(group, i, atStop)}
+                                disabled={sending[key]}
+                              >
+                                {sending[key] ? 'Sending…' : `Text ${atStop.length} at ${stop.name}`}
+                              </button>
+                            </div>
                           )}
                         </div>
-                      ))}
+                      )
+                    })}
 
-                      {atStop.length > 0 && (
-                        <div style={{ marginTop: '8px' }}>
-                          <textarea
-                            rows={2}
-                            placeholder={`Hey {first_name}, we're at ${stop.name}...`}
-                            value={stopMessage[key] || ''}
-                            onChange={e => setStopMessage({ ...stopMessage, [key]: e.target.value })}
-                          />
-                          <button
-                            className="btn-primary"
-                            onClick={() => sendStopSMS(group, i, atStop)}
-                            disabled={sending[key]}
-                          >
-                            {sending[key] ? 'Sending…' : `Text ${atStop.length} at ${stop.name}`}
-                          </button>
-                        </div>
-                      )}
-                    </div>
-                  )
-                })}
-
-                {membersByStop.get('not_started')?.length > 0 && (
-                  <div style={{ marginTop: '10px', borderTop: '1px solid #2a2a2a', paddingTop: '10px' }}>
-                    <p style={{ color: '#888', fontSize: '13px', marginBottom: '4px' }}>
-                      Not started yet ({membersByStop.get('not_started').length})
-                    </p>
-                    {membersByStop.get('not_started').map(m => (
-                      <div key={m.id} style={{ padding: '4px 0', fontSize: '13px', color: '#aaa' }}>
-                        {m.contacts?.first_name} {m.contacts?.last_name}
+                    {!isTonight && members.length > 0 && (
+                      <div style={{ marginTop: '12px', paddingTop: '12px', borderTop: '1px solid #1e1e23' }}>
+                        <h3 style={{ marginBottom: '6px' }}>Riders ({members.length})</h3>
+                        {members.map(m => (
+                          <div key={m.id} style={{ padding: '6px 0', fontSize: '13px', color: '#c8c8cc', borderTop: '1px solid #1a1a1f' }}>
+                            {m.contacts?.first_name} {m.contacts?.last_name}
+                          </div>
+                        ))}
                       </div>
-                    ))}
-                  </div>
+                    )}
+                  </>
                 )}
               </>
             )}
@@ -322,4 +389,30 @@ export default function Groups() {
       })}
     </main>
   )
+}
+
+function initialDay() {
+  try {
+    const parts = new Intl.DateTimeFormat('en-US', {
+      timeZone: 'America/Indiana/Indianapolis',
+      weekday: 'short',
+    }).format(new Date())
+    if (parts === 'Sat') return 'saturday'
+  } catch {}
+  return 'friday'
+}
+
+function formatEventDate(iso) {
+  if (!iso) return 'No date'
+  try {
+    const d = new Date(`${iso}T12:00:00-05:00`)
+    return d.toLocaleDateString('en-US', {
+      weekday: 'long',
+      month: 'short',
+      day: 'numeric',
+      timeZone: 'America/Indiana/Indianapolis',
+    })
+  } catch {
+    return iso
+  }
 }
