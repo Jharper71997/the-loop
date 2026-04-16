@@ -8,7 +8,7 @@ const supabase = createClient(
 export async function POST(req) {
   const body = await req.json()
 
-  if (body.event !== 'order.placed') {
+  if (body.event !== 'order.created') {
     return Response.json({ received: true })
   }
 
