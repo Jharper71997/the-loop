@@ -13,7 +13,6 @@ export default function Home() {
   const [assignedGroup, setAssignedGroup] = useState('')
   const [editing, setEditing] = useState(false)
   const [editForm, setEditForm] = useState({})
-  const [showPast, setShowPast] = useState(false)
   const [importing, setImporting] = useState(false)
   const [importResult, setImportResult] = useState(null)
 
@@ -78,15 +77,31 @@ export default function Home() {
   const sections = useMemo(() => {
     const contactById = new Map(contacts.map(c => [c.id, c]))
     const groupById = new Map(groups.map(g => [g.id, g]))
+
     const ridersByGroup = new Map()
-    const assignedIds = new Set()
+    const groupDatesByContact = new Map()
 
     for (const m of members) {
       const rider = contactById.get(m.contact_id)
-      if (!rider) continue
-      assignedIds.add(rider.id)
+      const group = groupById.get(m.group_id)
+      if (!rider || !group) continue
+
       if (!ridersByGroup.has(m.group_id)) ridersByGroup.set(m.group_id, [])
       ridersByGroup.get(m.group_id).push(rider)
+
+      if (!groupDatesByContact.has(rider.id)) groupDatesByContact.set(rider.id, [])
+      groupDatesByContact.get(rider.id).push(group.event_date)
+    }
+
+    const rideStats = new Map()
+    for (const [contactId, dates] of groupDatesByContact) {
+      const pastDates = dates.filter(d => d && d < today).sort()
+      const upcomingDates = dates.filter(d => !d || d >= today).sort()
+      rideStats.set(contactId, {
+        rideCount: pastDates.length,
+        lastRide: pastDates.length ? pastDates[pastDates.length - 1] : null,
+        hasUpcoming: upcomingDates.length > 0,
+      })
     }
 
     const q = search.trim().toLowerCase()
@@ -94,29 +109,27 @@ export default function Home() {
       !q || `${r.first_name || ''} ${r.last_name || ''} ${r.phone || ''} ${r.email || ''}`
         .toLowerCase().includes(q)
 
-    const nights = Array.from(ridersByGroup.entries())
+    const upcoming = Array.from(ridersByGroup.entries())
       .map(([groupId, riders]) => ({
         group: groupById.get(groupId),
-        riders: riders.filter(matches).sort((a, b) =>
-          (a.last_name || '').localeCompare(b.last_name || '')
-        ),
+        riders: riders
+          .filter(matches)
+          .sort((a, b) => (a.last_name || '').localeCompare(b.last_name || '')),
       }))
-      .filter(n => n.group && n.riders.length)
-
-    const upcoming = nights
-      .filter(n => !n.group.event_date || n.group.event_date >= today)
+      .filter(n => n.group && (!n.group.event_date || n.group.event_date >= today) && n.riders.length)
       .sort((a, b) => (a.group.event_date || '').localeCompare(b.group.event_date || ''))
 
-    const past = nights
-      .filter(n => n.group.event_date && n.group.event_date < today)
-      .sort((a, b) => (b.group.event_date || '').localeCompare(a.group.event_date || ''))
-
-    const unassigned = contacts
-      .filter(c => !assignedIds.has(c.id))
+    const allRiders = contacts
       .filter(matches)
-      .sort((a, b) => (a.last_name || '').localeCompare(b.last_name || ''))
+      .map(c => ({ ...c, ...(rideStats.get(c.id) || { rideCount: 0, lastRide: null, hasUpcoming: false }) }))
+      .sort((a, b) => {
+        if (a.lastRide && b.lastRide) return b.lastRide.localeCompare(a.lastRide)
+        if (a.lastRide) return -1
+        if (b.lastRide) return 1
+        return (a.last_name || '').localeCompare(b.last_name || '')
+      })
 
-    return { upcoming, past, unassigned, total: contacts.length }
+    return { upcoming, allRiders, total: contacts.length }
   }, [contacts, groups, members, search, today])
 
   if (selected) {
@@ -219,9 +232,9 @@ export default function Home() {
       </div>
 
       {sections.upcoming.length > 0 && (
-        <section style={{ marginBottom: '20px' }}>
-          <h2 style={{ fontSize: '14px', textTransform: 'uppercase', letterSpacing: '0.5px', color: '#888' }}>
-            Upcoming Nights
+        <section style={{ marginBottom: '24px' }}>
+          <h2 style={{ fontSize: '14px', textTransform: 'uppercase', letterSpacing: '0.5px', color: '#f0c040' }}>
+            🟢 Active — Upcoming
           </h2>
           {sections.upcoming.map(n => (
             <NightSection key={n.group.id} night={n} onSelect={setSelected} />
@@ -229,42 +242,18 @@ export default function Home() {
         </section>
       )}
 
-      {sections.past.length > 0 && (
-        <section style={{ marginBottom: '20px' }}>
-          <button
-            onClick={() => setShowPast(v => !v)}
-            style={{
-              background: 'none',
-              color: '#888',
-              fontSize: '14px',
-              textTransform: 'uppercase',
-              letterSpacing: '0.5px',
-              padding: '0',
-              marginBottom: '8px',
-              width: '100%',
-              textAlign: 'left',
-            }}
-          >
-            {showPast ? '▼' : '▶'} Past Nights ({sections.past.length})
-          </button>
-          {showPast && sections.past.map(n => (
-            <NightSection key={n.group.id} night={n} onSelect={setSelected} />
-          ))}
-        </section>
-      )}
-
-      {sections.unassigned.length > 0 && (
+      {sections.allRiders.length > 0 && (
         <section style={{ marginBottom: '20px' }}>
           <h2 style={{ fontSize: '14px', textTransform: 'uppercase', letterSpacing: '0.5px', color: '#888' }}>
-            Unassigned ({sections.unassigned.length})
+            All Riders ({sections.allRiders.length})
           </h2>
-          {sections.unassigned.map(c => (
-            <RiderRow key={c.id} rider={c} onSelect={setSelected} />
+          {sections.allRiders.map(r => (
+            <RiderRow key={r.id} rider={r} onSelect={setSelected} />
           ))}
         </section>
       )}
 
-      {sections.upcoming.length === 0 && sections.past.length === 0 && sections.unassigned.length === 0 && (
+      {sections.upcoming.length === 0 && sections.allRiders.length === 0 && (
         <p style={{ color: '#aaa', textAlign: 'center', marginTop: '40px' }}>
           {search ? 'No riders match that search.' : 'No riders yet. Try importing from Ticket Tailor above.'}
         </p>
@@ -316,10 +305,44 @@ function NightSection({ night, onSelect }) {
 }
 
 function RiderRow({ rider, onSelect }) {
+  const tag = rider.hasUpcoming
+    ? { label: 'Booked', color: '#4aa84a', bg: '#1a2a1a' }
+    : rider.rideCount > 0
+      ? { label: `${rider.rideCount} ride${rider.rideCount === 1 ? '' : 's'}`, color: '#f0c040', bg: '#2a2316' }
+      : { label: 'New', color: '#888', bg: '#1f1f1f' }
+
   return (
-    <div className="card" onClick={() => onSelect(rider)} style={{ cursor: 'pointer' }}>
-      <p className="rider-name">{rider.first_name} {rider.last_name}</p>
-      <p className="rider-phone">{rider.phone}</p>
+    <div
+      className="card"
+      onClick={() => onSelect(rider)}
+      style={{ cursor: 'pointer', padding: '12px 14px' }}
+    >
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '8px' }}>
+        <div style={{ minWidth: 0, flex: 1 }}>
+          <p className="rider-name" style={{ fontSize: '15px' }}>
+            {rider.first_name} {rider.last_name}
+          </p>
+          <p className="rider-phone">
+            {rider.phone}
+            {rider.lastRide && (
+              <span style={{ color: '#666', marginLeft: '8px' }}>
+                · last rode {formatEventDate(rider.lastRide)}
+              </span>
+            )}
+          </p>
+        </div>
+        <span style={{
+          background: tag.bg,
+          color: tag.color,
+          fontSize: '11px',
+          fontWeight: 600,
+          padding: '3px 8px',
+          borderRadius: '10px',
+          whiteSpace: 'nowrap',
+        }}>
+          {tag.label}
+        </span>
+      </div>
     </div>
   )
 }
