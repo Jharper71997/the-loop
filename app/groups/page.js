@@ -1,16 +1,6 @@
 'use client'
 
 import { useEffect, useMemo, useState } from 'react'
-import {
-  DndContext,
-  PointerSensor,
-  TouchSensor,
-  useSensor,
-  useSensors,
-  useDraggable,
-  useDroppable,
-  DragOverlay,
-} from '@dnd-kit/core'
 import { supabase } from '@/lib/supabase'
 import { personalize } from '@/lib/personalize'
 import {
@@ -36,13 +26,8 @@ export default function Groups() {
   const [stopMessage, setStopMessage] = useState({})
   const [sending, setSending] = useState({})
   const [expanded, setExpanded] = useState(null)
-  const [openStop, setOpenStop] = useState(null) // `${group.id}:${stopIdx}`
-  const [dragging, setDragging] = useState(null)
-
-  const sensors = useSensors(
-    useSensor(PointerSensor, { activationConstraint: { distance: 4 } }),
-    useSensor(TouchSensor, { activationConstraint: { delay: 120, tolerance: 6 } })
-  )
+  const [openStop, setOpenStop] = useState(null)
+  const [pickerMember, setPickerMember] = useState(null)
 
   useEffect(() => {
     fetchGroups()
@@ -90,22 +75,11 @@ export default function Groups() {
         m.id === memberId ? { ...m, current_stop_index: stopIdx } : m
       ),
     })))
+    setPickerMember(null)
     await supabase
       .from('group_members')
       .update({ current_stop_index: stopIdx })
       .eq('id', memberId)
-  }
-
-  function onDragEnd(event) {
-    setDragging(null)
-    const memberId = event.active?.id
-    const dest = event.over?.id
-    if (!memberId || !dest) return
-    const [, idxStr] = String(dest).split(':')
-    if (idxStr === undefined) return
-    const idx = idxStr === 'auto' ? null : Number(idxStr)
-    if (idx !== null && Number.isNaN(idx)) return
-    moveRider(memberId, idx)
   }
 
   async function sendStopSMS(group, stopIdx, riders) {
@@ -157,27 +131,11 @@ export default function Groups() {
     return out
   }, [groups, today])
 
-  const dragRiderName = useMemo(() => {
-    if (!dragging) return null
-    for (const g of groups) {
-      for (const m of g.group_members || []) {
-        if (m.id === dragging) return `${m.contacts?.first_name || ''} ${m.contacts?.last_name || ''}`.trim()
-      }
-    }
-    return null
-  }, [dragging, groups])
-
   return (
-    <DndContext
-      sensors={sensors}
-      onDragStart={e => setDragging(e.active?.id)}
-      onDragCancel={() => setDragging(null)}
-      onDragEnd={onDragEnd}
-    >
     <main>
       <h1>Loops</h1>
       <p className="muted" style={{ marginBottom: '14px' }}>
-        Upcoming pickups by night · {now} · Drag a rider between stops to reassign.
+        Upcoming pickups by night · {now}
       </p>
 
       <div style={{
@@ -339,7 +297,7 @@ export default function Groups() {
                         const isActive = i === currentIdx
                         const isOpen = openStop === key
                         return (
-                          <StopDropZone key={i} id={key} isActive={isActive}>
+                          <StopCard key={i} isActive={isActive}>
                             <div
                               onClick={() => setOpenStop(isOpen ? null : key)}
                               style={{
@@ -366,13 +324,20 @@ export default function Groups() {
                               <div style={{ marginTop: '10px', paddingTop: '8px', borderTop: '1px solid #1a1a1f' }}>
                                 {atStop.length === 0 ? (
                                   <p className="muted" style={{ fontSize: '13px', padding: '8px 0' }}>
-                                    No one at this stop yet. Drag a rider onto this card to assign.
+                                    No one starting at this stop.
                                   </p>
                                 ) : (
                                   <>
-                                    <p className="tiny" style={{ marginBottom: '4px' }}>Starting here · drag to another stop to reassign</p>
+                                    <p className="tiny" style={{ marginBottom: '4px' }}>Tap a rider to move them to another stop</p>
                                     {atStop.map(m => (
-                                      <DraggableRider key={m.id} member={m} schedule={schedule} onMove={moveRider} />
+                                      <RiderRow
+                                        key={m.id}
+                                        member={m}
+                                        schedule={schedule}
+                                        pickerOpen={pickerMember === m.id}
+                                        onOpenPicker={() => setPickerMember(pickerMember === m.id ? null : m.id)}
+                                        onMove={moveRider}
+                                      />
                                     ))}
                                   </>
                                 )}
@@ -398,13 +363,9 @@ export default function Groups() {
                                 </div>
                               </div>
                             )}
-                          </StopDropZone>
+                          </StopCard>
                         )
                       })}
-                    </div>
-
-                    <div style={{ marginTop: '10px' }}>
-                      <AutoDropZone id={`${group.id}:auto`} />
                     </div>
 
                     {!isTonight && members.length > 0 && (
@@ -425,115 +386,93 @@ export default function Groups() {
         )
       })}
     </main>
-    <DragOverlay>
-      {dragRiderName ? (
-        <div style={{
-          background: '#1c1c22',
-          color: '#e8e8ea',
-          border: '1px solid #d4a333',
-          borderRadius: '10px',
-          padding: '8px 12px',
-          fontSize: '14px',
-          fontWeight: 500,
-          boxShadow: '0 8px 24px rgba(0,0,0,0.6)',
-        }}>
-          {dragRiderName}
-        </div>
-      ) : null}
-    </DragOverlay>
-    </DndContext>
   )
 }
 
-function DraggableRider({ member, schedule, onMove }) {
-  const { attributes, listeners, setNodeRef, isDragging } = useDraggable({ id: member.id })
+function RiderRow({ member, schedule, pickerOpen, onOpenPicker, onMove }) {
+  const moved = member.current_stop_index != null
   return (
-    <div
-      style={{
-        padding: '8px 0',
-        borderTop: '1px solid #1a1a1f',
-        display: 'flex',
-        justifyContent: 'space-between',
-        alignItems: 'center',
-        gap: '8px',
-        fontSize: '13px',
-        opacity: isDragging ? 0.35 : 1,
-      }}
-    >
+    <>
       <div
-        ref={setNodeRef}
-        {...listeners}
-        {...attributes}
+        onClick={onOpenPicker}
         style={{
-          minWidth: 0,
-          flex: 1,
-          color: '#e8e8ea',
-          cursor: 'grab',
-          touchAction: 'none',
-          padding: '2px 4px',
-          margin: '-2px -4px',
+          padding: '10px 0',
+          borderTop: '1px solid #1a1a1f',
           display: 'flex',
+          justifyContent: 'space-between',
           alignItems: 'center',
-          gap: '6px',
+          gap: '8px',
+          fontSize: '14px',
+          cursor: 'pointer',
         }}
       >
-        <span className="muted" style={{ fontSize: '14px' }}>⋮⋮</span>
-        <span style={{ minWidth: 0, flex: 1 }}>
+        <span style={{ color: '#e8e8ea' }}>
           {member.contacts?.first_name} {member.contacts?.last_name}
         </span>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+          {moved && <span className="chip chip-gold" style={{ fontSize: '10px', padding: '1px 6px' }}>moved</span>}
+          <span className="muted" style={{ fontSize: '12px' }}>Move ▸</span>
+        </div>
       </div>
-      {member.current_stop_index != null && (
-        <span className="chip chip-gold" style={{ fontSize: '10px', padding: '1px 6px' }}>
-          moved
-        </span>
+      {pickerOpen && (
+        <div style={{
+          display: 'grid',
+          gridTemplateColumns: '1fr 1fr',
+          gap: '6px',
+          padding: '10px',
+          background: '#16161a',
+          border: '1px solid #24242a',
+          borderRadius: '10px',
+          margin: '6px 0',
+        }}>
+          {schedule.map((s, si) => {
+            const selected = si === member.current_stop_index
+            return (
+              <button
+                key={si}
+                onClick={() => onMove(member.id, si)}
+                style={{
+                  background: selected ? '#d4a333' : '#1c1c22',
+                  color: selected ? '#0a0a0b' : '#e8e8ea',
+                  border: selected ? '1px solid #d4a333' : '1px solid #2a2a2f',
+                  padding: '10px 8px',
+                  fontSize: '13px',
+                  fontWeight: selected ? 600 : 500,
+                  textAlign: 'left',
+                }}
+              >
+                {s.name}
+              </button>
+            )
+          })}
+          <button
+            onClick={() => onMove(member.id, null)}
+            style={{
+              gridColumn: '1 / -1',
+              background: '#1c1c22',
+              color: '#8a8a90',
+              border: '1px solid #2a2a2f',
+              padding: '8px',
+              fontSize: '12px',
+            }}
+          >
+            Clear (follow group)
+          </button>
+        </div>
       )}
-      <select
-        value={member.current_stop_index ?? ''}
-        onChange={e => onMove(member.id, e.target.value === '' ? null : Number(e.target.value))}
-        onPointerDown={e => e.stopPropagation()}
-        style={{ width: 'auto', marginBottom: 0, fontSize: '11px', padding: '2px 4px' }}
-      >
-        <option value="">auto</option>
-        {schedule.map((s, si) => (
-          <option key={si} value={si}>{s.name}</option>
-        ))}
-      </select>
-    </div>
+    </>
   )
 }
 
-function AutoDropZone({ id }) {
-  const { setNodeRef, isOver } = useDroppable({ id })
+function StopCard({ isActive, children }) {
   return (
     <div
-      ref={setNodeRef}
-      style={{
-        padding: '8px 12px',
-        border: isOver ? '1px dashed #d4a333' : '1px dashed #2a2a2f',
-        borderRadius: '8px',
-        textAlign: 'center',
-        color: '#6f6f76',
-        fontSize: '11px',
-        background: isOver ? 'rgba(212, 163, 51, 0.08)' : 'transparent',
-      }}
-    >
-      Drop here to clear override (auto-follow group)
-    </div>
-  )
-}
-
-function StopDropZone({ id, isActive, children }) {
-  const { setNodeRef, isOver } = useDroppable({ id })
-  return (
-    <div
-      ref={setNodeRef}
       style={{
         padding: '12px 14px',
         marginBottom: '6px',
         borderRadius: '10px',
-        border: isOver ? '1px dashed #d4a333' : isActive ? '1px solid #d4a333' : '1px solid #1e1e23',
-        background: isOver ? 'rgba(212, 163, 51, 0.08)' : '#121215',
-        transition: 'background 0.12s, border-color 0.12s',
+        border: isActive ? '1px solid #d4a333' : '1px solid #1e1e23',
+        background: '#121215',
       }}
     >
       {children}
