@@ -1,19 +1,30 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { supabase } from '@/lib/supabase'
 import { personalize } from '@/lib/personalize'
+import {
+  buildDefaultSchedule,
+  currentStopIndex,
+  formatStopTime,
+  nowInTZ,
+  todayInTZ,
+} from '@/lib/schedule'
 
 export default function Groups() {
   const [groups, setGroups] = useState([])
-  const [newGroup, setNewGroup] = useState({ name: '', pickup_time: '' })
-  const [groupMessage, setGroupMessage] = useState({})
+  const [now, setNow] = useState(() => nowInTZ())
+  const [today] = useState(() => todayInTZ())
+  const [editingSchedule, setEditingSchedule] = useState(null)
+  const [scheduleDraft, setScheduleDraft] = useState([])
+  const [stopMessage, setStopMessage] = useState({})
   const [sending, setSending] = useState({})
-  const [editingGroup, setEditingGroup] = useState(null)
-  const [groupEdit, setGroupEdit] = useState({})
+  const [movingRider, setMovingRider] = useState(null)
 
   useEffect(() => {
     fetchGroups()
+    const t = setInterval(() => setNow(nowInTZ()), 60000)
+    return () => clearInterval(t)
   }, [])
 
   async function fetchGroups() {
@@ -23,184 +34,292 @@ export default function Groups() {
         *,
         group_members (
           id,
-          contacts (
-            id, first_name, last_name, phone
-          )
+          current_stop_index,
+          contacts ( id, first_name, last_name, phone )
         )
       `)
-      .order('pickup_time')
+      .order('event_date')
     setGroups(data || [])
   }
 
-  async function createGroup() {
-    if (!newGroup.name) return
-    await supabase.from('groups').insert([newGroup])
-    setNewGroup({ name: '', pickup_time: '' })
+  async function generateScheduleFor(group) {
+    const schedule = buildDefaultSchedule(group.pickup_time || '19:30', 'Angry Ginger')
+    if (!schedule) return alert('Set a pickup time on this group first.')
+    await supabase.from('groups').update({ schedule }).eq('id', group.id)
     fetchGroups()
   }
 
-  async function saveGroupEdit(id) {
+  function startEditSchedule(group) {
+    setEditingSchedule(group.id)
+    setScheduleDraft(group.schedule || buildDefaultSchedule(group.pickup_time || '19:30', 'Stop 1') || [])
+  }
+
+  async function saveSchedule(group) {
+    await supabase.from('groups').update({ schedule: scheduleDraft }).eq('id', group.id)
+    setEditingSchedule(null)
+    fetchGroups()
+  }
+
+  async function moveRider(memberId, stopIdx) {
     await supabase
-      .from('groups')
-      .update({ name: groupEdit.name, pickup_time: groupEdit.pickup_time })
-      .eq('id', id)
-    setEditingGroup(null)
+      .from('group_members')
+      .update({ current_stop_index: stopIdx })
+      .eq('id', memberId)
+    setMovingRider(null)
     fetchGroups()
   }
 
-  async function deleteGroup(id) {
-    if (!confirm('Delete this group?')) return
-    await supabase.from('group_members').delete().eq('group_id', id)
-    await supabase.from('groups').delete().eq('id', id)
-    fetchGroups()
-  }
-
-  async function removeMember(memberId) {
-    if (!confirm('Remove this rider from the group?')) return
-    await supabase.from('group_members').delete().eq('id', memberId)
-    fetchGroups()
-  }
-
-  async function sendGroupSMS(group) {
-    const template = groupMessage[group.id]
+  async function sendStopSMS(group, stopIdx, riders) {
+    const key = `${group.id}:${stopIdx}`
+    const template = stopMessage[key]
     if (!template) return alert('Type a message first')
+    const withPhones = riders.filter(r => r.contacts?.phone)
+    if (!withPhones.length) return alert('No riders with phones at this stop.')
+    if (!confirm(`Send to ${withPhones.length} rider${withPhones.length === 1 ? '' : 's'} at this stop?`)) return
 
-    const riders = (group.group_members || [])
-      .map(m => m.contacts)
-      .filter(r => r && r.phone)
-
-    if (riders.length === 0) return alert('No riders with phone numbers in this group')
-
-    const count = riders.length
-    if (!confirm(`Send a personalized text to ${count} rider${count === 1 ? '' : 's'}?\n\nEach person gets their own text from your number.`)) return
-
-    setSending({ ...sending, [group.id]: true })
-
+    setSending(s => ({ ...s, [key]: true }))
     const results = await Promise.all(
-      riders.map(rider =>
+      withPhones.map(m =>
         fetch('/api/send-sms', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ to: rider.phone, message: personalize(template, rider) })
+          body: JSON.stringify({ to: m.contacts.phone, message: personalize(template, m.contacts) }),
         }).then(r => r.json()).catch(e => ({ success: false, error: e.message }))
       )
     )
-
-    setSending({ ...sending, [group.id]: false })
+    setSending(s => ({ ...s, [key]: false }))
     const failed = results.filter(r => !r.success).length
-    if (failed === 0) {
-      alert(`Sent to ${count} rider${count === 1 ? '' : 's'}!`)
-      setGroupMessage({ ...groupMessage, [group.id]: '' })
-    } else {
-      alert(`Sent to ${count - failed} of ${count}. ${failed} failed.`)
-    }
+    alert(failed === 0 ? `Sent to ${withPhones.length}!` : `Sent ${withPhones.length - failed} of ${withPhones.length}. ${failed} failed.`)
+    if (failed === 0) setStopMessage(m => ({ ...m, [key]: '' }))
   }
+
+  const upcoming = useMemo(
+    () => groups.filter(g => !g.event_date || g.event_date >= today),
+    [groups, today]
+  )
 
   return (
     <main>
-      <h1>Groups</h1>
+      <h1>Tonight&apos;s Loops</h1>
+      <p style={{ color: '#888', fontSize: '13px', marginBottom: '16px' }}>
+        Clock: {now} · {today}
+      </p>
 
-      <div className="card">
-        <h3>New Group</h3>
-        <input
-          placeholder="Group name (e.g. 7pm Riders)"
-          value={newGroup.name}
-          onChange={e => setNewGroup({ ...newGroup, name: e.target.value })}
-        />
-        <input
-          placeholder="Pickup time (e.g. 7:00 PM)"
-          value={newGroup.pickup_time}
-          onChange={e => setNewGroup({ ...newGroup, pickup_time: e.target.value })}
-        />
-        <button className="btn-primary" onClick={createGroup}>
-          Create Group
-        </button>
-      </div>
+      {upcoming.length === 0 && (
+        <p style={{ color: '#888', textAlign: 'center', marginTop: '40px' }}>
+          No upcoming loops. New ones appear here when someone buys a ticket.
+        </p>
+      )}
 
-      {groups.map(g => (
-        <div key={g.id} className="card">
-          {editingGroup === g.id ? (
-            <>
-              <input
-                value={groupEdit.name || ''}
-                onChange={e => setGroupEdit({ ...groupEdit, name: e.target.value })}
-                placeholder="Group name"
-              />
-              <input
-                value={groupEdit.pickup_time || ''}
-                onChange={e => setGroupEdit({ ...groupEdit, pickup_time: e.target.value })}
-                placeholder="Pickup time"
-              />
-              <button className="btn-primary" onClick={() => saveGroupEdit(g.id)}>Save</button>
-              <button
-                onClick={() => setEditingGroup(null)}
-                style={{ background: 'none', color: '#888', marginTop: '8px', width: '100%' }}
-              >
-                Cancel
-              </button>
-            </>
-          ) : (
-            <>
-              <p className="rider-name">{g.name}</p>
-              <p className="rider-phone">{g.pickup_time}</p>
-              <div style={{ display: 'flex', gap: '16px', marginTop: '8px' }}>
+      {upcoming.map(group => {
+        const schedule = Array.isArray(group.schedule) ? group.schedule : []
+        const currentIdx = currentStopIndex(schedule, now, group.event_date, today)
+        const members = group.group_members || []
+        const membersByStop = new Map()
+        for (const m of members) {
+          const effectiveIdx = m.current_stop_index ?? currentIdx
+          const bucket = effectiveIdx >= 0 && effectiveIdx < schedule.length ? effectiveIdx : 'not_started'
+          if (!membersByStop.has(bucket)) membersByStop.set(bucket, [])
+          membersByStop.get(bucket).push(m)
+        }
+        const isEditing = editingSchedule === group.id
+
+        return (
+          <div key={group.id} className="card">
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline' }}>
+              <div>
+                <p style={{ fontWeight: 600, color: '#f0c040', fontSize: '15px' }}>{group.name}</p>
+                <p style={{ color: '#888', fontSize: '13px' }}>
+                  {group.event_date || 'No date'} · Pickup {group.pickup_time || 'TBD'}
+                </p>
+              </div>
+              <span style={{ color: '#888', fontSize: '13px' }}>
+                {members.length} rider{members.length === 1 ? '' : 's'}
+              </span>
+            </div>
+
+            {schedule.length === 0 ? (
+              <div style={{ marginTop: '10px' }}>
                 <button
-                  onClick={() => { setEditingGroup(g.id); setGroupEdit(g) }}
-                  style={{ background: 'none', color: '#f0c040', fontSize: '14px' }}
+                  onClick={() => generateScheduleFor(group)}
+                  style={{ background: '#1a1a1a', color: '#f0c040', border: '1px solid #2a2a2a', fontSize: '13px', width: '100%' }}
                 >
-                  Edit Group
-                </button>
-                <button
-                  onClick={() => deleteGroup(g.id)}
-                  style={{ background: 'none', color: '#ff4444', fontSize: '14px' }}
-                >
-                  Delete Group
+                  Generate 5-stop schedule from pickup time
                 </button>
               </div>
-            </>
-          )}
+            ) : (
+              <>
+                <div style={{ display: 'flex', gap: '4px', margin: '12px 0 4px', overflowX: 'auto' }}>
+                  {schedule.map((stop, i) => {
+                    const active = i === currentIdx
+                    const past = currentIdx > i
+                    return (
+                      <div
+                        key={i}
+                        style={{
+                          flex: 1,
+                          minWidth: '80px',
+                          textAlign: 'center',
+                          padding: '8px 6px',
+                          borderRadius: '8px',
+                          background: active ? '#f0c040' : past ? '#1a2216' : '#1a1a1a',
+                          color: active ? '#0d0d0d' : past ? '#4aa84a' : '#888',
+                          border: active ? '1px solid #f0c040' : '1px solid #2a2a2a',
+                          fontSize: '11px',
+                          fontWeight: active ? 700 : 500,
+                        }}
+                      >
+                        <div style={{ fontSize: '10px', textTransform: 'uppercase' }}>{formatStopTime(stop.start_time)}</div>
+                        <div style={{ marginTop: '2px' }}>{stop.name}</div>
+                      </div>
+                    )
+                  })}
+                </div>
+                <button
+                  onClick={() => isEditing ? setEditingSchedule(null) : startEditSchedule(group)}
+                  style={{ background: 'none', color: '#888', fontSize: '12px', padding: '4px 0', marginBottom: '8px' }}
+                >
+                  {isEditing ? 'Cancel edit' : '✎ Edit schedule'}
+                </button>
 
-          <div style={{ marginTop: '12px', borderTop: '1px solid #2a2a2a', paddingTop: '12px' }}>
-            {g.group_members?.length === 0 && (
-              <p style={{ color: '#aaa', fontSize: '14px' }}>No riders yet.</p>
+                {isEditing && (
+                  <div style={{ border: '1px solid #2a2a2a', borderRadius: '8px', padding: '10px', marginBottom: '12px' }}>
+                    {scheduleDraft.map((stop, i) => (
+                      <div key={i} style={{ display: 'flex', gap: '6px', marginBottom: '6px' }}>
+                        <input
+                          style={{ flex: 2, marginBottom: 0, fontSize: '13px' }}
+                          value={stop.name}
+                          onChange={e => {
+                            const next = [...scheduleDraft]
+                            next[i] = { ...next[i], name: e.target.value }
+                            setScheduleDraft(next)
+                          }}
+                        />
+                        <input
+                          style={{ flex: 1, marginBottom: 0, fontSize: '13px' }}
+                          placeholder="HH:MM"
+                          value={stop.start_time}
+                          onChange={e => {
+                            const next = [...scheduleDraft]
+                            next[i] = { ...next[i], start_time: e.target.value }
+                            setScheduleDraft(next)
+                          }}
+                        />
+                      </div>
+                    ))}
+                    <button className="btn-primary" onClick={() => saveSchedule(group)}>Save Schedule</button>
+                  </div>
+                )}
+
+                {schedule.map((stop, i) => {
+                  const atStop = membersByStop.get(i) || []
+                  const key = `${group.id}:${i}`
+                  const isActive = i === currentIdx
+                  return (
+                    <div
+                      key={i}
+                      style={{
+                        marginTop: '10px',
+                        borderTop: '1px solid #2a2a2a',
+                        paddingTop: '10px',
+                      }}
+                    >
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline' }}>
+                        <div>
+                          <p style={{ fontWeight: 600, color: isActive ? '#f0c040' : '#f0f0f0', fontSize: '14px' }}>
+                            {isActive && '🟢 '}{stop.name}
+                          </p>
+                          <p style={{ color: '#666', fontSize: '12px' }}>{formatStopTime(stop.start_time)}</p>
+                        </div>
+                        <span style={{ color: '#666', fontSize: '12px' }}>
+                          {atStop.length} here
+                        </span>
+                      </div>
+
+                      {atStop.map(m => (
+                        <div
+                          key={m.id}
+                          style={{
+                            padding: '6px 0',
+                            borderBottom: '1px solid #222',
+                            fontSize: '14px',
+                            display: 'flex',
+                            justifyContent: 'space-between',
+                            alignItems: 'center',
+                            gap: '8px',
+                          }}
+                        >
+                          <span style={{ minWidth: 0, flex: 1 }}>
+                            <span style={{ fontWeight: 500 }}>
+                              {m.contacts?.first_name} {m.contacts?.last_name}
+                            </span>
+                            {m.current_stop_index != null && (
+                              <span style={{ marginLeft: '6px', fontSize: '10px', color: '#f0c040', border: '1px solid #3a3220', padding: '1px 5px', borderRadius: '8px' }}>
+                                override
+                              </span>
+                            )}
+                          </span>
+                          {movingRider === m.id ? (
+                            <select
+                              autoFocus
+                              onBlur={() => setMovingRider(null)}
+                              onChange={e => moveRider(m.id, e.target.value === '' ? null : Number(e.target.value))}
+                              style={{ width: 'auto', marginBottom: 0, fontSize: '12px', padding: '4px 6px' }}
+                            >
+                              <option value="">— auto (follow group) —</option>
+                              {schedule.map((s, si) => (
+                                <option key={si} value={si}>{s.name} ({formatStopTime(s.start_time)})</option>
+                              ))}
+                            </select>
+                          ) : (
+                            <button
+                              onClick={() => setMovingRider(m.id)}
+                              style={{ background: 'none', color: '#888', fontSize: '12px', padding: '2px 6px' }}
+                            >
+                              Move →
+                            </button>
+                          )}
+                        </div>
+                      ))}
+
+                      {atStop.length > 0 && (
+                        <div style={{ marginTop: '8px' }}>
+                          <textarea
+                            rows={2}
+                            placeholder={`Hey {first_name}, we're at ${stop.name}...`}
+                            value={stopMessage[key] || ''}
+                            onChange={e => setStopMessage({ ...stopMessage, [key]: e.target.value })}
+                          />
+                          <button
+                            className="btn-primary"
+                            onClick={() => sendStopSMS(group, i, atStop)}
+                            disabled={sending[key]}
+                          >
+                            {sending[key] ? 'Sending…' : `Text ${atStop.length} at ${stop.name}`}
+                          </button>
+                        </div>
+                      )}
+                    </div>
+                  )
+                })}
+
+                {membersByStop.get('not_started')?.length > 0 && (
+                  <div style={{ marginTop: '10px', borderTop: '1px solid #2a2a2a', paddingTop: '10px' }}>
+                    <p style={{ color: '#888', fontSize: '13px', marginBottom: '4px' }}>
+                      Not started yet ({membersByStop.get('not_started').length})
+                    </p>
+                    {membersByStop.get('not_started').map(m => (
+                      <div key={m.id} style={{ padding: '4px 0', fontSize: '13px', color: '#aaa' }}>
+                        {m.contacts?.first_name} {m.contacts?.last_name}
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </>
             )}
-            {g.group_members?.map(m => (
-              <div key={m.id} style={{ fontSize: '14px', padding: '6px 0', borderBottom: '1px solid #222', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                <span>
-                  <span style={{ fontWeight: '500' }}>{m.contacts?.first_name} {m.contacts?.last_name}</span>
-                  <span style={{ color: '#888', marginLeft: '8px' }}>{m.contacts?.phone}</span>
-                </span>
-                <button
-                  onClick={() => removeMember(m.id)}
-                  style={{ background: 'none', color: '#ff4444', fontSize: '12px' }}
-                >
-                  Remove
-                </button>
-              </div>
-            ))}
           </div>
-
-          <div style={{ marginTop: '12px', borderTop: '1px solid #2a2a2a', paddingTop: '12px' }}>
-            <h3>Text This Group</h3>
-            <p style={{ color: '#888', fontSize: '12px', marginBottom: '6px' }}>
-              Each rider gets their own text. Use <code>{'{first_name}'}</code> to personalize.
-            </p>
-            <textarea
-              rows={2}
-              placeholder="Hey {first_name}, your pickup is in 10 min..."
-              value={groupMessage[g.id] || ''}
-              onChange={e => setGroupMessage({ ...groupMessage, [g.id]: e.target.value })}
-            />
-            <button
-              className="btn-primary"
-              onClick={() => sendGroupSMS(g)}
-              disabled={sending[g.id]}
-            >
-              {sending[g.id] ? 'Sending...' : `Send to ${g.group_members?.length || 0} Riders`}
-            </button>
-          </div>
-        </div>
-      ))}
+        )
+      })}
     </main>
   )
 }
