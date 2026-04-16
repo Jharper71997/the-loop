@@ -411,7 +411,16 @@ function RiderRow({ member, schedule, pickerOpen, onOpenPicker, onMove }) {
         </span>
         <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
           {moved && <span className="chip chip-gold" style={{ fontSize: '10px', padding: '1px 6px' }}>moved</span>}
-          <span className="muted" style={{ fontSize: '12px' }}>Move ▸</span>
+          <span style={{
+            background: '#d4a333',
+            color: '#0a0a0b',
+            fontSize: '12px',
+            fontWeight: 600,
+            padding: '4px 10px',
+            borderRadius: '999px',
+          }}>
+            {pickerOpen ? 'Close' : 'Move'}
+          </span>
         </div>
       </div>
       {pickerOpen && (
