@@ -15,7 +15,7 @@ export async function POST(req) {
   }
 
   const supabase = supabaseAdmin()
-  const eventType = body.event || body.type || 'unknown'
+  const eventType = String(body.event || body.type || 'unknown').toLowerCase()
   const externalId = body.payload?.id || body.id || null
 
   const { data: logRow } = await supabase
@@ -41,13 +41,16 @@ export async function POST(req) {
   }
 
   try {
+    let handled = true
     if (eventType === 'order.created' || eventType === 'order.updated') {
       await handleOrder(supabase, body.payload)
     } else if (eventType === 'issued_ticket.voided' || eventType === 'ticket.voided') {
       await handleVoidedTicket(supabase, body.payload)
+    } else {
+      handled = false
     }
 
-    await markProcessed('ok')
+    await markProcessed(handled ? 'ok' : 'ignored')
     return Response.json({ received: true })
   } catch (err) {
     console.error('[ticket-tailor-webhook] error', err)
@@ -135,7 +138,11 @@ async function upsertGroupForTicket(supabase, ticket, order) {
   const startIso = order.event_summary?.start_date?.iso
   const eventDate = startIso ? startIso.slice(0, 10) : null
   const pickupTime = startIso
-    ? new Date(startIso).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', timeZone: order.event_summary?.start_date?.timezone ? undefined : 'America/Indiana/Indianapolis' })
+    ? new Date(startIso).toLocaleTimeString('en-US', {
+        hour: 'numeric',
+        minute: '2-digit',
+        timeZone: 'America/Indiana/Indianapolis',
+      })
     : null
 
   const name = eventDate
@@ -211,8 +218,13 @@ function splitName(full) {
 
 function formatDate(iso) {
   try {
-    const d = new Date(`${iso}T12:00:00`)
-    return d.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })
+    const d = new Date(`${iso}T12:00:00-05:00`)
+    return d.toLocaleDateString('en-US', {
+      weekday: 'short',
+      month: 'short',
+      day: 'numeric',
+      timeZone: 'America/Indiana/Indianapolis',
+    })
   } catch {
     return iso
   }
