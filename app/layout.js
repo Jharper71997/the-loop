@@ -23,6 +23,7 @@ export default function RootLayout({ children }) {
           <span style={{ color: '#d4a333', fontWeight: 700, fontSize: '16px', letterSpacing: '-0.01em' }}>
             The Loop
           </span>
+          <a href="/dashboard" style={{ color: '#c8c8cc', textDecoration: 'none', fontSize: '14px' }}>Dashboard</a>
           <a href="/" style={{ color: '#c8c8cc', textDecoration: 'none', fontSize: '14px' }}>Riders</a>
           <a href="/contacts" style={{ color: '#c8c8cc', textDecoration: 'none', fontSize: '14px' }}>Contacts</a>
           <a href="/groups" style={{ color: '#c8c8cc', textDecoration: 'none', fontSize: '14px' }}>Loops</a>
