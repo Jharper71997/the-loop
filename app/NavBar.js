@@ -9,7 +9,6 @@ const LINKS = [
   { href: '/', label: 'Riders' },
   { href: '/contacts', label: 'Contacts' },
   { href: '/groups', label: 'Loops' },
-  { href: '/finance', label: 'Finance' },
 ]
 
 export default function NavBar() {
