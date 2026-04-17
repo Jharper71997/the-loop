@@ -1,3 +1,5 @@
+import Stripe from 'stripe'
+
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
 
@@ -6,6 +8,9 @@ const TT_BASE = 'https://api.tickettailor.com/v1'
 export async function GET() {
   const apiKey = process.env.TICKET_TAILOR_API_KEY
   if (!apiKey) return Response.json({ error: 'TICKET_TAILOR_API_KEY not set' }, { status: 500 })
+
+  const stripe = process.env.STRIPE_SECRET_KEY ? new Stripe(process.env.STRIPE_SECRET_KEY) : null
+  const stripeData = stripe ? await fetchStripeData(stripe).catch(err => ({ error: err.message })) : null
 
   const auth = 'Basic ' + Buffer.from(`${apiKey}:`).toString('base64')
 
@@ -87,5 +92,57 @@ export async function GET() {
     nights,
     avgPast4Revenue,
     avgPast4Riders,
+    stripe: stripeData,
   })
+}
+
+async function fetchStripeData(stripe) {
+  const ninetyDaysAgoSec = Math.floor(Date.now() / 1000) - 90 * 86400
+
+  const balance = await stripe.balance.retrieve()
+  const available = (balance.available || []).reduce((s, b) => s + (b.amount || 0), 0) / 100
+  const pending = (balance.pending || []).reduce((s, b) => s + (b.amount || 0), 0) / 100
+
+  const payouts = []
+  for await (const p of stripe.payouts.list({ limit: 100, created: { gte: ninetyDaysAgoSec } })) {
+    payouts.push({
+      id: p.id,
+      amount: p.amount / 100,
+      arrival_date: p.arrival_date,
+      status: p.status,
+    })
+    if (payouts.length >= 50) break
+  }
+  const paidOut = payouts.filter(p => p.status === 'paid').reduce((s, p) => s + p.amount, 0)
+
+  let grossLast90 = 0
+  let netLast90 = 0
+  let feesLast90 = 0
+  let chargeCount = 0
+  let refundedLast90 = 0
+  let txnCount = 0
+  for await (const bt of stripe.balanceTransactions.list({ limit: 100, created: { gte: ninetyDaysAgoSec } })) {
+    if (bt.type === 'charge') {
+      grossLast90 += (bt.amount || 0) / 100
+      netLast90 += (bt.net || 0) / 100
+      feesLast90 += (bt.fee || 0) / 100
+      chargeCount++
+    } else if (bt.type === 'refund') {
+      refundedLast90 += Math.abs(bt.amount || 0) / 100
+    }
+    txnCount++
+    if (txnCount >= 500) break
+  }
+
+  return {
+    balanceAvailable: available,
+    balancePending: pending,
+    paidOutLast90: paidOut,
+    grossLast90,
+    netLast90,
+    feesLast90,
+    refundedLast90,
+    chargeCount,
+    payouts: payouts.slice(0, 10),
+  }
 }

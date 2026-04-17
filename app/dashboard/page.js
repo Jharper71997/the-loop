@@ -146,14 +146,54 @@ function CurrentFinances({ finance, err }) {
   if (err) return <p style={{ color: '#e07a7a' }}>Error: {err}</p>
   if (!finance) return <p className="muted">Loading revenue…</p>
 
+  const stripe = finance.stripe
+
   return (
     <>
+      <h2 style={{ marginTop: 0 }}>Ticket Tailor</h2>
       <div style={grid2}>
         <StatCard label="Past 90 days" value={usd(finance.pastRevenue)} sub={`${finance.pastTickets} riders`} />
         <StatCard label="Upcoming booked" value={usd(finance.upcomingRevenue)} sub={`${finance.upcomingTickets} riders`} accent />
         <StatCard label="Avg/night (last 4)" value={usd(finance.avgPast4Revenue)} sub={`${Math.round(finance.avgPast4Riders)} riders`} />
         <StatCard label="Refunded" value={usd(finance.refunded)} />
       </div>
+
+      {stripe && !stripe.error && (
+        <>
+          <h2>Stripe</h2>
+          <div style={grid2}>
+            <StatCard label="Available balance" value={usd(stripe.balanceAvailable)} accent />
+            <StatCard label="Pending balance" value={usd(stripe.balancePending)} sub="clearing" />
+            <StatCard label="Gross (last 90d)" value={usd(stripe.grossLast90)} sub={`${stripe.chargeCount} charges`} />
+            <StatCard label="Fees (last 90d)" value={usd(stripe.feesLast90)} negative />
+            <StatCard label="Net (last 90d)" value={usd(stripe.netLast90)} />
+            <StatCard label="Paid to bank (90d)" value={usd(stripe.paidOutLast90)} />
+          </div>
+
+          {stripe.payouts?.length > 0 && (
+            <>
+              <h2>Recent payouts</h2>
+              <div className="card" style={{ padding: 0 }}>
+                {stripe.payouts.map((p, i) => (
+                  <ListRow
+                    key={p.id}
+                    first={i === 0}
+                    left={<>
+                      <p style={{ fontSize: '14px' }}>{formatUnixDate(p.arrival_date)}</p>
+                      <p className="tiny">{p.status}</p>
+                    </>}
+                    right={<strong style={{ color: p.status === 'paid' ? '#6fbf7f' : '#d4a333' }}>{usd(p.amount)}</strong>}
+                  />
+                ))}
+              </div>
+            </>
+          )}
+        </>
+      )}
+
+      {stripe?.error && (
+        <p style={{ color: '#e07a7a', fontSize: '13px', marginBottom: '12px' }}>Stripe error: {stripe.error}</p>
+      )}
 
       <h2>Revenue by month</h2>
       <div className="card" style={{ padding: 0 }}>
@@ -570,6 +610,13 @@ function formatDate(iso) {
     const d = new Date(`${iso}T12:00:00-05:00`)
     return d.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })
   } catch { return iso }
+}
+
+function formatUnixDate(unix) {
+  if (!unix) return ''
+  try {
+    return new Date(unix * 1000).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
+  } catch { return String(unix) }
 }
 
 function formatMonth(ym) {
