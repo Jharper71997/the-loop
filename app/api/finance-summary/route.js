@@ -1,4 +1,5 @@
 import Stripe from 'stripe'
+import { supabaseAdmin } from '@/lib/supabaseAdmin'
 
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
@@ -11,6 +12,7 @@ export async function GET() {
 
   const stripe = process.env.STRIPE_SECRET_KEY ? new Stripe(process.env.STRIPE_SECRET_KEY) : null
   const stripeData = stripe ? await fetchStripeData(stripe).catch(err => ({ error: err.message })) : null
+  const native = await fetchNativeOrders().catch(err => ({ error: err.message }))
 
   const auth = 'Basic ' + Buffer.from(`${apiKey}:`).toString('base64')
 
@@ -93,7 +95,37 @@ export async function GET() {
     avgPast4Revenue,
     avgPast4Riders,
     stripe: stripeData,
+    native,
   })
+}
+
+async function fetchNativeOrders() {
+  const supabase = supabaseAdmin()
+  const today = new Date().toISOString().slice(0, 10)
+  const { data: orders, error } = await supabase
+    .from('orders')
+    .select('total_cents, party_size, status, paid_at, events(event_date)')
+    .eq('status', 'paid')
+    .order('paid_at', { ascending: false })
+    .limit(500)
+  if (error) throw new Error(error.message)
+
+  let pastRevenue = 0, pastTickets = 0, upcomingRevenue = 0, upcomingTickets = 0
+  for (const o of orders || []) {
+    const date = o.events?.event_date
+    if (!date) continue
+    const cents = o.total_cents || 0
+    const seats = o.party_size || 0
+    if (date >= today) { upcomingRevenue += cents; upcomingTickets += seats }
+    else { pastRevenue += cents; pastTickets += seats }
+  }
+  return {
+    orderCount: (orders || []).length,
+    pastRevenue: pastRevenue / 100,
+    pastTickets,
+    upcomingRevenue: upcomingRevenue / 100,
+    upcomingTickets,
+  }
 }
 
 async function fetchStripeData(stripe) {

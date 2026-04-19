@@ -1,0 +1,100 @@
+import { notFound } from 'next/navigation'
+import { supabaseAdmin } from '@/lib/supabaseAdmin'
+import { getCurrentWaiverVersion } from '@/lib/waiver'
+import BookingForm from './BookingForm'
+
+export const dynamic = 'force-dynamic'
+
+export async function generateMetadata({ params }) {
+  const { eventId } = await params
+  const supabase = supabaseAdmin()
+  const { data: event } = await supabase
+    .from('events')
+    .select('name, event_date')
+    .eq('id', eventId)
+    .maybeSingle()
+  return {
+    title: event ? `Book ${event.name}` : 'Book',
+  }
+}
+
+export default async function EventBookingPage({ params }) {
+  const { eventId } = await params
+  const supabase = supabaseAdmin()
+
+  const { data: event } = await supabase
+    .from('events')
+    .select('id, name, event_date, pickup_time, description, status')
+    .eq('id', eventId)
+    .maybeSingle()
+  if (!event || event.status !== 'on_sale') notFound()
+
+  const { data: ticketTypes } = await supabase
+    .from('ticket_types')
+    .select('id, name, price_cents, capacity, stop_index, sort_order')
+    .eq('event_id', eventId)
+    .eq('active', true)
+    .order('sort_order', { ascending: true })
+
+  const waiver = await getCurrentWaiverVersion(supabase)
+
+  return (
+    <main style={{
+      minHeight: '100vh',
+      background: '#0a0a0b',
+      color: '#fff',
+      fontFamily: 'system-ui, -apple-system, "Segoe UI", Roboto, sans-serif',
+    }}>
+      <header style={{
+        padding: '12px 16px',
+        borderBottom: '2px solid #d4a333',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+      }}>
+        <a href="/book" style={{ color: '#d4a333', textDecoration: 'none', fontSize: 13 }}>← All loops</a>
+        <span style={{ color: '#d4a333', fontSize: 14, fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase' }}>
+          Jville Brew Loop
+        </span>
+        <span style={{ width: 70 }} />
+      </header>
+
+      <div style={{ maxWidth: 640, margin: '0 auto', padding: '20px 16px' }}>
+        <div style={{ color: '#d4a333', fontSize: 12, letterSpacing: '0.08em', textTransform: 'uppercase' }}>
+          {formatDate(event.event_date)}{event.pickup_time ? ` · ${formatTime(event.pickup_time)}` : ''}
+        </div>
+        <h1 style={{ fontSize: 26, margin: '4px 0 8px' }}>{event.name}</h1>
+        {event.description && (
+          <p style={{ color: '#bbb', fontSize: 14, margin: '0 0 18px' }}>{event.description}</p>
+        )}
+
+        <BookingForm
+          eventId={event.id}
+          eventName={event.name}
+          ticketTypes={ticketTypes || []}
+          waiver={waiver}
+        />
+      </div>
+    </main>
+  )
+}
+
+function formatDate(iso) {
+  if (!iso) return ''
+  try {
+    const d = new Date(`${iso}T12:00:00-05:00`)
+    return d.toLocaleDateString('en-US', {
+      weekday: 'long', month: 'long', day: 'numeric',
+      timeZone: 'America/Indiana/Indianapolis',
+    })
+  } catch { return iso }
+}
+
+function formatTime(hhmm) {
+  if (!hhmm) return ''
+  const [h, m] = String(hhmm).split(':').map(Number)
+  if (!Number.isFinite(h) || !Number.isFinite(m)) return ''
+  const suffix = h >= 12 ? 'PM' : 'AM'
+  const h12 = ((h + 11) % 12) + 1
+  return `${h12}:${String(m).padStart(2, '0')} ${suffix}`
+}

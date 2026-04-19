@@ -5,6 +5,11 @@ const PUBLIC_PATHS = [
   '/login',
   '/api/ticket-tailor-webhook',
   '/api/stripe-webhook',
+  '/track',
+  '/book',
+  '/waiver',
+  '/api/checkout',
+  '/api/waiver',
 ]
 
 export async function middleware(req) {
