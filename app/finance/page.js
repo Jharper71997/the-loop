@@ -1,26 +1,35 @@
 'use client'
 
 import { useEffect, useMemo, useState } from 'react'
+import { supabase } from '@/lib/supabase'
 
+const ACCENT = '#d4a333'
+const SURFACE = '#15151a'
+const BORDER = '#2a2a31'
 const LS_KEY = 'the-loop:proforma:v1'
 
 const DEFAULT_PROFORMA = {
-  price: 20,
+  price: 25,
   fridayRiders: 20,
   saturdayRiders: 20,
   costPerNight: 300,
   monthlyFixed: 500,
-  ttFeePct: 3,
+  ttFeePct: 0,
   stripeFeePct: 2.9,
   stripeFeeFlat: 0.3,
   weeksPerMonth: 4.33,
 }
 
+const EXPENSE_CATEGORIES = ['driver_pay', 'fuel', 'insurance', 'marketing', 'platform_fees', 'other']
+
 export default function Finance() {
   const [summary, setSummary] = useState(null)
+  const [data, setData] = useState(null)
+  const [groups, setGroups] = useState([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
   const [pro, setPro] = useState(DEFAULT_PROFORMA)
+  const [showProforma, setShowProforma] = useState(false)
 
   useEffect(() => {
     try {
@@ -31,229 +40,406 @@ export default function Finance() {
   }, [])
 
   useEffect(() => {
-    try {
-      localStorage.setItem(LS_KEY, JSON.stringify(pro))
-    } catch {}
+    try { localStorage.setItem(LS_KEY, JSON.stringify(pro)) } catch {}
   }, [pro])
 
   async function refresh() {
-    setLoading(true)
-    setError(null)
+    setLoading(true); setError(null)
     try {
-      const res = await fetch('/api/finance-summary')
-      const json = await res.json()
-      if (!res.ok || json.error) throw new Error(json.error || 'Failed')
-      setSummary(json)
-      setPro(prev => ({
-        ...prev,
-        fridayRiders: Math.round(json.avgPast4Riders) || prev.fridayRiders,
-        saturdayRiders: Math.round(json.avgPast4Riders) || prev.saturdayRiders,
-      }))
+      const [sumRes, dataRes, groupsRes] = await Promise.all([
+        fetch('/api/finance-summary').then(r => r.json()),
+        fetch('/api/finance-data').then(r => r.json()),
+        supabase.from('groups').select('id, name, event_date').order('event_date', { ascending: false }).limit(40),
+      ])
+      if (sumRes.error) throw new Error(sumRes.error)
+      setSummary(sumRes)
+      setData(dataRes)
+      setGroups(groupsRes.data || [])
     } catch (err) {
       setError(err.message)
-    } finally {
-      setLoading(false)
-    }
+    } finally { setLoading(false) }
   }
 
-  const projection = useMemo(() => {
-    const ridersPerWeek = Number(pro.fridayRiders) + Number(pro.saturdayRiders)
-    const grossPerWeek = ridersPerWeek * Number(pro.price)
-    const ttFeePerWeek = grossPerWeek * (Number(pro.ttFeePct) / 100)
-    const stripeFeePerWeek = grossPerWeek * (Number(pro.stripeFeePct) / 100) + ridersPerWeek * Number(pro.stripeFeeFlat)
-    const netPerWeek = grossPerWeek - ttFeePerWeek - stripeFeePerWeek
-
-    const operatingCostPerWeek = Number(pro.costPerNight) * 2 // Fri + Sat
-    const profitPerWeek = netPerWeek - operatingCostPerWeek
-    const profitPerMonth = profitPerWeek * Number(pro.weeksPerMonth) - Number(pro.monthlyFixed)
-    const profitPerYear = profitPerMonth * 12
-
-    const variableCostPerRider = (Number(pro.price) * (Number(pro.ttFeePct) + Number(pro.stripeFeePct)) / 100) + Number(pro.stripeFeeFlat)
-    const netPerRider = Number(pro.price) - variableCostPerRider
-    const fixedPerWeek = operatingCostPerWeek + Number(pro.monthlyFixed) / Number(pro.weeksPerMonth)
-    const breakEvenRidersPerWeek = netPerRider > 0 ? Math.ceil(fixedPerWeek / netPerRider) : null
-    const breakEvenPerNight = breakEvenRidersPerWeek != null ? Math.ceil(breakEvenRidersPerWeek / 2) : null
-
-    return {
-      grossPerWeek,
-      netPerWeek,
-      profitPerWeek,
-      profitPerMonth,
-      profitPerYear,
-      ttFeePerWeek,
-      stripeFeePerWeek,
-      operatingCostPerWeek,
-      breakEvenRidersPerWeek,
-      breakEvenPerNight,
-      netPerRider,
-    }
-  }, [pro])
+  const cashPosition = useMemo(() => {
+    const stripe = (summary?.stripe?.balanceAvailable || 0) + (summary?.stripe?.balancePending || 0)
+    const bank = (data?.bank || []).reduce((s, b) => s + (b.balance_cents || 0) / 100, 0)
+    return { stripe, bank, total: stripe + bank }
+  }, [summary, data])
 
   return (
-    <main>
-      <h1>Finance</h1>
-      <p className="muted" style={{ marginBottom: '14px' }}>Revenue · projection · break-even</p>
+    <main style={{ maxWidth: 1100, margin: '0 auto', padding: '20px 16px', minHeight: '100vh', color: '#fff' }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: 16 }}>
+        <h1 style={{ fontSize: 28, color: ACCENT, margin: 0 }}>Finance</h1>
+        <button onClick={refresh} style={ghostBtn}>Refresh</button>
+      </div>
 
-      {loading && <p className="muted">Loading…</p>}
-      {error && <p style={{ color: '#e07a7a' }}>Error: {error}</p>}
+      {loading && <p style={{ color: '#9c9ca3' }}>Loading…</p>}
+      {error && <Card style={{ borderColor: '#f87171' }}><span style={{ color: '#f87171' }}>{error}</span></Card>}
 
-      {summary && (
+      {summary && data && (
         <>
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px', marginBottom: '8px' }}>
-            <StatCard label="Past 90 days" value={usd(summary.pastRevenue)} sub={`${summary.pastTickets} riders`} />
-            <StatCard label="Upcoming booked" value={usd(summary.upcomingRevenue)} sub={`${summary.upcomingTickets} riders`} accent />
-            <StatCard label="Avg/night (last 4)" value={usd(summary.avgPast4Revenue)} sub={`${Math.round(summary.avgPast4Riders)} riders`} />
-            <StatCard label="Refunded" value={usd(summary.refunded)} />
-          </div>
+          {/* Cash */}
+          <Section title="Cash position">
+            <Stats3>
+              <Stat label="Total" value={`$${fmt(cashPosition.total)}`} highlight />
+              <Stat label="Stripe" value={`$${fmt(cashPosition.stripe)}`} />
+              <Stat label="Bank accounts" value={`$${fmt(cashPosition.bank)}`} />
+            </Stats3>
 
-          <h2>Revenue by month</h2>
-          <div className="card" style={{ padding: 0 }}>
-            {summary.months.length === 0 && <p className="muted" style={{ padding: '12px' }}>No months yet.</p>}
-            {summary.months.map((m, i) => (
-              <MonthRow key={m.month} month={m.month} revenue={m.revenue} first={i === 0} />
-            ))}
-          </div>
+            <div style={{ display: 'grid', gap: 6, marginTop: 8 }}>
+              {(data.bank || []).map(b => (
+                <BankRow key={b.id} b={b} onChange={refresh} />
+              ))}
+              <AddBankForm onAdded={refresh} />
+            </div>
+          </Section>
 
-          <h2>Nights</h2>
-          <div className="card" style={{ padding: 0 }}>
-            {summary.nights.slice(-12).reverse().map((n, i) => (
-              <NightRow key={n.date} night={n} first={i === 0} />
-            ))}
-          </div>
+          {/* Sales */}
+          <Section title="Ticket sales (last 90 days)">
+            <Stats3>
+              <Stat label="Past revenue" value={`$${fmt(summary.pastRevenue)}`} />
+              <Stat label="Upcoming revenue" value={`$${fmt(summary.upcomingRevenue)}`} />
+              <Stat label="Refunded" value={`$${fmt(summary.refunded)}`} />
+            </Stats3>
+            <p style={{ color: '#9c9ca3', fontSize: 12, margin: '8px 0 0' }}>
+              Avg last 4 nights: {Math.round(summary.avgPast4Riders || 0)} riders · ${fmt(summary.avgPast4Revenue || 0)}
+            </p>
+            {summary.native?.orderCount > 0 && (
+              <p style={{ color: '#9c9ca3', fontSize: 12, margin: '4px 0 0' }}>
+                Native orders: {summary.native.orderCount} · ${fmt(summary.native.pastRevenue + summary.native.upcomingRevenue)}
+              </p>
+            )}
+          </Section>
+
+          {/* Sponsors */}
+          <Section title="Sponsorships">
+            <Stats3>
+              <Stat label="Committed" value={`$${fmt(data.sponsorTotals.committed)}`} />
+              <Stat label="Paid" value={`$${fmt(data.sponsorTotals.paid)}`} />
+              <Stat label="Outstanding" value={`$${fmt(data.sponsorTotals.committed - data.sponsorTotals.paid)}`} />
+            </Stats3>
+            <div style={{ display: 'grid', gap: 6 }}>
+              {(data.sponsors || []).map(s => (
+                <div key={s.id} style={listRow}>
+                  <div>
+                    <strong>{s.name}</strong>
+                    <span style={{ color: '#9c9ca3', fontSize: 12, marginLeft: 6 }}>{s.tier || '—'}</span>
+                  </div>
+                  <div style={{ textAlign: 'right', fontSize: 13 }}>
+                    <div style={{ color: ACCENT }}>${fmt(s.amount_paid || 0)} / ${fmt(s.amount_committed || 0)}</div>
+                    <div style={{ color: '#9c9ca3', fontSize: 11 }}>{s.status || 'pending'}</div>
+                  </div>
+                </div>
+              ))}
+              {(!data.sponsors || data.sponsors.length === 0) && (
+                <div style={{ color: '#9c9ca3', fontSize: 13 }}>No sponsors yet. Add via SQL or Sponsors page.</div>
+              )}
+            </div>
+          </Section>
+
+          {/* Expenses */}
+          <Section title="Expenses">
+            <Stats3>
+              <Stat label="Month-to-date" value={`$${fmt(data.expensesMTD / 100)}`} />
+            </Stats3>
+            <AddExpenseForm groups={groups} onAdded={refresh} />
+            <div style={{ display: 'grid', gap: 6, marginTop: 8 }}>
+              {(data.expenses || []).slice(0, 30).map(e => (
+                <ExpenseRow key={e.id} e={e} groups={groups} onChange={refresh} />
+              ))}
+              {(!data.expenses || data.expenses.length === 0) && (
+                <div style={{ color: '#9c9ca3', fontSize: 13 }}>No expenses logged yet.</div>
+              )}
+            </div>
+          </Section>
+
+          {/* Profit per Loop */}
+          <Section title="Profit per Loop">
+            {(data.perLoop || []).length === 0 && (
+              <div style={{ color: '#9c9ca3', fontSize: 13 }}>
+                No data yet — once orders + expenses are tagged to Loops, they show here.
+              </div>
+            )}
+            <div style={{ display: 'grid', gap: 6 }}>
+              {(data.perLoop || []).map(l => {
+                const profit = l.revenue - l.expenses
+                return (
+                  <div key={l.id} style={listRow}>
+                    <div>
+                      <div style={{ fontSize: 11, color: '#9c9ca3' }}>{l.event_date}</div>
+                      <strong>{l.name}</strong>
+                      <div style={{ fontSize: 11, color: '#9c9ca3', marginTop: 2 }}>{l.tickets} tickets</div>
+                    </div>
+                    <div style={{ textAlign: 'right', fontSize: 13 }}>
+                      <div style={{ color: '#10b981' }}>+${fmt(l.revenue / 100)}</div>
+                      <div style={{ color: '#f87171' }}>−${fmt(l.expenses / 100)}</div>
+                      <div style={{ color: profit >= 0 ? ACCENT : '#f87171', fontWeight: 700, marginTop: 2 }}>
+                        ${fmt(profit / 100)}
+                      </div>
+                    </div>
+                  </div>
+                )
+              })}
+            </div>
+          </Section>
+
+          {/* Pro-forma calculator (collapsed) */}
+          <Section title={`Projection calculator${showProforma ? '' : ' (click to expand)'}`}>
+            <button onClick={() => setShowProforma(s => !s)} style={ghostBtn}>
+              {showProforma ? 'Hide' : 'Show'} calculator
+            </button>
+            {showProforma && (
+              <Proforma pro={pro} setPro={setPro} />
+            )}
+          </Section>
         </>
       )}
-
-      <h2>Pro forma</h2>
-      <div className="card">
-        <p className="tiny" style={{ marginBottom: '10px' }}>
-          Adjust inputs to see projected monthly/yearly profit and break-even.
-        </p>
-        <InputRow label="Ticket price ($)" value={pro.price} onChange={v => setPro({ ...pro, price: v })} />
-        <InputRow label="Riders / Friday" value={pro.fridayRiders} onChange={v => setPro({ ...pro, fridayRiders: v })} />
-        <InputRow label="Riders / Saturday" value={pro.saturdayRiders} onChange={v => setPro({ ...pro, saturdayRiders: v })} />
-        <InputRow label="Cost per night (gas, driver)" value={pro.costPerNight} onChange={v => setPro({ ...pro, costPerNight: v })} />
-        <InputRow label="Fixed monthly cost" value={pro.monthlyFixed} onChange={v => setPro({ ...pro, monthlyFixed: v })} />
-        <InputRow label="Ticket Tailor fee %" value={pro.ttFeePct} onChange={v => setPro({ ...pro, ttFeePct: v })} />
-        <InputRow label="Stripe fee %" value={pro.stripeFeePct} onChange={v => setPro({ ...pro, stripeFeePct: v })} />
-        <InputRow label="Stripe fee flat per tx" value={pro.stripeFeeFlat} onChange={v => setPro({ ...pro, stripeFeeFlat: v })} />
-      </div>
-
-      <h2>Projection</h2>
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px', marginBottom: '8px' }}>
-        <StatCard label="Gross / week" value={usd(projection.grossPerWeek)} />
-        <StatCard label="Net / week (after fees)" value={usd(projection.netPerWeek)} />
-        <StatCard
-          label="Profit / month"
-          value={usd(projection.profitPerMonth)}
-          accent={projection.profitPerMonth >= 0}
-          negative={projection.profitPerMonth < 0}
-        />
-        <StatCard
-          label="Profit / year"
-          value={usd(projection.profitPerYear)}
-          accent={projection.profitPerYear >= 0}
-          negative={projection.profitPerYear < 0}
-        />
-      </div>
-
-      <div className="card card-compact">
-        <p style={{ fontSize: '13px', color: '#c8c8cc' }}>
-          <strong style={{ color: '#d4a333' }}>Break-even:</strong>{' '}
-          {projection.breakEvenRidersPerWeek == null
-            ? 'Not reachable at current price'
-            : `${projection.breakEvenRidersPerWeek} riders/week (~${projection.breakEvenPerNight}/night)`}
-        </p>
-        <p className="tiny" style={{ marginTop: '4px' }}>
-          Net per rider: {usd(projection.netPerRider)} · Operating cost/week: {usd(projection.operatingCostPerWeek)}
-        </p>
-      </div>
     </main>
   )
 }
 
-function StatCard({ label, value, sub, accent, negative }) {
-  const color = negative ? '#e07a7a' : accent ? '#d4a333' : '#e8e8ea'
-  const bg = accent ? '#1c1a10' : negative ? '#1c1313' : '#121215'
+function fmt(n) {
+  return Number(n || 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
+}
+
+function Section({ title, children }) {
   return (
-    <div className="card card-compact" style={{ marginBottom: 0, background: bg }}>
-      <p style={{ fontSize: '11px', color: '#8a8a90', textTransform: 'uppercase', letterSpacing: '0.06em' }}>{label}</p>
-      <p style={{ fontSize: '20px', fontWeight: 700, color, marginTop: '2px' }}>{value}</p>
-      {sub && <p className="tiny" style={{ marginTop: '2px' }}>{sub}</p>}
+    <section style={{ background: SURFACE, border: `1px solid ${BORDER}`, borderRadius: 12, padding: 14, display: 'grid', gap: 10, marginBottom: 14 }}>
+      <h2 style={{ fontSize: 12, color: ACCENT, margin: 0, letterSpacing: '0.08em', textTransform: 'uppercase' }}>{title}</h2>
+      {children}
+    </section>
+  )
+}
+
+function Stats3({ children }) {
+  return <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))', gap: 8 }}>{children}</div>
+}
+
+function Stat({ label, value, highlight }) {
+  return (
+    <div style={{
+      padding: 10,
+      background: '#0e0e12',
+      border: highlight ? `1px solid ${ACCENT}` : `1px solid ${BORDER}`,
+      borderRadius: 8,
+    }}>
+      <div style={{ fontSize: 10, color: '#9c9ca3', textTransform: 'uppercase', letterSpacing: '0.06em' }}>{label}</div>
+      <div style={{ fontSize: 18, fontWeight: 700, color: highlight ? ACCENT : '#fff', marginTop: 2 }}>{value}</div>
     </div>
   )
 }
 
-function MonthRow({ month, revenue, first }) {
+function Card({ children, style }) {
+  return <div style={{ background: SURFACE, border: `1px solid ${BORDER}`, borderRadius: 12, padding: 14, ...style }}>{children}</div>
+}
+
+const listRow = {
+  display: 'flex',
+  justifyContent: 'space-between',
+  alignItems: 'center',
+  padding: 10,
+  background: '#0e0e12',
+  border: `1px solid ${BORDER}`,
+  borderRadius: 8,
+  fontSize: 13,
+}
+
+const ghostBtn = {
+  background: 'transparent',
+  border: `1px solid ${BORDER}`,
+  color: ACCENT,
+  padding: '6px 10px',
+  borderRadius: 8,
+  fontSize: 12,
+  cursor: 'pointer',
+}
+
+function AddBankForm({ onAdded }) {
+  const [account, setAccount] = useState('NFCU Operating')
+  const [balance, setBalance] = useState('')
+  const [busy, setBusy] = useState(false)
+
+  async function submit(e) {
+    e.preventDefault()
+    if (!account || !balance) return
+    setBusy(true)
+    await fetch('/api/finance-entries', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        kind: 'bank',
+        bank: { account_name: account, balance_cents: Math.round(parseFloat(balance) * 100) },
+      }),
+    })
+    setBalance('')
+    setBusy(false)
+    onAdded()
+  }
   return (
-    <div style={{
-      padding: '10px 14px',
-      borderTop: first ? 'none' : '1px solid #1a1a1f',
-      display: 'flex',
-      justifyContent: 'space-between',
-    }}>
-      <span style={{ fontSize: '14px', color: '#e8e8ea' }}>{formatMonth(month)}</span>
-      <span style={{ fontSize: '14px', color: '#d4a333', fontWeight: 600 }}>{usd(revenue)}</span>
-    </div>
+    <form onSubmit={submit} style={{ display: 'flex', gap: 6, alignItems: 'flex-end' }}>
+      <input value={account} onChange={e => setAccount(e.target.value)} placeholder="Account" style={input} />
+      <input value={balance} onChange={e => setBalance(e.target.value)} placeholder="Balance ($)" type="number" step="0.01" style={input} />
+      <button type="submit" disabled={busy} style={{ ...ghostBtn, color: '#0a0a0b', background: ACCENT, borderColor: ACCENT }}>
+        {busy ? 'Saving…' : 'Update'}
+      </button>
+    </form>
   )
 }
 
-function NightRow({ night, first }) {
+function BankRow({ b, onChange }) {
+  async function del() {
+    if (!confirm(`Delete snapshot for ${b.account_name}?`)) return
+    await fetch(`/api/finance-entries?kind=bank&id=${b.id}`, { method: 'DELETE' })
+    onChange()
+  }
   return (
-    <div style={{
-      padding: '10px 14px',
-      borderTop: first ? 'none' : '1px solid #1a1a1f',
-      display: 'flex',
-      justifyContent: 'space-between',
-      alignItems: 'center',
-    }}>
+    <div style={listRow}>
       <div>
-        <p style={{ fontSize: '14px', color: '#e8e8ea' }}>
-          {formatDate(night.date)} {night.upcoming && <span className="chip chip-green" style={{ marginLeft: '6px' }}>upcoming</span>}
-        </p>
-        <p className="tiny">{night.tickets} rider{night.tickets === 1 ? '' : 's'}</p>
+        <strong>{b.account_name}</strong>
+        <div style={{ fontSize: 11, color: '#9c9ca3' }}>as of {new Date(b.as_of).toLocaleDateString()}</div>
       </div>
-      <span style={{ fontSize: '14px', color: '#d4a333', fontWeight: 600 }}>{usd(night.revenue)}</span>
+      <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
+        <span style={{ color: ACCENT, fontWeight: 600 }}>${fmt(b.balance_cents / 100)}</span>
+        <button onClick={del} style={ghostBtn}>×</button>
+      </div>
     </div>
   )
 }
 
-function InputRow({ label, value, onChange }) {
+function AddExpenseForm({ groups, onAdded }) {
+  const [category, setCategory] = useState('driver_pay')
+  const [amount, setAmount] = useState('')
+  const [vendor, setVendor] = useState('')
+  const [date, setDate] = useState(() => new Date().toISOString().slice(0, 10))
+  const [groupId, setGroupId] = useState('')
+  const [busy, setBusy] = useState(false)
+
+  async function submit(e) {
+    e.preventDefault()
+    if (!amount) return
+    setBusy(true)
+    await fetch('/api/finance-entries', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        kind: 'expense',
+        expense: {
+          category,
+          vendor: vendor || null,
+          amount_cents: Math.round(parseFloat(amount) * 100),
+          group_id: groupId || null,
+          expense_date: date,
+        },
+      }),
+    })
+    setAmount(''); setVendor('')
+    setBusy(false)
+    onAdded()
+  }
   return (
-    <label style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '8px' }}>
-      <span style={{ flex: 1, fontSize: '13px', color: '#c8c8cc' }}>{label}</span>
-      <input
-        type="number"
-        inputMode="decimal"
-        step="any"
-        value={value}
-        onChange={e => onChange(Number(e.target.value) || 0)}
-        style={{ width: '100px', textAlign: 'right', marginBottom: 0, fontSize: '14px', padding: '6px 8px' }}
-      />
+    <form onSubmit={submit} style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(120px, 1fr))', gap: 6 }}>
+      <select value={category} onChange={e => setCategory(e.target.value)} style={input}>
+        {EXPENSE_CATEGORIES.map(c => <option key={c} value={c}>{c.replace(/_/g, ' ')}</option>)}
+      </select>
+      <input value={amount} onChange={e => setAmount(e.target.value)} placeholder="$" type="number" step="0.01" style={input} />
+      <input value={vendor} onChange={e => setVendor(e.target.value)} placeholder="Vendor" style={input} />
+      <input type="date" value={date} onChange={e => setDate(e.target.value)} style={input} />
+      <select value={groupId} onChange={e => setGroupId(e.target.value)} style={input}>
+        <option value="">— No Loop —</option>
+        {groups.map(g => <option key={g.id} value={g.id}>{g.event_date} · {g.name}</option>)}
+      </select>
+      <button type="submit" disabled={busy} style={{ ...ghostBtn, color: '#0a0a0b', background: ACCENT, borderColor: ACCENT }}>
+        {busy ? 'Adding…' : 'Add'}
+      </button>
+    </form>
+  )
+}
+
+function ExpenseRow({ e, groups, onChange }) {
+  const group = groups.find(g => g.id === e.group_id)
+  async function del() {
+    if (!confirm(`Delete expense?`)) return
+    await fetch(`/api/finance-entries?kind=expense&id=${e.id}`, { method: 'DELETE' })
+    onChange()
+  }
+  return (
+    <div style={listRow}>
+      <div>
+        <strong style={{ textTransform: 'capitalize' }}>{e.category.replace(/_/g, ' ')}</strong>
+        {e.vendor && <span style={{ color: '#9c9ca3', fontSize: 12, marginLeft: 6 }}>{e.vendor}</span>}
+        <div style={{ fontSize: 11, color: '#9c9ca3', marginTop: 2 }}>
+          {e.expense_date}{group ? ` · ${group.name}` : ''}
+        </div>
+      </div>
+      <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
+        <span style={{ color: '#f87171', fontWeight: 600 }}>−${fmt(e.amount_cents / 100)}</span>
+        <button onClick={del} style={ghostBtn}>×</button>
+      </div>
+    </div>
+  )
+}
+
+const input = {
+  background: '#0a0a0b',
+  border: `1px solid ${BORDER}`,
+  color: '#fff',
+  padding: '8px 10px',
+  borderRadius: 6,
+  fontSize: 13,
+  width: '100%',
+  boxSizing: 'border-box',
+}
+
+function Proforma({ pro, setPro }) {
+  const projection = useMemo(() => {
+    const ridersPerWeek = Number(pro.fridayRiders) + Number(pro.saturdayRiders)
+    const grossPerWeek = ridersPerWeek * Number(pro.price)
+    const stripeFee = grossPerWeek * (Number(pro.stripeFeePct) / 100) + ridersPerWeek * Number(pro.stripeFeeFlat)
+    const netPerWeek = grossPerWeek - stripeFee
+    const opCostPerWeek = Number(pro.costPerNight) * 2
+    const profitWk = netPerWeek - opCostPerWeek
+    const profitMo = profitWk * Number(pro.weeksPerMonth) - Number(pro.monthlyFixed)
+    const profitYr = profitMo * 12
+    return { grossPerWeek, netPerWeek, profitWk, profitMo, profitYr }
+  }, [pro])
+
+  function set(k, v) { setPro(p => ({ ...p, [k]: v })) }
+
+  return (
+    <div style={{ display: 'grid', gap: 10, marginTop: 10 }}>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))', gap: 8 }}>
+        <Stat label="Wkly gross" value={`$${fmt(projection.grossPerWeek)}`} />
+        <Stat label="Wkly net" value={`$${fmt(projection.netPerWeek)}`} />
+        <Stat label="Wkly profit" value={`$${fmt(projection.profitWk)}`} highlight />
+        <Stat label="Monthly profit" value={`$${fmt(projection.profitMo)}`} />
+        <Stat label="Annual profit" value={`$${fmt(projection.profitYr)}`} />
+      </div>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))', gap: 6 }}>
+        <Lbl label="Ticket price">
+          <input type="number" value={pro.price} onChange={e => set('price', e.target.value)} style={input} />
+        </Lbl>
+        <Lbl label="Friday riders">
+          <input type="number" value={pro.fridayRiders} onChange={e => set('fridayRiders', e.target.value)} style={input} />
+        </Lbl>
+        <Lbl label="Saturday riders">
+          <input type="number" value={pro.saturdayRiders} onChange={e => set('saturdayRiders', e.target.value)} style={input} />
+        </Lbl>
+        <Lbl label="Cost per night">
+          <input type="number" value={pro.costPerNight} onChange={e => set('costPerNight', e.target.value)} style={input} />
+        </Lbl>
+        <Lbl label="Monthly fixed">
+          <input type="number" value={pro.monthlyFixed} onChange={e => set('monthlyFixed', e.target.value)} style={input} />
+        </Lbl>
+      </div>
+    </div>
+  )
+}
+
+function Lbl({ label, children }) {
+  return (
+    <label style={{ display: 'grid', gap: 4, fontSize: 11, color: '#9c9ca3' }}>
+      {label}
+      {children}
     </label>
   )
-}
-
-function usd(n) {
-  if (n == null || Number.isNaN(n)) return '$0'
-  const sign = n < 0 ? '-' : ''
-  const abs = Math.abs(Math.round(n))
-  return sign + '$' + abs.toLocaleString()
-}
-
-function formatMonth(ym) {
-  try {
-    const [y, m] = ym.split('-').map(Number)
-    return new Date(y, m - 1, 1).toLocaleDateString('en-US', { month: 'long', year: 'numeric' })
-  } catch {
-    return ym
-  }
-}
-
-function formatDate(iso) {
-  try {
-    const d = new Date(`${iso}T12:00:00-05:00`)
-    return d.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })
-  } catch {
-    return iso
-  }
 }

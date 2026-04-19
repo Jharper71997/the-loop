@@ -133,7 +133,13 @@ export default function Groups() {
 
   return (
     <main>
-      <h1>Loops</h1>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: '4px' }}>
+        <h1 style={{ margin: 0 }}>Loops</h1>
+        <a href="/groups/new" style={{
+          background: '#d4a333', color: '#0a0a0b', padding: '8px 14px', borderRadius: 8,
+          fontWeight: 700, fontSize: 13, textDecoration: 'none',
+        }}>+ New Loop</a>
+      </div>
       <p className="muted" style={{ marginBottom: '14px' }}>
         Upcoming pickups by night · {now}
       </p>
@@ -213,6 +219,16 @@ export default function Groups() {
                 </p>
               </div>
               <div style={{ display: 'flex', gap: '6px', alignItems: 'center' }}>
+                <a
+                  href={`/groups/${group.id}`}
+                  onClick={e => e.stopPropagation()}
+                  style={{
+                    color: '#d4a333', fontSize: '12px', textDecoration: 'none',
+                    padding: '2px 8px', border: '1px solid #d4a333', borderRadius: '6px',
+                  }}
+                >
+                  Manage
+                </a>
                 <span className="chip">{members.length} rider{members.length === 1 ? '' : 's'}</span>
                 <span className="muted" style={{ fontSize: '14px' }}>{isExpanded ? '▾' : '▸'}</span>
               </div>

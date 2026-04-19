@@ -1,212 +1,203 @@
-'use client'
+import { supabaseAdmin } from '@/lib/supabaseAdmin'
+import { todayInTZ, formatStopTime } from '@/lib/schedule'
 
-import { useEffect, useMemo, useState } from 'react'
-import { supabase } from '@/lib/supabase'
-import { personalize } from '@/lib/personalize'
+export const dynamic = 'force-dynamic'
 
-export default function Home() {
-  const [groups, setGroups] = useState([])
-  const [members, setMembers] = useState([])
-  const [contacts, setContacts] = useState([])
-  const [search, setSearch] = useState('')
-  const [importing, setImporting] = useState(false)
-  const [importResult, setImportResult] = useState(null)
-  const [groupMessage, setGroupMessage] = useState({})
-  const [sending, setSending] = useState({})
+const ACCENT = '#d4a333'
+const SURFACE = '#15151a'
+const BORDER = '#2a2a31'
 
-  useEffect(() => {
-    refresh()
-  }, [])
+export default async function TonightPage() {
+  const supabase = supabaseAdmin()
+  const today = todayInTZ()
 
-  async function refresh() {
-    const [g, m, c] = await Promise.all([
-      supabase.from('groups').select('*').order('event_date'),
-      supabase.from('group_members').select('id, group_id, contact_id'),
-      supabase.from('contacts').select('id, first_name, last_name, phone'),
-    ])
-    setGroups(g.data || [])
-    setMembers(m.data || [])
-    setContacts(c.data || [])
-  }
+  const [
+    { data: groups },
+    { data: orders },
+    { data: contactsCount },
+  ] = await Promise.all([
+    supabase
+      .from('groups')
+      .select('id, name, event_date, pickup_time, schedule, group_members(id, current_stop_index, contacts(id, first_name, last_name, phone))')
+      .gte('event_date', today)
+      .order('event_date', { ascending: true })
+      .limit(3),
+    supabase
+      .from('orders')
+      .select('id, buyer_name, buyer_phone, total_cents, status, party_size, created_at, paid_at, events(name, event_date)')
+      .order('created_at', { ascending: false })
+      .limit(5),
+    supabase
+      .from('contacts')
+      .select('id', { count: 'exact', head: true }),
+  ])
 
-  async function runImport() {
-    if (!confirm('Import all historical riders from Ticket Tailor? Safe to re-run.')) return
-    setImporting(true)
-    setImportResult(null)
-    try {
-      const res = await fetch('/api/backfill-riders', { method: 'POST' })
-      const data = await res.json()
-      setImportResult(data)
-      if (data.ok) refresh()
-    } catch (err) {
-      setImportResult({ error: err.message })
-    } finally {
-      setImporting(false)
-    }
-  }
+  const tonight = (groups || []).find(g => g.event_date === today) || (groups || [])[0]
+  const upcoming = (groups || []).filter(g => g.id !== tonight?.id)
 
-  async function sendGroupSMS(night) {
-    const template = groupMessage[night.group.id]
-    if (!template) return alert('Type a message first')
-    const riders = night.riders.filter(r => r.phone)
-    if (!riders.length) return alert('No riders with phones.')
-    if (!confirm(`Send a personalized text to ${riders.length} rider${riders.length === 1 ? '' : 's'}?`)) return
+  const stops = Array.isArray(tonight?.schedule) ? tonight.schedule : []
+  const ridersByStop = stops.map((s, i) => ({
+    name: s.name,
+    start_time: s.start_time,
+    riders: (tonight?.group_members || []).filter(m => m.current_stop_index === i),
+  }))
+  const unassigned = (tonight?.group_members || []).filter(m => m.current_stop_index == null || m.current_stop_index < 0)
 
-    setSending(s => ({ ...s, [night.group.id]: true }))
-    const results = await Promise.all(
-      riders.map(r =>
-        fetch('/api/send-sms', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ to: r.phone, message: personalize(template, r) }),
-        }).then(r => r.json()).catch(e => ({ success: false, error: e.message }))
-      )
-    )
-    setSending(s => ({ ...s, [night.group.id]: false }))
-    const failed = results.filter(r => !r.success).length
-    if (failed === 0) {
-      alert(`Sent to ${riders.length} rider${riders.length === 1 ? '' : 's'}!`)
-      setGroupMessage(m => ({ ...m, [night.group.id]: '' }))
-    } else {
-      alert(`Sent to ${riders.length - failed} of ${riders.length}. ${failed} failed.`)
-    }
-  }
-
-  const today = new Date().toISOString().slice(0, 10)
-
-  const upcoming = useMemo(() => {
-    const contactById = new Map(contacts.map(c => [c.id, c]))
-    const ridersByGroup = new Map()
-
-    for (const m of members) {
-      const rider = contactById.get(m.contact_id)
-      if (!rider) continue
-      if (!ridersByGroup.has(m.group_id)) ridersByGroup.set(m.group_id, [])
-      ridersByGroup.get(m.group_id).push(rider)
-    }
-
-    const q = search.trim().toLowerCase()
-    const matches = (r) =>
-      !q || `${r.first_name || ''} ${r.last_name || ''} ${r.phone || ''}`
-        .toLowerCase().includes(q)
-
-    return groups
-      .filter(g => !g.event_date || g.event_date >= today)
-      .map(g => ({
-        group: g,
-        riders: (ridersByGroup.get(g.id) || [])
-          .filter(matches)
-          .sort((a, b) => (a.last_name || '').localeCompare(b.last_name || '')),
-      }))
-      .filter(n => n.riders.length || !search)
-      .sort((a, b) => (a.group.event_date || '').localeCompare(b.group.event_date || ''))
-  }, [groups, members, contacts, search, today])
+  const totalRiders = tonight?.group_members?.length || 0
+  const paidToday = (orders || [])
+    .filter(o => o.status === 'paid' && o.events?.event_date === today)
+    .reduce((s, o) => s + (o.total_cents || 0), 0)
 
   return (
-    <main>
-      <h1>Riders</h1>
-      <p className="muted" style={{ marginBottom: '16px' }}>Upcoming pickups and who&apos;s on each.</p>
-
-      <div style={{ display: 'flex', gap: '8px', marginBottom: '12px' }}>
-        <button className="btn-subtle" onClick={runImport} disabled={importing} style={{ flex: 1 }}>
-          {importing ? 'Importing…' : 'Import from Ticket Tailor'}
-        </button>
-        <button className="btn-subtle" onClick={refresh}>Refresh</button>
+    <main style={{ maxWidth: 1100, margin: '0 auto', padding: '20px 16px', minHeight: '100vh', color: '#fff' }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: 16 }}>
+        <h1 style={{ fontSize: 28, color: ACCENT, margin: 0 }}>Tonight</h1>
+        <span style={{ color: '#9c9ca3', fontSize: 13 }}>{formatToday(today)}</span>
       </div>
 
-      {importResult && (
-        <div className="card card-compact" style={{ fontSize: '13px', color: importResult.error ? '#e07a7a' : '#8fc99a' }}>
-          {importResult.error
-            ? `Error: ${importResult.error}${importResult.detail ? ' — ' + importResult.detail : ''}`
-            : `Imported ${importResult.ridersUpserted} riders across ${importResult.ordersProcessed} orders.${importResult.errorCount ? ` ${importResult.errorCount} errors.` : ''}`}
-        </div>
-      )}
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: 10, marginBottom: 18 }}>
+        <Stat label="Riders booked" value={totalRiders} />
+        <Stat label="Today's revenue" value={`$${(paidToday / 100).toFixed(0)}`} />
+        <Stat label="Total contacts" value={contactsCount?.length ?? '—'} />
+        <Stat label="Pickup time" value={tonight?.pickup_time ? formatStopTime(tonight.pickup_time) : '—'} />
+      </div>
 
-      <input
-        placeholder="Search by name or phone..."
-        value={search}
-        onChange={e => setSearch(e.target.value)}
-      />
-
-      <h2>Upcoming</h2>
-
-      {upcoming.length === 0 && (
-        <p style={{ color: '#888', textAlign: 'center', fontSize: '14px', margin: '20px 0' }}>
-          No upcoming nights with riders yet.
-        </p>
-      )}
-
-      {upcoming.map(n => (
-        <div key={n.group.id} className="card">
-          <div className="row" style={{ marginBottom: '6px' }}>
-            <div>
-              <p style={{ fontWeight: 600, fontSize: '15px', color: '#e8e8ea' }}>
-                {formatEventDate(n.group.event_date) || n.group.name}
-              </p>
-              {n.group.pickup_time && (
-                <p className="muted" style={{ fontSize: '12px' }}>Pickup {n.group.pickup_time}</p>
+      <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 2fr) minmax(0, 1fr)', gap: 14 }}>
+        <Card title={tonight ? `Manifest — ${tonight.name}` : 'No Loop scheduled tonight'}>
+          {!tonight && (
+            <p style={{ color: '#9c9ca3', margin: 0 }}>
+              Create one from the <a href="/groups" style={{ color: ACCENT }}>Loops</a> tab.
+            </p>
+          )}
+          {tonight && stops.length === 0 && (
+            <p style={{ color: '#9c9ca3', margin: 0 }}>
+              No schedule set yet. Open the Loop to add stops.
+            </p>
+          )}
+          {tonight && stops.length > 0 && (
+            <div style={{ display: 'grid', gap: 10 }}>
+              {ridersByStop.map((s, i) => (
+                <div key={i} style={{ padding: 10, background: '#0e0e12', borderRadius: 8, border: `1px solid ${BORDER}` }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline' }}>
+                    <strong style={{ color: ACCENT, fontSize: 13 }}>
+                      {i + 1}. {s.name}
+                    </strong>
+                    <span style={{ color: '#9c9ca3', fontSize: 11 }}>{formatStopTime(s.start_time)}</span>
+                  </div>
+                  {s.riders.length === 0 ? (
+                    <div style={{ fontSize: 12, color: '#6f6f76', marginTop: 4 }}>No riders here</div>
+                  ) : (
+                    <ul style={{ margin: '6px 0 0', padding: 0, listStyle: 'none', display: 'grid', gap: 3 }}>
+                      {s.riders.map(r => (
+                        <li key={r.id} style={{ fontSize: 13 }}>
+                          {r.contacts?.first_name} {r.contacts?.last_name}
+                          {r.contacts?.phone && (
+                            <span style={{ color: '#9c9ca3', fontSize: 11, marginLeft: 6 }}>{r.contacts.phone}</span>
+                          )}
+                        </li>
+                      ))}
+                    </ul>
+                  )}
+                </div>
+              ))}
+              {unassigned.length > 0 && (
+                <div style={{ padding: 10, background: '#0e0e12', borderRadius: 8, border: `1px dashed ${BORDER}` }}>
+                  <strong style={{ color: '#facc15', fontSize: 13 }}>Unassigned ({unassigned.length})</strong>
+                  <ul style={{ margin: '6px 0 0', padding: 0, listStyle: 'none', display: 'grid', gap: 3 }}>
+                    {unassigned.map(r => (
+                      <li key={r.id} style={{ fontSize: 13 }}>
+                        {r.contacts?.first_name} {r.contacts?.last_name}
+                      </li>
+                    ))}
+                  </ul>
+                </div>
               )}
             </div>
-            <span className="chip">{n.riders.length} rider{n.riders.length === 1 ? '' : 's'}</span>
-          </div>
+          )}
+        </Card>
 
-          {n.riders.length > 0 && (
-            <div style={{ marginTop: '8px' }}>
-              {n.riders.map((r, idx) => (
-                <div
-                  key={r.id}
-                  style={{
-                    padding: '8px 0',
-                    borderTop: idx === 0 ? '1px solid #1e1e23' : '1px solid #1a1a1f',
-                    display: 'flex',
-                    justifyContent: 'space-between',
-                    alignItems: 'center',
-                  }}
-                >
-                  <span style={{ fontSize: '14px', color: '#e8e8ea' }}>
-                    {r.first_name} {r.last_name}
-                  </span>
-                  <span className="muted" style={{ fontSize: '12px' }}>{r.phone}</span>
+        <div style={{ display: 'grid', gap: 14 }}>
+          <Card title="Live shuttle">
+            <a href="/track" style={{
+              display: 'block',
+              padding: '24px 12px',
+              background: '#0e0e12',
+              border: `1px solid ${BORDER}`,
+              borderRadius: 8,
+              textAlign: 'center',
+              textDecoration: 'none',
+              color: ACCENT,
+              fontWeight: 700,
+            }}>
+              Open tracker →
+            </a>
+          </Card>
+
+          <Card title="Recent orders">
+            {(orders || []).length === 0 && (
+              <p style={{ color: '#9c9ca3', margin: 0, fontSize: 13 }}>No orders yet.</p>
+            )}
+            <div style={{ display: 'grid', gap: 6 }}>
+              {(orders || []).map(o => (
+                <div key={o.id} style={{ padding: 8, background: '#0e0e12', borderRadius: 6, fontSize: 12 }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                    <strong>{o.buyer_name || '(no name)'}</strong>
+                    <span style={{ color: ACCENT }}>${(o.total_cents / 100).toFixed(2)}</span>
+                  </div>
+                  <div style={{ color: '#9c9ca3', fontSize: 11, marginTop: 2 }}>
+                    {o.events?.name || '—'} · {o.party_size} ticket{o.party_size === 1 ? '' : 's'} · {o.status}
+                  </div>
                 </div>
               ))}
             </div>
-          )}
+          </Card>
 
-          <div style={{ marginTop: '12px', paddingTop: '12px', borderTop: '1px solid #1e1e23' }}>
-            <p className="tiny" style={{ marginBottom: '6px' }}>
-              Use <code>{'{first_name}'}</code> to personalize.
-            </p>
-            <textarea
-              rows={2}
-              placeholder="Hey {first_name}, pickup in 10 min..."
-              value={groupMessage[n.group.id] || ''}
-              onChange={e => setGroupMessage({ ...groupMessage, [n.group.id]: e.target.value })}
-            />
-            <button
-              className="btn-primary"
-              onClick={() => sendGroupSMS(n)}
-              disabled={sending[n.group.id] || n.riders.length === 0}
-            >
-              {sending[n.group.id] ? 'Sending…' : `Send to ${n.riders.length}`}
-            </button>
-          </div>
+          {upcoming.length > 0 && (
+            <Card title="Upcoming Loops">
+              <div style={{ display: 'grid', gap: 6 }}>
+                {upcoming.map(g => (
+                  <a key={g.id} href={`/groups#${g.id}`} style={{
+                    padding: 8, background: '#0e0e12', borderRadius: 6, fontSize: 13,
+                    textDecoration: 'none', color: '#fff', display: 'block',
+                  }}>
+                    <div style={{ color: ACCENT, fontSize: 11 }}>{g.event_date}</div>
+                    <div>{g.name}</div>
+                  </a>
+                ))}
+              </div>
+            </Card>
+          )}
         </div>
-      ))}
+      </div>
     </main>
   )
 }
 
-function formatEventDate(iso) {
-  if (!iso) return null
+function Stat({ label, value }) {
+  return (
+    <div style={{ background: SURFACE, border: `1px solid ${BORDER}`, borderRadius: 10, padding: 12 }}>
+      <div style={{ fontSize: 11, color: '#9c9ca3', textTransform: 'uppercase', letterSpacing: '0.06em' }}>{label}</div>
+      <div style={{ fontSize: 22, fontWeight: 700, color: ACCENT, marginTop: 2 }}>{value}</div>
+    </div>
+  )
+}
+
+function Card({ title, children }) {
+  return (
+    <section style={{ background: SURFACE, border: `1px solid ${BORDER}`, borderRadius: 12, padding: 14, display: 'grid', gap: 10 }}>
+      <h2 style={{ fontSize: 12, color: ACCENT, margin: 0, letterSpacing: '0.08em', textTransform: 'uppercase' }}>{title}</h2>
+      {children}
+    </section>
+  )
+}
+
+function formatToday(iso) {
+  if (!iso) return ''
   try {
     const d = new Date(`${iso}T12:00:00-05:00`)
     return d.toLocaleDateString('en-US', {
-      weekday: 'long',
-      month: 'short',
-      day: 'numeric',
+      weekday: 'long', month: 'long', day: 'numeric',
       timeZone: 'America/Indiana/Indianapolis',
     })
-  } catch {
-    return iso
-  }
+  } catch { return iso }
 }
