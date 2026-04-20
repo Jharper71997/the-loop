@@ -1,6 +1,8 @@
 import { notFound } from 'next/navigation'
 import { supabaseAdmin } from '@/lib/supabaseAdmin'
 import EventForm from '../EventForm'
+import SmsBroadcast from '../../components/SmsBroadcast'
+import SmsButton from '../../components/SmsButton'
 
 export const dynamic = 'force-dynamic'
 
@@ -93,6 +95,22 @@ export default async function ManageLoopPage({ params }) {
         <Stat label="Waivers signed" value={`${waiverCount} / ${members?.length || 0}`} />
       </Stats3>
 
+      {(members || []).length > 0 && (
+        <div style={{ marginTop: 8 }}>
+          <SmsBroadcast
+            recipients={(members || []).map(m => ({
+              id: m.contacts?.id,
+              first_name: m.contacts?.first_name || '',
+              last_name: m.contacts?.last_name || '',
+              phone: m.contacts?.phone || null,
+              current_stop_index: m.current_stop_index,
+            }))}
+            stops={Array.isArray(group.schedule) ? group.schedule : null}
+            title="Text the riders on this Loop"
+          />
+        </div>
+      )}
+
       {!event && (
         <Section title="Sales not enabled">
           <p style={{ color: '#9c9ca3', fontSize: 13, margin: 0 }}>
@@ -123,12 +141,15 @@ export default async function ManageLoopPage({ params }) {
                     Stop {m.current_stop_index != null ? m.current_stop_index + 1 : '—'}
                   </div>
                 </div>
-                <div style={{ fontSize: 11 }}>
-                  {sig ? (
-                    <span style={{ color: '#10b981' }}>✓ waiver v{sig.waiver_versions?.version}</span>
-                  ) : (
-                    <span style={{ color: '#facc15' }}>waiver not signed</span>
-                  )}
+                <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+                  <span style={{ fontSize: 11 }}>
+                    {sig ? (
+                      <span style={{ color: '#10b981' }}>✓ waiver v{sig.waiver_versions?.version}</span>
+                    ) : (
+                      <span style={{ color: '#facc15' }}>waiver not signed</span>
+                    )}
+                  </span>
+                  <SmsButton contact={c} />
                 </div>
               </div>
             )

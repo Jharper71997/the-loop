@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState } from 'react'
 import { supabase } from '@/lib/supabase'
+import SmsButton from '../components/SmsButton'
 
 export default function Contacts() {
   const [contacts, setContacts] = useState([])
@@ -226,6 +227,9 @@ export default function Contacts() {
               <div style={{ display: 'flex', gap: '6px', alignItems: 'center' }}>
                 {hasUpcoming && <span className="chip chip-green">Booked</span>}
                 {rides > 0 && <span className="chip chip-gold">{rides}</span>}
+                <span onClick={e => e.stopPropagation()}>
+                  <SmsButton contact={c} />
+                </span>
               </div>
             </div>
           )
