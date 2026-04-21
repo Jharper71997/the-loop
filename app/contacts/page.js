@@ -155,14 +155,28 @@ export default function Contacts() {
         </div>
 
         <div className="card">
-          <h3>Assign to Group</h3>
-          <select value={assignedGroup} onChange={e => setAssignedGroup(e.target.value)}>
-            <option value="">Select a group...</option>
-            {groups.map(g => (
-              <option key={g.id} value={g.id}>{g.name}{g.pickup_time ? ` — ${g.pickup_time}` : ''}</option>
-            ))}
-          </select>
-          <button className="btn-green" onClick={assignToGroup}>Assign</button>
+          <h3>Assign to Upcoming Loop</h3>
+          {(() => {
+            const upcomingGroups = groups
+              .filter(g => g.event_date && g.event_date >= today)
+              .sort((a, b) => (a.event_date || '').localeCompare(b.event_date || ''))
+            if (upcomingGroups.length === 0) {
+              return <p style={{ color: '#888', fontSize: '13px' }}>No upcoming loops scheduled.</p>
+            }
+            return (
+              <>
+                <select value={assignedGroup} onChange={e => setAssignedGroup(e.target.value)}>
+                  <option value="">Select a loop...</option>
+                  {upcomingGroups.map(g => (
+                    <option key={g.id} value={g.id}>
+                      {formatEventDate(g.event_date)}{g.pickup_time ? ` · ${g.pickup_time}` : ''} — {g.name}
+                    </option>
+                  ))}
+                </select>
+                <button className="btn-green" onClick={assignToGroup}>Assign</button>
+              </>
+            )
+          })()}
         </div>
 
         <div className="card">

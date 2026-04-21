@@ -7,8 +7,10 @@ import { supabase } from '@/lib/supabase'
 const LINKS = [
   { href: '/', label: 'Tonight' },
   { href: '/groups', label: 'Loops' },
+  { href: '/contacts', label: 'Contacts' },
   { href: '/metrics', label: 'Metrics' },
   { href: '/qr', label: 'QR' },
+  { href: '/track', label: 'Track', external: true },
   { href: '/finance', label: 'Finance' },
 ]
 
@@ -94,7 +96,7 @@ export default function NavBar() {
             ? pathname === '/'
             : pathname === l.href || pathname.startsWith(l.href + '/')
           return (
-            <a key={l.href} href={l.href} style={{
+            <a key={l.href} href={l.href} target={l.external ? '_blank' : undefined} rel={l.external ? 'noreferrer' : undefined} style={{
               color: active ? '#0a0a0b' : '#c8c8cc',
               background: active ? 'linear-gradient(180deg, #f0c24a, #d4a333)' : 'transparent',
               textDecoration: 'none',
