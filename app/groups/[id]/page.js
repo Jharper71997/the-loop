@@ -3,6 +3,7 @@ import { supabaseAdmin } from '@/lib/supabaseAdmin'
 import EventForm from '../EventForm'
 import SmsBroadcast from '../../components/SmsBroadcast'
 import SmsButton from '../../components/SmsButton'
+import WaiversPanel from './WaiversPanel'
 
 export const dynamic = 'force-dynamic'
 
@@ -34,7 +35,7 @@ export default async function ManageLoopPage({ params }) {
       .limit(0), // placeholder; we'll re-query below if event exists
     supabase
       .from('group_members')
-      .select('id, current_stop_index, contacts(id, first_name, last_name, phone, has_signed_waiver)')
+      .select('id, current_stop_index, contacts(id, first_name, last_name, phone, has_signed_waiver, waiver_sms_sent_at, waiver_sms_count)')
       .eq('group_id', id),
   ])
 
@@ -94,6 +95,20 @@ export default async function ManageLoopPage({ params }) {
         <Stat label="Revenue" value={`$${(revenue / 100).toFixed(2)}`} />
         <Stat label="Waivers signed" value={`${waiverCount} / ${members?.length || 0}`} />
       </Stats3>
+
+      {(members || []).length > 0 && (
+        <WaiversPanel
+          groupId={group.id}
+          members={(members || []).map(m => ({
+            id: m.contacts?.id,
+            first_name: m.contacts?.first_name || '',
+            last_name: m.contacts?.last_name || '',
+            phone: m.contacts?.phone || null,
+            has_signed_waiver: !!m.contacts?.has_signed_waiver,
+            waiver_sms_sent_at: m.contacts?.waiver_sms_sent_at || null,
+          }))}
+        />
+      )}
 
       {(members || []).length > 0 && (
         <div style={{ marginTop: 8 }}>

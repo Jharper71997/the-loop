@@ -1,6 +1,6 @@
 'use client'
 
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 
 const ACCENT = '#d4a333'
 const SURFACE = '#15151a'
@@ -8,6 +8,19 @@ const BORDER = '#2a2a31'
 
 export default function BookingForm({ eventId, eventName, ticketTypes, waiver }) {
   const defaultTtId = ticketTypes[0]?.id || ''
+
+  const [attribution, setAttribution] = useState(null)
+  useEffect(() => {
+    if (typeof window === 'undefined') return
+    const p = new URLSearchParams(window.location.search)
+    const a = {
+      qr_code: p.get('qr') || null,
+      utm_source: p.get('utm_source') || null,
+      utm_medium: p.get('utm_medium') || null,
+      utm_campaign: p.get('utm_campaign') || null,
+    }
+    if (a.qr_code || a.utm_source || a.utm_campaign) setAttribution(a)
+  }, [])
 
   const [buyer, setBuyer] = useState({
     first_name: '', last_name: '', email: '', phone: '', sms_consent: true,
@@ -104,6 +117,7 @@ export default function BookingForm({ eventId, eventName, ticketTypes, waiver })
           buyer,
           riders: ridersPayload,
           buyer_typed_name: buyerTypedName.trim(),
+          attribution,
         }),
       })
       const json = await res.json()

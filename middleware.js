@@ -10,6 +10,8 @@ const PUBLIC_PATHS = [
   '/waiver',
   '/api/checkout',
   '/api/waiver',
+  '/r/',
+  '/events',
 ]
 
 export async function middleware(req) {

@@ -1,8 +1,9 @@
 import Stripe from 'stripe'
 import { supabaseAdmin } from '@/lib/supabaseAdmin'
-import { recordSignature } from '@/lib/waiver'
+import { recordSignature, textUnsignedContact } from '@/lib/waiver'
 import { sendBookingConfirmation } from '@/lib/sms'
 import { appUrl } from '@/lib/stripe'
+import { randomCode } from '@/lib/qrcodeAi'
 
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
@@ -79,14 +80,57 @@ async function handleCheckoutCompleted(supabase, session) {
 
   if (order.status === 'paid') return
 
+  const qrCode = session.metadata?.qr_code || null
+  const utmSource = session.metadata?.utm_source || null
+  const utmMedium = session.metadata?.utm_medium || null
+  const utmCampaign = session.metadata?.utm_campaign || null
+
+  const orderUpdate = {
+    status: 'paid',
+    stripe_payment_intent_id: session.payment_intent || null,
+    paid_at: new Date().toISOString(),
+  }
+  if (qrCode || utmSource || utmMedium || utmCampaign) {
+    orderUpdate.metadata = {
+      qr_code: qrCode,
+      utm_source: utmSource,
+      utm_medium: utmMedium,
+      utm_campaign: utmCampaign,
+    }
+  }
+
   await supabase
     .from('orders')
-    .update({
-      status: 'paid',
-      stripe_payment_intent_id: session.payment_intent || null,
-      paid_at: new Date().toISOString(),
-    })
+    .update(orderUpdate)
     .eq('id', order.id)
+
+  // Link the most recent scan from this QR code to this order so attribution
+  // rollups can count "scans that converted". We pick the latest unattributed
+  // scan of this code, which is a reasonable heuristic for "the scan that
+  // started this buyer's journey".
+  if (qrCode) {
+    const { data: qrRow } = await supabase
+      .from('qr_codes')
+      .select('id')
+      .eq('code', qrCode)
+      .maybeSingle()
+    if (qrRow) {
+      const { data: recentScan } = await supabase
+        .from('qr_scans')
+        .select('id')
+        .eq('qr_id', qrRow.id)
+        .is('resulting_order_id', null)
+        .order('scanned_at', { ascending: false })
+        .limit(1)
+        .maybeSingle()
+      if (recentScan) {
+        await supabase
+          .from('qr_scans')
+          .update({ resulting_order_id: order.id })
+          .eq('id', recentScan.id)
+      }
+    }
+  }
 
   const sigPayload = parseSigPayload(session.metadata?.waiver_payload)
   const sigsByContact = new Map()
@@ -158,6 +202,59 @@ async function handleCheckoutCompleted(supabase, session) {
       } catch (err) {
         console.error('[stripe-webhook] SMS failed', err)
       }
+    }
+
+    // Mint a per-ticket check-in QR code for every order_item. We only
+    // insert the DB row (no PNG API call yet) so each purchase is free —
+    // qrcode.ai PNG rendering happens on demand when an admin opens the
+    // item on /qr. The /r/<code> redirect already works without a PNG.
+    try {
+      const { data: freshItems } = await supabase
+        .from('order_items')
+        .select('id, rider_first_name, rider_last_name')
+        .eq('order_id', order.id)
+
+      const qrRows = (freshItems || []).map(it => ({
+        code: randomCode(8),
+        kind: 'checkin',
+        label: `Check-in · ${[it.rider_first_name, it.rider_last_name].filter(Boolean).join(' ') || order.id.slice(0, 6)}`,
+        target_url: `${appUrl()}/track?checkin=ok`,
+        order_item_id: it.id,
+      }))
+
+      if (qrRows.length) {
+        const { error: qrErr } = await supabase.from('qr_codes').insert(qrRows)
+        if (qrErr) console.error('[stripe-webhook] checkin QR insert failed', qrErr)
+      }
+    } catch (err) {
+      console.error('[stripe-webhook] checkin QR mint failed', err)
+    }
+
+    // Waiver reminders for additional riders on the order (party_size > 1).
+    // Buyer already got one in sendBookingConfirmation above; this handles
+    // everyone else who was added as a contact but hasn't signed.
+    try {
+      const { data: items } = await supabase
+        .from('order_items')
+        .select('contact_id')
+        .eq('order_id', order.id)
+
+      const riderContactIds = [...new Set((items || [])
+        .map(it => it.contact_id)
+        .filter(cid => cid && cid !== order.contact_id))]
+
+      if (riderContactIds.length) {
+        const { data: riders } = await supabase
+          .from('contacts')
+          .select('id, first_name, phone, has_signed_waiver, waiver_sms_sent_at, waiver_sms_count')
+          .in('id', riderContactIds)
+        for (const rider of riders || []) {
+          try { await textUnsignedContact(supabase, rider) }
+          catch (err) { console.error('[stripe-webhook] rider waiver SMS failed', err) }
+        }
+      }
+    } catch (err) {
+      console.error('[stripe-webhook] rider waiver sweep failed', err)
     }
   }
 }

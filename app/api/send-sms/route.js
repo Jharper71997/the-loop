@@ -1,19 +1,12 @@
-import twilio from 'twilio'
+import { sendSms } from '@/lib/sms'
 
-const client = twilio(
-  process.env.TWILIO_ACCOUNT_SID,
-  process.env.TWILIO_AUTH_TOKEN
-)
+export const runtime = 'nodejs'
+export const dynamic = 'force-dynamic'
 
 export async function POST(req) {
   const { to, message } = await req.json()
-
   try {
-    await client.messages.create({
-      body: message,
-      from: process.env.TWILIO_PHONE_NUMBER,
-      to: to
-    })
+    await sendSms(to, message)
     return Response.json({ success: true })
   } catch (error) {
     return Response.json({ success: false, error: error.message }, { status: 500 })

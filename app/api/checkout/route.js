@@ -192,6 +192,7 @@ export async function POST(req) {
       },
       orderId: order.id,
       waiverPayload: JSON.stringify({ sigs: waiverQueue }),
+      attribution: body.attribution || null,
     })
   } catch (err) {
     return Response.json({ error: `stripe: ${err.message}` }, { status: 500 })
