@@ -39,7 +39,7 @@ export default async function TonightPage() {
 
   const { data: ordersToday } = await supabase
     .from('orders')
-    .select('id, buyer_name, total_cents, party_size, status, paid_at')
+    .select('id, buyer_name, total_cents, party_size, status, paid_at, metadata')
     .eq('status', 'paid')
     .gte('paid_at', `${today}T00:00:00`)
     .order('paid_at', { ascending: false })

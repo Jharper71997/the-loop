@@ -4,6 +4,7 @@ import { useMemo } from 'react'
 import SmsBroadcast from '../_components/SmsBroadcast'
 import PickedUpToggle from '../_components/PickedUpToggle'
 import SmsButton from '../_components/SmsButton'
+import TtBackfillButton from '../_components/TtBackfillButton'
 import { formatStopTime } from '@/lib/schedule'
 
 const ACCENT = '#d4a333'
@@ -27,18 +28,37 @@ export default function TonightClient({ state, today, group, currentIdx, ordersT
         }}>
           <h2 style={sectionHeader}>Orders today ({ordersToday.length})</h2>
           <div style={{ display: 'grid', gap: 6, marginTop: 8 }}>
-            {ordersToday.map(o => (
-              <div key={o.id} style={{
-                padding: 8, background: '#0e0e12', borderRadius: 6, fontSize: 12,
-                display: 'flex', justifyContent: 'space-between',
-              }}>
-                <span>{o.buyer_name || '(no name)'} · {o.party_size} ticket{o.party_size === 1 ? '' : 's'}</span>
-                <span style={{ color: ACCENT, fontWeight: 600 }}>${(o.total_cents / 100).toFixed(2)}</span>
-              </div>
-            ))}
+            {ordersToday.map(o => {
+              const ttTagged = o.metadata?.source === 'ticket_tailor'
+              return (
+                <div key={o.id} style={{
+                  padding: 8, background: '#0e0e12', borderRadius: 6, fontSize: 12,
+                  display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 8,
+                }}>
+                  <span>
+                    {o.buyer_name || '(no name)'} · {o.party_size} ticket{o.party_size === 1 ? '' : 's'}
+                    {ttTagged && (
+                      <span style={{
+                        marginLeft: 8,
+                        fontSize: 9,
+                        letterSpacing: '0.18em',
+                        textTransform: 'uppercase',
+                        color: '#9c9ca3',
+                        border: '1px solid #2a2a31',
+                        padding: '1px 6px',
+                        borderRadius: 3,
+                      }}>TT</span>
+                    )}
+                  </span>
+                  <span style={{ color: ACCENT, fontWeight: 600 }}>${(o.total_cents / 100).toFixed(2)}</span>
+                </div>
+              )
+            })}
           </div>
         </section>
       )}
+
+      <TtBackfillButton />
     </main>
   )
 }
