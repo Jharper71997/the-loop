@@ -1,7 +1,7 @@
 import ExternalNav from '../_components/ExternalNav'
 
 const ZENDU_MAP_URL = 'https://zenbus.zenduit.com/map/jville_brew_loop/6998b2d1d9a9a1bab8a072dc'
-const LOOP_PHONE = '18448846175' // (844) 884-6175
+const LOOP_PHONE = '16362661801' // (636) 266-1801 — rider text line
 
 export const metadata = {
   title: 'Live Shuttle',
@@ -84,7 +84,7 @@ export default function TrackPage() {
             </div>
 
             <a
-              href={`tel:${LOOP_PHONE}`}
+              href={`sms:+${LOOP_PHONE}`}
               style={{
                 display: 'inline-flex',
                 alignItems: 'center',

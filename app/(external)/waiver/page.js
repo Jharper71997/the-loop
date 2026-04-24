@@ -69,7 +69,7 @@ export default function WaiverLandingPage() {
               Search your messages for <strong style={{ color: INK }}>&ldquo;Brew Loop&rdquo;</strong>, or text us and we&apos;ll resend.
             </p>
             <a
-              href="sms:+18448846175&body=Resend%20my%20waiver%20link%20please"
+              href="sms:+16362661801&body=Resend%20my%20waiver%20link%20please"
               style={{
                 display: 'inline-block',
                 padding: '12px 22px',

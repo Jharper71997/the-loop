@@ -233,10 +233,10 @@ export default function ExternalNav() {
               }}
             >
               <a
-                href="tel:+18448846175"
+                href="sms:+16362661801"
                 style={{ color: INK_DIM, fontSize: 14, textDecoration: 'none' }}
               >
-                (844) 884-6175
+                Text us: (636) 266-1801
               </a>
               <a
                 href="mailto:hello@jvillebrewloop.com"

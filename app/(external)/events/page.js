@@ -1,4 +1,4 @@
-import { supabaseAdmin } from '@/lib/supabaseAdmin'
+import { getUpcomingLoops } from '@/lib/upcomingLoops'
 import ExternalNav from '../_components/ExternalNav'
 import Footer from '../_components/Footer'
 import PlaceholderArt from '../_components/PlaceholderArt'
@@ -25,19 +25,7 @@ const INK = '#f5f5f7'
 const INK_DIM = '#b8b8bf'
 
 export default async function EventsPage() {
-  const supabase = supabaseAdmin()
-  const today = new Date().toISOString().slice(0, 10)
-
-  const { data: events } = await supabase
-    .from('events')
-    .select(`
-      id, name, event_date, pickup_time, description, cover_image_url, status, capacity,
-      ticket_types ( price_cents, active )
-    `)
-    .eq('status', 'on_sale')
-    .gte('event_date', today)
-    .order('event_date', { ascending: true })
-    .limit(24)
+  const loops = await getUpcomingLoops({ limit: 24 })
 
   return (
     <>
@@ -72,7 +60,7 @@ export default async function EventsPage() {
         </section>
 
         <section style={{ maxWidth: 1100, margin: '0 auto', padding: '40px 20px 72px' }}>
-          {!events?.length ? (
+          {!loops.length ? (
             <EmptyState />
           ) : (
             <div
@@ -82,7 +70,7 @@ export default async function EventsPage() {
                 gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))',
               }}
             >
-              {events.map(e => <EventCard key={e.id} event={e} />)}
+              {loops.map(loop => <LoopCard key={`${loop.kind}-${loop.id}`} loop={loop} />)}
             </div>
           )}
         </section>
@@ -106,26 +94,24 @@ function EmptyState() {
       }}
     >
       <div style={{ color: INK, fontWeight: 600, fontSize: 18, marginBottom: 8 }}>
-        No loops on sale yet
+        No loops scheduled yet
       </div>
       <p style={{ color: INK_DIM, margin: '0 0 20px' }}>
-        Tickets typically drop early in the week. Follow us or check back soon.
+        New dates drop each week. Follow us or check back soon.
       </p>
       <a href="/" style={ghostCta}>Back home</a>
     </div>
   )
 }
 
-function EventCard({ event }) {
-  const prices = (event.ticket_types || [])
-    .filter(t => t.active)
-    .map(t => t.price_cents)
-    .sort((a, b) => a - b)
-  const fromPrice = prices[0]
+function LoopCard({ loop }) {
+  const isBookable = loop.kind === 'event'
+  const href = isBookable ? `/book/${loop.id}` : '#'
 
   return (
     <a
-      href={`/book/${event.id}`}
+      href={href}
+      onClick={isBookable ? undefined : (e) => e.preventDefault()}
       style={{
         display: 'flex',
         flexDirection: 'column',
@@ -136,6 +122,7 @@ function EventCard({ event }) {
         borderRadius: 16,
         overflow: 'hidden',
         transition: 'border-color 0.2s, transform 0.15s',
+        cursor: isBookable ? 'pointer' : 'default',
       }}
     >
       <div
@@ -145,13 +132,13 @@ function EventCard({ event }) {
           overflow: 'hidden',
         }}
       >
-        {event.cover_image_url ? (
+        {loop.coverImageUrl ? (
           <div
             aria-hidden
             style={{
               position: 'absolute',
               inset: 0,
-              background: `url(${event.cover_image_url}) center/cover`,
+              background: `url(${loop.coverImageUrl}) center/cover`,
             }}
           />
         ) : (
@@ -173,9 +160,29 @@ function EventCard({ event }) {
             backdropFilter: 'blur(6px)',
           }}
         >
-          {formatDate(event.event_date)}
+          {formatDate(loop.eventDate)}
         </span>
-        {event.pickup_time && (
+        {!isBookable && (
+          <span
+            style={{
+              position: 'absolute',
+              top: 12,
+              right: 12,
+              fontSize: 10,
+              letterSpacing: '0.2em',
+              textTransform: 'uppercase',
+              color: GOLD_HI,
+              fontWeight: 700,
+              background: 'rgba(212,163,51,0.14)',
+              border: '1px solid rgba(212,163,51,0.35)',
+              padding: '4px 10px',
+              borderRadius: 999,
+            }}
+          >
+            Coming soon
+          </span>
+        )}
+        {loop.pickupTime && (
           <span
             style={{
               position: 'absolute',
@@ -190,29 +197,13 @@ function EventCard({ event }) {
               backdropFilter: 'blur(6px)',
             }}
           >
-            First pickup {formatTime(event.pickup_time)}
+            First pickup {formatTime(loop.pickupTime)}
           </span>
         )}
       </div>
 
       <div style={{ padding: '20px 22px 22px', display: 'flex', flexDirection: 'column', flex: 1 }}>
-        <h3 style={{ color: INK, fontSize: 19, fontWeight: 600, marginBottom: 8 }}>{event.name}</h3>
-        {event.description && (
-          <p
-            style={{
-              color: INK_DIM,
-              fontSize: 14,
-              lineHeight: 1.55,
-              margin: '0 0 16px',
-              display: '-webkit-box',
-              WebkitLineClamp: 3,
-              WebkitBoxOrient: 'vertical',
-              overflow: 'hidden',
-            }}
-          >
-            {event.description}
-          </p>
-        )}
+        <h3 style={{ color: INK, fontSize: 19, fontWeight: 600, marginBottom: 8 }}>{loop.name}</h3>
 
         <div
           style={{
@@ -225,7 +216,9 @@ function EventCard({ event }) {
           }}
         >
           <span style={{ color: GOLD_HI, fontWeight: 700, fontSize: 16 }}>
-            {fromPrice != null ? `From $${(fromPrice / 100).toFixed(0)}` : 'Book now'}
+            {isBookable
+              ? (loop.fromPriceCents != null ? `From $${(loop.fromPriceCents / 100).toFixed(0)}` : 'Book now')
+              : 'Tickets soon'}
           </span>
           <span
             style={{
@@ -238,7 +231,11 @@ function EventCard({ event }) {
               gap: 4,
             }}
           >
-            Book <span style={{ color: GOLD }}>&rarr;</span>
+            {isBookable ? (
+              <>Book <span style={{ color: GOLD }}>&rarr;</span></>
+            ) : (
+              <span style={{ color: INK_DIM }}>Not on sale</span>
+            )}
           </span>
         </div>
       </div>

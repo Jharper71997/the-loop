@@ -1,4 +1,4 @@
-import { supabaseAdmin } from '@/lib/supabaseAdmin'
+import { getUpcomingLoops } from '@/lib/upcomingLoops'
 import ExternalNav from './_components/ExternalNav'
 import Footer from './_components/Footer'
 import PlaceholderArt from './_components/PlaceholderArt'
@@ -17,16 +17,7 @@ const INK_DIM = '#b8b8bf'
 const INK_MUTED = '#8a8a90'
 
 export default async function LandingPage() {
-  const supabase = supabaseAdmin()
-  const today = new Date().toISOString().slice(0, 10)
-
-  const { data: events } = await supabase
-    .from('events')
-    .select('id, name, event_date, pickup_time, cover_image_url, ticket_types(price_cents, active)')
-    .eq('status', 'on_sale')
-    .gte('event_date', today)
-    .order('event_date', { ascending: true })
-    .limit(3)
+  const loops = await getUpcomingLoops({ limit: 3 })
 
   return (
     <>
@@ -34,7 +25,7 @@ export default async function LandingPage() {
       <main>
         <Hero />
         <HowItWorks />
-        <NextLoops events={events || []} />
+        <NextLoops loops={loops} />
         <Mission />
         <Faq />
         <SponsorStrip />
@@ -235,7 +226,7 @@ function SectionHeader({ eyebrow, title, sub }) {
   )
 }
 
-function NextLoops({ events }) {
+function NextLoops({ loops }) {
   return (
     <section style={{ padding: '32px 20px 72px', maxWidth: 1100, margin: '0 auto' }}>
       <SectionHeader
@@ -243,7 +234,7 @@ function NextLoops({ events }) {
         title="What&apos;s rolling this weekend."
       />
 
-      {events.length === 0 ? (
+      {loops.length === 0 ? (
         <div
           style={{
             marginTop: 32,
@@ -254,7 +245,7 @@ function NextLoops({ events }) {
             background: 'rgba(255,255,255,0.015)',
           }}
         >
-          <div style={{ color: INK, fontWeight: 600, marginBottom: 6 }}>No loops on sale right now.</div>
+          <div style={{ color: INK, fontWeight: 600, marginBottom: 6 }}>No loops scheduled yet.</div>
           <p style={{ color: INK_DIM, margin: 0 }}>Check back soon, or follow us to hear when tickets drop.</p>
         </div>
       ) : (
@@ -266,27 +257,24 @@ function NextLoops({ events }) {
             gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))',
           }}
         >
-          {events.map(e => <MiniEventCard key={e.id} event={e} />)}
+          {loops.map(loop => <MiniLoopCard key={`${loop.kind}-${loop.id}`} loop={loop} />)}
         </div>
       )}
 
       <div style={{ marginTop: 28, textAlign: 'center' }}>
-        <a href="/events" style={ghostCta}>See all events &rarr;</a>
+        <a href="/events" style={ghostCta}>See all loops &rarr;</a>
       </div>
     </section>
   )
 }
 
-function MiniEventCard({ event }) {
-  const prices = (event.ticket_types || [])
-    .filter(t => t.active)
-    .map(t => t.price_cents)
-    .sort((a, b) => a - b)
-  const fromPrice = prices[0]
+function MiniLoopCard({ loop }) {
+  const isBookable = loop.kind === 'event'
+  const href = isBookable ? `/book/${loop.id}` : '/events'
 
   return (
     <a
-      href={`/book/${event.id}`}
+      href={href}
       style={{
         display: 'block',
         textDecoration: 'none',
@@ -308,13 +296,13 @@ function MiniEventCard({ event }) {
           overflow: 'hidden',
         }}
       >
-        {event.cover_image_url ? (
+        {loop.coverImageUrl ? (
           <div
             aria-hidden
             style={{
               position: 'absolute',
               inset: 0,
-              background: `url(${event.cover_image_url}) center/cover`,
+              background: `url(${loop.coverImageUrl}) center/cover`,
             }}
           />
         ) : (
@@ -334,17 +322,41 @@ function MiniEventCard({ event }) {
             backdropFilter: 'blur(6px)',
           }}
         >
-          {formatDate(event.event_date)}
-          {event.pickup_time ? ` · ${formatTime(event.pickup_time)}` : ''}
+          {formatDate(loop.eventDate)}
+          {loop.pickupTime ? ` · ${formatTime(loop.pickupTime)}` : ''}
         </span>
+        {!isBookable && (
+          <span
+            style={{
+              position: 'absolute',
+              top: 12,
+              right: 12,
+              fontSize: 10,
+              letterSpacing: '0.2em',
+              textTransform: 'uppercase',
+              color: GOLD_HI,
+              fontWeight: 700,
+              background: 'rgba(212,163,51,0.14)',
+              border: '1px solid rgba(212,163,51,0.35)',
+              padding: '4px 10px',
+              borderRadius: 999,
+            }}
+          >
+            Coming soon
+          </span>
+        )}
       </div>
       <div style={{ padding: '18px 18px 20px' }}>
-        <h3 style={{ color: INK, fontSize: 18, fontWeight: 600, marginBottom: 6 }}>{event.name}</h3>
+        <h3 style={{ color: INK, fontSize: 18, fontWeight: 600, marginBottom: 6 }}>{loop.name}</h3>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginTop: 10 }}>
           <span style={{ color: GOLD_HI, fontWeight: 700, fontSize: 15 }}>
-            {fromPrice != null ? `From $${(fromPrice / 100).toFixed(0)}` : 'Book now'}
+            {isBookable
+              ? (loop.fromPriceCents != null ? `From $${(loop.fromPriceCents / 100).toFixed(0)}` : 'Book now')
+              : 'Tickets soon'}
           </span>
-          <span style={{ color: INK_DIM, fontSize: 13, fontWeight: 500 }}>Book &rarr;</span>
+          <span style={{ color: INK_DIM, fontSize: 13, fontWeight: 500 }}>
+            {isBookable ? 'Book →' : 'Details →'}
+          </span>
         </div>
       </div>
     </a>

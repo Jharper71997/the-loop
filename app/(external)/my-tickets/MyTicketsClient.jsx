@@ -61,8 +61,8 @@ export default function MyTicketsClient() {
             <p style={{ color: INK_DIM, margin: 0, fontSize: 14 }}>
               Double-check your email and the last 4 digits of the phone number you booked with. If it still doesn&apos;t
               match, text us at{' '}
-              <a href="sms:+18448846175" style={{ color: GOLD, textDecoration: 'none', fontWeight: 600 }}>
-                (844) 884-6175
+              <a href="sms:+16362661801" style={{ color: GOLD, textDecoration: 'none', fontWeight: 600 }}>
+                (636) 266-1801
               </a>{' '}
               and we&apos;ll track it down.
             </p>
