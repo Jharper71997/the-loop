@@ -41,8 +41,9 @@ export default function Footer() {
           </FooterCol>
 
           <FooterCol title="About">
+            <FooterLink href="/about">About the Loop</FooterLink>
+            <FooterLink href="/about#faq">FAQ</FooterLink>
             <FooterLink href="/bars">Partner bars</FooterLink>
-            <FooterLink href="/#how-it-works">How it works</FooterLink>
             <FooterLink href="mailto:hello@jvillebrewloop.com">Contact</FooterLink>
           </FooterCol>
 
