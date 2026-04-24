@@ -5,16 +5,28 @@ export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
 export const maxDuration = 60
 
-// POST /api/ticket-tailor-backfill
+// TT backfill — split into two modes so a single event's orders can be
+// processed inside Vercel's function timeout, while the UI can loop through
+// many events for a full resync.
 //
-// Re-pulls every TT order for every group that was ever synced with a
-// tt_event_id and re-runs it through the webhook handler. Safe to call
-// repeatedly — handleOrder is idempotent (contacts and group_members are
-// keyed by natural keys; the synthetic `orders` row dedupes on
-// metadata.tt_order_id).
+//   GET  /api/ticket-tailor-backfill            -> { event_ids: [...] }
+//   POST /api/ticket-tailor-backfill            -> backfill ALL events (may 504)
+//   POST /api/ticket-tailor-backfill?event_id=X -> backfill just that event
 //
-// Requires TICKET_TAILOR_API_KEY. No body required.
-export async function POST() {
+// Idempotent via orders.metadata->>tt_order_id + contact natural keys.
+
+export async function GET() {
+  const supabase = supabaseAdmin()
+  const { data, error } = await supabase
+    .from('groups')
+    .select('tt_event_id')
+    .not('tt_event_id', 'is', null)
+  if (error) return Response.json({ error: error.message }, { status: 500 })
+  const eventIds = Array.from(new Set((data || []).map(g => g.tt_event_id).filter(Boolean)))
+  return Response.json({ event_ids: eventIds })
+}
+
+export async function POST(req) {
   const apiKey = process.env.TICKET_TAILOR_API_KEY
   if (!apiKey) {
     return Response.json(
@@ -25,13 +37,20 @@ export async function POST() {
   const auth = 'Basic ' + Buffer.from(`${apiKey}:`).toString('base64')
   const supabase = supabaseAdmin()
 
-  const { data: groups, error: gErr } = await supabase
-    .from('groups')
-    .select('id, tt_event_id, name, event_date')
-    .not('tt_event_id', 'is', null)
-  if (gErr) return Response.json({ error: `groups query: ${gErr.message}` }, { status: 500 })
+  const { searchParams } = new URL(req.url)
+  const singleEventId = searchParams.get('event_id')
 
-  const eventIds = Array.from(new Set((groups || []).map(g => g.tt_event_id).filter(Boolean)))
+  let eventIds
+  if (singleEventId) {
+    eventIds = [singleEventId]
+  } else {
+    const { data, error } = await supabase
+      .from('groups')
+      .select('tt_event_id')
+      .not('tt_event_id', 'is', null)
+    if (error) return Response.json({ error: `groups query: ${error.message}` }, { status: 500 })
+    eventIds = Array.from(new Set((data || []).map(g => g.tt_event_id).filter(Boolean)))
+  }
 
   if (eventIds.length === 0) {
     return Response.json({
@@ -71,7 +90,7 @@ export async function POST() {
     const handlerErrors = []
     for (const o of orders) {
       try {
-        await handleOrder(supabase, o)
+        await handleOrder(supabase, o, { skipWaiverSms: true })
         replayed++
       } catch (err) {
         errors++
@@ -129,7 +148,7 @@ async function fetchAllOrdersForEvent(eventId, auth) {
     let data
     try {
       data = await res.json()
-    } catch (err) {
+    } catch {
       return { error: `TT API returned non-JSON`, status: res.status, orders: all }
     }
 
