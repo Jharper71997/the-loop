@@ -1,23 +1,51 @@
 import { NextResponse } from 'next/server'
 import { createServerClient } from '@supabase/ssr'
 
-const PUBLIC_PATHS = [
+const PUBLIC_PREFIXES = [
   '/login',
+  '/book',
+  '/track',
+  '/waiver',
+  '/events',
+  '/bars',
+  '/my-tickets',
+  '/r/',
   '/api/ticket-tailor-webhook',
   '/api/stripe-webhook',
-  '/track',
-  '/book',
-  '/waiver',
   '/api/checkout',
   '/api/waiver',
-  '/r/',
-  '/events',
 ]
+
+const LEGACY_ADMIN_PREFIXES = ['/groups', '/contacts', '/finance', '/metrics', '/qr']
+
+function isPublic(pathname) {
+  if (pathname === '/') return true
+  return PUBLIC_PREFIXES.some(p => {
+    if (p.endsWith('/')) return pathname.startsWith(p)
+    return pathname === p || pathname.startsWith(p + '/')
+  })
+}
+
+function legacyRedirect(pathname) {
+  for (const prefix of LEGACY_ADMIN_PREFIXES) {
+    if (pathname === prefix || pathname.startsWith(prefix + '/')) {
+      return '/admin' + pathname
+    }
+  }
+  return null
+}
 
 export async function middleware(req) {
   const { pathname } = req.nextUrl
 
-  if (PUBLIC_PATHS.some(p => pathname.startsWith(p))) {
+  const redirectTo = legacyRedirect(pathname)
+  if (redirectTo) {
+    const url = req.nextUrl.clone()
+    url.pathname = redirectTo
+    return NextResponse.redirect(url, 308)
+  }
+
+  if (isPublic(pathname)) {
     return NextResponse.next()
   }
 
@@ -44,7 +72,7 @@ export async function middleware(req) {
   if (!user) {
     const loginUrl = req.nextUrl.clone()
     loginUrl.pathname = '/login'
-    if (pathname !== '/') loginUrl.searchParams.set('next', pathname)
+    loginUrl.searchParams.set('next', pathname)
     return NextResponse.redirect(loginUrl)
   }
 
