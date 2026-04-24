@@ -1,45 +1,91 @@
 'use client'
 
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 
-// Triggers the TT backfill one event at a time so each request stays inside
-// Vercel's function timeout. Idempotent — safe to re-run.
+// TT sync panel. Runs a health check on mount so Jacob sees the state of
+// the TT integration at a glance, then lets him kick a per-event backfill.
 export default function TtBackfillButton() {
+  const [status, setStatus] = useState(null)
+  const [statusError, setStatusError] = useState(null)
+  const [statusLoading, setStatusLoading] = useState(false)
+
   const [running, setRunning] = useState(false)
-  const [progress, setProgress] = useState(null) // { done, total }
+  const [stage, setStage] = useState('') // user-visible activity label
+  const [progress, setProgress] = useState(null)
   const [perEvent, setPerEvent] = useState([])
   const [error, setError] = useState(null)
+
+  async function loadStatus() {
+    setStatusLoading(true)
+    setStatusError(null)
+    try {
+      const res = await fetch('/api/ticket-tailor-status')
+      const ct = res.headers.get('content-type') || ''
+      if (!ct.includes('application/json')) {
+        const txt = await res.text().catch(() => '')
+        setStatusError(`Unexpected response (HTTP ${res.status}). First 100 chars: ${txt.slice(0, 100)}`)
+        setStatusLoading(false)
+        return
+      }
+      const json = await res.json()
+      if (!res.ok) {
+        setStatusError(json.error || `HTTP ${res.status}`)
+      } else {
+        setStatus(json)
+      }
+    } catch (err) {
+      setStatusError(err.message)
+    }
+    setStatusLoading(false)
+  }
+
+  useEffect(() => {
+    loadStatus()
+  }, [])
 
   async function run() {
     if (running) return
     setRunning(true)
     setError(null)
     setPerEvent([])
-    setProgress({ done: 0, total: 0 })
+    setProgress(null)
+    setStage('Fetching event list…')
 
     let eventIds = []
     try {
       const res = await fetch('/api/ticket-tailor-backfill')
-      const json = await res.json().catch(() => ({}))
+      const ct = res.headers.get('content-type') || ''
+      if (!ct.includes('application/json')) {
+        const txt = await res.text().catch(() => '')
+        setError(`list: got non-JSON (HTTP ${res.status}). First 200 chars: ${txt.slice(0, 200)}`)
+        setRunning(false)
+        setStage('')
+        return
+      }
+      const json = await res.json()
       if (!res.ok) {
         setError(json.error || `list: HTTP ${res.status}`)
         setRunning(false)
+        setStage('')
         return
       }
       eventIds = json.event_ids || []
     } catch (err) {
       setError(`list: ${err.message}`)
       setRunning(false)
+      setStage('')
       return
     }
 
     if (!eventIds.length) {
       setError('No groups have a TT event ID yet — the TT webhook needs to fire at least once before there is anything to backfill.')
       setRunning(false)
+      setStage('')
       return
     }
 
     setProgress({ done: 0, total: eventIds.length })
+    setStage(`Replaying ${eventIds.length} event${eventIds.length === 1 ? '' : 's'}…`)
 
     const results = []
     for (let i = 0; i < eventIds.length; i++) {
@@ -48,12 +94,22 @@ export default function TtBackfillButton() {
         const res = await fetch(`/api/ticket-tailor-backfill?event_id=${encodeURIComponent(eid)}`, {
           method: 'POST',
         })
-        const json = await res.json().catch(() => ({}))
-        if (!res.ok) {
-          results.push({ event_id: eid, orders: 0, replayed: 0, errors: 1, api_error: json.error || `HTTP ${res.status}` })
+        const ct = res.headers.get('content-type') || ''
+        if (!ct.includes('application/json')) {
+          const txt = await res.text().catch(() => '')
+          results.push({
+            event_id: eid,
+            orders: 0, replayed: 0, errors: 1,
+            api_error: `non-JSON HTTP ${res.status}: ${txt.slice(0, 120)}`,
+          })
         } else {
-          const pe = (json.per_event && json.per_event[0]) || { event_id: eid, orders: 0, replayed: 0, errors: 0 }
-          results.push(pe)
+          const json = await res.json()
+          if (!res.ok) {
+            results.push({ event_id: eid, orders: 0, replayed: 0, errors: 1, api_error: json.error || `HTTP ${res.status}` })
+          } else {
+            const pe = (json.per_event && json.per_event[0]) || { event_id: eid, orders: 0, replayed: 0, errors: 0 }
+            results.push(pe)
+          }
         }
       } catch (err) {
         results.push({ event_id: eid, orders: 0, replayed: 0, errors: 1, api_error: err.message })
@@ -62,6 +118,8 @@ export default function TtBackfillButton() {
       setProgress({ done: i + 1, total: eventIds.length })
     }
     setRunning(false)
+    setStage('')
+    loadStatus()
   }
 
   const totals = perEvent.reduce(
@@ -136,8 +194,16 @@ export default function TtBackfillButton() {
         </button>
       </div>
 
+      <StatusPanel status={status} error={statusError} loading={statusLoading} onRefresh={loadStatus} />
+
+      {stage && (
+        <div style={{ marginTop: 10, fontSize: 12, color: '#f0c24a', fontFamily: "'JetBrains Mono', monospace" }}>
+          {stage}
+        </div>
+      )}
+
       {progress && progress.total > 0 && (
-        <div style={{ marginTop: 12 }}>
+        <div style={{ marginTop: 10 }}>
           <div
             style={{
               height: 6,
@@ -240,4 +306,135 @@ export default function TtBackfillButton() {
       )}
     </div>
   )
+}
+
+function StatusPanel({ status, error, loading, onRefresh }) {
+  if (loading && !status) {
+    return (
+      <div style={{ marginTop: 10, fontSize: 11, color: '#6f6f76', fontFamily: "'JetBrains Mono', monospace" }}>
+        Checking TT integration status…
+      </div>
+    )
+  }
+
+  if (error) {
+    return (
+      <div style={{
+        marginTop: 10,
+        padding: '8px 10px',
+        borderRadius: 6,
+        color: '#e07a7a',
+        background: 'rgba(224,122,122,0.08)',
+        fontSize: 12,
+      }}>
+        Status check failed: {error}
+        <button onClick={onRefresh} style={statusBtnLink}>retry</button>
+      </div>
+    )
+  }
+
+  if (!status) return null
+
+  const checks = [
+    {
+      label: 'API key',
+      ok: status.api_key_set && status.api_key_probe?.ok === true,
+      detail: !status.api_key_set
+        ? 'not set on this environment'
+        : status.api_key_probe?.ok
+          ? 'valid'
+          : `rejected: ${status.api_key_probe?.error || 'unknown'}`,
+    },
+    {
+      label: 'Groups w/ TT event ID',
+      ok: status.groups_with_tt > 0,
+      detail: String(status.groups_with_tt),
+    },
+    {
+      label: 'TT webhooks last 24h',
+      ok: status.webhooks_24h > 0,
+      detail: String(status.webhooks_24h),
+    },
+    {
+      label: 'Last webhook',
+      ok: !!status.last_webhook,
+      detail: status.last_webhook
+        ? `${status.last_webhook.event_type} · ${status.last_webhook.status}${status.last_webhook.error ? ' · ' + status.last_webhook.error.slice(0, 60) : ''} · ${relTime(status.last_webhook.received_at)}`
+        : 'never received',
+    },
+    {
+      label: 'TT orders in DB',
+      ok: status.tt_orders_in_db > 0,
+      detail: String(status.tt_orders_in_db),
+    },
+  ]
+
+  return (
+    <div style={{
+      marginTop: 10,
+      padding: '10px 12px',
+      borderRadius: 6,
+      background: 'rgba(255,255,255,0.02)',
+      border: '1px solid #1e1e23',
+      fontSize: 12,
+    }}>
+      <div style={{
+        display: 'flex',
+        justifyContent: 'space-between',
+        alignItems: 'center',
+        marginBottom: 6,
+      }}>
+        <span style={{
+          color: '#9c9ca3',
+          fontFamily: "'JetBrains Mono', monospace",
+          fontSize: 10,
+          letterSpacing: '0.2em',
+          textTransform: 'uppercase',
+        }}>
+          Integration status
+        </span>
+        <button onClick={onRefresh} style={statusBtnLink}>refresh</button>
+      </div>
+      <div style={{ display: 'grid', gap: 4 }}>
+        {checks.map((c, i) => (
+          <div key={i} style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+            <span style={{
+              width: 8, height: 8, borderRadius: '50%',
+              background: c.ok ? '#6fbf7f' : '#e07a7a',
+              flexShrink: 0,
+            }} />
+            <span style={{ color: '#c8c8cc', minWidth: 160 }}>{c.label}</span>
+            <span style={{
+              color: '#9c9ca3',
+              fontFamily: "'JetBrains Mono', monospace",
+              fontSize: 11,
+              flex: 1,
+            }}>
+              {c.detail}
+            </span>
+          </div>
+        ))}
+      </div>
+    </div>
+  )
+}
+
+const statusBtnLink = {
+  background: 'none',
+  border: 0,
+  color: '#d4a333',
+  fontSize: 11,
+  cursor: 'pointer',
+  padding: 0,
+  fontFamily: 'inherit',
+}
+
+function relTime(iso) {
+  if (!iso) return 'never'
+  const then = new Date(iso).getTime()
+  const delta = Date.now() - then
+  if (delta < 60_000) return 'just now'
+  if (delta < 3_600_000) return `${Math.floor(delta / 60_000)}m ago`
+  if (delta < 86_400_000) return `${Math.floor(delta / 3_600_000)}h ago`
+  return `${Math.floor(delta / 86_400_000)}d ago`
 }
