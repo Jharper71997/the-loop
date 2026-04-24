@@ -119,26 +119,42 @@ export default function TtBackfillButton() {
             {result.replayed} order{result.replayed === 1 ? '' : 's'}
             {result.errors > 0 ? `, ${result.errors} error${result.errors === 1 ? '' : 's'}` : ''}
           </div>
+          {result.warning && (
+            <div style={{ color: '#f0c24a', fontSize: 12, marginBottom: 6 }}>
+              {result.warning}
+            </div>
+          )}
           {Array.isArray(result.per_event) && result.per_event.length > 0 && (
-            <details style={{ marginTop: 4 }}>
+            <details style={{ marginTop: 4 }} open={result.errors > 0}>
               <summary style={{ cursor: 'pointer', color: '#9c9ca3' }}>Per-event breakdown</summary>
-              <div style={{ marginTop: 6, display: 'grid', gap: 4 }}>
+              <div style={{ marginTop: 6, display: 'grid', gap: 6 }}>
                 {result.per_event.map(pe => (
                   <div
                     key={pe.event_id}
                     style={{
-                      display: 'flex',
-                      justifyContent: 'space-between',
-                      gap: 10,
+                      display: 'grid',
+                      gap: 2,
                       fontFamily: "'JetBrains Mono', monospace",
                       fontSize: 11,
                     }}
                   >
-                    <span style={{ color: '#6f6f76' }}>{pe.event_id}</span>
-                    <span>
-                      {pe.replayed}/{pe.orders}
-                      {pe.errors > 0 ? ` · ${pe.errors} err` : ''}
-                    </span>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', gap: 10 }}>
+                      <span style={{ color: '#6f6f76' }}>{pe.event_id}</span>
+                      <span>
+                        {pe.replayed}/{pe.orders}
+                        {pe.errors > 0 ? ` · ${pe.errors} err` : ''}
+                      </span>
+                    </div>
+                    {pe.api_error && (
+                      <div style={{ color: '#e07a7a', fontSize: 10, paddingLeft: 4 }}>
+                        API: {pe.api_error}
+                      </div>
+                    )}
+                    {Array.isArray(pe.handler_errors) && pe.handler_errors.map((he, i) => (
+                      <div key={i} style={{ color: '#e07a7a', fontSize: 10, paddingLeft: 4 }}>
+                        {he.order_id}: {he.error}
+                      </div>
+                    ))}
                   </div>
                 ))}
               </div>

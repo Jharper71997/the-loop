@@ -13,15 +13,14 @@ export const maxDuration = 60
 // keyed by natural keys; the synthetic `orders` row dedupes on
 // metadata.tt_order_id).
 //
-// Use this after wiring the TT webhook to populate `orders` for TT sales
-// that arrived before the webhook did the mirroring (or to reconcile after
-// any webhook delivery failures).
-//
 // Requires TICKET_TAILOR_API_KEY. No body required.
 export async function POST() {
   const apiKey = process.env.TICKET_TAILOR_API_KEY
   if (!apiKey) {
-    return Response.json({ error: 'TICKET_TAILOR_API_KEY not set' }, { status: 500 })
+    return Response.json(
+      { error: 'TICKET_TAILOR_API_KEY not set on this environment' },
+      { status: 500 }
+    )
   }
   const auth = 'Basic ' + Buffer.from(`${apiKey}:`).toString('base64')
   const supabase = supabaseAdmin()
@@ -30,9 +29,21 @@ export async function POST() {
     .from('groups')
     .select('id, tt_event_id, name, event_date')
     .not('tt_event_id', 'is', null)
-  if (gErr) return Response.json({ error: gErr.message }, { status: 500 })
+  if (gErr) return Response.json({ error: `groups query: ${gErr.message}` }, { status: 500 })
 
   const eventIds = Array.from(new Set((groups || []).map(g => g.tt_event_id).filter(Boolean)))
+
+  if (eventIds.length === 0) {
+    return Response.json({
+      ok: true,
+      events_processed: 0,
+      total_orders: 0,
+      replayed: 0,
+      errors: 0,
+      per_event: [],
+      warning: 'No groups in the DB have a tt_event_id yet. The TT webhook needs to fire at least once (from a real sale) before there is anything to backfill.',
+    })
+  }
 
   const perEvent = []
   let totalOrders = 0
@@ -40,25 +51,46 @@ export async function POST() {
   let totalErrors = 0
 
   for (const eventId of eventIds) {
-    const orders = await fetchAllOrdersForEvent(eventId, auth)
+    const fetchResult = await fetchAllOrdersForEvent(eventId, auth)
+    if (fetchResult.error) {
+      perEvent.push({
+        event_id: eventId,
+        orders: 0,
+        replayed: 0,
+        errors: 1,
+        api_status: fetchResult.status,
+        api_error: fetchResult.error,
+      })
+      totalErrors++
+      continue
+    }
+    const orders = fetchResult.orders
     totalOrders += orders.length
     let replayed = 0
     let errors = 0
+    const handlerErrors = []
     for (const o of orders) {
       try {
         await handleOrder(supabase, o)
         replayed++
       } catch (err) {
-        console.error(`[tt-backfill] event ${eventId} order ${o.id} failed`, err)
         errors++
+        handlerErrors.push({ order_id: o.id, error: err?.message || String(err) })
       }
     }
     totalReplayed += replayed
     totalErrors += errors
-    perEvent.push({ event_id: eventId, orders: orders.length, replayed, errors })
+    perEvent.push({
+      event_id: eventId,
+      orders: orders.length,
+      replayed,
+      errors,
+      handler_errors: handlerErrors.length ? handlerErrors : undefined,
+    })
   }
 
   return Response.json({
+    ok: true,
     events_processed: eventIds.length,
     total_orders: totalOrders,
     replayed: totalReplayed,
@@ -70,18 +102,37 @@ export async function POST() {
 async function fetchAllOrdersForEvent(eventId, auth) {
   const all = []
   let startingAfter = null
-  // TT paginates with ?starting_after. Cap at 10 pages (~1000 orders) as a
-  // safety stop — way above anything Brew Loop realistically sells per event.
   for (let page = 0; page < 10; page++) {
     const url = new URL('https://api.tickettailor.com/v1/orders')
     url.searchParams.set('event_id', eventId)
     url.searchParams.set('limit', '100')
     if (startingAfter) url.searchParams.set('starting_after', startingAfter)
-    const res = await fetch(url.toString(), {
-      headers: { Authorization: auth, Accept: 'application/json' },
-    })
-    if (!res.ok) break
-    const data = await res.json()
+
+    let res
+    try {
+      res = await fetch(url.toString(), {
+        headers: { Authorization: auth, Accept: 'application/json' },
+      })
+    } catch (err) {
+      return { error: `fetch failed: ${err?.message || err}`, status: null, orders: all }
+    }
+
+    if (!res.ok) {
+      const text = await res.text().catch(() => '')
+      return {
+        error: `TT API ${res.status}: ${text.slice(0, 300) || res.statusText}`,
+        status: res.status,
+        orders: all,
+      }
+    }
+
+    let data
+    try {
+      data = await res.json()
+    } catch (err) {
+      return { error: `TT API returned non-JSON`, status: res.status, orders: all }
+    }
+
     const batch = Array.isArray(data?.data) ? data.data : []
     if (!batch.length) break
     all.push(...batch)
@@ -89,5 +140,5 @@ async function fetchAllOrdersForEvent(eventId, auth) {
     startingAfter = batch[batch.length - 1]?.id
     if (!startingAfter) break
   }
-  return all
+  return { orders: all }
 }
