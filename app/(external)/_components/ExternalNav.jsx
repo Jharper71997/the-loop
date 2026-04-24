@@ -120,49 +120,132 @@ export default function ExternalNav() {
 
       {open && (
         <div
+          role="dialog"
+          aria-modal="true"
           style={{
             position: 'fixed',
-            inset: '64px 0 0 0',
+            inset: 0,
             background: BG,
-            zIndex: 39,
-            padding: '24px 20px',
+            zIndex: 60,
             display: 'flex',
             flexDirection: 'column',
-            gap: 4,
+            overflowY: 'auto',
           }}
         >
-          {LINKS.map(l => (
-            <a
-              key={l.href}
-              href={l.href}
-              onClick={() => setOpen(false)}
-              style={{
-                display: 'block',
-                padding: '16px 8px',
-                fontSize: 20,
-                fontWeight: 500,
-                color: INK,
-                textDecoration: 'none',
-                borderBottom: `1px solid ${LINE}`,
-              }}
-            >
-              {l.label}
-            </a>
-          ))}
-          <a
-            href="/book"
-            onClick={() => setOpen(false)}
+          <div
             style={{
-              ...ctaStyle,
-              marginTop: 24,
-              display: 'block',
-              textAlign: 'center',
-              fontSize: 16,
-              padding: '16px 24px',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              padding: '14px 20px',
+              borderBottom: `1px solid ${LINE}`,
+              background: BG,
             }}
           >
-            Book a ride
-          </a>
+            <a
+              href="/"
+              onClick={() => setOpen(false)}
+              style={{
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: 10,
+                textDecoration: 'none',
+                color: INK,
+                fontWeight: 700,
+                fontSize: 16,
+              }}
+            >
+              <LoopMark />
+              <span>Jville Brew Loop</span>
+            </a>
+            <button
+              aria-label="Close menu"
+              onClick={() => setOpen(false)}
+              style={{
+                display: 'inline-flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                width: 44,
+                height: 44,
+                border: `1px solid ${LINE}`,
+                background: 'rgba(255,255,255,0.04)',
+                color: INK,
+                borderRadius: 10,
+                cursor: 'pointer',
+                padding: 0,
+                fontSize: 20,
+                lineHeight: 1,
+              }}
+            >
+              ×
+            </button>
+          </div>
+
+          <nav style={{ padding: '12px 20px 32px', display: 'flex', flexDirection: 'column' }}>
+            {LINKS.map(l => (
+              <a
+                key={l.href}
+                href={l.href}
+                onClick={() => setOpen(false)}
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'space-between',
+                  padding: '18px 4px',
+                  fontSize: 22,
+                  fontWeight: 600,
+                  color: INK,
+                  textDecoration: 'none',
+                  borderBottom: `1px solid ${LINE}`,
+                  minHeight: 60,
+                }}
+              >
+                <span>{l.label}</span>
+                <span style={{ color: GOLD, fontSize: 18 }}>&rsaquo;</span>
+              </a>
+            ))}
+            <a
+              href="/book"
+              onClick={() => setOpen(false)}
+              style={{
+                ...ctaStyle,
+                marginTop: 28,
+                display: 'block',
+                textAlign: 'center',
+                fontSize: 17,
+                padding: '18px 24px',
+                borderRadius: 14,
+                fontWeight: 700,
+                letterSpacing: '0.02em',
+              }}
+            >
+              Book a ride
+            </a>
+
+            <div
+              style={{
+                marginTop: 28,
+                paddingTop: 20,
+                borderTop: `1px solid ${LINE}`,
+                display: 'flex',
+                flexDirection: 'column',
+                gap: 14,
+              }}
+            >
+              <a
+                href="tel:+18448846175"
+                style={{ color: INK_DIM, fontSize: 14, textDecoration: 'none' }}
+              >
+                (844) 884-6175
+              </a>
+              <a
+                href="mailto:hello@jvillebrewloop.com"
+                style={{ color: INK_DIM, fontSize: 14, textDecoration: 'none' }}
+              >
+                hello@jvillebrewloop.com
+              </a>
+            </div>
+          </nav>
         </div>
       )}
 
