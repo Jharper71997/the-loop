@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server'
 import { createServerClient } from '@supabase/ssr'
+import { isLeadership, isLeadershipOnlyPath } from '@/lib/roles'
 
 const PUBLIC_PREFIXES = [
   '/login',
@@ -75,6 +76,12 @@ export async function middleware(req) {
     loginUrl.pathname = '/login'
     loginUrl.searchParams.set('next', pathname)
     return NextResponse.redirect(loginUrl)
+  }
+
+  if (isLeadershipOnlyPath(pathname) && !isLeadership(user.email)) {
+    const url = req.nextUrl.clone()
+    url.pathname = '/admin'
+    return NextResponse.redirect(url)
   }
 
   return res
