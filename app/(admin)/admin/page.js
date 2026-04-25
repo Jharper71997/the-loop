@@ -1,12 +1,12 @@
 import { supabaseAdmin } from '@/lib/supabaseAdmin'
-import { operationalDateInTZ, nowInTZ, currentStopIndex, formatStopTime } from '@/lib/schedule'
+import { todayInTZ, nowInTZ, currentStopIndex, formatStopTime } from '@/lib/schedule'
 import TonightClient from './TonightClient'
 
 export const dynamic = 'force-dynamic'
 
 export default async function TonightPage() {
   const supabase = supabaseAdmin()
-  const today = operationalDateInTZ()
+  const today = todayInTZ()
   const now = nowInTZ()
 
   const { data: groups } = await supabase
@@ -18,7 +18,6 @@ export default async function TonightPage() {
         contacts ( id, first_name, last_name, phone, has_signed_waiver )
       )
     `)
-    .is('archived_at', null)
     .gte('event_date', today)
     .order('event_date', { ascending: true })
     .limit(4)

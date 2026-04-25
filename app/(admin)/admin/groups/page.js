@@ -8,7 +8,7 @@ import {
   currentStopIndex,
   formatStopTime,
   nowInTZ,
-  operationalDateInTZ,
+  todayInTZ,
 } from '@/lib/schedule'
 
 const DAY_TABS = [
@@ -19,7 +19,7 @@ const DAY_TABS = [
 export default function Groups() {
   const [groups, setGroups] = useState([])
   const [now, setNow] = useState(() => nowInTZ())
-  const [today] = useState(() => operationalDateInTZ())
+  const [today] = useState(() => todayInTZ())
   const [activeDay, setActiveDay] = useState(() => initialDay())
   const [editingSchedule, setEditingSchedule] = useState(null)
   const [scheduleDraft, setScheduleDraft] = useState([])
@@ -28,8 +28,6 @@ export default function Groups() {
   const [expanded, setExpanded] = useState(null)
   const [openStop, setOpenStop] = useState(null)
   const [pickerMember, setPickerMember] = useState(null)
-  const [showArchived, setShowArchived] = useState(false)
-  const [archivingId, setArchivingId] = useState(null)
 
   useEffect(() => {
     fetchGroups()
@@ -113,59 +111,25 @@ export default function Groups() {
     return groups
       .filter(g => {
         if (!g.event_date) return false
-        if (showArchived ? !g.archived_at : !!g.archived_at) return false
-        if (!showArchived && g.event_date < today) return false
+        if (g.event_date < today) return false
         const d = new Date(`${g.event_date}T12:00:00-05:00`).getDay()
         return d === target
       })
-      .sort((a, b) => {
-        const cmp = (a.event_date || '').localeCompare(b.event_date || '')
-        return showArchived ? -cmp : cmp
-      })
-  }, [groups, activeDay, today, showArchived])
+      .sort((a, b) => (a.event_date || '').localeCompare(b.event_date || ''))
+  }, [groups, activeDay, today])
 
   const counts = useMemo(() => {
     const out = {}
     for (const day of DAY_TABS) {
       out[day.key] = groups
         .filter(g => {
-          if (!g.event_date || g.archived_at || g.event_date < today) return false
+          if (!g.event_date || g.event_date < today) return false
           return new Date(`${g.event_date}T12:00:00-05:00`).getDay() === day.weekday
         })
         .reduce((sum, g) => sum + (g.group_members?.length || 0), 0)
     }
     return out
   }, [groups, today])
-
-  const archivedCount = useMemo(
-    () => groups.filter(g => g.archived_at).length,
-    [groups],
-  )
-
-  async function archiveGroup(group) {
-    if (archivingId) return
-    if (!confirm(`Archive ${formatEventDate(group.event_date)}? It'll move out of the active Loops list.`)) return
-    setArchivingId(group.id)
-    const { error } = await supabase
-      .from('groups')
-      .update({ archived_at: new Date().toISOString() })
-      .eq('id', group.id)
-    setArchivingId(null)
-    if (error) return alert('Archive failed: ' + error.message)
-    fetchGroups()
-  }
-
-  async function unarchiveGroup(group) {
-    if (archivingId) return
-    setArchivingId(group.id)
-    const { error } = await supabase
-      .from('groups')
-      .update({ archived_at: null })
-      .eq('id', group.id)
-    setArchivingId(null)
-    if (error) return alert('Unarchive failed: ' + error.message)
-    fetchGroups()
-  }
 
   return (
     <main>
@@ -177,27 +141,9 @@ export default function Groups() {
           minHeight: 44, display: 'inline-flex', alignItems: 'center',
         }}>+ New Loop</a>
       </div>
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', gap: 10, marginBottom: '14px', flexWrap: 'wrap' }}>
-        <p className="muted" style={{ margin: 0 }}>
-          {showArchived ? `Archived Loops (${archivedCount})` : 'Upcoming pickups by night'} · {now}
-        </p>
-        <button
-          onClick={() => setShowArchived(s => !s)}
-          style={{
-            background: 'none',
-            color: showArchived ? '#d4a333' : '#9c9ca3',
-            border: `1px solid ${showArchived ? '#d4a333' : '#2a2a31'}`,
-            padding: '4px 10px',
-            borderRadius: 6,
-            fontSize: 11,
-            letterSpacing: '0.08em',
-            textTransform: 'uppercase',
-            cursor: 'pointer',
-          }}
-        >
-          {showArchived ? 'Show active' : `Show archived (${archivedCount})`}
-        </button>
-      </div>
+      <p className="muted" style={{ marginBottom: '14px' }}>
+        Upcoming pickups by night · {now}
+      </p>
 
       <div style={{
         display: 'flex',
@@ -450,28 +396,6 @@ export default function Groups() {
                         ))}
                       </div>
                     )}
-
-                    <div style={{ marginTop: '12px', paddingTop: '12px', borderTop: '1px solid #1e1e23', display: 'flex', justifyContent: 'flex-end' }}>
-                      {group.archived_at ? (
-                        <button
-                          onClick={() => unarchiveGroup(group)}
-                          disabled={archivingId === group.id}
-                          className="btn-link"
-                          style={{ color: '#d4a333', fontSize: 12 }}
-                        >
-                          {archivingId === group.id ? 'Restoring…' : 'Restore Loop'}
-                        </button>
-                      ) : (
-                        <button
-                          onClick={() => archiveGroup(group)}
-                          disabled={archivingId === group.id}
-                          className="btn-link"
-                          style={{ color: '#9c9ca3', fontSize: 12 }}
-                        >
-                          {archivingId === group.id ? 'Archiving…' : 'Archive Loop'}
-                        </button>
-                      )}
-                    </div>
                   </>
                 )}
               </>
@@ -585,9 +509,11 @@ function StopCard({ isActive, children }) {
 
 function initialDay() {
   try {
-    const iso = operationalDateInTZ()
-    const weekday = new Date(`${iso}T12:00:00-05:00`).getDay()
-    if (weekday === 6) return 'saturday'
+    const parts = new Intl.DateTimeFormat('en-US', {
+      timeZone: 'America/Indiana/Indianapolis',
+      weekday: 'short',
+    }).format(new Date())
+    if (parts === 'Sat') return 'saturday'
   } catch {}
   return 'friday'
 }

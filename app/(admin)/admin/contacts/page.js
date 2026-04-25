@@ -161,7 +161,7 @@ export default function Contacts() {
           <h3>Assign to Upcoming Loop</h3>
           {(() => {
             const upcomingGroups = groups
-              .filter(g => g.event_date && g.event_date >= today && !g.archived_at)
+              .filter(g => g.event_date && g.event_date >= today)
               .sort((a, b) => (a.event_date || '').localeCompare(b.event_date || ''))
             if (upcomingGroups.length === 0) {
               return <p style={{ color: '#888', fontSize: '13px' }}>No upcoming loops scheduled.</p>
