@@ -12,7 +12,7 @@ export default async function TonightPage() {
   const { data: groups } = await supabase
     .from('groups')
     .select(`
-      id, name, event_date, pickup_time, schedule,
+      id, name, event_date, pickup_time, schedule, tt_event_id,
       group_members (
         id, current_stop_index,
         contacts ( id, first_name, last_name, phone, has_signed_waiver )
@@ -38,9 +38,23 @@ export default async function TonightPage() {
   }
 
   // Pull party_size from paid orders so multi-ticket buyers (TT-era) count
-  // for their actual headcount, not just the buyer contact row.
+  // for their actual headcount, not just the buyer contact row. Two paths:
+  //   1) Native /book: orders.event_id → events.group_id matches activeGroup.
+  //   2) TT mirror: orders.metadata.tt_event_id matches group.tt_event_id.
   let ticketsByContact = {}
   let totalTickets = 0
+  const seenOrderIds = new Set()
+
+  function rollUpOrder(o) {
+    if (!o?.id || seenOrderIds.has(o.id)) return
+    seenOrderIds.add(o.id)
+    const size = Number(o.party_size) || 1
+    totalTickets += size
+    if (o.contact_id) {
+      ticketsByContact[o.contact_id] = (ticketsByContact[o.contact_id] || 0) + size
+    }
+  }
+
   if (activeGroup?.id) {
     const { data: events } = await supabase
       .from('events')
@@ -50,16 +64,19 @@ export default async function TonightPage() {
     if (eventIds.length) {
       const { data: paidOrders } = await supabase
         .from('orders')
-        .select('contact_id, party_size')
+        .select('id, contact_id, party_size')
         .in('event_id', eventIds)
         .eq('status', 'paid')
-      for (const o of paidOrders || []) {
-        const size = Number(o.party_size) || 1
-        totalTickets += size
-        if (o.contact_id) {
-          ticketsByContact[o.contact_id] = (ticketsByContact[o.contact_id] || 0) + size
-        }
-      }
+      for (const o of paidOrders || []) rollUpOrder(o)
+    }
+
+    if (activeGroup.tt_event_id) {
+      const { data: ttOrders } = await supabase
+        .from('orders')
+        .select('id, contact_id, party_size, metadata')
+        .eq('status', 'paid')
+        .eq('metadata->>tt_event_id', String(activeGroup.tt_event_id))
+      for (const o of ttOrders || []) rollUpOrder(o)
     }
   }
 
