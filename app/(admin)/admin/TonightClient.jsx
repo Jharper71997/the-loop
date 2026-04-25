@@ -12,15 +12,15 @@ const SURFACE = '#15151a'
 const BORDER = '#2a2a31'
 const TRACK_URL = 'https://zenbus.zenduit.com/map/jville_brew_loop/6998b2d1d9a9a1bab8a072dc'
 
-export default function TonightClient({ state, today, group, currentIdx, ordersToday }) {
+export default function TonightClient({ state, today, group, currentIdx, ordersToday, ticketsByContact = {}, totalTickets = 0 }) {
   return (
     <main style={{ maxWidth: 1100, margin: '0 auto', padding: '20px 16px', minHeight: '100vh', color: '#fff' }}>
       <Header today={today} group={group} state={state} />
 
       {state === 'none' && <NoLoopState today={today} />}
-      {state === 'upcoming' && <UpcomingLoopState group={group} />}
-      {state === 'pre_pickup' && <PrePickupState group={group} />}
-      {state === 'in_progress' && <InProgressState group={group} currentIdx={currentIdx} />}
+      {state === 'upcoming' && <UpcomingLoopState group={group} ticketsByContact={ticketsByContact} totalTickets={totalTickets} />}
+      {state === 'pre_pickup' && <PrePickupState group={group} ticketsByContact={ticketsByContact} totalTickets={totalTickets} />}
+      {state === 'in_progress' && <InProgressState group={group} currentIdx={currentIdx} ticketsByContact={ticketsByContact} totalTickets={totalTickets} />}
 
       {ordersToday.length > 0 && (
         <section style={{
@@ -96,9 +96,10 @@ function NoLoopState() {
   )
 }
 
-function UpcomingLoopState({ group }) {
-  const riders = flattenMembers(group)
+function UpcomingLoopState({ group, ticketsByContact, totalTickets }) {
+  const riders = flattenMembers(group, ticketsByContact)
   const signed = riders.filter(r => r.has_signed_waiver).length
+  const seatLabel = formatSeatLabel(riders.length, totalTickets)
   return (
     <>
       <Hero>
@@ -108,7 +109,7 @@ function UpcomingLoopState({ group }) {
         </div>
         <div style={{ color: '#d4a333', fontSize: 14, marginTop: 2 }}>{group.name}</div>
         <div style={{ color: '#9c9ca3', fontSize: 13, marginTop: 8 }}>
-          {riders.length} rider{riders.length === 1 ? '' : 's'} booked · {signed}/{riders.length} waivers signed
+          {seatLabel} booked · {signed}/{riders.length} waivers signed
         </div>
         <div style={{ marginTop: 12, display: 'flex', gap: 8 }}>
           <a href={`/groups/${group.id}`} style={secondaryBtn}>Open Manage view →</a>
@@ -122,11 +123,12 @@ function UpcomingLoopState({ group }) {
   )
 }
 
-function PrePickupState({ group }) {
-  const riders = flattenMembers(group)
+function PrePickupState({ group, ticketsByContact, totalTickets }) {
+  const riders = flattenMembers(group, ticketsByContact)
   const signed = riders.filter(r => r.has_signed_waiver).length
   const stops = Array.isArray(group?.schedule) ? group.schedule : []
   const countdown = minutesUntil(group.pickup_time)
+  const seatLabel = formatSeatLabel(riders.length, totalTickets)
 
   return (
     <>
@@ -139,7 +141,7 @@ function PrePickupState({ group }) {
           )}
         </div>
         <div style={{ color: '#9c9ca3', fontSize: 13, marginTop: 8 }}>
-          {riders.length} rider{riders.length === 1 ? '' : 's'} · {signed}/{riders.length} waivers signed
+          {seatLabel} · {signed}/{riders.length} waivers signed
         </div>
         <div style={{ marginTop: 12, display: 'flex', gap: 8 }}>
           <a href={`/groups/${group.id}`} style={secondaryBtn}>Manage Loop →</a>
@@ -156,10 +158,11 @@ function PrePickupState({ group }) {
   )
 }
 
-function InProgressState({ group, currentIdx }) {
-  const riders = flattenMembers(group)
+function InProgressState({ group, currentIdx, ticketsByContact, totalTickets }) {
+  const riders = flattenMembers(group, ticketsByContact)
   const stops = Array.isArray(group?.schedule) ? group.schedule : []
   const currentStop = stops[currentIdx]
+  const seatLabel = formatSeatLabel(riders.length, totalTickets)
 
   return (
     <>
@@ -178,6 +181,7 @@ function InProgressState({ group, currentIdx }) {
             </span>
           </div>
         )}
+        <div style={{ color: '#9c9ca3', fontSize: 13, marginTop: 8 }}>{seatLabel}</div>
       </Hero>
 
       <section style={{
@@ -253,6 +257,7 @@ function StopCards({ stops, riders, currentIdx, showCheckoff = false }) {
               }}>
                 <div style={{ fontSize: 13 }}>
                   <strong>{r.first_name} {r.last_name}</strong>
+                  {r.tickets > 1 && <TicketBadge tickets={r.tickets} />}
                   {r.phone && <span style={{ color: '#9c9ca3', fontSize: 11, marginLeft: 6 }}>{r.phone}</span>}
                 </div>
                 <SmsButton contact={r} />
@@ -292,6 +297,7 @@ function StopCards({ stops, riders, currentIdx, showCheckoff = false }) {
                   }}>
                     <div style={{ fontSize: 13 }}>
                       <strong>{r.first_name} {r.last_name}</strong>
+                      {r.tickets > 1 && <TicketBadge tickets={r.tickets} />}
                       {r.phone && <span style={{ color: '#9c9ca3', fontSize: 11, marginLeft: 6 }}>{r.phone}</span>}
                     </div>
                     <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
@@ -315,6 +321,26 @@ function StopCards({ stops, riders, currentIdx, showCheckoff = false }) {
   )
 }
 
+function TicketBadge({ tickets }) {
+  return (
+    <span style={{
+      display: 'inline-block',
+      marginLeft: 8,
+      padding: '1px 7px',
+      borderRadius: 999,
+      background: 'rgba(212,163,51,0.15)',
+      color: ACCENT,
+      border: '1px solid rgba(212,163,51,0.4)',
+      fontSize: 10,
+      fontWeight: 700,
+      letterSpacing: '0.05em',
+      verticalAlign: 'middle',
+    }}>
+      {tickets} tix
+    </span>
+  )
+}
+
 function Hero({ children }) {
   return (
     <section style={{
@@ -325,7 +351,7 @@ function Hero({ children }) {
   )
 }
 
-function flattenMembers(group) {
+function flattenMembers(group, ticketsByContact = {}) {
   if (!group?.group_members) return []
   return group.group_members.map(m => ({
     member_id: m.id,
@@ -335,7 +361,15 @@ function flattenMembers(group) {
     last_name: m.contacts?.last_name || '',
     phone: m.contacts?.phone || null,
     has_signed_waiver: !!m.contacts?.has_signed_waiver,
+    tickets: m.contacts?.id ? (ticketsByContact[m.contacts.id] || 1) : 1,
   }))
+}
+
+function formatSeatLabel(riderCount, totalTickets) {
+  if (totalTickets > 0 && totalTickets !== riderCount) {
+    return `${totalTickets} ticket${totalTickets === 1 ? '' : 's'} · ${riderCount} contact${riderCount === 1 ? '' : 's'}`
+  }
+  return `${riderCount} rider${riderCount === 1 ? '' : 's'}`
 }
 
 function formatToday(iso) {

@@ -37,6 +37,32 @@ export default async function TonightPage() {
     state = 'upcoming'
   }
 
+  // Pull party_size from paid orders so multi-ticket buyers (TT-era) count
+  // for their actual headcount, not just the buyer contact row.
+  let ticketsByContact = {}
+  let totalTickets = 0
+  if (activeGroup?.id) {
+    const { data: events } = await supabase
+      .from('events')
+      .select('id')
+      .eq('group_id', activeGroup.id)
+    const eventIds = (events || []).map(e => e.id)
+    if (eventIds.length) {
+      const { data: paidOrders } = await supabase
+        .from('orders')
+        .select('contact_id, party_size')
+        .in('event_id', eventIds)
+        .eq('status', 'paid')
+      for (const o of paidOrders || []) {
+        const size = Number(o.party_size) || 1
+        totalTickets += size
+        if (o.contact_id) {
+          ticketsByContact[o.contact_id] = (ticketsByContact[o.contact_id] || 0) + size
+        }
+      }
+    }
+  }
+
   const { data: ordersToday } = await supabase
     .from('orders')
     .select('id, buyer_name, total_cents, party_size, status, paid_at, metadata')
@@ -52,6 +78,8 @@ export default async function TonightPage() {
       group={activeGroup}
       currentIdx={currentIdx}
       ordersToday={ordersToday || []}
+      ticketsByContact={ticketsByContact}
+      totalTickets={totalTickets}
     />
   )
 }
