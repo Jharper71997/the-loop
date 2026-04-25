@@ -10,6 +10,7 @@ export default function Contacts() {
   const [groups, setGroups] = useState([])
   const [members, setMembers] = useState([])
   const [search, setSearch] = useState('')
+  const [loopFilter, setLoopFilter] = useState('')
   const [selected, setSelected] = useState(null)
   const [editing, setEditing] = useState(false)
   const [editForm, setEditForm] = useState({})
@@ -87,6 +88,7 @@ export default function Contacts() {
         const upcoming = rides.filter(r => !r.event_date || r.event_date >= today)
         return { ...c, rides, past, upcoming }
       })
+      .filter(c => !loopFilter || c.rides.some(r => r.id === loopFilter))
       .sort((a, b) => {
         const aLast = a.past[0]?.event_date || ''
         const bLast = b.past[0]?.event_date || ''
@@ -95,7 +97,14 @@ export default function Contacts() {
         if (bLast) return 1
         return (a.last_name || '').localeCompare(b.last_name || '')
       })
-  }, [contacts, groups, members, search, today])
+  }, [contacts, groups, members, search, today, loopFilter])
+
+  const loopOptions = useMemo(() => {
+    return groups
+      .filter(g => g.event_date)
+      .slice()
+      .sort((a, b) => (b.event_date || '').localeCompare(a.event_date || ''))
+  }, [groups])
 
   if (selected) {
     const detail = enriched.find(c => c.id === selected.id) || selected
@@ -231,6 +240,45 @@ export default function Contacts() {
   return (
     <main style={{ paddingBottom: checkedCount > 0 ? 96 : undefined }}>
       <h1>Contacts</h1>
+      <div style={{ display: 'flex', gap: 8, marginBottom: 8, flexWrap: 'wrap' }}>
+        <select
+          value={loopFilter}
+          onChange={e => { setLoopFilter(e.target.value); setCheckedIds(new Set()) }}
+          style={{
+            flex: '1 1 200px',
+            background: loopFilter ? '#2a2316' : '#121215',
+            color: loopFilter ? '#f0c040' : '#c8c8cc',
+            border: `1px solid ${loopFilter ? '#3a3220' : '#1e1e23'}`,
+            borderRadius: 8,
+            padding: '10px 12px',
+            fontSize: 14,
+            margin: 0,
+          }}
+        >
+          <option value="">All contacts</option>
+          {loopOptions.map(g => (
+            <option key={g.id} value={g.id}>
+              {formatEventDate(g.event_date)}{g.pickup_time ? ` · ${g.pickup_time}` : ''}{g.name ? ` — ${g.name}` : ''}
+            </option>
+          ))}
+        </select>
+        {loopFilter && (
+          <button
+            onClick={() => { setLoopFilter(''); setCheckedIds(new Set()) }}
+            style={{
+              background: 'none',
+              color: '#9c9ca3',
+              border: '1px solid #2a2a31',
+              padding: '0 12px',
+              borderRadius: 8,
+              fontSize: 12,
+              cursor: 'pointer',
+            }}
+          >
+            Clear filter
+          </button>
+        )}
+      </div>
       <input
         placeholder="Search by name, phone, or email..."
         value={search}
