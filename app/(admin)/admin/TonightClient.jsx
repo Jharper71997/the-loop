@@ -1,6 +1,8 @@
 'use client'
 
-import { useMemo } from 'react'
+import { useMemo, useState } from 'react'
+import { useRouter } from 'next/navigation'
+import { supabase } from '@/lib/supabase'
 import SmsBroadcast from '../_components/SmsBroadcast'
 import PickedUpToggle from '../_components/PickedUpToggle'
 import SmsButton from '../_components/SmsButton'
@@ -141,9 +143,10 @@ function PrePickupState({ group }) {
         <div style={{ color: '#9c9ca3', fontSize: 13, marginTop: 8 }}>
           {riders.length} rider{riders.length === 1 ? '' : 's'} · {signed}/{riders.length} waivers signed
         </div>
-        <div style={{ marginTop: 12, display: 'flex', gap: 8 }}>
+        <div style={{ marginTop: 12, display: 'flex', gap: 8, flexWrap: 'wrap' }}>
           <a href={`/groups/${group.id}`} style={secondaryBtn}>Manage Loop →</a>
           <a href="/track" style={secondaryBtn}>Open tracker →</a>
+          <ArchiveButton groupId={group.id} />
         </div>
       </Hero>
 
@@ -178,6 +181,9 @@ function InProgressState({ group, currentIdx }) {
             </span>
           </div>
         )}
+        <div style={{ marginTop: 12, display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+          <ArchiveButton groupId={group.id} />
+        </div>
       </Hero>
 
       <section style={{
@@ -275,6 +281,44 @@ function StopCards({ stops, riders, currentIdx, showCheckoff = false }) {
         )
       })}
     </div>
+  )
+}
+
+function ArchiveButton({ groupId }) {
+  const router = useRouter()
+  const [busy, setBusy] = useState(false)
+
+  async function archive() {
+    if (busy) return
+    if (!confirm('Archive this Loop? It will be removed from Tonight and the active Loops list.')) return
+    setBusy(true)
+    const { error } = await supabase
+      .from('groups')
+      .update({ archived_at: new Date().toISOString() })
+      .eq('id', groupId)
+    if (error) {
+      alert('Archive failed: ' + error.message)
+      setBusy(false)
+      return
+    }
+    router.refresh()
+  }
+
+  return (
+    <button
+      onClick={archive}
+      disabled={busy}
+      style={{
+        ...secondaryBtn,
+        cursor: busy ? 'not-allowed' : 'pointer',
+        opacity: busy ? 0.6 : 1,
+        background: 'transparent',
+        color: '#9c9ca3',
+        border: '1px solid #2a2a31',
+      }}
+    >
+      {busy ? 'Archiving…' : 'Archive Loop'}
+    </button>
   )
 }
 
