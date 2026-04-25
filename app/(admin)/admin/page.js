@@ -1,12 +1,12 @@
 import { supabaseAdmin } from '@/lib/supabaseAdmin'
-import { todayInTZ, nowInTZ, currentStopIndex, formatStopTime } from '@/lib/schedule'
+import { operationalDateInTZ, nowInTZ, currentStopIndex, formatStopTime } from '@/lib/schedule'
 import TonightClient from './TonightClient'
 
 export const dynamic = 'force-dynamic'
 
 export default async function TonightPage() {
   const supabase = supabaseAdmin()
-  const today = todayInTZ()
+  const today = operationalDateInTZ()
   const now = nowInTZ()
 
   const { data: groups } = await supabase

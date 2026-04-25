@@ -8,7 +8,7 @@ import {
   currentStopIndex,
   formatStopTime,
   nowInTZ,
-  todayInTZ,
+  operationalDateInTZ,
 } from '@/lib/schedule'
 
 const DAY_TABS = [
@@ -19,7 +19,7 @@ const DAY_TABS = [
 export default function Groups() {
   const [groups, setGroups] = useState([])
   const [now, setNow] = useState(() => nowInTZ())
-  const [today] = useState(() => todayInTZ())
+  const [today] = useState(() => operationalDateInTZ())
   const [activeDay, setActiveDay] = useState(() => initialDay())
   const [editingSchedule, setEditingSchedule] = useState(null)
   const [scheduleDraft, setScheduleDraft] = useState([])
@@ -509,11 +509,9 @@ function StopCard({ isActive, children }) {
 
 function initialDay() {
   try {
-    const parts = new Intl.DateTimeFormat('en-US', {
-      timeZone: 'America/Indiana/Indianapolis',
-      weekday: 'short',
-    }).format(new Date())
-    if (parts === 'Sat') return 'saturday'
+    const iso = operationalDateInTZ()
+    const weekday = new Date(`${iso}T12:00:00-05:00`).getDay()
+    if (weekday === 6) return 'saturday'
   } catch {}
   return 'friday'
 }
