@@ -317,6 +317,7 @@ export default function Contacts() {
           return (
             <div
               key={c.id}
+              onClick={() => setSelected(c)}
               style={{
                 padding: '12px 14px',
                 borderTop: idx === 0 ? 'none' : '1px solid #1a1a1f',
@@ -325,6 +326,7 @@ export default function Contacts() {
                 justifyContent: 'space-between',
                 gap: '10px',
                 background: checked ? 'rgba(212,163,51,0.06)' : 'transparent',
+                cursor: 'pointer',
               }}
             >
               <label
@@ -350,10 +352,7 @@ export default function Contacts() {
                   }}
                 />
               </label>
-              <div
-                onClick={() => setSelected(c)}
-                style={{ minWidth: 0, flex: 1, cursor: 'pointer' }}
-              >
+              <div style={{ minWidth: 0, flex: 1 }}>
                 <p style={{ fontSize: '14px', fontWeight: 500, color: '#e8e8ea' }}>
                   {c.first_name} {c.last_name}
                 </p>
