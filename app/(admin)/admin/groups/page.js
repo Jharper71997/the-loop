@@ -309,6 +309,51 @@ export default function Groups() {
                     )}
 
                     <div style={{ marginTop: '10px' }}>
+                      {(() => {
+                        const unassigned = membersByStop.get('not_started') || []
+                        if (!unassigned.length) return null
+                        const key = `${group.id}:unassigned`
+                        const isOpen = openStop === key
+                        return (
+                          <div
+                            style={{
+                              padding: '12px 14px',
+                              marginBottom: '6px',
+                              borderRadius: '10px',
+                              border: '1px solid #f87171',
+                              background: '#1a0f0f',
+                            }}
+                          >
+                            <div
+                              onClick={() => setOpenStop(isOpen ? null : key)}
+                              style={{ cursor: 'pointer', display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '8px' }}
+                            >
+                              <div>
+                                <p style={{ fontWeight: 700, color: '#f87171', fontSize: '14px' }}>Unassigned</p>
+                                <p className="tiny" style={{ color: '#f87171' }}>No stop yet — tap a rider to assign</p>
+                              </div>
+                              <div style={{ display: 'flex', gap: '6px', alignItems: 'center' }}>
+                                <span className="chip" style={{ background: '#3a1a1a', color: '#f87171', borderColor: '#f87171' }}>{unassigned.length}</span>
+                                <span className="muted" style={{ fontSize: '12px' }}>{isOpen ? '▾' : '▸'}</span>
+                              </div>
+                            </div>
+                            {isOpen && (
+                              <div style={{ marginTop: '10px', paddingTop: '8px', borderTop: '1px solid #3a1a1a' }}>
+                                {unassigned.map(m => (
+                                  <RiderRow
+                                    key={m.id}
+                                    member={m}
+                                    schedule={schedule}
+                                    pickerOpen={pickerMember === m.id}
+                                    onOpenPicker={() => setPickerMember(pickerMember === m.id ? null : m.id)}
+                                    onMove={moveRider}
+                                  />
+                                ))}
+                              </div>
+                            )}
+                          </div>
+                        )
+                      })()}
                       {schedule.map((stop, i) => {
                         const atStop = membersByStop.get(i) || []
                         const key = `${group.id}:${i}`

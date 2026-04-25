@@ -211,6 +211,13 @@ function StopCards({ stops, riders, currentIdx, showCheckoff = false }) {
     return map
   }, [riders])
 
+  const unassigned = useMemo(
+    () => (riders || []).filter(r =>
+      r.current_stop_index == null || r.current_stop_index < 0 || r.current_stop_index >= stops.length
+    ),
+    [riders, stops.length],
+  )
+
   if (!stops.length) {
     return (
       <section style={{
@@ -225,6 +232,36 @@ function StopCards({ stops, riders, currentIdx, showCheckoff = false }) {
 
   return (
     <div style={{ display: 'grid', gap: 10, marginTop: 14 }}>
+      {unassigned.length > 0 && (
+        <section style={{
+          background: SURFACE, border: `1px solid #f87171`, borderRadius: 12, padding: 14,
+        }}>
+          <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between' }}>
+            <div>
+              <div style={{ fontSize: 11, color: '#f87171', letterSpacing: '0.08em', textTransform: 'uppercase' }}>Unassigned</div>
+              <div style={{ fontSize: 15, fontWeight: 700, color: '#f87171' }}>No stop yet — assign on Loops tab</div>
+            </div>
+            <span style={{ fontSize: 12, color: '#f87171' }}>
+              {unassigned.length} rider{unassigned.length === 1 ? '' : 's'}
+            </span>
+          </div>
+          <div style={{ display: 'grid', gap: 6, marginTop: 10 }}>
+            {unassigned.map(r => (
+              <div key={r.member_id} style={{
+                padding: 8, background: '#0e0e12', borderRadius: 8, border: `1px solid ${BORDER}`,
+                display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 8,
+              }}>
+                <div style={{ fontSize: 13 }}>
+                  <strong>{r.first_name} {r.last_name}</strong>
+                  {r.phone && <span style={{ color: '#9c9ca3', fontSize: 11, marginLeft: 6 }}>{r.phone}</span>}
+                </div>
+                <SmsButton contact={r} />
+              </div>
+            ))}
+          </div>
+        </section>
+      )}
+
       {stops.map((stop, i) => {
         const atStop = (riders || []).filter(r => (r.current_stop_index ?? -1) === i)
         const isCurrent = i === currentIdx
