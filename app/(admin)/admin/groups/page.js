@@ -18,6 +18,8 @@ const DAY_TABS = [
 
 export default function Groups() {
   const [groups, setGroups] = useState([])
+  const [ticketsByGroup, setTicketsByGroup] = useState({})
+  const [ticketsByContact, setTicketsByContact] = useState({})
   const [now, setNow] = useState(() => nowInTZ())
   const [today] = useState(() => operationalDateInTZ())
   const [activeDay, setActiveDay] = useState(() => initialDay())
@@ -47,7 +49,71 @@ export default function Groups() {
         )
       `)
       .order('event_date')
-    setGroups(data || [])
+    const groupRows = data || []
+    setGroups(groupRows)
+
+    // Roll up paid orders into per-group + per-contact ticket totals so the
+    // Loop chip shows real headcount, not just the contact-row count. Two
+    // paths: (1) events.group_id → orders.event_id, (2) groups.tt_event_id →
+    // orders.metadata.tt_event_id. Idempotent: dedupe by order id.
+    const groupIds = groupRows.map(g => g.id)
+    const ttEventIds = groupRows.map(g => g.tt_event_id).filter(Boolean)
+    if (!groupIds.length) {
+      setTicketsByGroup({})
+      setTicketsByContact({})
+      return
+    }
+
+    const { data: events } = await supabase
+      .from('events')
+      .select('id, group_id')
+      .in('group_id', groupIds)
+    const eventToGroup = new Map((events || []).map(e => [e.id, e.group_id]))
+    const eventIds = (events || []).map(e => e.id)
+
+    const seenOrderIds = new Set()
+    const groupTotals = {}
+    const contactTotals = {}
+
+    function addOrder(o, gid) {
+      if (!o?.id || seenOrderIds.has(o.id) || !gid) return
+      seenOrderIds.add(o.id)
+      const size = Number(o.party_size) || 1
+      groupTotals[gid] = (groupTotals[gid] || 0) + size
+      if (o.contact_id) {
+        contactTotals[o.contact_id] = (contactTotals[o.contact_id] || 0) + size
+      }
+    }
+
+    if (eventIds.length) {
+      const { data: paidOrders } = await supabase
+        .from('orders')
+        .select('id, contact_id, party_size, event_id')
+        .in('event_id', eventIds)
+        .eq('status', 'paid')
+      for (const o of paidOrders || []) {
+        addOrder(o, eventToGroup.get(o.event_id))
+      }
+    }
+
+    if (ttEventIds.length) {
+      const ttGroupByEvent = new Map(
+        groupRows.filter(g => g.tt_event_id).map(g => [String(g.tt_event_id), g.id])
+      )
+      const { data: ttOrders } = await supabase
+        .from('orders')
+        .select('id, contact_id, party_size, metadata')
+        .eq('status', 'paid')
+        .in('metadata->>tt_event_id', ttEventIds.map(String))
+      for (const o of ttOrders || []) {
+        const ttId = o.metadata?.tt_event_id
+        if (!ttId) continue
+        addOrder(o, ttGroupByEvent.get(String(ttId)))
+      }
+    }
+
+    setTicketsByGroup(groupTotals)
+    setTicketsByContact(contactTotals)
   }
 
   async function generateScheduleFor(group) {
@@ -126,10 +192,10 @@ export default function Groups() {
           if (!g.event_date || g.event_date < today) return false
           return new Date(`${g.event_date}T12:00:00-05:00`).getDay() === day.weekday
         })
-        .reduce((sum, g) => sum + (g.group_members?.length || 0), 0)
+        .reduce((sum, g) => sum + (ticketsByGroup[g.id] || g.group_members?.length || 0), 0)
     }
     return out
-  }, [groups, today])
+  }, [groups, today, ticketsByGroup])
 
   return (
     <main>
@@ -202,6 +268,8 @@ export default function Groups() {
         }
         const isEditing = editingSchedule === group.id
         const isExpanded = expanded === group.id
+        const tickets = ticketsByGroup[group.id] || 0
+        const showTickets = tickets > 0 && tickets !== members.length
 
         return (
           <div key={group.id} className="card">
@@ -231,7 +299,11 @@ export default function Groups() {
                 >
                   Manage
                 </a>
-                <span className="chip">{members.length} rider{members.length === 1 ? '' : 's'}</span>
+                {showTickets ? (
+                  <span className="chip chip-gold">{tickets} tix</span>
+                ) : (
+                  <span className="chip">{members.length} rider{members.length === 1 ? '' : 's'}</span>
+                )}
                 <span className="muted" style={{ fontSize: '14px' }}>{isExpanded ? '▾' : '▸'}</span>
               </div>
             </div>
@@ -347,6 +419,7 @@ export default function Groups() {
                                     pickerOpen={pickerMember === m.id}
                                     onOpenPicker={() => setPickerMember(pickerMember === m.id ? null : m.id)}
                                     onMove={moveRider}
+                                    tickets={ticketsByContact[m.contacts?.id] || 1}
                                   />
                                 ))}
                               </div>
@@ -400,6 +473,7 @@ export default function Groups() {
                                         pickerOpen={pickerMember === m.id}
                                         onOpenPicker={() => setPickerMember(pickerMember === m.id ? null : m.id)}
                                         onMove={moveRider}
+                                        tickets={ticketsByContact[m.contacts?.id] || 1}
                                       />
                                     ))}
                                   </>
@@ -452,7 +526,7 @@ export default function Groups() {
   )
 }
 
-function RiderRow({ member, schedule, pickerOpen, onOpenPicker, onMove }) {
+function RiderRow({ member, schedule, pickerOpen, onOpenPicker, onMove, tickets = 1 }) {
   const moved = member.current_stop_index != null
   return (
     <>
@@ -471,6 +545,19 @@ function RiderRow({ member, schedule, pickerOpen, onOpenPicker, onMove }) {
       >
         <span style={{ color: '#e8e8ea' }}>
           {member.contacts?.first_name} {member.contacts?.last_name}
+          {tickets > 1 && (
+            <span style={{
+              marginLeft: 8,
+              padding: '1px 6px',
+              borderRadius: 999,
+              background: 'rgba(212,163,51,0.15)',
+              color: '#d4a333',
+              border: '1px solid rgba(212,163,51,0.4)',
+              fontSize: 10,
+              fontWeight: 700,
+              letterSpacing: '0.05em',
+            }}>{tickets} tix</span>
+          )}
         </span>
         <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
           {moved && <span className="chip chip-gold" style={{ fontSize: '10px', padding: '1px 6px' }}>moved</span>}
