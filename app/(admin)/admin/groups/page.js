@@ -52,63 +52,47 @@ export default function Groups() {
     const groupRows = data || []
     setGroups(groupRows)
 
-    // Roll up paid orders into per-group + per-contact ticket totals so the
-    // Loop chip shows real headcount, not just the contact-row count. Two
-    // paths: (1) events.group_id → orders.event_id, (2) groups.tt_event_id →
-    // orders.metadata.tt_event_id. Idempotent: dedupe by order id.
     const groupIds = groupRows.map(g => g.id)
-    const ttEventIds = groupRows.map(g => g.tt_event_id).filter(Boolean)
     if (!groupIds.length) {
       setTicketsByGroup({})
       setTicketsByContact({})
       return
     }
 
+    // Build lookup tables: event_id → group_id, tt_event_id → group_id.
+    // Then pull all recent paid orders once and attribute by either path.
     const { data: events } = await supabase
       .from('events')
       .select('id, group_id')
       .in('group_id', groupIds)
     const eventToGroup = new Map((events || []).map(e => [e.id, e.group_id]))
-    const eventIds = (events || []).map(e => e.id)
+    const ttToGroup = new Map(
+      groupRows.filter(g => g.tt_event_id).map(g => [String(g.tt_event_id), g.id])
+    )
 
-    const seenOrderIds = new Set()
+    // Pull paid orders from the last 90 days — broad enough for any visible
+    // Loop's purchases. Filter client-side so we don't depend on a specific
+    // PostgREST JSON-path .in() syntax that's harder to verify.
+    const since = new Date(Date.now() - 90 * 24 * 3600 * 1000).toISOString()
+    const { data: paidOrders, error: ordersErr } = await supabase
+      .from('orders')
+      .select('id, contact_id, party_size, event_id, metadata, paid_at')
+      .eq('status', 'paid')
+      .gte('paid_at', since)
+    if (ordersErr) console.error('[Loops] orders fetch failed', ordersErr)
+
     const groupTotals = {}
     const contactTotals = {}
-
-    function addOrder(o, gid) {
-      if (!o?.id || seenOrderIds.has(o.id) || !gid) return
-      seenOrderIds.add(o.id)
+    for (const o of paidOrders || []) {
+      let gid = eventToGroup.get(o.event_id) || null
+      if (!gid && o.metadata?.tt_event_id) {
+        gid = ttToGroup.get(String(o.metadata.tt_event_id)) || null
+      }
+      if (!gid) continue
       const size = Number(o.party_size) || 1
       groupTotals[gid] = (groupTotals[gid] || 0) + size
       if (o.contact_id) {
         contactTotals[o.contact_id] = (contactTotals[o.contact_id] || 0) + size
-      }
-    }
-
-    if (eventIds.length) {
-      const { data: paidOrders } = await supabase
-        .from('orders')
-        .select('id, contact_id, party_size, event_id')
-        .in('event_id', eventIds)
-        .eq('status', 'paid')
-      for (const o of paidOrders || []) {
-        addOrder(o, eventToGroup.get(o.event_id))
-      }
-    }
-
-    if (ttEventIds.length) {
-      const ttGroupByEvent = new Map(
-        groupRows.filter(g => g.tt_event_id).map(g => [String(g.tt_event_id), g.id])
-      )
-      const { data: ttOrders } = await supabase
-        .from('orders')
-        .select('id, contact_id, party_size, metadata')
-        .eq('status', 'paid')
-        .in('metadata->>tt_event_id', ttEventIds.map(String))
-      for (const o of ttOrders || []) {
-        const ttId = o.metadata?.tt_event_id
-        if (!ttId) continue
-        addOrder(o, ttGroupByEvent.get(String(ttId)))
       }
     }
 
