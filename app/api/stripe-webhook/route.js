@@ -2,6 +2,7 @@ import Stripe from 'stripe'
 import { supabaseAdmin } from '@/lib/supabaseAdmin'
 import { recordSignature } from '@/lib/waiver'
 import { finalizeBooking } from '@/lib/booking'
+import { sendSms } from '@/lib/sms'
 
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
@@ -196,10 +197,13 @@ async function handleRefund(supabase, obj) {
   if (!paymentIntent) return
   const { data: order } = await supabase
     .from('orders')
-    .select('id, event_id, status')
+    .select('id, event_id, status, buyer_phone, buyer_name, total_cents')
     .eq('stripe_payment_intent_id', paymentIntent)
     .maybeSingle()
   if (!order) return
+  // Idempotent: charge.refunded + refund.created can both fire for the same
+  // refund; only the first should run side effects.
+  if (order.status === 'refunded') return
 
   await supabase
     .from('orders')
@@ -209,7 +213,7 @@ async function handleRefund(supabase, obj) {
   if (order.event_id) {
     const { data: event } = await supabase
       .from('events')
-      .select('group_id')
+      .select('group_id, name, event_date')
       .eq('id', order.event_id)
       .maybeSingle()
     if (event?.group_id) {
@@ -226,7 +230,29 @@ async function handleRefund(supabase, obj) {
           .in('contact_id', contactIds)
       }
     }
+
+    if (order.buyer_phone) {
+      const dateLabel = formatRefundDate(event?.event_date)
+      const dollars = (order.total_cents / 100).toFixed(2)
+      const body = `Brew Loop: your booking${dateLabel ? ` for ${dateLabel}` : ''} has been refunded ($${dollars}). Hope to see you on a future Loop.`
+      try {
+        await sendSms(order.buyer_phone, body)
+      } catch (err) {
+        console.error('[stripe-webhook] refund SMS failed', err)
+      }
+    }
   }
+}
+
+function formatRefundDate(iso) {
+  if (!iso) return ''
+  try {
+    const d = new Date(`${iso}T12:00:00-05:00`)
+    return d.toLocaleDateString('en-US', {
+      weekday: 'short', month: 'short', day: 'numeric',
+      timeZone: 'America/Indiana/Indianapolis',
+    })
+  } catch { return iso }
 }
 
 async function handleLegacyGroupCheckout(supabase, session) {

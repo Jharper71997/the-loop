@@ -31,12 +31,36 @@ export async function POST(req) {
     return Response.json({ error: 'invalid JSON' }, { status: 400 })
   }
 
-  const { event_id, buyer, riders, buyer_typed_name } = body || {}
+  const { event_id, buyer, riders, buyer_typed_name, client_token } = body || {}
   if (!event_id || !buyer || !Array.isArray(riders) || !riders.length) {
     return Response.json({ error: 'missing event_id, buyer, or riders' }, { status: 400 })
   }
 
   const supabase = supabaseAdmin()
+
+  // Idempotent retry: if the rider double-taps Pay or the network retries the
+  // POST, the same client_token replays the same Stripe URL instead of
+  // creating a second order + second Checkout session.
+  if (client_token) {
+    const { data: existing } = await supabase
+      .from('orders')
+      .select('id, stripe_checkout_url, status')
+      .eq('event_id', event_id)
+      .eq('client_token', client_token)
+      .maybeSingle()
+    if (existing?.stripe_checkout_url) {
+      return Response.json({
+        checkout_url: existing.stripe_checkout_url,
+        order_id: existing.id,
+        replayed: true,
+      })
+    }
+    // existing without a URL means the first request is still mid-flight —
+    // ask the client to retry rather than racing to create a second session.
+    if (existing) {
+      return Response.json({ error: 'in_flight_retry' }, { status: 409 })
+    }
+  }
 
   const { data: event } = await supabase
     .from('events')
@@ -51,7 +75,7 @@ export async function POST(req) {
   const ticketTypeIds = [...new Set(riders.map(r => r.ticket_type_id).filter(Boolean))]
   const { data: ticketTypes } = await supabase
     .from('ticket_types')
-    .select('id, name, price_cents, stop_index, event_id, active')
+    .select('id, name, price_cents, stop_index, capacity, event_id, active')
     .in('id', ticketTypeIds)
   const ttById = new Map((ticketTypes || []).map(t => [t.id, t]))
 
@@ -59,6 +83,43 @@ export async function POST(req) {
     const tt = ttById.get(r.ticket_type_id)
     if (!tt || tt.event_id !== event.id || !tt.active) {
       return Response.json({ error: 'invalid ticket_type_id' }, { status: 400 })
+    }
+  }
+
+  // Per-ticket-type capacity check. Counts already-paid orders + recent
+  // pendings (< 1 hour old, the typical Stripe Checkout window) against the
+  // configured ticket_types.capacity. Tickets with capacity = null are
+  // unlimited.
+  const requestedByType = new Map()
+  for (const r of riders) {
+    requestedByType.set(r.ticket_type_id, (requestedByType.get(r.ticket_type_id) || 0) + 1)
+  }
+  const pendingCutoff = new Date(Date.now() - 60 * 60 * 1000).toISOString()
+  for (const [ttId, requested] of requestedByType.entries()) {
+    const tt = ttById.get(ttId)
+    if (tt.capacity == null) continue
+
+    const { count: paidCount } = await supabase
+      .from('order_items')
+      .select('id, orders!inner(id, status)', { count: 'exact', head: true })
+      .eq('ticket_type_id', ttId)
+      .eq('orders.status', 'paid')
+    const { count: pendingCount } = await supabase
+      .from('order_items')
+      .select('id, orders!inner(id, status, created_at)', { count: 'exact', head: true })
+      .eq('ticket_type_id', ttId)
+      .eq('orders.status', 'pending')
+      .gte('orders.created_at', pendingCutoff)
+
+    const taken = (paidCount || 0) + (pendingCount || 0)
+    if (taken + requested > tt.capacity) {
+      return Response.json({
+        error: 'sold_out',
+        ticket_type_id: ttId,
+        ticket_type_name: tt.name,
+        remaining: Math.max(0, tt.capacity - taken),
+        requested,
+      }, { status: 409 })
     }
   }
 
@@ -144,11 +205,31 @@ export async function POST(req) {
       buyer_phone: normalizePhone(buyer.phone),
       buyer_name: `${buyer.first_name || ''} ${buyer.last_name || ''}`.trim(),
       party_size: riders.length,
+      client_token: client_token || null,
     })
     .select('id')
     .single()
   if (orderErr) {
-    return Response.json({ error: `order_insert: ${orderErr.message}` }, { status: 500 })
+    // 23505 = unique violation on (event_id, client_token). Race between two
+    // simultaneous POSTs; the loser replays the winner's checkout URL.
+    if (orderErr.code === '23505' && client_token) {
+      const { data: winner } = await supabase
+        .from('orders')
+        .select('id, stripe_checkout_url')
+        .eq('event_id', event.id)
+        .eq('client_token', client_token)
+        .maybeSingle()
+      if (winner?.stripe_checkout_url) {
+        return Response.json({
+          checkout_url: winner.stripe_checkout_url,
+          order_id: winner.id,
+          replayed: true,
+        })
+      }
+      return Response.json({ error: 'in_flight_retry' }, { status: 409 })
+    }
+    console.error('[checkout] order insert failed', orderErr)
+    return Response.json({ error: 'order_insert_failed' }, { status: 500 })
   }
 
   const orderItemRows = riderContacts.map(rc => {
@@ -167,7 +248,41 @@ export async function POST(req) {
   })
   const { error: itemsErr } = await supabase.from('order_items').insert(orderItemRows)
   if (itemsErr) {
-    return Response.json({ error: `order_items_insert: ${itemsErr.message}` }, { status: 500 })
+    console.error('[checkout] order_items insert failed', itemsErr)
+    return Response.json({ error: 'order_items_insert_failed' }, { status: 500 })
+  }
+
+  // Belt-and-suspenders capacity recheck. The pre-insert check is racy across
+  // simultaneous buyers (two reads see the same "remaining"). If the race lost
+  // and we just oversold a ticket type, undo this order before handing off to
+  // Stripe so the buyer sees sold_out instead of paying for a seat we can't
+  // honor.
+  for (const [ttId, requested] of requestedByType.entries()) {
+    const tt = ttById.get(ttId)
+    if (tt.capacity == null) continue
+    const { count: paidCount } = await supabase
+      .from('order_items')
+      .select('id, orders!inner(id, status)', { count: 'exact', head: true })
+      .eq('ticket_type_id', ttId)
+      .eq('orders.status', 'paid')
+    const { count: pendingCount } = await supabase
+      .from('order_items')
+      .select('id, orders!inner(id, status, created_at)', { count: 'exact', head: true })
+      .eq('ticket_type_id', ttId)
+      .eq('orders.status', 'pending')
+      .gte('orders.created_at', pendingCutoff)
+    const taken = (paidCount || 0) + (pendingCount || 0)
+    if (taken > tt.capacity) {
+      // Undo: cascade-deletes order_items, frees the slot back up.
+      await supabase.from('orders').delete().eq('id', order.id)
+      return Response.json({
+        error: 'sold_out',
+        ticket_type_id: ttId,
+        ticket_type_name: tt.name,
+        remaining: 0,
+        requested,
+      }, { status: 409 })
+    }
   }
 
   const sessionLineItems = []
@@ -200,7 +315,10 @@ export async function POST(req) {
 
   await supabase
     .from('orders')
-    .update({ stripe_checkout_session_id: session.id })
+    .update({
+      stripe_checkout_session_id: session.id,
+      stripe_checkout_url: session.url,
+    })
     .eq('id', order.id)
 
   return Response.json({ checkout_url: session.url, order_id: order.id })

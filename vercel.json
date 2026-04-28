@@ -1,0 +1,12 @@
+{
+  "crons": [
+    {
+      "path": "/api/cron/cleanup-pending",
+      "schedule": "0 9 * * *"
+    },
+    {
+      "path": "/api/cron/waiver-nudge",
+      "schedule": "0 14 * * 5,6"
+    }
+  ]
+}

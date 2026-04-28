@@ -1,5 +1,6 @@
 import { supabaseAdmin } from '@/lib/supabaseAdmin'
 import { handleOrder } from '@/lib/ticketTailor'
+import { denyIfNotLeadership } from '@/lib/routeAuth'
 
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
@@ -16,17 +17,21 @@ export const maxDuration = 60
 // Idempotent via orders.metadata->>tt_order_id + contact natural keys.
 
 export async function GET() {
+  const denied = await denyIfNotLeadership()
+  if (denied) return denied
   const supabase = supabaseAdmin()
   const { data, error } = await supabase
     .from('groups')
     .select('tt_event_id')
     .not('tt_event_id', 'is', null)
-  if (error) return Response.json({ error: error.message }, { status: 500 })
+  if (error) return Response.json({ error: 'groups_query_failed' }, { status: 500 })
   const eventIds = Array.from(new Set((data || []).map(g => g.tt_event_id).filter(Boolean)))
   return Response.json({ event_ids: eventIds })
 }
 
 export async function POST(req) {
+  const denied = await denyIfNotLeadership()
+  if (denied) return denied
   const apiKey = process.env.TICKET_TAILOR_API_KEY
   if (!apiKey) {
     return Response.json(

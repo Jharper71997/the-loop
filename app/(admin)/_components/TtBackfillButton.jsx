@@ -15,6 +15,11 @@ export default function TtBackfillButton() {
   const [perEvent, setPerEvent] = useState([])
   const [error, setError] = useState(null)
 
+  // Import-upcoming state (separate from backfill so it doesn't fight for UI).
+  const [importing, setImporting] = useState(false)
+  const [importResult, setImportResult] = useState(null)
+  const [importError, setImportError] = useState(null)
+
   async function loadStatus() {
     setStatusLoading(true)
     setStatusError(null)
@@ -122,6 +127,32 @@ export default function TtBackfillButton() {
     loadStatus()
   }
 
+  async function importUpcoming() {
+    if (importing) return
+    setImporting(true)
+    setImportError(null)
+    setImportResult(null)
+    try {
+      const res = await fetch('/api/ticket-tailor-import', { method: 'POST' })
+      const ct = res.headers.get('content-type') || ''
+      if (!ct.includes('application/json')) {
+        const txt = await res.text().catch(() => '')
+        setImportError(`non-JSON HTTP ${res.status}: ${txt.slice(0, 200)}`)
+      } else {
+        const json = await res.json()
+        if (!res.ok) {
+          setImportError(json.error || `HTTP ${res.status}`)
+        } else {
+          setImportResult(json)
+        }
+      }
+    } catch (err) {
+      setImportError(err.message)
+    }
+    setImporting(false)
+    loadStatus()
+  }
+
   const totals = perEvent.reduce(
     (acc, pe) => ({
       orders: acc.orders + (pe.orders || 0),
@@ -171,30 +202,106 @@ export default function TtBackfillButton() {
             Replays every TT order into Orders, one event at a time. Safe to re-run.
           </div>
         </div>
-        <button
-          onClick={run}
-          disabled={running}
-          style={{
-            padding: '10px 16px',
-            borderRadius: 8,
-            border: 0,
-            background: running
-              ? '#2a2a31'
-              : 'linear-gradient(180deg, #f0c24a, #d4a333)',
-            color: running ? '#9c9ca3' : '#0a0a0b',
-            fontSize: 12,
-            fontWeight: 700,
-            letterSpacing: '0.08em',
-            textTransform: 'uppercase',
-            cursor: running ? 'wait' : 'pointer',
-            minHeight: 40,
-          }}
-        >
-          {running ? 'Syncing…' : 'Sync now'}
-        </button>
+        <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+          <button
+            onClick={importUpcoming}
+            disabled={importing}
+            title="Pulls upcoming TT events into the Loop app so /events shows them before the first sale."
+            style={{
+              padding: '10px 14px',
+              borderRadius: 8,
+              border: '1px solid #2a2a31',
+              background: importing ? '#2a2a31' : 'transparent',
+              color: importing ? '#9c9ca3' : '#d4a333',
+              fontSize: 12,
+              fontWeight: 700,
+              letterSpacing: '0.08em',
+              textTransform: 'uppercase',
+              cursor: importing ? 'wait' : 'pointer',
+              minHeight: 40,
+            }}
+          >
+            {importing ? 'Importing…' : 'Import upcoming'}
+          </button>
+          <button
+            onClick={run}
+            disabled={running}
+            style={{
+              padding: '10px 16px',
+              borderRadius: 8,
+              border: 0,
+              background: running
+                ? '#2a2a31'
+                : 'linear-gradient(180deg, #f0c24a, #d4a333)',
+              color: running ? '#9c9ca3' : '#0a0a0b',
+              fontSize: 12,
+              fontWeight: 700,
+              letterSpacing: '0.08em',
+              textTransform: 'uppercase',
+              cursor: running ? 'wait' : 'pointer',
+              minHeight: 40,
+            }}
+          >
+            {running ? 'Syncing…' : 'Sync now'}
+          </button>
+        </div>
       </div>
 
       <StatusPanel status={status} error={statusError} loading={statusLoading} onRefresh={loadStatus} />
+
+      {importError && (
+        <div style={{
+          marginTop: 10,
+          padding: '8px 10px',
+          borderRadius: 6,
+          color: '#e07a7a',
+          background: 'rgba(224,122,122,0.08)',
+          fontSize: 12,
+        }}>
+          Import failed: {importError}
+        </div>
+      )}
+
+      {importResult && (
+        <details
+          style={{
+            marginTop: 10,
+            padding: '8px 10px',
+            borderRadius: 6,
+            background: 'rgba(255,255,255,0.02)',
+            border: '1px solid #1e1e23',
+            fontSize: 12,
+            color: '#c8c8cc',
+          }}
+          open
+        >
+          <summary style={{ cursor: 'pointer', color: '#9c9ca3' }}>
+            Imported {importResult.upserted} of {importResult.upcoming} upcoming TT events
+            {importResult.skipped > 0 ? ` · ${importResult.skipped} skipped/unchanged` : ''}
+          </summary>
+          <div style={{ marginTop: 6, display: 'grid', gap: 4 }}>
+            {(importResult.per_event || []).map(pe => (
+              <div key={pe.tt_event_id} style={{
+                fontFamily: "'JetBrains Mono', monospace",
+                fontSize: 11,
+                display: 'flex',
+                justifyContent: 'space-between',
+                gap: 10,
+              }}>
+                <span style={{ color: '#c8c8cc' }}>{pe.event_date || '—'} · {pe.name || pe.tt_event_id}</span>
+                <span style={{
+                  color: pe.action === 'error' ? '#e07a7a'
+                    : pe.action === 'inserted' ? '#6fbf7f'
+                    : pe.action === 'updated' ? '#f0c24a'
+                    : '#6f6f76',
+                }}>
+                  {pe.action}
+                </span>
+              </div>
+            ))}
+          </div>
+        </details>
+      )}
 
       {stage && (
         <div style={{ marginTop: 10, fontSize: 12, color: '#f0c24a', fontFamily: "'JetBrains Mono', monospace" }}>

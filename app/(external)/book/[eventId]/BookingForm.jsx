@@ -40,6 +40,13 @@ export default function BookingForm({ eventId, eventName, ticketTypes, waiver })
   const [submitting, setSubmitting] = useState(false)
   const [error, setError] = useState(null)
 
+  // Stable per-session token so a double-tap or retry of Pay returns the same
+  // Stripe Checkout URL instead of creating a duplicate order.
+  const [clientToken] = useState(() => {
+    if (typeof crypto !== 'undefined' && crypto.randomUUID) return crypto.randomUUID()
+    return `${Date.now().toString(36)}-${Math.random().toString(36).slice(2)}`
+  })
+
   const totalCents = useMemo(() => riders.reduce((s, r) => {
     const tt = ticketTypes.find(t => t.id === r.ticket_type_id)
     return s + (tt?.price_cents || 0)
@@ -118,11 +125,21 @@ export default function BookingForm({ eventId, eventName, ticketTypes, waiver })
           riders: ridersPayload,
           buyer_typed_name: buyerTypedName.trim(),
           attribution,
+          client_token: clientToken,
         }),
       })
       const json = await res.json()
       if (!res.ok || !json.checkout_url) {
-        setError(json.error || `Checkout failed (${res.status})`)
+        let message = json.error || `Checkout failed (${res.status})`
+        if (json.error === 'sold_out') {
+          const remaining = json.remaining ?? 0
+          message = remaining > 0
+            ? `Only ${remaining} ${json.ticket_type_name || 'ticket'}${remaining === 1 ? '' : 's'} left — please remove a rider or pick a different ticket.`
+            : `Sold out: ${json.ticket_type_name || 'this ticket'} is fully booked.`
+        } else if (json.error === 'in_flight_retry') {
+          message = 'Hang on — finalizing your previous attempt. Try again in a few seconds.'
+        }
+        setError(message)
         setSubmitting(false)
         return
       }

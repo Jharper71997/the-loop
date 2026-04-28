@@ -1,5 +1,6 @@
 import { supabaseAdmin } from '@/lib/supabaseAdmin'
 import { textUnsignedForGroup, textUnsignedContact } from '@/lib/waiver'
+import { denyIfNotLeadership } from '@/lib/routeAuth'
 
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
@@ -8,10 +9,14 @@ export const dynamic = 'force-dynamic'
 //   { group_id }    -> texts every unsigned rider on that Loop
 //   { contact_id }  -> texts one rider
 //
-// Admin-only via middleware.js (any path outside PUBLIC_PATHS requires a
-// Supabase session). Dedup is enforced inside lib/waiver.js (24h window)
-// unless { force: true } is passed.
+// Leadership-only — sends real SMS that costs us money. Daily automated
+// nudge runs through /api/cron/waiver-nudge with the cron Bearer secret.
+// Dedup is enforced inside lib/waiver.js (24h window) unless { force: true }.
 export async function POST(req) {
+  const denied = await denyIfNotLeadership()
+  if (denied) return denied
+
+
   let body
   try {
     body = await req.json()

@@ -1,6 +1,7 @@
 import { supabaseAdmin } from '@/lib/supabaseAdmin'
 import { handleOrder } from '@/lib/ticketTailor'
 import { scheduleFromTicketTypes } from '@/lib/schedule'
+import { denyIfNotLeadership } from '@/lib/routeAuth'
 
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
@@ -10,6 +11,8 @@ const TT_BASE = 'https://api.tickettailor.com/v1'
 const LOOP_NAME_PATTERN = /jville brew loop/i
 
 export async function POST() {
+  const denied = await denyIfNotLeadership()
+  if (denied) return denied
   const apiKey = process.env.TICKET_TAILOR_API_KEY
   if (!apiKey) {
     return Response.json({ error: 'TICKET_TAILOR_API_KEY not set' }, { status: 500 })

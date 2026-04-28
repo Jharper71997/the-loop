@@ -1,5 +1,5 @@
 import { supabaseAdmin } from '@/lib/supabaseAdmin'
-import { recordSignature, getCurrentWaiverVersion } from '@/lib/waiver'
+import { recordSignature, getCurrentWaiverVersion, contactHasSignedCurrent } from '@/lib/waiver'
 
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
@@ -19,12 +19,12 @@ export async function GET(req) {
   if (contactId) {
     const { data: contact } = await supabase
       .from('contacts')
-      .select('id, first_name, last_name, has_signed_waiver, waiver_version')
+      .select('id, first_name, last_name')
       .eq('id', contactId)
       .maybeSingle()
     if (contact) {
       contactName = `${contact.first_name || ''} ${contact.last_name || ''}`.trim() || null
-      alreadySigned = contact.has_signed_waiver && contact.waiver_version === current.version
+      alreadySigned = await contactHasSignedCurrent(supabase, contact.id)
     }
   }
 
