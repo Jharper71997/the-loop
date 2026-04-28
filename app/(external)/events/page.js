@@ -23,10 +23,32 @@ const INK = '#f5f5f7'
 const INK_DIM = '#b8b8bf'
 
 export default async function EventsPage() {
-  const loops = await getUpcomingLoops({ limit: 24 })
+  let loops = []
+  let renderError = null
+  try {
+    loops = await getUpcomingLoops({ limit: 24 })
+  } catch (err) {
+    console.error('[/events] render threw', err)
+    renderError = err?.message || String(err)
+  }
 
   return (
     <main>
+      {renderError && (
+        <div style={{
+          background: '#3a1a1a',
+          border: '1px solid #f87171',
+          color: '#f87171',
+          padding: '12px 16px',
+          fontSize: 13,
+          fontFamily: 'ui-monospace, monospace',
+          margin: '12px 16px 0',
+          borderRadius: 8,
+          whiteSpace: 'pre-wrap',
+        }}>
+          {renderError}
+        </div>
+      )}
         <section
           style={{
             padding: '56px 20px 32px',

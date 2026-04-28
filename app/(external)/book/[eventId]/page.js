@@ -6,15 +6,23 @@ import BookingForm from './BookingForm'
 export const dynamic = 'force-dynamic'
 
 export async function generateMetadata({ params }) {
-  const { eventId } = await params
-  const supabase = supabaseAdmin()
-  const { data: event } = await supabase
-    .from('events')
-    .select('name, event_date')
-    .eq('id', eventId)
-    .maybeSingle()
-  return {
-    title: event ? `Book ${event.name}` : 'Book',
+  // generateMetadata throwing crashes the entire route to a 500 before the
+  // page render has a chance to recover, so swallow everything here. The
+  // page-level handler will deal with any real lookup failure.
+  try {
+    const { eventId } = await params
+    const supabase = supabaseAdmin()
+    const { data: event } = await supabase
+      .from('events')
+      .select('name, event_date')
+      .eq('id', eventId)
+      .maybeSingle()
+    return {
+      title: event ? `Book ${event.name}` : 'Book',
+    }
+  } catch (err) {
+    console.error('[book/eventId] generateMetadata threw', err)
+    return { title: 'Book' }
   }
 }
 
