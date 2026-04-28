@@ -13,14 +13,26 @@ export default function SummaryView({
   ticketTypes,
   members,
   orders,
+  orderItems = [],
   waiverSigs,
   onJumpToEdit,
   onJumpToTickets,
 }) {
   const paidOrders = (orders || []).filter(o => o.status === 'paid')
-  const ticketsSold = paidOrders.reduce((s, o) => s + (o.party_size || 0), 0)
+  // Real ticket count comes from active (non-voided) order_items, not
+  // orders.party_size — voiding a seat decrements party_size but the order's
+  // party_size sum is the right rollup either way. Use order_items length so
+  // per-type counts and total agree.
+  const ticketsSold = orderItems.length
   const revenueCents = paidOrders.reduce((s, o) => s + (o.total_cents || 0), 0)
   const checkedIn = (members || []).filter(m => m.checked_in_at).length
+
+  // Group order_items by ticket_type_id for the "issued" column.
+  const issuedByType = new Map()
+  for (const oi of orderItems) {
+    if (!oi.ticket_type_id) continue
+    issuedByType.set(oi.ticket_type_id, (issuedByType.get(oi.ticket_type_id) || 0) + 1)
+  }
 
   const days = computeDaysToGo(group.event_date)
 
@@ -79,7 +91,7 @@ export default function SummaryView({
         ) : (
           <div style={{ display: 'grid', gap: 6 }}>
             {ticketTypes.map(tt => {
-              const issued = countIssued(tt, paidOrders)
+              const issued = issuedByType.get(tt.id) || 0
               const cap = tt.capacity || null
               const remaining = cap != null ? Math.max(0, cap - issued) : null
               return (

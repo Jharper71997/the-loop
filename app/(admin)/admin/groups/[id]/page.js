@@ -30,8 +30,9 @@ export default async function ManageLoopPage({ params }) {
 
   let orders = []
   let ticketTypes = []
+  let orderItems = []
   if (event?.id) {
-    const [oRes, ttRes] = await Promise.all([
+    const [oRes, ttRes, oiRes] = await Promise.all([
       supabase
         .from('orders')
         .select('id, buyer_name, buyer_phone, total_cents, status, party_size, created_at, paid_at, contact_id, metadata')
@@ -42,9 +43,19 @@ export default async function ManageLoopPage({ params }) {
         .select('id, name, price_cents, stop_index, capacity, active, sort_order')
         .eq('event_id', event.id)
         .order('sort_order', { ascending: true }),
+      // Real per-ticket-type counts: pull every active order_item for this
+      // event's paid orders. Filter voided so retired seats don't inflate
+      // the issued column. Used by SummaryView.countIssued.
+      supabase
+        .from('order_items')
+        .select('id, ticket_type_id, voided_at, orders!inner(id, event_id, status)')
+        .eq('orders.event_id', event.id)
+        .eq('orders.status', 'paid')
+        .is('voided_at', null),
     ])
     orders = oRes.data || []
     ticketTypes = ttRes.data || []
+    orderItems = oiRes.data || []
   }
 
   const memberIds = (members || []).map(m => m.contacts?.id).filter(Boolean)
@@ -75,6 +86,7 @@ export default async function ManageLoopPage({ params }) {
         ticketTypes={ticketTypes}
         members={members || []}
         orders={orders}
+        orderItems={orderItems}
         waiverSigs={waiverSigs}
       />
 

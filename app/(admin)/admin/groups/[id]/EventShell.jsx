@@ -26,6 +26,7 @@ export default function EventShell({
   ticketTypes,
   members,
   orders,
+  orderItems,
   waiverSigs,
 }) {
   const [view, setView] = useState('summary')
@@ -118,6 +119,7 @@ export default function EventShell({
             ticketTypes={ticketTypes}
             members={members}
             orders={orders}
+            orderItems={orderItems || []}
             waiverSigs={waiverSigs}
             onJumpToEdit={() => go('edit')}
             onJumpToTickets={() => go('tickets')}
