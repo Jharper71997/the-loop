@@ -1,6 +1,4 @@
 import { BARS } from '@/lib/bars'
-import ExternalNav from '../_components/ExternalNav'
-import Footer from '../_components/Footer'
 import PlaceholderArt from '../_components/PlaceholderArt'
 
 export const metadata = {
@@ -24,9 +22,7 @@ const INK_DIM = '#b8b8bf'
 
 export default function BarsIndex() {
   return (
-    <>
-      <ExternalNav />
-      <main>
+    <main>
         <section
           style={{
             padding: '56px 20px 32px',
@@ -66,9 +62,7 @@ export default function BarsIndex() {
             {BARS.map(bar => <BarTile key={bar.slug} bar={bar} />)}
           </div>
         </section>
-      </main>
-      <Footer />
-    </>
+    </main>
   )
 }
 

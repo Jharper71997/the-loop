@@ -90,7 +90,10 @@ export async function POST(req) {
     const handlerErrors = []
     for (const o of orders) {
       try {
-        await handleOrder(supabase, o, { skipWaiverSms: true })
+        // Backfills mint QRs but skip the SMS — these orders predate the new
+        // /tickets/<code> link and the buyer doesn't need a fresh confirmation
+        // text. QRs still mint so security can scan tickets at the door.
+        await handleOrder(supabase, o, { skipSms: true })
         replayed++
       } catch (err) {
         errors++

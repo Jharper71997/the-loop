@@ -1,0 +1,26 @@
+{
+  "name": "Brew Loop",
+  "short_name": "Brew Loop",
+  "description": "Jville Brew Loop — book a ride, sign your waiver, show your QR at the bar.",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#0a0a0b",
+  "theme_color": "#0a0a0b",
+  "icons": [
+    {
+      "src": "/icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/flyers/jbl-logo-gold.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    }
+  ],
+  "categories": ["travel", "lifestyle"]
+}

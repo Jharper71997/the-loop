@@ -6,8 +6,14 @@ export const dynamic = 'force-dynamic'
 
 // GET /r/<code>
 // Public endpoint. Logs the scan and 302s to the QR's target URL with UTM
-// params appended. For `kind='checkin'` with an order_item_id, stamps
-// checked_in_at on that order item and redirects to /track?checkin=ok.
+// params appended.
+//
+// For `kind='checkin'` codes we deliberately do NOT stamp checked_in_at here
+// anymore — that path used to redeem on any scan, which is unsafe now that
+// riders carry the QR on their phone (a casual camera-app scan would
+// erroneously mark them as boarded). Real check-in goes through
+// POST /api/checkin/<code> from the staffed /security scanner. /r/<code>
+// for checkin codes just redirects the rider back to their own ticket page.
 export async function GET(req, ctx) {
   const { code } = await ctx.params
   const supabase = supabaseAdmin()
@@ -32,17 +38,9 @@ export async function GET(req, ctx) {
     user_agent: ua,
   })
 
-  if (qr.kind === 'checkin' && qr.order_item_id) {
-    await supabase
-      .from('order_items')
-      .update({
-        checked_in_at: new Date().toISOString(),
-        checked_in_via: 'qr',
-      })
-      .eq('id', qr.order_item_id)
-      .is('checked_in_at', null)
+  if (qr.kind === 'checkin') {
     await logPromise
-    return NextResponse.redirect(new URL('/track?checkin=ok', req.url), 302)
+    return NextResponse.redirect(new URL(`/tickets/${code}`, req.url), 302)
   }
 
   const target = new URL(qr.target_url, req.url)

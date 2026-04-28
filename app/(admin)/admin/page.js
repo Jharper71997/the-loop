@@ -29,6 +29,11 @@ export default async function TonightPage() {
   let activeGroup = todayGroup || nextGroup
   let currentIdx = -1
 
+  // Everything else on the schedule that isn't the one we're rendering on top.
+  // The Schedule tab now shows what's live AND what's queued so the dispatcher
+  // can scan the week from one screen.
+  const upcomingGroups = (groups || []).filter(g => g.id !== activeGroup?.id).slice(0, 5)
+
   if (todayGroup) {
     const schedule = Array.isArray(todayGroup.schedule) ? todayGroup.schedule : []
     currentIdx = currentStopIndex(schedule, now, todayGroup.event_date, today)
@@ -97,6 +102,7 @@ export default async function TonightPage() {
       ordersToday={ordersToday || []}
       ticketsByContact={ticketsByContact}
       totalTickets={totalTickets}
+      upcomingGroups={upcomingGroups}
     />
   )
 }

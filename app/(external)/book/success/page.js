@@ -1,7 +1,5 @@
 import { supabaseAdmin } from '@/lib/supabaseAdmin'
 import { contactHasSignedCurrent } from '@/lib/waiver'
-import ExternalNav from '../../_components/ExternalNav'
-import Footer from '../../_components/Footer'
 
 export const metadata = { title: 'Booked — Jville Brew Loop' }
 export const dynamic = 'force-dynamic'
@@ -38,10 +36,8 @@ export default async function BookingSuccess({ searchParams }) {
   }
 
   return (
-    <>
-      <ExternalNav />
-      <main>
-        <section style={{ padding: '56px 20px 40px', maxWidth: 640, margin: '0 auto' }}>
+    <main>
+        <section style={{ padding: '32px 20px 40px', maxWidth: 640, margin: '0 auto' }}>
           <div style={{ textAlign: 'center' }}>
             <div
               style={{
@@ -146,9 +142,7 @@ export default async function BookingSuccess({ searchParams }) {
             <a href="/events" style={ghostCta}>Browse more loops</a>
           </div>
         </section>
-      </main>
-      <Footer />
-    </>
+    </main>
   )
 }
 

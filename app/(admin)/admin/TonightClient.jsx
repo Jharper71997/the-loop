@@ -10,9 +10,8 @@ import { formatStopTime } from '@/lib/schedule'
 const ACCENT = '#d4a333'
 const SURFACE = '#15151a'
 const BORDER = '#2a2a31'
-const TRACK_URL = 'https://zenbus.zenduit.com/map/jville_brew_loop/6998b2d1d9a9a1bab8a072dc'
 
-export default function TonightClient({ state, today, group, currentIdx, ordersToday, ticketsByContact = {}, totalTickets = 0 }) {
+export default function TonightClient({ state, today, group, currentIdx, ordersToday, ticketsByContact = {}, totalTickets = 0, upcomingGroups = [] }) {
   return (
     <main style={{ maxWidth: 1100, margin: '0 auto', padding: '20px 16px', minHeight: '100vh', color: '#fff' }}>
       <Header today={today} group={group} state={state} />
@@ -21,6 +20,8 @@ export default function TonightClient({ state, today, group, currentIdx, ordersT
       {state === 'upcoming' && <UpcomingLoopState group={group} ticketsByContact={ticketsByContact} totalTickets={totalTickets} />}
       {state === 'pre_pickup' && <PrePickupState group={group} ticketsByContact={ticketsByContact} totalTickets={totalTickets} />}
       {state === 'in_progress' && <InProgressState group={group} currentIdx={currentIdx} ticketsByContact={ticketsByContact} totalTickets={totalTickets} />}
+
+      <UpNextSection groups={upcomingGroups} />
 
       {ordersToday.length > 0 && (
         <section style={{
@@ -64,10 +65,31 @@ export default function TonightClient({ state, today, group, currentIdx, ordersT
 }
 
 function Header({ today, group, state }) {
+  const isLive = state === 'pre_pickup' || state === 'in_progress'
+  const eyebrow = isLive ? 'Live · Today' : 'Schedule'
   return (
     <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', marginBottom: 16, gap: 12, flexWrap: 'wrap' }}>
       <div>
-        <h1 style={{ fontSize: 'clamp(22px, 6vw, 28px)', color: ACCENT, margin: 0 }}>Tonight</h1>
+        <div style={{
+          color: isLive ? '#6fbf7f' : '#9c9ca3',
+          fontSize: 11,
+          letterSpacing: '0.22em',
+          textTransform: 'uppercase',
+          fontWeight: 700,
+          display: 'inline-flex',
+          alignItems: 'center',
+          gap: 8,
+        }}>
+          {isLive && (
+            <span style={{
+              width: 7, height: 7, borderRadius: '50%',
+              background: '#6fbf7f', boxShadow: '0 0 10px #6fbf7f',
+              display: 'inline-block',
+            }} />
+          )}
+          {eyebrow}
+        </div>
+        <h1 style={{ fontSize: 'clamp(22px, 6vw, 28px)', color: ACCENT, margin: '4px 0 0' }}>Schedule</h1>
         <span style={{ color: '#9c9ca3', fontSize: 13 }}>{formatToday(today)}</span>
       </div>
       <a href="/admin/groups/new" style={{
@@ -186,13 +208,13 @@ function InProgressState({ group, currentIdx, ticketsByContact, totalTickets }) 
 
       <section style={{
         background: SURFACE, border: `1px solid ${BORDER}`, borderRadius: 12,
-        overflow: 'hidden', marginTop: 14,
+        padding: 14, marginTop: 14,
       }}>
-        <iframe
-          src={TRACK_URL}
-          title="Live Shuttle"
-          style={{ width: '100%', height: 320, border: 0, display: 'block' }}
-        />
+        <h2 style={sectionHeader}>Live shuttle map</h2>
+        <p style={{ color: '#9c9ca3', fontSize: 13, margin: '8px 0 12px' }}>
+          The native map is shipping this week. Until then, open the rider tracker:
+        </p>
+        <a href="/track" style={secondaryBtn}>Open rider tracker →</a>
       </section>
 
       <div style={{ marginTop: 14 }}>
@@ -318,6 +340,50 @@ function StopCards({ stops, riders, currentIdx, showCheckoff = false }) {
         )
       })}
     </div>
+  )
+}
+
+function UpNextSection({ groups }) {
+  if (!groups || !groups.length) return null
+  return (
+    <section style={{
+      background: SURFACE, border: `1px solid ${BORDER}`, borderRadius: 12, padding: 14, marginTop: 14,
+    }}>
+      <h2 style={sectionHeader}>Up next</h2>
+      <div style={{ display: 'grid', gap: 8, marginTop: 10 }}>
+        {groups.map(g => {
+          const seats = (g.group_members || []).length
+          return (
+            <a
+              key={g.id}
+              href={`/admin/groups/${g.id}`}
+              style={{
+                display: 'flex',
+                justifyContent: 'space-between',
+                alignItems: 'center',
+                gap: 12,
+                padding: '10px 12px',
+                background: '#0e0e12',
+                borderRadius: 8,
+                border: `1px solid ${BORDER}`,
+                textDecoration: 'none',
+                color: '#fff',
+              }}
+            >
+              <div>
+                <div style={{ fontSize: 11, color: ACCENT, letterSpacing: '0.16em', textTransform: 'uppercase', fontWeight: 700 }}>
+                  {formatDate(g.event_date)}{g.pickup_time ? ` · ${formatStopTime(g.pickup_time)}` : ''}
+                </div>
+                <div style={{ fontSize: 14, fontWeight: 600, marginTop: 2 }}>{g.name || 'Brew Loop'}</div>
+              </div>
+              <span style={{ fontSize: 12, color: '#9c9ca3' }}>
+                {seats} rider{seats === 1 ? '' : 's'}
+              </span>
+            </a>
+          )
+        })}
+      </div>
+    </section>
   )
 }
 

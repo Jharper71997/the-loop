@@ -6,13 +6,13 @@ import { supabase } from '@/lib/supabase'
 import { isLeadership } from '@/lib/roles'
 
 const LINKS = [
-  { href: '/admin', label: 'Tonight' },
+  { href: '/admin', label: 'Schedule' },
   { href: '/admin/groups', label: 'Loops' },
   { href: '/admin/contacts', label: 'Contacts' },
   { href: '/admin/metrics', label: 'Metrics', leadership: true },
   { href: '/admin/qr', label: 'QR', leadership: true },
+  { href: '/admin/leaderboard', label: 'Leaderboard', leadership: true },
   { href: '/track', label: 'Track', external: true, leadership: true },
-  { href: '/admin/finance', label: 'Finance', leadership: true },
 ]
 
 export default function NavBar() {

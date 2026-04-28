@@ -1,5 +1,3 @@
-import ExternalNav from '../_components/ExternalNav'
-import Footer from '../_components/Footer'
 import MyTicketsClient from './MyTicketsClient'
 
 export const metadata = {
@@ -14,33 +12,30 @@ const INK = '#f5f5f7'
 
 export default function MyTicketsPage() {
   return (
-    <>
-      <ExternalNav />
-      <main>
-        <section style={{ padding: '56px 20px 24px', maxWidth: 640, margin: '0 auto', textAlign: 'center' }}>
+    <main style={{ padding: '24px 16px 32px' }}>
+      <div style={{ maxWidth: 520, margin: '0 auto', display: 'grid', gap: 16 }}>
+        <header style={{ paddingTop: 8 }}>
           <div
             style={{
               color: GOLD,
               fontSize: 11,
-              letterSpacing: '0.2em',
+              letterSpacing: '0.22em',
               textTransform: 'uppercase',
               fontWeight: 700,
-              marginBottom: 12,
             }}
           >
             My tickets
           </div>
-          <h1 style={{ color: INK }}>Find your ride.</h1>
-          <p style={{ marginTop: 14, fontSize: 16 }}>
-            Enter the email you booked with and the last 4 digits of your phone number.
+          <h1 style={{ color: INK, fontSize: 26, fontWeight: 800, margin: '6px 0 0' }}>
+            Find your ride.
+          </h1>
+          <p style={{ color: '#b8b8bf', fontSize: 14, margin: '6px 0 0' }}>
+            Enter the email you booked with and the last 4 digits of your phone.
           </p>
-        </section>
+        </header>
 
-        <section style={{ maxWidth: 560, margin: '0 auto', padding: '0 20px 56px' }}>
-          <MyTicketsClient />
-        </section>
-      </main>
-      <Footer />
-    </>
+        <MyTicketsClient />
+      </div>
+    </main>
   )
 }

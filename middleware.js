@@ -1,6 +1,13 @@
 import { NextResponse } from 'next/server'
 import { createServerClient } from '@supabase/ssr'
-import { isLeadership, isLeadershipOnlyPath } from '@/lib/roles'
+import {
+  isLeadership,
+  isLeadershipOnlyPath,
+  isSecurity,
+  isSecurityPath,
+  isDriver,
+  isDriverPath,
+} from '@/lib/roles'
 
 const PUBLIC_PREFIXES = [
   '/login',
@@ -11,14 +18,29 @@ const PUBLIC_PREFIXES = [
   '/events',
   '/bars',
   '/my-tickets',
+  '/tickets/',
   '/r/',
+  '/leaderboard',
+  '/bartender-signup',
   '/api/ticket-tailor-webhook',
   '/api/stripe-webhook',
   '/api/checkout',
   '/api/waiver',
+  '/api/leaderboard',
+  '/api/bartender-signup',
 ]
 
 const LEGACY_ADMIN_PREFIXES = ['/groups', '/contacts', '/finance', '/metrics', '/qr']
+
+// Phase C: finance is being removed from this app. Routes still exist on disk
+// (so we can revive them later by deleting these prefixes) but middleware
+// blocks every request. Soft-remove, not a delete.
+const REMOVED_PREFIXES = [
+  '/admin/finance',
+  '/api/finance-summary',
+  '/api/finance-data',
+  '/api/finance-entries',
+]
 
 function isPublic(pathname) {
   if (pathname === '/') return true
@@ -26,6 +48,10 @@ function isPublic(pathname) {
     if (p.endsWith('/')) return pathname.startsWith(p)
     return pathname === p || pathname.startsWith(p + '/')
   })
+}
+
+function isRemoved(pathname) {
+  return REMOVED_PREFIXES.some(p => pathname === p || pathname.startsWith(p + '/'))
 }
 
 function legacyRedirect(pathname) {
@@ -39,6 +65,15 @@ function legacyRedirect(pathname) {
 
 export async function middleware(req) {
   const { pathname } = req.nextUrl
+
+  if (isRemoved(pathname)) {
+    if (pathname.startsWith('/api/')) {
+      return NextResponse.json({ error: 'gone' }, { status: 410 })
+    }
+    const url = req.nextUrl.clone()
+    url.pathname = '/admin'
+    return NextResponse.redirect(url, 302)
+  }
 
   const redirectTo = legacyRedirect(pathname)
   if (redirectTo) {
@@ -79,6 +114,18 @@ export async function middleware(req) {
   }
 
   if (isLeadershipOnlyPath(pathname) && !isLeadership(user.email)) {
+    const url = req.nextUrl.clone()
+    url.pathname = '/admin'
+    return NextResponse.redirect(url)
+  }
+
+  if (isSecurityPath(pathname) && !isSecurity(user.email)) {
+    const url = req.nextUrl.clone()
+    url.pathname = '/admin'
+    return NextResponse.redirect(url)
+  }
+
+  if (isDriverPath(pathname) && !isDriver(user.email)) {
     const url = req.nextUrl.clone()
     url.pathname = '/admin'
     return NextResponse.redirect(url)

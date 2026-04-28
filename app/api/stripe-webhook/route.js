@@ -1,9 +1,7 @@
 import Stripe from 'stripe'
 import { supabaseAdmin } from '@/lib/supabaseAdmin'
-import { recordSignature, textUnsignedContact } from '@/lib/waiver'
-import { sendBookingConfirmation } from '@/lib/sms'
-import { appUrl } from '@/lib/stripe'
-import { randomCode } from '@/lib/qrcodeAi'
+import { recordSignature } from '@/lib/waiver'
+import { finalizeBooking } from '@/lib/booking'
 
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
@@ -182,79 +180,13 @@ async function handleCheckoutCompleted(supabase, session) {
       }
     }
 
-    if (order.buyer_phone) {
-      const { data: buyerContact } = await supabase
-        .from('contacts')
-        .select('id, has_signed_waiver, waiver_version')
-        .eq('id', order.contact_id)
-        .maybeSingle()
-
-      const waiverLink = buyerContact && !buyerContact.has_signed_waiver
-        ? `${appUrl()}/waiver/${buyerContact.id}`
-        : null
-
-      try {
-        await sendBookingConfirmation(order.buyer_phone, {
-          buyer: { name: session.customer_details?.name || '' },
-          event: event,
-          waiverLink,
-        })
-      } catch (err) {
-        console.error('[stripe-webhook] SMS failed', err)
-      }
-    }
-
-    // Mint a per-ticket check-in QR code for every order_item. We only
-    // insert the DB row (no PNG API call yet) so each purchase is free —
-    // qrcode.ai PNG rendering happens on demand when an admin opens the
-    // item on /qr. The /r/<code> redirect already works without a PNG.
+    // Mint per-ticket check-in QRs + send the buyer a confirmation SMS with
+    // /tickets/<code> links. Single codepath shared with the TT webhook so
+    // both channels deliver the same in-app experience.
     try {
-      const { data: freshItems } = await supabase
-        .from('order_items')
-        .select('id, rider_first_name, rider_last_name')
-        .eq('order_id', order.id)
-
-      const qrRows = (freshItems || []).map(it => ({
-        code: randomCode(8),
-        kind: 'checkin',
-        label: `Check-in · ${[it.rider_first_name, it.rider_last_name].filter(Boolean).join(' ') || order.id.slice(0, 6)}`,
-        target_url: `${appUrl()}/track?checkin=ok`,
-        order_item_id: it.id,
-      }))
-
-      if (qrRows.length) {
-        const { error: qrErr } = await supabase.from('qr_codes').insert(qrRows)
-        if (qrErr) console.error('[stripe-webhook] checkin QR insert failed', qrErr)
-      }
+      await finalizeBooking(supabase, order.id)
     } catch (err) {
-      console.error('[stripe-webhook] checkin QR mint failed', err)
-    }
-
-    // Waiver reminders for additional riders on the order (party_size > 1).
-    // Buyer already got one in sendBookingConfirmation above; this handles
-    // everyone else who was added as a contact but hasn't signed.
-    try {
-      const { data: items } = await supabase
-        .from('order_items')
-        .select('contact_id')
-        .eq('order_id', order.id)
-
-      const riderContactIds = [...new Set((items || [])
-        .map(it => it.contact_id)
-        .filter(cid => cid && cid !== order.contact_id))]
-
-      if (riderContactIds.length) {
-        const { data: riders } = await supabase
-          .from('contacts')
-          .select('id, first_name, phone, has_signed_waiver, waiver_sms_sent_at, waiver_sms_count')
-          .in('id', riderContactIds)
-        for (const rider of riders || []) {
-          try { await textUnsignedContact(supabase, rider) }
-          catch (err) { console.error('[stripe-webhook] rider waiver SMS failed', err) }
-        }
-      }
-    } catch (err) {
-      console.error('[stripe-webhook] rider waiver sweep failed', err)
+      console.error('[stripe-webhook] finalizeBooking failed', err)
     }
   }
 }

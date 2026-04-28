@@ -1,5 +1,3 @@
-import ExternalNav from '../_components/ExternalNav'
-import Footer from '../_components/Footer'
 
 export const metadata = {
   title: 'About',
@@ -23,9 +21,7 @@ const INK_DIM = '#b8b8bf'
 
 export default function AboutPage() {
   return (
-    <>
-      <ExternalNav />
-      <main>
+    <main>
         <section style={{ padding: '56px 20px 24px', maxWidth: 760, margin: '0 auto', textAlign: 'center' }}>
           <div
             style={{
@@ -49,9 +45,7 @@ export default function AboutPage() {
         <HowItWorksFull />
         <Faq />
         <SponsorStrip />
-      </main>
-      <Footer />
-    </>
+    </main>
   )
 }
 

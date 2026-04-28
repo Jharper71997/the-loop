@@ -1,6 +1,4 @@
 import { getUpcomingLoops } from '@/lib/upcomingLoops'
-import ExternalNav from '../_components/ExternalNav'
-import Footer from '../_components/Footer'
 import PlaceholderArt from '../_components/PlaceholderArt'
 
 export const metadata = {
@@ -28,9 +26,7 @@ export default async function EventsPage() {
   const loops = await getUpcomingLoops({ limit: 24 })
 
   return (
-    <>
-      <ExternalNav />
-      <main>
+    <main>
         <section
           style={{
             padding: '56px 20px 32px',
@@ -74,9 +70,7 @@ export default async function EventsPage() {
             </div>
           )}
         </section>
-      </main>
-      <Footer />
-    </>
+    </main>
   )
 }
 

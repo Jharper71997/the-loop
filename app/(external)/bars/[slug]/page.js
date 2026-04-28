@@ -1,7 +1,5 @@
 import { notFound } from 'next/navigation'
 import { BARS, getBar } from '@/lib/bars'
-import ExternalNav from '../../_components/ExternalNav'
-import Footer from '../../_components/Footer'
 import PlaceholderArt from '../../_components/PlaceholderArt'
 
 const GOLD = '#d4a333'
@@ -35,9 +33,7 @@ export default async function BarDetail({ params }) {
   if (!bar) notFound()
 
   return (
-    <>
-      <ExternalNav />
-      <main>
+    <main>
         <section
           style={{
             position: 'relative',
@@ -164,9 +160,7 @@ export default async function BarDetail({ params }) {
             </a>
           </div>
         </section>
-      </main>
-      <Footer />
-    </>
+    </main>
   )
 }
 

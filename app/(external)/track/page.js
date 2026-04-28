@@ -1,6 +1,5 @@
-import ExternalNav from '../_components/ExternalNav'
+import ShuttleMap from './ShuttleMap'
 
-const ZENDU_MAP_URL = 'https://zenbus.zenduit.com/map/jville_brew_loop/6998b2d1d9a9a1bab8a072dc'
 const LOOP_PHONE = '16362661801' // (636) 266-1801 — rider text line
 
 export const metadata = {
@@ -25,7 +24,6 @@ const INK_DIM = '#b8b8bf'
 export default function TrackPage() {
   return (
     <>
-      <ExternalNav />
       <div
         style={{
           display: 'flex',
@@ -117,19 +115,7 @@ export default function TrackPage() {
             boxShadow: '0 20px 60px rgba(0,0,0,0.5)',
           }}
         >
-          <iframe
-            src={ZENDU_MAP_URL}
-            title="Jville Brew Loop live shuttle map"
-            allow="geolocation"
-            style={{
-              position: 'absolute',
-              inset: 0,
-              width: '100%',
-              height: '100%',
-              border: 0,
-              display: 'block',
-            }}
-          />
+          <ShuttleMap />
         </div>
 
         <section style={{ maxWidth: 1100, margin: '0 auto 48px', padding: '0 20px', width: '100%' }}>

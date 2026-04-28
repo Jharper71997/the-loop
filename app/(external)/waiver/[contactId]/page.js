@@ -1,4 +1,3 @@
-import ExternalNav from '../../_components/ExternalNav'
 import WaiverForm from './WaiverForm'
 
 export const metadata = {
@@ -14,12 +13,10 @@ const INK_DIM = '#b8b8bf'
 export default async function WaiverPage({ params }) {
   const { contactId } = await params
   return (
-    <>
-      <ExternalNav />
-      <main>
+    <main>
         <section
           style={{
-            padding: '40px 20px 24px',
+            padding: '32px 20px 24px',
             maxWidth: 640,
             margin: '0 auto',
             textAlign: 'center',
@@ -48,7 +45,6 @@ export default async function WaiverPage({ params }) {
         <section style={{ maxWidth: 640, margin: '0 auto', padding: '0 16px 56px' }}>
           <WaiverForm contactId={contactId} />
         </section>
-      </main>
-    </>
+    </main>
   )
 }

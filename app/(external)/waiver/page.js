@@ -1,6 +1,3 @@
-import ExternalNav from '../_components/ExternalNav'
-import Footer from '../_components/Footer'
-
 export const metadata = {
   title: 'Sign your waiver',
   description: 'Every Brew Loop rider signs a liability waiver before pickup.',
@@ -14,12 +11,10 @@ const INK_DIM = '#b8b8bf'
 
 export default function WaiverLandingPage() {
   return (
-    <>
-      <ExternalNav />
-      <main>
+    <main>
         <section
           style={{
-            padding: '64px 20px 48px',
+            padding: '32px 20px 48px',
             maxWidth: 640,
             margin: '0 auto',
             textAlign: 'center',
@@ -89,8 +84,6 @@ export default function WaiverLandingPage() {
             Haven&apos;t booked yet? <a href="/events" style={{ color: GOLD, textDecoration: 'none', fontWeight: 600 }}>See upcoming loops &rarr;</a>
           </p>
         </section>
-      </main>
-      <Footer />
-    </>
+    </main>
   )
 }
