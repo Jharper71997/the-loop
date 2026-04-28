@@ -32,14 +32,16 @@ const PUBLIC_PREFIXES = [
   '/api/cron/',
 ]
 
-const LEGACY_ADMIN_PREFIXES = ['/groups', '/contacts', '/finance', '/qr']
+const LEGACY_ADMIN_PREFIXES = ['/groups', '/contacts', '/finance']
 
 // Soft-removed routes — files may still exist on disk but middleware blocks
 // every request so direct URLs land somewhere sensible.
 const REMOVED_PREFIXES = [
   '/admin/finance',
   '/admin/metrics',
+  '/admin/qr',
   '/track',
+  '/api/qr',
   '/api/finance-summary',
   '/api/finance-data',
   '/api/finance-entries',

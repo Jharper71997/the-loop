@@ -9,7 +9,6 @@ const LINKS = [
   { href: '/admin', label: 'Schedule' },
   { href: '/admin/groups', label: 'Loops' },
   { href: '/admin/contacts', label: 'Contacts' },
-  { href: '/admin/qr', label: 'QR', leadership: true },
   { href: '/admin/leaderboard', label: 'Leaderboard', leadership: true },
   { href: '/admin/notifications', label: 'Alerts', leadership: true },
 ]
