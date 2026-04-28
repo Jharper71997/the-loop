@@ -122,12 +122,16 @@ function EmptyState() {
 
 function LoopCard({ loop }) {
   const isBookable = loop.kind === 'event'
-  const href = isBookable ? `/book/${loop.id}` : '#'
+  // Non-bookable loops render as a <div> rather than a hash-linked <a> so
+  // we don't have to attach a preventDefault onClick — server components
+  // can't pass functions to client components, which crashes /events with
+  // a React error 2295622842.
+  const Wrapper = isBookable ? 'a' : 'div'
+  const wrapperProps = isBookable ? { href: `/book/${loop.id}` } : {}
 
   return (
-    <a
-      href={href}
-      onClick={isBookable ? undefined : (e) => e.preventDefault()}
+    <Wrapper
+      {...wrapperProps}
       style={{
         display: 'flex',
         flexDirection: 'column',
@@ -255,7 +259,7 @@ function LoopCard({ loop }) {
           </span>
         </div>
       </div>
-    </a>
+    </Wrapper>
   )
 }
 
