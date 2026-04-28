@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useRef, useState } from 'react'
 
 const ACCENT = '#d4a333'
 const SURFACE = '#15151a'
@@ -101,8 +101,22 @@ export default function EventForm({ mode = 'create', initialEvent = null, initia
       <Card title="Loop details">
         <Field label="Name" value={event.name} onChange={v => patchEvent({ name: v })} placeholder="Brew Loop — Friday Night" />
         <Row>
-          <Field label="Date" type="date" value={event.event_date} onChange={v => patchEvent({ event_date: v })} />
-          <Field label="Pickup time" type="time" value={event.pickup_time || ''} onChange={v => patchEvent({ pickup_time: v })} />
+          <PickerField
+            label="Date"
+            type="date"
+            value={event.event_date}
+            onChange={v => patchEvent({ event_date: v })}
+            placeholder="Pick a date"
+            format={formatDateLabel}
+          />
+          <PickerField
+            label="Pickup time"
+            type="time"
+            value={event.pickup_time || ''}
+            onChange={v => patchEvent({ pickup_time: v })}
+            placeholder="Pick a time"
+            format={formatTimeLabel}
+          />
         </Row>
         <Field label="Description (optional)" value={event.description || ''} onChange={v => patchEvent({ description: v })} placeholder="Sponsored by ..." />
         <Row>
@@ -185,6 +199,90 @@ function Field({ label, value, onChange, type = 'text', placeholder }) {
       <input type={type} value={value} onChange={e => onChange(e.target.value)} placeholder={placeholder} style={input} />
     </label>
   )
+}
+
+// Date / time picker rendered as a button that programmatically opens the
+// native picker via input.showPicker(). The native <input type="date"> is
+// kept in the DOM (offscreen) so the form still has the correctly-typed
+// value, but the visible affordance is a styled, obviously-tappable button.
+// Fixes the iOS PWA + Android edge cases where tapping a styled native
+// date input did nothing.
+function PickerField({ label, type, value, onChange, placeholder, format }) {
+  const ref = useRef(null)
+  const display = value ? format(value) : null
+  const empty = !display
+
+  function open() {
+    const el = ref.current
+    if (!el) return
+    if (typeof el.showPicker === 'function') {
+      try { el.showPicker(); return } catch {}
+    }
+    el.focus()
+    el.click()
+  }
+
+  return (
+    <label style={{ display: 'grid', gap: 4, fontSize: 12, color: '#9c9ca3' }}>
+      {label}
+      <button
+        type="button"
+        onClick={open}
+        style={{
+          ...input,
+          textAlign: 'left',
+          cursor: 'pointer',
+          color: empty ? '#6f6f76' : '#fff',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          gap: 8,
+        }}
+      >
+        <span>{display || placeholder}</span>
+        <span aria-hidden style={{ color: ACCENT, fontSize: 14 }}>
+          {type === 'time' ? '⏱' : '📅'}
+        </span>
+      </button>
+      {/* Hidden native input — provides the actual picker UI and form value. */}
+      <input
+        ref={ref}
+        type={type}
+        value={value || ''}
+        onChange={e => onChange(e.target.value)}
+        style={{
+          position: 'absolute',
+          width: 0,
+          height: 0,
+          opacity: 0,
+          pointerEvents: 'none',
+        }}
+        tabIndex={-1}
+        aria-hidden
+      />
+    </label>
+  )
+}
+
+function formatDateLabel(iso) {
+  if (!iso) return ''
+  try {
+    const d = new Date(`${iso}T12:00:00-05:00`)
+    return d.toLocaleDateString('en-US', {
+      weekday: 'short', month: 'short', day: 'numeric', year: 'numeric',
+      timeZone: 'America/Indiana/Indianapolis',
+    })
+  } catch { return iso }
+}
+
+function formatTimeLabel(hhmm) {
+  if (!hhmm) return ''
+  const [hStr, mStr] = String(hhmm).split(':')
+  const h = Number(hStr); const m = Number(mStr)
+  if (!Number.isFinite(h) || !Number.isFinite(m)) return hhmm
+  const suffix = h >= 12 ? 'PM' : 'AM'
+  const h12 = ((h + 11) % 12) + 1
+  return `${h12}:${String(m).padStart(2, '0')} ${suffix}`
 }
 
 const input = {

@@ -1,6 +1,6 @@
+import QRCode from 'qrcode'
 import { supabaseAdmin } from '@/lib/supabaseAdmin'
 import { BARS } from '@/lib/bars'
-import { generateQr } from '@/lib/qrcodeAi'
 
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
@@ -48,7 +48,7 @@ export async function POST(req) {
     .maybeSingle()
 
   if (existing) {
-    return Response.json(buildPayload(existing, bar))
+    return Response.json(await buildPayload(supabase, existing, bar))
   }
 
   // Resolve slug collision: -2, -3, ... if base is taken by a different name.
@@ -64,18 +64,13 @@ export async function POST(req) {
   }
 
   const referralUrl = referralUrlFor(slug)
-
-  const qr = await generateQr({
-    url: referralUrl,
-    label: `Brew Loop · ${firstName}`,
-    style: { color: '#d4a333', background: '#0a0a0b' },
-  })
+  const qrDataUrl = await renderQr(referralUrl)
 
   const row = {
     slug,
     display_name: firstName,
     bar: bar.name,
-    qr_image_url: qr.imageUrl || null,
+    qr_image_url: qrDataUrl,
     active: true,
   }
 
@@ -84,20 +79,51 @@ export async function POST(req) {
     return Response.json({ error: `insert failed: ${error.message}` }, { status: 500 })
   }
 
-  return Response.json(buildPayload(row, bar))
+  return Response.json(await buildPayload(supabase, row, bar))
 }
 
-function buildPayload(row, bar) {
+// Server-render the QR locally with the `qrcode` library. No external API
+// dependency — same approach as the rider boarding pass at /tickets/<code>.
+async function renderQr(url) {
+  try {
+    return await QRCode.toDataURL(url, {
+      margin: 1,
+      width: 600,
+      color: { dark: '#0a0a0b', light: '#ffffff' },
+      errorCorrectionLevel: 'M',
+    })
+  } catch (err) {
+    console.error('[bartender-signup] QR render failed', err)
+    return null
+  }
+}
+
+async function buildPayload(supabase, row, bar) {
   const referralUrl = referralUrlFor(row.slug)
   const token = process.env.LEADERBOARD_TOKEN || ''
   const leaderboardUrl = token ? `/leaderboard?t=${encodeURIComponent(token)}` : '/leaderboard'
+
+  // Older rows may have a null or stale qr_image_url (signed up before this
+  // path was switched to local rendering). Lazily generate + persist so the
+  // bartender always sees a working QR.
+  let qrImageUrl = row.qr_image_url
+  if (!qrImageUrl) {
+    qrImageUrl = await renderQr(referralUrl)
+    if (qrImageUrl) {
+      await supabase
+        .from('bartenders')
+        .update({ qr_image_url: qrImageUrl })
+        .eq('slug', row.slug)
+    }
+  }
+
   return {
     slug: row.slug,
     display_name: row.display_name,
     bar: row.bar,
     bar_slug: bar.slug,
     referral_url: referralUrl,
-    qr_image_url: row.qr_image_url,
+    qr_image_url: qrImageUrl,
     leaderboard_url: leaderboardUrl,
   }
 }
