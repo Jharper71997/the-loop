@@ -20,6 +20,7 @@ export default function Contacts() {
   const [broadcastOpen, setBroadcastOpen] = useState(false)
   const [orders, setOrders] = useState([])
   const [voidingId, setVoidingId] = useState(null)
+  const [datePicked, setDatePicked] = useState('')
 
   async function loadOrders(contactId) {
     if (!contactId) { setOrders([]); return }
@@ -180,6 +181,17 @@ export default function Contacts() {
       .slice()
       .sort((a, b) => (b.event_date || '').localeCompare(a.event_date || ''))
   }, [groups])
+
+  // These useMemos must run on every render — including when `selected` is set
+  // and we early-return below — or React throws "rendered fewer hooks than
+  // expected" and crashes the contact detail page.
+  const broadcastTargets = useMemo(
+    () => contacts.filter(c => checkedIds.has(c.id)),
+    [contacts, checkedIds]
+  )
+  const tonightLoop = useMemo(() => {
+    return loopOptions.find(g => g.event_date === today) || null
+  }, [loopOptions, today])
 
   if (selected) {
     const detail = enriched.find(c => c.id === selected.id) || selected
@@ -395,20 +407,10 @@ export default function Contacts() {
     })
   }
 
-  const broadcastTargets = useMemo(
-    () => contacts.filter(c => checkedIds.has(c.id)),
-    [contacts, checkedIds]
-  )
-
   const allVisibleChecked = enriched.length > 0 && enriched.every(c => checkedIds.has(c.id))
-
-  const tonightLoop = useMemo(() => {
-    return loopOptions.find(g => g.event_date === today) || null
-  }, [loopOptions, today])
 
   const activeLoop = loopOptions.find(g => g.id === loopFilter) || null
 
-  const [datePicked, setDatePicked] = useState('')
   const dateMatchedLoop = datePicked ? loopOptions.find(g => g.event_date === datePicked) : null
   const dateMissedLookup = datePicked && !dateMatchedLoop
 
