@@ -1,6 +1,25 @@
 import './globals.css'
 
-const SITE_URL = (process.env.APP_URL || process.env.NEXT_PUBLIC_APP_URL || 'https://jvillebrewloop.com').replace(/\/$/, '')
+// Resolve the public origin defensively — if someone sets APP_URL on Vercel
+// to a value missing the protocol (e.g. "jvillebrewloop.com"), `new URL(...)`
+// here throws at module load and every route in the app 500s. Fall back
+// rather than crashing the world.
+function resolveSiteUrl() {
+  const raw = process.env.APP_URL || process.env.NEXT_PUBLIC_APP_URL || 'https://jvillebrewloop.com'
+  const trimmed = raw.replace(/\/$/, '')
+  try {
+    return new URL(trimmed).origin
+  } catch {
+    const guess = `https://${trimmed.replace(/^https?:\/\//, '')}`
+    try {
+      return new URL(guess).origin
+    } catch {
+      return 'https://jvillebrewloop.com'
+    }
+  }
+}
+
+const SITE_URL = resolveSiteUrl()
 
 export const metadata = {
   metadataBase: new URL(SITE_URL),
