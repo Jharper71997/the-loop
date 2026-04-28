@@ -54,6 +54,24 @@ export async function POST(req) {
       .eq('id', logId)
   }
 
+  // Idempotency: if a prior delivery of this exact event already processed
+  // successfully, skip the side effects. Stripe retries on 5xx and sometimes
+  // on connection blips — without this guard we'd double-mint QRs and
+  // double-send confirmations.
+  if (logId) {
+    const { count: priorOk } = await supabase
+      .from('webhook_events')
+      .select('id', { count: 'exact', head: true })
+      .eq('source', 'stripe')
+      .eq('external_id', event.id)
+      .eq('status', 'ok')
+      .neq('id', logId)
+    if (priorOk && priorOk > 0) {
+      await markProcessed('ignored_duplicate')
+      return Response.json({ received: true, deduped: true })
+    }
+  }
+
   try {
     if (event.type === 'checkout.session.completed') {
       await handleCheckoutCompleted(supabase, event.data.object)

@@ -43,14 +43,16 @@ export default function QrClient() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(form),
       })
-      const json = await res.json()
-      if (json.error) {
-        alert(json.error)
+      const json = await res.json().catch(() => ({}))
+      if (!res.ok || json.error) {
+        alert(json.error || `QR generate failed (${res.status})`)
       } else {
         setLatest(json)
         setForm(f => ({ ...f, label: '', utm_campaign: '' }))
         await load()
       }
+    } catch (err) {
+      alert(`QR generate failed: ${err.message || 'network error'}`)
     } finally {
       setBusy(false)
     }
