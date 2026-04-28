@@ -9,6 +9,8 @@ export default function BroadcastModal({ contacts, onClose }) {
   const [body, setBody] = useState('')
   const [sending, setSending] = useState(false)
   const [results, setResults] = useState(null) // { sent, failed, errors: [{ contactId, name, error }] }
+  const [alsoPush, setAlsoPush] = useState(true)
+  const [title, setTitle] = useState('Brew Loop')
 
   const preview = useMemo(() => {
     if (!contacts.length) return ''
@@ -38,6 +40,16 @@ export default function BroadcastModal({ contacts, onClose }) {
         }
       } catch (err) {
         failed.push({ contactId: c.id, name: displayName(c), error: err.message })
+      }
+      // Push runs in parallel with the SMS spacing — silent if no subscription.
+      if (alsoPush && c.id) {
+        try {
+          await fetch('/api/admin/push-broadcast', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ contact_id: c.id, title, body: message, url: '/my-tickets' }),
+          })
+        } catch {}
       }
       await sleep(130)
     }
@@ -142,6 +154,32 @@ export default function BroadcastModal({ contacts, onClose }) {
                 </div>
                 <div style={{ color: '#f5f5f7', fontSize: 14, whiteSpace: 'pre-wrap' }}>{preview}</div>
               </div>
+            )}
+
+            <label style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 10, color: '#c8c8cc', fontSize: 13 }}>
+              <input
+                type="checkbox"
+                checked={alsoPush}
+                onChange={e => setAlsoPush(e.target.checked)}
+              />
+              Also send push notification to subscribed devices (free)
+            </label>
+            {alsoPush && (
+              <label style={{ display: 'grid', gap: 4, marginBottom: 12 }}>
+                <span style={{ color: '#9c9ca3', fontSize: 12 }}>Push title (line 1)</span>
+                <input
+                  value={title}
+                  onChange={e => setTitle(e.target.value)}
+                  style={{
+                    padding: '8px 10px',
+                    borderRadius: 8,
+                    border: '1px solid #2a2a31',
+                    background: '#0a0a0b',
+                    color: '#f5f5f7',
+                    fontSize: 14,
+                  }}
+                />
+              </label>
             )}
 
             <div style={{ color: '#6f6f76', fontSize: 12, marginBottom: 12 }}>

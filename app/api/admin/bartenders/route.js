@@ -1,12 +1,20 @@
 import { supabaseAdmin } from '@/lib/supabaseAdmin'
+import { BARS } from '@/lib/bars'
+import {
+  slugifyName,
+  referralUrlFor,
+  renderBartenderQr,
+  pickFreeSlug,
+} from '@/lib/bartenders'
 
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
 
-// GET /api/admin/bartenders — full roster (active + inactive) for the admin
-// page. Middleware already gates this behind leadership login via the parent
-// /admin/leaderboard path; this endpoint is callable from any logged-in admin
-// page (it's not in PUBLIC_PREFIXES, so middleware enforces auth).
+// Middleware gates this endpoint behind leadership auth via the parent /admin
+// route prefix. Editing here can change display_name + bar but never the slug
+// (the slug is the Ticket Tailor referral_tag — changing it would orphan all
+// historical attribution).
+
 export async function GET() {
   const supabase = supabaseAdmin()
   const { data, error } = await supabase
@@ -14,31 +22,124 @@ export async function GET() {
     .select('slug, display_name, bar, qr_image_url, active, created_at')
     .order('created_at', { ascending: false })
 
-  if (error) {
-    return Response.json({ error: error.message }, { status: 500 })
-  }
+  if (error) return Response.json({ error: error.message }, { status: 500 })
   return Response.json({ bartenders: data || [] })
 }
 
-// PATCH /api/admin/bartenders — toggle active state.
-// Body: { slug, active }
+// POST /api/admin/bartenders
+// Body: { first_name, bar_slug }
+// Creates a new bartender row directly (admin onboarding without the public
+// signup form). Mirrors the slug + QR generation logic from the signup route.
+export async function POST(req) {
+  let body
+  try { body = await req.json() } catch { return bad('invalid json') }
+
+  const firstName = String(body?.first_name || '').trim()
+  const barSlug = String(body?.bar_slug || '').trim()
+  if (!firstName) return bad('first_name required')
+  if (!barSlug) return bad('bar_slug required')
+
+  const bar = BARS.find(b => b.slug === barSlug)
+  if (!bar) return bad('unknown bar')
+
+  const firstSlug = slugifyName(firstName)
+  if (!firstSlug) return bad('first_name has no usable letters')
+
+  const supabase = supabaseAdmin()
+  const baseSlug = `${bar.slug}-${firstSlug}`
+
+  // Idempotency: if a row already exists for this exact (bar, display_name),
+  // surface a 409 rather than silently creating a duplicate.
+  const { data: existing } = await supabase
+    .from('bartenders')
+    .select('slug')
+    .eq('bar', bar.name)
+    .ilike('display_name', firstName)
+    .maybeSingle()
+  if (existing) {
+    return Response.json({ error: 'A bartender with that name already exists at this bar.' }, { status: 409 })
+  }
+
+  const slug = await pickFreeSlug(supabase, baseSlug)
+  if (!slug) return Response.json({ error: 'could not find a free slug' }, { status: 500 })
+
+  const qrImageUrl = await renderBartenderQr(referralUrlFor(slug))
+
+  const row = {
+    slug,
+    display_name: firstName,
+    bar: bar.name,
+    qr_image_url: qrImageUrl,
+    active: true,
+  }
+
+  const { error } = await supabase.from('bartenders').insert(row)
+  if (error) return Response.json({ error: error.message }, { status: 500 })
+
+  return Response.json({ bartender: row })
+}
+
+// PATCH /api/admin/bartenders
+// Body: { slug, display_name?, bar_slug?, active? }
+// Edits any combination of display_name / bar / active. Slug is immutable.
+// QR doesn't need to regenerate when name/bar change because the QR points at
+// the TT URL with the slug, which is unchanged.
 export async function PATCH(req) {
   let body
   try { body = await req.json() } catch { return bad('invalid json') }
 
   const slug = String(body?.slug || '').trim()
-  const active = Boolean(body?.active)
+  if (!slug) return bad('slug required')
+
+  const updates = {}
+
+  if ('display_name' in body) {
+    const next = String(body.display_name || '').trim()
+    if (!next) return bad('display_name cannot be empty')
+    updates.display_name = next
+  }
+
+  if ('bar_slug' in body && body.bar_slug) {
+    const bar = BARS.find(b => b.slug === body.bar_slug)
+    if (!bar) return bad('unknown bar')
+    updates.bar = bar.name
+  }
+
+  if ('active' in body) {
+    updates.active = Boolean(body.active)
+  }
+
+  if (Object.keys(updates).length === 0) return bad('no changes provided')
+
+  const supabase = supabaseAdmin()
+  const { data, error } = await supabase
+    .from('bartenders')
+    .update(updates)
+    .eq('slug', slug)
+    .select('slug, display_name, bar, qr_image_url, active, created_at')
+    .maybeSingle()
+
+  if (error) return Response.json({ error: error.message }, { status: 500 })
+  if (!data) return Response.json({ error: 'bartender not found' }, { status: 404 })
+  return Response.json({ bartender: data })
+}
+
+// DELETE /api/admin/bartenders?slug=foo
+// Hard-deletes a roster row. Used to clean up typos or duplicates where the
+// row never had any ticket attribution. For "stop counting them" without
+// losing history, prefer PATCH active=false.
+export async function DELETE(req) {
+  const url = new URL(req.url)
+  const slug = String(url.searchParams.get('slug') || '').trim()
   if (!slug) return bad('slug required')
 
   const supabase = supabaseAdmin()
   const { error } = await supabase
     .from('bartenders')
-    .update({ active })
+    .delete()
     .eq('slug', slug)
 
-  if (error) {
-    return Response.json({ error: error.message }, { status: 500 })
-  }
+  if (error) return Response.json({ error: error.message }, { status: 500 })
   return Response.json({ ok: true })
 }
 

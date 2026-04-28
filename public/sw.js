@@ -28,6 +28,40 @@ self.addEventListener('activate', event => {
   )
 })
 
+// Web Push: shows OS notifications even when the app isn't open.
+// Payload shape (from lib/push.js): { title, body, url?, tag? }
+self.addEventListener('push', event => {
+  let data = {}
+  try { data = event.data ? event.data.json() : {} } catch { data = { title: 'Brew Loop', body: event.data?.text() || '' } }
+  const title = data.title || 'Brew Loop'
+  const options = {
+    body: data.body || '',
+    icon: '/icon-192.png',
+    badge: '/icon-192.png',
+    tag: data.tag || undefined,
+    data: { url: data.url || '/my-tickets' },
+  }
+  event.waitUntil(self.registration.showNotification(title, options))
+})
+
+self.addEventListener('notificationclick', event => {
+  event.notification.close()
+  const url = event.notification?.data?.url || '/my-tickets'
+  event.waitUntil(
+    self.clients.matchAll({ type: 'window', includeUncontrolled: true }).then(list => {
+      for (const c of list) {
+        try {
+          const u = new URL(c.url)
+          if (u.pathname === url || c.url.endsWith(url)) {
+            if ('focus' in c) return c.focus()
+          }
+        } catch {}
+      }
+      if (self.clients.openWindow) return self.clients.openWindow(url)
+    }),
+  )
+})
+
 self.addEventListener('fetch', event => {
   const req = event.request
   const url = new URL(req.url)

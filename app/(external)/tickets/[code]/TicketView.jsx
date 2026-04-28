@@ -1,6 +1,7 @@
 'use client'
 
 import { useEffect, useRef, useState } from 'react'
+import EnableNotifications from '../../_components/EnableNotifications'
 
 const GOLD = '#d4a333'
 const GOLD_HI = '#f0c24a'
@@ -196,6 +197,8 @@ export default function TicketView({
             Track the shuttle
           </a>
         </div>
+
+        <EnableNotifications contactId={contactId} />
 
         {brightHint && (
           <p style={{ color: INK_MUTED, fontSize: 12, textAlign: 'center', margin: 0 }}>
