@@ -10,6 +10,7 @@ import {
   nowInTZ,
   operationalDateInTZ,
 } from '@/lib/schedule'
+import { PARTNER_BAR_NAMES } from '@/lib/bars'
 
 const DAY_TABS = [
   { key: 'friday', label: 'Friday', weekday: 5 },
@@ -101,7 +102,11 @@ export default function Groups() {
   }
 
   async function generateScheduleFor(group) {
-    const schedule = buildDefaultSchedule(group.pickup_time || '19:30', 'Angry Ginger')
+    // Default rotation order for the bar picker — Jacob can rearrange in the
+    // editor afterward. Pulls 5 bars from PARTNER_BAR_NAMES so the schedule
+    // never starts with generic "Stop 2/3/4/5" labels.
+    const bars = PARTNER_BAR_NAMES.slice(0, 5)
+    const schedule = buildDefaultSchedule(group.pickup_time || '19:30', { bars })
     if (!schedule) return alert('Set a pickup time on this group first.')
     await supabase.from('groups').update({ schedule }).eq('id', group.id)
     fetchGroups()
@@ -109,7 +114,10 @@ export default function Groups() {
 
   function startEditSchedule(group) {
     setEditingSchedule(group.id)
-    setScheduleDraft(group.schedule || buildDefaultSchedule(group.pickup_time || '19:30', 'Stop 1') || [])
+    const seeded = group.schedule || buildDefaultSchedule(group.pickup_time || '19:30', {
+      bars: PARTNER_BAR_NAMES.slice(0, 5),
+    }) || []
+    setScheduleDraft(seeded)
   }
 
   async function saveSchedule(group) {
@@ -273,15 +281,28 @@ export default function Groups() {
               </div>
               <div style={{ display: 'flex', gap: '6px', alignItems: 'center' }}>
                 <a
-                  href={`/admin/groups/${group.id}`}
+                  href={`/admin/groups/${group.id}#summary`}
+                  onClick={e => e.stopPropagation()}
+                  style={{
+                    color: '#c8c8cc', fontSize: '12px', textDecoration: 'none',
+                    padding: '6px 10px', border: '1px solid #2a2a31', borderRadius: '6px',
+                    minHeight: 32, display: 'inline-flex', alignItems: 'center',
+                    fontWeight: 600,
+                  }}
+                >
+                  Summary
+                </a>
+                <a
+                  href={`/admin/groups/${group.id}#edit`}
                   onClick={e => e.stopPropagation()}
                   style={{
                     color: '#d4a333', fontSize: '12px', textDecoration: 'none',
-                    padding: '4px 10px', border: '1px solid #d4a333', borderRadius: '6px',
-                    minHeight: 28, display: 'inline-flex', alignItems: 'center',
+                    padding: '6px 10px', border: '1px solid #d4a333', borderRadius: '6px',
+                    minHeight: 32, display: 'inline-flex', alignItems: 'center',
+                    fontWeight: 600,
                   }}
                 >
-                  Manage
+                  Settings
                 </a>
                 {showTickets ? (
                   <span className="chip chip-gold">{tickets} tix</span>
@@ -337,29 +358,38 @@ export default function Groups() {
 
                     {isEditing && (
                       <div style={{ border: '1px solid #1e1e23', borderRadius: '8px', padding: '10px', margin: '8px 0 12px' }}>
-                        {scheduleDraft.map((stop, i) => (
-                          <div key={i} style={{ display: 'flex', gap: '6px', marginBottom: '6px' }}>
-                            <input
-                              style={{ flex: 2, marginBottom: 0, fontSize: '13px' }}
-                              value={stop.name}
-                              onChange={e => {
-                                const next = [...scheduleDraft]
-                                next[i] = { ...next[i], name: e.target.value }
-                                setScheduleDraft(next)
-                              }}
-                            />
-                            <input
-                              style={{ flex: 1, marginBottom: 0, fontSize: '13px' }}
-                              placeholder="HH:MM"
-                              value={stop.start_time}
-                              onChange={e => {
-                                const next = [...scheduleDraft]
-                                next[i] = { ...next[i], start_time: e.target.value }
-                                setScheduleDraft(next)
-                              }}
-                            />
-                          </div>
-                        ))}
+                        {scheduleDraft.map((stop, i) => {
+                          const isCustom = stop.name && !PARTNER_BAR_NAMES.includes(stop.name)
+                          return (
+                            <div key={i} style={{ display: 'flex', gap: '6px', marginBottom: '6px' }}>
+                              <select
+                                style={{ flex: 2, marginBottom: 0, fontSize: '13px' }}
+                                value={isCustom ? '__custom__' : (stop.name || '')}
+                                onChange={e => {
+                                  const next = [...scheduleDraft]
+                                  next[i] = { ...next[i], name: e.target.value === '__custom__' ? '' : e.target.value }
+                                  setScheduleDraft(next)
+                                }}
+                              >
+                                <option value="">Pick a bar…</option>
+                                {PARTNER_BAR_NAMES.map(bar => (
+                                  <option key={bar} value={bar}>{bar}</option>
+                                ))}
+                                <option value="__custom__">Other (type below)</option>
+                              </select>
+                              <input
+                                style={{ flex: 1, marginBottom: 0, fontSize: '13px' }}
+                                placeholder="HH:MM"
+                                value={stop.start_time}
+                                onChange={e => {
+                                  const next = [...scheduleDraft]
+                                  next[i] = { ...next[i], start_time: e.target.value }
+                                  setScheduleDraft(next)
+                                }}
+                              />
+                            </div>
+                          )
+                        })}
                         <button className="btn-primary" onClick={() => saveSchedule(group)}>Save Schedule</button>
                       </div>
                     )}

@@ -10,11 +10,12 @@ const POLL_MS = 10000
 
 const GOLD = '#d4a333'
 
-export default function ShuttleMap() {
+export default function ShuttleMap({ stops = [] }) {
   const containerRef = useRef(null)
   const mapRef = useRef(null)
   const markerRef = useRef(null)
   const leafletRef = useRef(null)
+  const stopMarkersRef = useRef([])
   const followShuttleRef = useRef(true)
   const [shuttle, setShuttle] = useState(null)
   const [stale, setStale] = useState(false)
@@ -54,6 +55,47 @@ export default function ShuttleMap() {
       }).addTo(map)
 
       map.on('dragstart', () => { followShuttleRef.current = false })
+
+      // Drop a numbered marker for each stop on tonight's route, then auto-fit
+      // bounds so all stops show on first paint. Subsequent shuttle pings can
+      // re-center on the bus once the user has scrolled away.
+      if (stops.length) {
+        const latLngs = []
+        stops.forEach((stop, idx) => {
+          const icon = L.divIcon({
+            className: 'stop-marker',
+            html: `
+              <div style="
+                width: 26px; height: 26px; border-radius: 50%;
+                background: #15151a;
+                border: 2px solid ${GOLD};
+                color: ${GOLD};
+                font: 700 13px/22px -apple-system,sans-serif;
+                text-align: center;
+                box-shadow: 0 0 12px rgba(212,163,51,0.4);
+              ">${idx + 1}</div>
+            `,
+            iconSize: [26, 26],
+            iconAnchor: [13, 13],
+          })
+          const marker = L.marker([stop.lat, stop.lng], { icon }).addTo(map)
+          const mapsHref = `https://www.google.com/maps/search/?api=1&query=${stop.lat},${stop.lng}`
+          const popupHtml = `
+            <div style="font-family:-apple-system,sans-serif;color:#0a0a0b;">
+              <div style="font-weight:700;font-size:14px;margin-bottom:4px;">Stop ${idx + 1}: ${escapeHtml(stop.name)}</div>
+              ${stop.start_time ? `<div style="font-size:12px;color:#555;margin-bottom:6px;">${escapeHtml(stop.start_time)}</div>` : ''}
+              ${stop.address ? `<div style="font-size:12px;color:#555;margin-bottom:6px;">${escapeHtml(stop.address)}</div>` : ''}
+              <a href="${mapsHref}" target="_blank" rel="noreferrer" style="color:#d4a333;text-decoration:none;font-weight:600;">Open in Maps →</a>
+            </div>
+          `
+          marker.bindPopup(popupHtml)
+          stopMarkersRef.current.push(marker)
+          latLngs.push([stop.lat, stop.lng])
+        })
+        if (latLngs.length) {
+          map.fitBounds(latLngs, { padding: [40, 40], maxZoom: 14 })
+        }
+      }
     }
 
     init()
@@ -62,7 +104,9 @@ export default function ShuttleMap() {
       try { mapRef.current?.remove() } catch {}
       mapRef.current = null
       markerRef.current = null
+      stopMarkersRef.current = []
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
   useEffect(() => {
@@ -145,6 +189,27 @@ export default function ShuttleMap() {
           Shuttle is off duty right now. The map updates the moment your driver starts the route.
         </div>
       )}
+      {stops.length > 0 && (
+        <div
+          style={{
+            position: 'absolute',
+            bottom: 14,
+            left: 14,
+            right: 14,
+            padding: '8px 12px',
+            background: 'rgba(10,10,11,0.85)',
+            border: '1px solid rgba(255,255,255,0.08)',
+            borderRadius: 10,
+            color: '#b8b8bf',
+            fontSize: 11,
+            backdropFilter: 'blur(6px)',
+            zIndex: 500,
+            textAlign: 'center',
+          }}
+        >
+          {stops.length} stops on tonight’s route — tap a number for the bar
+        </div>
+      )}
       {shuttle && stale && (
         <div
           style={{
@@ -166,4 +231,10 @@ export default function ShuttleMap() {
       )}
     </div>
   )
+}
+
+function escapeHtml(s) {
+  return String(s ?? '').replace(/[&<>"']/g, c => (
+    { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]
+  ))
 }

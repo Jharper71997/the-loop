@@ -30,7 +30,7 @@ export default function MyTicketsPage() {
             Find your ride.
           </h1>
           <p style={{ color: '#b8b8bf', fontSize: 14, margin: '6px 0 0' }}>
-            Enter the email you booked with and the last 4 digits of your phone.
+            Enter the phone you booked with — we’ll show your tickets and waiver.
           </p>
         </header>
 

@@ -32,6 +32,7 @@ export default function BookingForm({ eventId, eventName, ticketTypes, waiver })
       same_as_buyer: true,
       signed_self: true,
       signed_by_buyer: false,
+      claim_link: false,
       typed_name: '',
     },
   ])
@@ -40,12 +41,10 @@ export default function BookingForm({ eventId, eventName, ticketTypes, waiver })
   const [submitting, setSubmitting] = useState(false)
   const [error, setError] = useState(null)
 
-  // Stable per-session token so a double-tap or retry of Pay returns the same
-  // Stripe Checkout URL instead of creating a duplicate order.
-  const [clientToken] = useState(() => {
-    if (typeof crypto !== 'undefined' && crypto.randomUUID) return crypto.randomUUID()
-    return `${Date.now().toString(36)}-${Math.random().toString(36).slice(2)}`
-  })
+  // Stable per-attempt token so a double-tap or network retry of Pay replays
+  // the same Stripe URL instead of creating a duplicate order. Rotated after
+  // a failed submit so the next manual click starts a fresh attempt.
+  const [clientToken, setClientToken] = useState(() => mintToken())
 
   const totalCents = useMemo(() => riders.reduce((s, r) => {
     const tt = ticketTypes.find(t => t.id === r.ticket_type_id)
@@ -62,7 +61,8 @@ export default function BookingForm({ eventId, eventName, ticketTypes, waiver })
       first_name: '', last_name: '', email: '', phone: '',
       same_as_buyer: false,
       signed_self: false,
-      signed_by_buyer: true,
+      signed_by_buyer: false,
+      claim_link: true,
       typed_name: '',
     }])
   }
@@ -78,6 +78,8 @@ export default function BookingForm({ eventId, eventName, ticketTypes, waiver })
     if (!ticketTypes.length) return false
     for (const r of riders) {
       if (!r.ticket_type_id) return false
+      // claim_link riders skip name + contact + waiver — that's the whole point
+      if (r.claim_link) continue
       if (!r.same_as_buyer && (!r.first_name || !r.last_name)) return false
       if (!r.same_as_buyer && !r.phone && !r.email) return false
       if (r.signed_self && !r.typed_name.trim()) return false
@@ -93,6 +95,14 @@ export default function BookingForm({ eventId, eventName, ticketTypes, waiver })
     setError(null)
 
     const ridersPayload = riders.map(r => {
+      // Claim-link riders: no contact info collected; checkout mints a token
+      // the buyer can forward to the friend. Friend fills info + signs at /c/<token>.
+      if (r.claim_link) {
+        return {
+          ticket_type_id: r.ticket_type_id,
+          claim_link: true,
+        }
+      }
       const baseRider = r.same_as_buyer
         ? {
             first_name: buyer.first_name,
@@ -141,12 +151,14 @@ export default function BookingForm({ eventId, eventName, ticketTypes, waiver })
         }
         setError(message)
         setSubmitting(false)
+        if (json.error !== 'in_flight_retry') setClientToken(mintToken())
         return
       }
       window.location.href = json.checkout_url
     } catch (err) {
       setError(err.message)
       setSubmitting(false)
+      setClientToken(mintToken())
     }
   }
 
@@ -216,59 +228,93 @@ export default function BookingForm({ eventId, eventName, ticketTypes, waiver })
                     <input
                       type="checkbox"
                       checked={r.same_as_buyer}
-                      onChange={e => updateRider(idx, { same_as_buyer: e.target.checked })}
+                      onChange={e => updateRider(idx, {
+                        same_as_buyer: e.target.checked,
+                        claim_link: false,
+                      })}
                     />
                     This rider is me
                   </label>
                 ) : null}
 
-                {!r.same_as_buyer && (
-                  <>
-                    <Row>
-                      <Field label="First name" value={r.first_name} onChange={v => updateRider(idx, { first_name: v })} />
-                      <Field label="Last name" value={r.last_name} onChange={v => updateRider(idx, { last_name: v })} />
-                    </Row>
-                    <Row>
-                      <Field label="Phone" value={r.phone} type="tel" onChange={v => updateRider(idx, { phone: v })} />
-                      <Field label="Email" value={r.email} type="email" onChange={v => updateRider(idx, { email: v })} />
-                    </Row>
-                  </>
+                {idx > 0 && (
+                  <label style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 13, color: r.claim_link ? '#d4a333' : '#bbb' }}>
+                    <input
+                      type="checkbox"
+                      checked={!!r.claim_link}
+                      onChange={e => updateRider(idx, {
+                        claim_link: e.target.checked,
+                        ...(e.target.checked
+                          ? { same_as_buyer: false, signed_self: false, signed_by_buyer: false, typed_name: '' }
+                          : { signed_by_buyer: true }),
+                      })}
+                    />
+                    I’ll send this person a link to sign their own waiver
+                  </label>
                 )}
 
-                <div style={{ display: 'grid', gap: 6, padding: 10, background: '#15151a', borderRadius: 8, marginTop: 4 }}>
-                  <strong style={{ fontSize: 12, color: ACCENT, letterSpacing: '0.05em', textTransform: 'uppercase' }}>
-                    Waiver for this rider
-                  </strong>
-                  <label style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 13 }}>
-                    <input
-                      type="radio"
-                      name={`sig-${idx}`}
-                      checked={r.signed_self}
-                      onChange={() => updateRider(idx, { signed_self: true, signed_by_buyer: false })}
-                    />
-                    This rider signs themselves
-                  </label>
-                  {idx > 0 && (
-                    <label style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 13 }}>
-                      <input
-                        type="radio"
-                        name={`sig-${idx}`}
-                        checked={r.signed_by_buyer}
-                        onChange={() => updateRider(idx, { signed_self: false, signed_by_buyer: true })}
-                      />
-                      I'm signing on their behalf
-                    </label>
-                  )}
+                {r.claim_link ? (
+                  <div style={{
+                    padding: 10,
+                    background: 'rgba(212,163,51,0.06)',
+                    border: `1px dashed ${ACCENT}`,
+                    borderRadius: 8,
+                    fontSize: 12,
+                    color: '#bbb',
+                  }}>
+                    Friend’s ticket — after payment we’ll give you a link to text them. They fill their info + sign on their own.
+                  </div>
+                ) : (
+                  <>
+                    {!r.same_as_buyer && (
+                      <>
+                        <Row>
+                          <Field label="First name" value={r.first_name} onChange={v => updateRider(idx, { first_name: v })} />
+                          <Field label="Last name" value={r.last_name} onChange={v => updateRider(idx, { last_name: v })} />
+                        </Row>
+                        <Row>
+                          <Field label="Phone" value={r.phone} type="tel" onChange={v => updateRider(idx, { phone: v })} />
+                          <Field label="Email" value={r.email} type="email" onChange={v => updateRider(idx, { email: v })} />
+                        </Row>
+                      </>
+                    )}
 
-                  {r.signed_self && (
-                    <input
-                      placeholder="Type rider's full legal name"
-                      value={r.typed_name}
-                      onChange={e => updateRider(idx, { typed_name: e.target.value })}
-                      style={input}
-                    />
-                  )}
-                </div>
+                    <div style={{ display: 'grid', gap: 6, padding: 10, background: '#15151a', borderRadius: 8, marginTop: 4 }}>
+                      <strong style={{ fontSize: 12, color: ACCENT, letterSpacing: '0.05em', textTransform: 'uppercase' }}>
+                        Waiver for this rider
+                      </strong>
+                      <label style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 13 }}>
+                        <input
+                          type="radio"
+                          name={`sig-${idx}`}
+                          checked={r.signed_self}
+                          onChange={() => updateRider(idx, { signed_self: true, signed_by_buyer: false })}
+                        />
+                        This rider signs themselves
+                      </label>
+                      {idx > 0 && (
+                        <label style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 13 }}>
+                          <input
+                            type="radio"
+                            name={`sig-${idx}`}
+                            checked={r.signed_by_buyer}
+                            onChange={() => updateRider(idx, { signed_self: false, signed_by_buyer: true })}
+                          />
+                          I’m signing on their behalf
+                        </label>
+                      )}
+
+                      {r.signed_self && (
+                        <input
+                          placeholder="Type rider’s full legal name"
+                          value={r.typed_name}
+                          onChange={e => updateRider(idx, { typed_name: e.target.value })}
+                          style={input}
+                        />
+                      )}
+                    </div>
+                  </>
+                )}
 
                 <div style={{ fontSize: 12, color: '#9c9ca3', textAlign: 'right' }}>
                   {tt ? `$${(tt.price_cents / 100).toFixed(2)}` : ''}
@@ -368,6 +414,11 @@ export default function BookingForm({ eventId, eventName, ticketTypes, waiver })
       </div>
     </form>
   )
+}
+
+function mintToken() {
+  if (typeof crypto !== 'undefined' && crypto.randomUUID) return crypto.randomUUID()
+  return `${Date.now().toString(36)}-${Math.random().toString(36).slice(2)}`
 }
 
 function Section({ title, children }) {

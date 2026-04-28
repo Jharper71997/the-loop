@@ -12,6 +12,7 @@ const LINKS = [
   { href: '/admin/metrics', label: 'Metrics', leadership: true },
   { href: '/admin/qr', label: 'QR', leadership: true },
   { href: '/admin/leaderboard', label: 'Leaderboard', leadership: true },
+  { href: '/admin/notifications', label: 'Alerts', leadership: true },
   { href: '/track', label: 'Track', external: true, leadership: true },
 ]
 

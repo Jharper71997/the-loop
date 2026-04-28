@@ -1,6 +1,7 @@
 import QRCode from 'qrcode'
 import { supabaseAdmin } from '@/lib/supabaseAdmin'
 import { BARS } from '@/lib/bars'
+import { recordAlert } from '@/lib/alerts'
 
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
@@ -40,12 +41,27 @@ export async function POST(req) {
   // Idempotency: if a row already exists for this exact (bar, display_name),
   // return it. Cheap dedupe so a bartender hitting submit twice doesn't end up
   // with two slugs.
-  const { data: existing } = await supabase
+  const { data: existing, error: lookupErr } = await supabase
     .from('bartenders')
     .select('slug, display_name, bar, qr_image_url, active')
     .eq('bar', bar.name)
     .ilike('display_name', firstName)
     .maybeSingle()
+
+  // 42P01 = relation does not exist. Means the migration was forgotten in
+  // this environment — surface a friendly message and alert Jacob.
+  if (lookupErr?.code === '42P01') {
+    await recordAlert(supabase, {
+      kind: 'schema_missing',
+      severity: 'error',
+      subject: 'Bartender signup failed — bartenders table missing',
+      body: 'sql/010_bartender_referrals.sql has not been applied to this Supabase. Run it in the SQL editor.',
+      context: { table: 'bartenders', endpoint: '/api/bartender-signup' },
+    })
+    return Response.json({
+      error: 'Signups are temporarily unavailable. Text us at (636) 266-1801 and we’ll get you set up.',
+    }, { status: 503 })
+  }
 
   if (existing) {
     return Response.json(await buildPayload(supabase, existing, bar))
@@ -76,7 +92,25 @@ export async function POST(req) {
 
   const { error } = await supabase.from('bartenders').insert(row)
   if (error) {
-    return Response.json({ error: `insert failed: ${error.message}` }, { status: 500 })
+    if (error.code === '42P01') {
+      await recordAlert(supabase, {
+        kind: 'schema_missing',
+        severity: 'error',
+        subject: 'Bartender signup failed — bartenders table missing',
+        body: 'sql/010_bartender_referrals.sql has not been applied to this Supabase. Run it in the SQL editor.',
+        context: { table: 'bartenders', endpoint: '/api/bartender-signup' },
+      })
+      return Response.json({
+        error: 'Signups are temporarily unavailable. Text us at (636) 266-1801 and we’ll get you set up.',
+      }, { status: 503 })
+    }
+    await recordAlert(supabase, {
+      kind: 'finalize_failed',
+      subject: 'Bartender signup insert failed',
+      body: error.message,
+      context: { display_name: firstName, bar: bar.name },
+    })
+    return Response.json({ error: 'Could not complete signup. Please try again.' }, { status: 500 })
   }
 
   return Response.json(await buildPayload(supabase, row, bar))

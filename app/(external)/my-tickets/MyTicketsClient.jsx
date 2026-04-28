@@ -12,8 +12,7 @@ const RED = '#e07a7a'
 const GREEN = '#6fbf7f'
 
 export default function MyTicketsClient() {
-  const [email, setEmail] = useState('')
-  const [phone4, setPhone4] = useState('')
+  const [phone, setPhone] = useState('')
   const [submitting, setSubmitting] = useState(false)
   const [searched, setSearched] = useState(false)
   const [orders, setOrders] = useState([])
@@ -28,11 +27,15 @@ export default function MyTicketsClient() {
       const res = await fetch('/api/my-tickets', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email: email.trim(), phone4: phone4.trim() }),
+        body: JSON.stringify({ phone: phone.trim() }),
       })
       const json = await res.json()
       if (!res.ok) {
-        setError(json.error || 'Something went wrong. Try again.')
+        if (json.error === 'rate_limited') {
+          setError(`Slow down — try again in ${json.retry_after_seconds || 60} seconds.`)
+        } else {
+          setError(json.error || 'Something went wrong. Try again.')
+        }
         setSubmitting(false)
         return
       }
@@ -59,17 +62,16 @@ export default function MyTicketsClient() {
               No tickets found.
             </div>
             <p style={{ color: INK_DIM, margin: 0, fontSize: 14 }}>
-              Double-check your email and the last 4 digits of the phone number you booked with. If it still doesn&apos;t
-              match, text us at{' '}
+              Double-check the phone number you booked with. If it still doesn’t match, text us at{' '}
               <a href="sms:+16362661801" style={{ color: GOLD, textDecoration: 'none', fontWeight: 600 }}>
                 (636) 266-1801
               </a>{' '}
-              and we&apos;ll track it down.
+              and we’ll track it down.
             </p>
           </Card>
         )}
 
-        {orders.map(o => <OrderCard key={o.id} order={o} />)}
+        {orders.map(o => <OrderCard key={o.id} order={o} phone={phone} />)}
 
         <button
           type="button"
@@ -95,30 +97,17 @@ export default function MyTicketsClient() {
   return (
     <form onSubmit={onSubmit} style={{ display: 'grid', gap: 14 }}>
       <label style={{ display: 'grid', gap: 6 }}>
-        <span style={labelStyle}>Email</span>
+        <span style={labelStyle}>Phone number</span>
         <input
-          type="email"
+          type="tel"
           required
-          autoComplete="email"
-          value={email}
-          onChange={e => setEmail(e.target.value)}
-          placeholder="you@example.com"
-          style={inputStyle}
-        />
-      </label>
-
-      <label style={{ display: 'grid', gap: 6 }}>
-        <span style={labelStyle}>Last 4 digits of phone</span>
-        <input
-          type="text"
-          required
-          inputMode="numeric"
-          pattern="[0-9]{4}"
-          maxLength={4}
-          value={phone4}
-          onChange={e => setPhone4(e.target.value.replace(/\D/g, ''))}
-          placeholder="1234"
-          style={{ ...inputStyle, letterSpacing: '0.3em', fontFamily: 'ui-monospace, monospace' }}
+          autoFocus
+          inputMode="tel"
+          autoComplete="tel"
+          value={phone}
+          onChange={e => setPhone(e.target.value)}
+          placeholder="(910) 555-0123"
+          style={{ ...inputStyle, fontSize: 18, padding: '16px 16px' }}
         />
       </label>
 
@@ -130,18 +119,18 @@ export default function MyTicketsClient() {
 
       <button
         type="submit"
-        disabled={submitting || !email || phone4.length !== 4}
+        disabled={submitting || phone.replace(/\D/g, '').length < 10}
         style={{
           marginTop: 4,
-          padding: '16px 24px',
+          padding: '18px 24px',
           borderRadius: 12,
           background: `linear-gradient(180deg, ${GOLD_HI}, ${GOLD})`,
           color: '#0a0a0b',
           border: 0,
           fontWeight: 700,
-          fontSize: 16,
+          fontSize: 17,
           cursor: submitting ? 'wait' : 'pointer',
-          opacity: submitting || !email || phone4.length !== 4 ? 0.6 : 1,
+          opacity: submitting || phone.replace(/\D/g, '').length < 10 ? 0.6 : 1,
           boxShadow: '0 10px 30px rgba(212,163,51,0.25)',
         }}
       >
@@ -149,17 +138,47 @@ export default function MyTicketsClient() {
       </button>
 
       <p style={{ color: INK_MUTED, fontSize: 12, textAlign: 'center', margin: '8px 0 0' }}>
-        We only match on exact email + last-4 phone. Nothing is confirmed until both line up.
+        Enter the phone you booked with — we’ll show your tickets and waiver.
       </p>
     </form>
   )
 }
 
-function OrderCard({ order }) {
+function OrderCard({ order, phone }) {
   const ev = order.event
   const eventDate = ev?.event_date ? formatDate(ev.event_date) : null
   const pickupTime = ev?.pickup_time ? formatTime(ev.pickup_time) : null
   const waiverHref = order.contact_id ? `/waiver/${order.contact_id}` : '/waiver'
+
+  const [resending, setResending] = useState(false)
+  const [resendMsg, setResendMsg] = useState(null)
+
+  async function onResend() {
+    if (resending) return
+    setResending(true)
+    setResendMsg(null)
+    try {
+      const res = await fetch('/api/my-tickets/resend', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ order_id: order.id, phone }),
+      })
+      const json = await res.json()
+      if (!res.ok) {
+        if (json.error === 'rate_limited') {
+          const mins = Math.ceil((json.retry_after_seconds || 300) / 60)
+          setResendMsg({ kind: 'err', text: `Try again in ${mins} min.` })
+        } else {
+          setResendMsg({ kind: 'err', text: json.error || 'Resend failed.' })
+        }
+      } else {
+        setResendMsg({ kind: 'ok', text: 'Sent — check your phone & email.' })
+      }
+    } catch (err) {
+      setResendMsg({ kind: 'err', text: err.message })
+    }
+    setResending(false)
+  }
 
   return (
     <Card>
@@ -220,7 +239,7 @@ function OrderCard({ order }) {
         </span>
         <div style={{ flex: 1, minWidth: 0 }}>
           <div style={{ color: INK, fontWeight: 600, fontSize: 14 }}>
-            {order.waiver_signed ? 'Waiver signed — you&apos;re clear to ride' : 'Waiver not signed yet'}
+            {order.waiver_signed ? 'Waiver signed — you’re clear to ride' : 'Waiver not signed yet'}
           </div>
           <div style={{ color: INK_DIM, fontSize: 12, marginTop: 2 }}>
             {order.waiver_signed
@@ -252,13 +271,44 @@ function OrderCard({ order }) {
           Riders:{' '}
           {order.riders.map((r, i) => (
             <span key={i}>
-              {r.name || 'Guest'}
-              {r.waiver_signed ? (
-                <span style={{ color: GREEN, marginLeft: 4 }}>✓</span>
-              ) : null}
+              {r.name || (r.unclaimed ? 'Unclaimed' : 'Guest')}
+              {r.waiver_signed ? <span style={{ color: GREEN, marginLeft: 4 }}>✓</span> : null}
               {i < order.riders.length - 1 ? ', ' : ''}
             </span>
           ))}
+        </div>
+      )}
+
+      {order.status === 'paid' && (
+        <div style={{ marginTop: 14, paddingTop: 12, borderTop: `1px solid ${LINE}` }}>
+          <button
+            type="button"
+            onClick={onResend}
+            disabled={resending}
+            style={{
+              width: '100%',
+              padding: '12px 16px',
+              borderRadius: 10,
+              background: 'transparent',
+              border: `1px solid ${LINE}`,
+              color: INK,
+              fontWeight: 600,
+              fontSize: 13,
+              cursor: resending ? 'wait' : 'pointer',
+            }}
+          >
+            {resending ? 'Sending…' : 'Resend ticket links'}
+          </button>
+          {resendMsg && (
+            <div style={{
+              marginTop: 8,
+              fontSize: 12,
+              color: resendMsg.kind === 'ok' ? GREEN : RED,
+              textAlign: 'center',
+            }}>
+              {resendMsg.text}
+            </div>
+          )}
         </div>
       )}
     </Card>

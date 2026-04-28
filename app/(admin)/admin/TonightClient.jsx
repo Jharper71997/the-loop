@@ -15,6 +15,9 @@ export default function TonightClient({ state, today, group, currentIdx, ordersT
   return (
     <main style={{ maxWidth: 1100, margin: '0 auto', padding: '20px 16px', minHeight: '100vh', color: '#fff' }}>
       <Header today={today} group={group} state={state} />
+      {group?.id && (
+        <EventQuickPanel group={group} totalTickets={totalTickets} />
+      )}
 
       {state === 'none' && <NoLoopState today={today} />}
       {state === 'upcoming' && <UpcomingLoopState group={group} ticketsByContact={ticketsByContact} totalTickets={totalTickets} />}
@@ -61,6 +64,55 @@ export default function TonightClient({ state, today, group, currentIdx, ordersT
 
       <TtBackfillButton />
     </main>
+  )
+}
+
+function EventQuickPanel({ group, totalTickets }) {
+  return (
+    <section style={{
+      display: 'flex',
+      gap: 12,
+      alignItems: 'center',
+      padding: '12px 14px',
+      background: 'linear-gradient(180deg, #15151a, #121215)',
+      border: `1px solid ${BORDER}`,
+      borderRadius: 12,
+      marginBottom: 14,
+      flexWrap: 'wrap',
+    }}>
+      <div style={{ flex: 1, minWidth: 220 }}>
+        <div style={{ fontSize: 11, color: '#9c9ca3', letterSpacing: '0.18em', textTransform: 'uppercase', fontWeight: 700 }}>
+          Active event
+        </div>
+        <div style={{ color: '#e8e8ea', fontWeight: 600, fontSize: 15, marginTop: 2 }}>
+          {group.name || 'Brew Loop'}
+        </div>
+        <div style={{ color: '#9c9ca3', fontSize: 12, marginTop: 2 }}>
+          {group.event_date || 'No date'}{group.pickup_time ? ` · ${group.pickup_time}` : ''}
+          {totalTickets ? ` · ${totalTickets} ticket${totalTickets === 1 ? '' : 's'} sold` : ''}
+        </div>
+      </div>
+      <a
+        href={`/admin/groups/${group.id}#summary`}
+        style={{
+          padding: '10px 14px', borderRadius: 8, border: `1px solid ${BORDER}`,
+          color: '#c8c8cc', fontSize: 12, fontWeight: 600, textDecoration: 'none',
+          minHeight: 36, display: 'inline-flex', alignItems: 'center',
+        }}
+      >
+        Summary
+      </a>
+      <a
+        href={`/admin/groups/${group.id}#edit`}
+        style={{
+          padding: '10px 14px', borderRadius: 8, border: `1px solid ${ACCENT}`,
+          color: ACCENT, fontSize: 12, fontWeight: 700, textDecoration: 'none',
+          minHeight: 36, display: 'inline-flex', alignItems: 'center',
+        }}
+      >
+        Open settings
+      </a>
+    </section>
   )
 }
 

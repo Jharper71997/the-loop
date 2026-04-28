@@ -1,6 +1,11 @@
 import ShuttleMap from './ShuttleMap'
+import { supabaseAdmin } from '@/lib/supabaseAdmin'
+import { operationalDateInTZ } from '@/lib/schedule'
+import { getBarByName } from '@/lib/bars'
 
 const LOOP_PHONE = '16362661801' // (636) 266-1801 — rider text line
+
+export const dynamic = 'force-dynamic'
 
 export const metadata = {
   title: 'Live Shuttle',
@@ -21,7 +26,8 @@ const GOLD = '#d4a333'
 const INK = '#f5f5f7'
 const INK_DIM = '#b8b8bf'
 
-export default function TrackPage() {
+export default async function TrackPage() {
+  const stops = await loadTonightStops()
   return (
     <>
       <div
@@ -115,7 +121,7 @@ export default function TrackPage() {
             boxShadow: '0 20px 60px rgba(0,0,0,0.5)',
           }}
         >
-          <ShuttleMap />
+          <ShuttleMap stops={stops} />
         </div>
 
         <section style={{ maxWidth: 1100, margin: '0 auto 48px', padding: '0 20px', width: '100%' }}>
@@ -155,6 +161,34 @@ export default function TrackPage() {
       `}</style>
     </>
   )
+}
+
+async function loadTonightStops() {
+  try {
+    const sb = supabaseAdmin()
+    const today = operationalDateInTZ()
+    const { data: group } = await sb
+      .from('groups')
+      .select('id, schedule')
+      .eq('event_date', today)
+      .maybeSingle()
+    const schedule = Array.isArray(group?.schedule) ? group.schedule : []
+    return schedule
+      .map((s, idx) => {
+        const bar = getBarByName(s.name)
+        return {
+          index: idx,
+          name: s.name || `Stop ${idx + 1}`,
+          start_time: s.start_time || null,
+          lat: bar?.lat ?? null,
+          lng: bar?.lng ?? null,
+          address: bar?.address ?? null,
+        }
+      })
+      .filter(s => s.lat != null && s.lng != null)
+  } catch {
+    return []
+  }
 }
 
 function TipCard({ title, body }) {

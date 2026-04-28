@@ -1,8 +1,16 @@
+import { randomBytes } from 'crypto'
 import { supabaseAdmin } from '@/lib/supabaseAdmin'
 import { createBookingCheckoutSession } from '@/lib/stripe'
 import { upsertContactByPhoneOrEmail, normalizeEmail } from '@/lib/contacts'
 import { normalizePhone } from '@/lib/phone'
 import { getCurrentWaiverVersion, contactHasSignedCurrent } from '@/lib/waiver'
+
+function mintClaimToken() {
+  // 24 bytes => 32 url-safe base64 chars. Long enough that brute-forcing
+  // an unclaimed token is computationally infeasible; short enough to copy
+  // into a text message without wrapping.
+  return randomBytes(24).toString('base64url')
+}
 
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
@@ -44,7 +52,7 @@ export async function POST(req) {
   if (client_token) {
     const { data: existing } = await supabase
       .from('orders')
-      .select('id, stripe_checkout_url, status')
+      .select('id, stripe_checkout_url, status, created_at')
       .eq('event_id', event_id)
       .eq('client_token', client_token)
       .maybeSingle()
@@ -55,10 +63,16 @@ export async function POST(req) {
         replayed: true,
       })
     }
-    // existing without a URL means the first request is still mid-flight —
-    // ask the client to retry rather than racing to create a second session.
     if (existing) {
-      return Response.json({ error: 'in_flight_retry' }, { status: 409 })
+      // No URL yet. If the row is fresh, the first request is still mid-flight
+      // — ask the client to wait. If it's older than 30s the Stripe call
+      // almost certainly failed (the row would be unrecoverable otherwise),
+      // so wipe it and fall through to a clean retry.
+      const ageMs = Date.now() - new Date(existing.created_at).getTime()
+      if (ageMs < 30_000) {
+        return Response.json({ error: 'in_flight_retry' }, { status: 409 })
+      }
+      await supabase.from('orders').delete().eq('id', existing.id)
     }
   }
 
@@ -141,6 +155,13 @@ export async function POST(req) {
 
   const riderContacts = []
   for (const r of riders) {
+    // Claim-link riders skip contact lookup entirely — the friend creates
+    // their own contact when they open the claim URL.
+    if (r.claim_link) {
+      riderContacts.push({ rider: r, contact: null, claim: true })
+      continue
+    }
+
     const riderIsBuyer =
       (r.phone && normalizePhone(r.phone) === normalizePhone(buyer.phone)) ||
       (r.email && normalizeEmail(r.email) === normalizeEmail(buyer.email))
@@ -164,6 +185,7 @@ export async function POST(req) {
 
   const waiverQueue = []
   for (const rc of riderContacts) {
+    if (rc.claim) continue // friend will sign at /c/<token>
     const alreadySigned = await contactHasSignedCurrent(supabase, rc.contact.id)
     if (alreadySigned) continue
 
@@ -234,6 +256,22 @@ export async function POST(req) {
 
   const orderItemRows = riderContacts.map(rc => {
     const tt = ttById.get(rc.rider.ticket_type_id)
+    if (rc.claim) {
+      // Claim-link item: friend hasn't filled their info yet. Mint an
+      // unguessable token they'll use at /c/<token>.
+      return {
+        order_id: order.id,
+        ticket_type_id: tt.id,
+        contact_id: null,
+        rider_first_name: '',
+        rider_last_name: '',
+        rider_email: null,
+        rider_phone: null,
+        unit_price_cents: tt.price_cents,
+        stop_index: tt.stop_index,
+        claim_token: mintClaimToken(),
+      }
+    }
     return {
       order_id: order.id,
       ticket_type_id: tt.id,
@@ -308,6 +346,7 @@ export async function POST(req) {
       orderId: order.id,
       waiverPayload: JSON.stringify({ sigs: waiverQueue }),
       attribution: body.attribution || null,
+      origin: req.headers.get('origin') || req.headers.get('referer'),
     })
   } catch (err) {
     return Response.json({ error: `stripe: ${err.message}` }, { status: 500 })

@@ -18,6 +18,81 @@ export default function Contacts() {
   const [assignedGroup, setAssignedGroup] = useState('')
   const [checkedIds, setCheckedIds] = useState(() => new Set())
   const [broadcastOpen, setBroadcastOpen] = useState(false)
+  const [orders, setOrders] = useState([])
+  const [voidingId, setVoidingId] = useState(null)
+
+  async function loadOrders(contactId) {
+    if (!contactId) { setOrders([]); return }
+    // Pull orders where this contact is buyer OR a rider on any item.
+    const [{ data: byBuyer }, { data: itemHits }] = await Promise.all([
+      supabase
+        .from('orders')
+        .select(`
+          id, status, total_cents, party_size, paid_at, created_at, stripe_payment_intent_id,
+          event:events ( id, name, event_date, pickup_time ),
+          order_items ( id, rider_first_name, rider_last_name, contact_id, unit_price_cents, voided_at, voided_by, void_reason )
+        `)
+        .eq('contact_id', contactId)
+        .order('created_at', { ascending: false })
+        .limit(50),
+      supabase
+        .from('order_items')
+        .select('order_id')
+        .eq('contact_id', contactId)
+        .limit(100),
+    ])
+    const buyerIds = new Set((byBuyer || []).map(o => o.id))
+    const extraIds = (itemHits || []).map(r => r.order_id).filter(id => !buyerIds.has(id))
+    let extra = []
+    if (extraIds.length) {
+      const { data } = await supabase
+        .from('orders')
+        .select(`
+          id, status, total_cents, party_size, paid_at, created_at, stripe_payment_intent_id,
+          event:events ( id, name, event_date, pickup_time ),
+          order_items ( id, rider_first_name, rider_last_name, contact_id, unit_price_cents, voided_at, voided_by, void_reason )
+        `)
+        .in('id', extraIds)
+      extra = data || []
+    }
+    const all = [...(byBuyer || []), ...extra]
+      .sort((a, b) => (b.created_at || '').localeCompare(a.created_at || ''))
+    setOrders(all)
+  }
+
+  async function voidOrderItem(item, order) {
+    if (voidingId) return
+    const reason = window.prompt('Optional reason for voiding this ticket:', '')
+    if (reason === null) return
+    const wantRefund = order?.stripe_payment_intent_id
+      ? confirm('Also issue a Stripe refund for this seat? Click Cancel to void without refunding.')
+      : false
+    setVoidingId(item.id)
+    try {
+      const res = await fetch(`/api/order-items/${item.id}/void`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ reason: reason || null, refund: wantRefund }),
+      })
+      const json = await res.json().catch(() => ({}))
+      if (!res.ok) {
+        alert(json.error || `Failed (${res.status})`)
+      } else {
+        await loadOrders(selected?.id)
+        await refresh()
+      }
+    } catch (err) {
+      alert(err.message)
+    } finally {
+      setVoidingId(null)
+    }
+  }
+
+  useEffect(() => {
+    if (selected?.id) loadOrders(selected.id)
+    else setOrders([])
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selected?.id])
 
   useEffect(() => {
     refresh()
@@ -189,6 +264,96 @@ export default function Contacts() {
               </>
             )
           })()}
+        </div>
+
+        <div className="card">
+          <h3>Tickets purchased ({orders.length})</h3>
+          {orders.length === 0 ? (
+            <p style={{ color: '#888', fontSize: '13px' }}>No orders found.</p>
+          ) : (
+            <div style={{ display: 'grid', gap: 10, marginTop: 8 }}>
+              {orders.map(o => {
+                const liveItems = (o.order_items || []).filter(i => !i.voided_at)
+                const evDate = o.event?.event_date ? formatEventDate(o.event.event_date) : null
+                return (
+                  <div key={o.id} style={{
+                    padding: 12,
+                    background: '#0f0f12',
+                    border: '1px solid #1e1e23',
+                    borderRadius: 10,
+                  }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', gap: 8 }}>
+                      <div>
+                        <div style={{ fontSize: 13, fontWeight: 600, color: '#e8e8ea' }}>
+                          {evDate || o.event?.name || 'Loop'}
+                          {o.event?.pickup_time ? ` · ${o.event.pickup_time}` : ''}
+                        </div>
+                        <div style={{ fontSize: 11, color: '#9c9ca3', marginTop: 2 }}>
+                          {liveItems.length} of {o.order_items?.length || 0} active
+                          {o.total_cents != null && ` · $${(o.total_cents / 100).toFixed(2)}`}
+                          {' · '}
+                          <span style={{
+                            color: o.status === 'paid' ? '#6fbf7f'
+                                  : o.status === 'voided' ? '#9c9ca3'
+                                  : o.status === 'refunded' ? '#e07a7a' : '#f0c24a',
+                          }}>{o.status}</span>
+                        </div>
+                      </div>
+                    </div>
+                    <div style={{ marginTop: 8, display: 'grid', gap: 4 }}>
+                      {(o.order_items || []).map(item => {
+                        const isVoided = !!item.voided_at
+                        return (
+                          <div key={item.id} style={{
+                            display: 'flex',
+                            justifyContent: 'space-between',
+                            alignItems: 'center',
+                            padding: '6px 8px',
+                            background: isVoided ? '#1a1a1f' : '#16161a',
+                            borderRadius: 6,
+                            fontSize: 12,
+                          }}>
+                            <span style={{
+                              color: isVoided ? '#666' : '#c8c8cc',
+                              textDecoration: isVoided ? 'line-through' : 'none',
+                            }}>
+                              {item.rider_first_name || 'Guest'} {item.rider_last_name || ''}
+                              {' · '}
+                              ${((item.unit_price_cents || 0) / 100).toFixed(2)}
+                              {isVoided && (
+                                <span style={{ marginLeft: 8, color: '#888', fontStyle: 'italic' }}>
+                                  Voided{item.void_reason ? ` · ${item.void_reason}` : ''}{item.voided_by ? ` · ${item.voided_by}` : ''}
+                                </span>
+                              )}
+                            </span>
+                            {!isVoided && (
+                              <button
+                                type="button"
+                                onClick={() => voidOrderItem(item, o)}
+                                disabled={voidingId === item.id}
+                                style={{
+                                  background: 'transparent',
+                                  color: '#e07a7a',
+                                  border: '1px solid #3a1f1f',
+                                  padding: '3px 8px',
+                                  borderRadius: 6,
+                                  fontSize: 11,
+                                  fontWeight: 600,
+                                  cursor: voidingId === item.id ? 'wait' : 'pointer',
+                                }}
+                              >
+                                {voidingId === item.id ? 'Voiding…' : 'Void'}
+                              </button>
+                            )}
+                          </div>
+                        )
+                      })}
+                    </div>
+                  </div>
+                )
+              })}
+            </div>
+          )}
         </div>
 
         <div className="card">

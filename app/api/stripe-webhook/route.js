@@ -3,6 +3,7 @@ import { supabaseAdmin } from '@/lib/supabaseAdmin'
 import { recordSignature } from '@/lib/waiver'
 import { finalizeBooking } from '@/lib/booking'
 import { sendSms } from '@/lib/sms'
+import { recordAlert } from '@/lib/alerts'
 
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
@@ -17,6 +18,14 @@ export async function POST(req) {
   try {
     event = stripe.webhooks.constructEvent(body, sig, process.env.STRIPE_WEBHOOK_SECRET)
   } catch (err) {
+    // Loud — signature mismatch is the silent killer of post-payment delivery.
+    await recordAlert(supabase, {
+      kind: 'webhook_error',
+      severity: 'error',
+      subject: 'Stripe webhook signature verification failed',
+      body: err?.message || String(err),
+      context: { source: 'stripe', has_secret: !!process.env.STRIPE_WEBHOOK_SECRET },
+    })
     return Response.json({ error: err.message }, { status: 400 })
   }
 
@@ -59,6 +68,12 @@ export async function POST(req) {
   } catch (err) {
     console.error('[stripe-webhook] error', err)
     await markProcessed('error', err?.message || err)
+    await recordAlert(supabase, {
+      kind: 'finalize_failed',
+      subject: `Stripe webhook handler threw on ${event?.type}`,
+      body: err?.message || String(err),
+      context: { event_id: event?.id, event_type: event?.type },
+    })
     return Response.json({ received: true, warning: 'processing_error' })
   }
 }
@@ -188,6 +203,12 @@ async function handleCheckoutCompleted(supabase, session) {
       await finalizeBooking(supabase, order.id)
     } catch (err) {
       console.error('[stripe-webhook] finalizeBooking failed', err)
+      await recordAlert(supabase, {
+        kind: 'finalize_failed',
+        subject: `finalizeBooking threw for order ${order.id.slice(0, 8)}`,
+        body: err?.message || String(err),
+        context: { order_id: order.id, event_id: order.event_id },
+      })
     }
   }
 }
