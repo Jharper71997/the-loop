@@ -33,7 +33,12 @@ export default function Groups() {
   const [pickerMember, setPickerMember] = useState(null)
 
   useEffect(() => {
-    fetchGroups()
+    // One-time bulk sync of schedule names from each event's ticket types so
+    // existing Loops with leftover "Stop 2/3/4/5" placeholders catch up to
+    // the real bar names. Idempotent — safe on every page load.
+    fetch('/api/admin/sync-schedules', { method: 'POST' })
+      .catch(() => {})
+      .finally(() => fetchGroups())
     const t = setInterval(() => setNow(nowInTZ()), 60000)
     return () => clearInterval(t)
   }, [])
