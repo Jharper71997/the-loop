@@ -20,23 +20,51 @@ export async function generateMetadata({ params }) {
 
 export default async function EventBookingPage({ params }) {
   const { eventId } = await params
-  const supabase = supabaseAdmin()
 
-  const { data: event } = await supabase
-    .from('events')
-    .select('id, name, event_date, pickup_time, description, status, cover_image_url')
-    .eq('id', eventId)
-    .maybeSingle()
+  let supabase
+  try {
+    supabase = supabaseAdmin()
+  } catch (err) {
+    console.error('[book/eventId] supabaseAdmin init failed', err)
+    notFound()
+  }
+
+  let event = null
+  let eventErr = null
+  try {
+    const r = await supabase
+      .from('events')
+      .select('id, name, event_date, pickup_time, description, status, cover_image_url')
+      .eq('id', eventId)
+      .maybeSingle()
+    event = r.data
+    eventErr = r.error
+  } catch (err) {
+    console.error('[book/eventId] event lookup threw', err)
+  }
+  if (eventErr) console.error('[book/eventId] event lookup error', eventErr)
   if (!event || event.status !== 'on_sale') notFound()
 
-  const { data: ticketTypes } = await supabase
-    .from('ticket_types')
-    .select('id, name, price_cents, capacity, stop_index, sort_order')
-    .eq('event_id', eventId)
-    .eq('active', true)
-    .order('sort_order', { ascending: true })
+  let ticketTypes = []
+  try {
+    const r = await supabase
+      .from('ticket_types')
+      .select('id, name, price_cents, capacity, stop_index, sort_order')
+      .eq('event_id', eventId)
+      .eq('active', true)
+      .order('sort_order', { ascending: true })
+    if (r.error) console.error('[book/eventId] ticket_types error', r.error)
+    ticketTypes = r.data || []
+  } catch (err) {
+    console.error('[book/eventId] ticket_types threw', err)
+  }
 
-  const waiver = await getCurrentWaiverVersion(supabase)
+  let waiver = null
+  try {
+    waiver = await getCurrentWaiverVersion(supabase)
+  } catch (err) {
+    console.error('[book/eventId] waiver lookup threw', err)
+  }
 
   return (
     <main style={{
