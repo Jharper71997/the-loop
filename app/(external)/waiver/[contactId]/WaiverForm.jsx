@@ -66,7 +66,7 @@ export default function WaiverForm({ contactId }) {
           Thanks{data.contact_name ? `, ${data.contact_name}` : ''}. You're cleared to ride.
         </p>
         <div style={{ textAlign: 'center', marginTop: 16 }}>
-          <a href="/track" style={primaryBtn}>Track the Shuttle</a>
+          <a href="/my-tickets" style={primaryBtn}>My tickets</a>
         </div>
       </Card>
     )

@@ -1,4 +1,5 @@
 import { supabaseAdmin } from '@/lib/supabaseAdmin'
+import { denyIfNotLeadership } from '@/lib/routeAuth'
 
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
@@ -173,4 +174,81 @@ export async function PUT(req) {
   }
 
   return Response.json({ ok: true })
+}
+
+// DELETE /api/events?event_id=...&force=1
+// Hard-deletes an event, its ticket_types (cascade), all linked orders +
+// order_items + qr_codes (cascade), waiver signatures tied to those orders
+// (cascade), the paired group, and group_members for that group.
+//
+// Refuses by default if there are any non-voided paid orders — those need to
+// be voided/refunded first or pass force=1 to override (audit trail in
+// order_items.voided_by survives because cascade nukes the rows).
+export async function DELETE(req) {
+  const denied = await denyIfNotLeadership()
+  if (denied) return denied
+
+  const url = new URL(req.url)
+  const eventId = url.searchParams.get('event_id')
+  const force = url.searchParams.get('force') === '1'
+  if (!eventId) return Response.json({ error: 'event_id required' }, { status: 400 })
+
+  const supabase = supabaseAdmin()
+
+  // Lookup the event + its paired group so we can clean up groups too.
+  const { data: ev, error: evErr } = await supabase
+    .from('events')
+    .select('id, group_id, name')
+    .eq('id', eventId)
+    .maybeSingle()
+  if (evErr) return Response.json({ error: `lookup: ${evErr.message}` }, { status: 500 })
+  if (!ev) return Response.json({ error: 'not_found' }, { status: 404 })
+
+  if (!force) {
+    const { data: paidOrders } = await supabase
+      .from('orders')
+      .select('id')
+      .eq('event_id', eventId)
+      .eq('status', 'paid')
+    const paidOrderIds = (paidOrders || []).map(o => o.id)
+    let paidActive = 0
+    if (paidOrderIds.length) {
+      const { count } = await supabase
+        .from('order_items')
+        .select('id', { count: 'exact', head: true })
+        .in('order_id', paidOrderIds)
+        .is('voided_at', null)
+      paidActive = count || 0
+    }
+    if (paidActive > 0) {
+      return Response.json({
+        error: 'has_paid_orders',
+        paid_active: paidActive,
+        message: `${paidActive} active paid ticket${paidActive === 1 ? '' : 's'} on this event. Void or refund them first, or call DELETE again with force=1.`,
+      }, { status: 409 })
+    }
+  }
+
+  // 1) Delete every order on this event. order_items, qr_codes, qr_scans, and
+  //    waiver_signatures all cascade off orders/order_items.
+  const { error: orderErr } = await supabase
+    .from('orders')
+    .delete()
+    .eq('event_id', eventId)
+  if (orderErr) return Response.json({ error: `orders_delete: ${orderErr.message}` }, { status: 500 })
+
+  // 2) Delete the event itself. ticket_types cascades.
+  const { error: eventDelErr } = await supabase
+    .from('events')
+    .delete()
+    .eq('id', eventId)
+  if (eventDelErr) return Response.json({ error: `event_delete: ${eventDelErr.message}` }, { status: 500 })
+
+  // 3) Clean up the paired group + its members.
+  if (ev.group_id) {
+    await supabase.from('group_members').delete().eq('group_id', ev.group_id)
+    await supabase.from('groups').delete().eq('id', ev.group_id)
+  }
+
+  return Response.json({ ok: true, deleted_event_id: eventId, deleted_group_id: ev.group_id || null })
 }

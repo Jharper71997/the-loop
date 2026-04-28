@@ -138,7 +138,7 @@ export default async function BookingSuccess({ searchParams }) {
           )}
 
           <div style={{ marginTop: 40, display: 'flex', gap: 12, justifyContent: 'center', flexWrap: 'wrap' }}>
-            <a href="/track" style={ghostCta}>Track the shuttle</a>
+            <a href="/my-tickets" style={ghostCta}>My tickets</a>
             <a href="/events" style={ghostCta}>Browse more loops</a>
           </div>
         </section>

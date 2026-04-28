@@ -30,6 +30,7 @@ export default async function TicketPage({ params }) {
       rider_last_name,
       contact_id,
       checked_in_at,
+      voided_at,
       order:orders ( id, status, event:events ( id, name, event_date, pickup_time ) )
     `)
     .eq('id', qr.order_item_id)
@@ -39,6 +40,7 @@ export default async function TicketPage({ params }) {
 
   const event = item.order?.event || null
   const isPaid = item.order?.status === 'paid'
+  const isVoided = !!item.voided_at
 
   // Waiver status — show the rider whether they still need to sign before
   // pickup. We render a deep link to /waiver/<contactId> right on the ticket.
@@ -73,6 +75,7 @@ export default async function TicketPage({ params }) {
       eventDate={event?.event_date || null}
       pickupTime={event?.pickup_time || null}
       isPaid={isPaid}
+      isVoided={isVoided}
       waiverSigned={waiverSigned}
       contactId={item.contact_id || null}
       checkedInAt={item.checked_in_at || null}

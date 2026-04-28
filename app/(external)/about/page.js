@@ -189,10 +189,6 @@ function Faq() {
       a: 'You&rsquo;ll get a text roughly 10 minutes before the shuttle rolls, so you can close your tab and finish your drink.',
     },
     {
-      q: 'Can I see where the bus is?',
-      a: 'Yes. The <a href="/track" style="color:#d4a333;text-decoration:none;font-weight:600">live map</a> shows the shuttle in real time once the night kicks off.',
-    },
-    {
       q: 'What time does it run?',
       a: 'First pickup is around 7:30 PM and we wrap up around 1:30 AM.',
     },

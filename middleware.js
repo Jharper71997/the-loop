@@ -13,7 +13,6 @@ const PUBLIC_PREFIXES = [
   '/login',
   '/staff',
   '/book',
-  '/track',
   '/waiver',
   '/events',
   '/bars',
@@ -33,13 +32,14 @@ const PUBLIC_PREFIXES = [
   '/api/cron/',
 ]
 
-const LEGACY_ADMIN_PREFIXES = ['/groups', '/contacts', '/finance', '/metrics', '/qr']
+const LEGACY_ADMIN_PREFIXES = ['/groups', '/contacts', '/finance', '/qr']
 
-// Phase C: finance is being removed from this app. Routes still exist on disk
-// (so we can revive them later by deleting these prefixes) but middleware
-// blocks every request. Soft-remove, not a delete.
+// Soft-removed routes — files may still exist on disk but middleware blocks
+// every request so direct URLs land somewhere sensible.
 const REMOVED_PREFIXES = [
   '/admin/finance',
+  '/admin/metrics',
+  '/track',
   '/api/finance-summary',
   '/api/finance-data',
   '/api/finance-entries',

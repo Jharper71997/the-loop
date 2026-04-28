@@ -72,7 +72,7 @@ export default function DriverClient() {
       wakeLockRef.current = null
     }
 
-    // Send a final "off duty" ping so /track fades the marker.
+    // Send a final "off duty" ping so the dispatch view fades the marker.
     if (position) {
       try {
         await fetch('/api/shuttle/ping', {
@@ -180,7 +180,7 @@ export default function DriverClient() {
             />
             <div>
               <div style={{ color: INK, fontSize: 16, fontWeight: 700 }}>
-                {running ? 'Pinging /track' : 'Shuttle is off duty'}
+                {running ? 'Sharing position' : 'Shuttle is off duty'}
               </div>
               <div style={{ color: INK_DIM, fontSize: 12 }}>
                 {running
@@ -224,7 +224,7 @@ export default function DriverClient() {
         </div>
 
         <p style={{ color: INK_DIM, fontSize: 12, textAlign: 'center', margin: 0 }}>
-          Keep this screen on while driving. Riders see your position on /track.
+          Keep this screen on while driving. Position is shared with the dispatch view.
         </p>
       </div>
     </div>

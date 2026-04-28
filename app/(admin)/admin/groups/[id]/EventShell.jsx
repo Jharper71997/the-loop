@@ -158,6 +158,36 @@ export default function EventShell({
 }
 
 function Sidebar({ group, event, view, onSelect, onCopyLink, drawerOpen, onCloseDrawer }) {
+  async function deleteEvent() {
+    if (!event?.id) return
+    const expected = group.name || event.name || ''
+    const typed = window.prompt(
+      `This permanently deletes "${expected}", all its tickets, all linked orders, and all rider records.\n\nType the event name to confirm:`
+    )
+    if (typed == null) return
+    if (typed.trim() !== expected.trim()) {
+      alert('Name did not match. Nothing deleted.')
+      return
+    }
+    let force = false
+    let res = await fetch(`/api/events?event_id=${encodeURIComponent(event.id)}`, { method: 'DELETE' })
+    let json = await res.json().catch(() => ({}))
+    if (res.status === 409 && json.error === 'has_paid_orders') {
+      const ok = window.confirm(
+        `${json.message}\n\nForce delete anyway? Paid riders will lose their tickets without an automatic refund.`
+      )
+      if (!ok) return
+      force = true
+      res = await fetch(`/api/events?event_id=${encodeURIComponent(event.id)}&force=1`, { method: 'DELETE' })
+      json = await res.json().catch(() => ({}))
+    }
+    if (!res.ok || json.error) {
+      alert(json.error || `Delete failed (${res.status})`)
+      return
+    }
+    window.location.href = '/admin/groups'
+  }
+
   const sections = ['Overview', 'Settings']
   const isLive = group.event_date && (() => {
     try { return new Date(`${group.event_date}T00:00:00`).toDateString() === new Date().toDateString() } catch { return false }
@@ -294,6 +324,19 @@ function Sidebar({ group, event, view, onSelect, onCopyLink, drawerOpen, onClose
           )}
           <button type="button" onClick={onCopyLink} style={actionBtn}>
             Copy booking link
+          </button>
+          <button
+            type="button"
+            onClick={deleteEvent}
+            style={{
+              ...actionBtn,
+              color: '#e07a7a',
+              borderTop: `1px solid ${BORDER}`,
+              marginTop: 6,
+              paddingTop: 12,
+            }}
+          >
+            Delete event…
           </button>
         </div>
       </div>

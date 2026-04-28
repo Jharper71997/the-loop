@@ -39,6 +39,21 @@ export async function GET(req, ctx) {
   })
 
   if (qr.kind === 'checkin') {
+    // If the linked seat has been voided, send the rider home — the ticket
+    // page would just render a "this ticket is voided" card, but blocking at
+    // /r/ keeps the QR fully dead so a stray scan from a printed-out seat
+    // never lands on the boarding pass.
+    if (qr.order_item_id) {
+      const { data: oi } = await supabase
+        .from('order_items')
+        .select('voided_at')
+        .eq('id', qr.order_item_id)
+        .maybeSingle()
+      if (oi?.voided_at) {
+        await logPromise
+        return NextResponse.redirect(new URL('/', req.url), 302)
+      }
+    }
     await logPromise
     return NextResponse.redirect(new URL(`/tickets/${code}`, req.url), 302)
   }

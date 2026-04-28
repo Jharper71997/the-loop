@@ -10,7 +10,7 @@
 //     the network. We never serve stale API responses.
 
 const SHELL_CACHE = 'brew-loop-shell-v1'
-const SHELL_PRELOAD = ['/', '/track', '/tickets']
+const SHELL_PRELOAD = ['/', '/tickets']
 
 self.addEventListener('install', event => {
   event.waitUntil(

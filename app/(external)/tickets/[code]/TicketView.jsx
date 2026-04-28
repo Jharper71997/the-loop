@@ -22,6 +22,7 @@ export default function TicketView({
   eventDate,
   pickupTime,
   isPaid,
+  isVoided,
   waiverSigned,
   contactId,
   checkedInAt,
@@ -86,6 +87,38 @@ export default function TicketView({
   const dateLabel = formatDate(eventDate)
   const timeLabel = formatTime(pickupTime)
   const checkedIn = !!checkedInAt
+
+  if (isVoided) {
+    return (
+      <div
+        style={{
+          minHeight: '100dvh',
+          background: BG,
+          color: INK,
+          padding: '24px 16px 48px',
+          display: 'flex',
+          flexDirection: 'column',
+          alignItems: 'center',
+          justifyContent: 'center',
+        }}
+      >
+        <div style={{ maxWidth: 420, width: '100%', textAlign: 'center', display: 'grid', gap: 14 }}>
+          <div style={{ fontSize: 36 }}>×</div>
+          <h1 style={{ color: INK, fontSize: 22, fontWeight: 700, margin: 0 }}>
+            This ticket has been voided
+          </h1>
+          <p style={{ color: INK_DIM, fontSize: 14, lineHeight: 1.5, margin: 0 }}>
+            It&apos;s no longer valid for boarding. If you think this was a mistake, text us at{' '}
+            <a href="sms:+16362661801" style={{ color: GOLD, textDecoration: 'none' }}>
+              (636) 266-1801
+            </a>
+            .
+          </p>
+          <a href="/events" style={primaryBtn}>Browse upcoming Loops</a>
+        </div>
+      </div>
+    )
+  }
 
   return (
     <div
@@ -193,9 +226,6 @@ export default function TicketView({
           >
             {shareSupported ? 'Share with rider' : 'Copy ticket link'}
           </button>
-          <a href="/track" style={ghostBtn}>
-            Track the shuttle
-          </a>
         </div>
 
         <EnableNotifications contactId={contactId} />

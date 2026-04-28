@@ -11,7 +11,7 @@ const TABS = [
   { href: '/', label: 'Home', icon: HomeIcon, match: p => p === '/' },
   { href: '/events', label: 'Book', icon: TicketPlusIcon, match: p => p.startsWith('/events') || p.startsWith('/book') },
   { href: '/my-tickets', label: 'Tickets', icon: TicketIcon, match: p => p.startsWith('/my-tickets') || p.startsWith('/tickets') },
-  { href: '/track', label: 'Track', icon: MapIcon, match: p => p.startsWith('/track') },
+  { href: '/bars', label: 'Bars', icon: MapIcon, match: p => p.startsWith('/bars') },
 ]
 
 // Pages that should NOT show the tab bar (boarding pass, individual ticket

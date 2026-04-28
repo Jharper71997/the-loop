@@ -219,7 +219,6 @@ function PrePickupState({ group, ticketsByContact, totalTickets }) {
         </div>
         <div style={{ marginTop: 12, display: 'flex', gap: 8 }}>
           <a href={`/groups/${group.id}`} style={secondaryBtn}>Manage Loop →</a>
-          <a href="/track" style={secondaryBtn}>Open tracker →</a>
         </div>
       </Hero>
 
@@ -257,17 +256,6 @@ function InProgressState({ group, currentIdx, ticketsByContact, totalTickets }) 
         )}
         <div style={{ color: '#9c9ca3', fontSize: 13, marginTop: 8 }}>{seatLabel}</div>
       </Hero>
-
-      <section style={{
-        background: SURFACE, border: `1px solid ${BORDER}`, borderRadius: 12,
-        padding: 14, marginTop: 14,
-      }}>
-        <h2 style={sectionHeader}>Live shuttle map</h2>
-        <p style={{ color: '#9c9ca3', fontSize: 13, margin: '8px 0 12px' }}>
-          The native map is shipping this week. Until then, open the rider tracker:
-        </p>
-        <a href="/track" style={secondaryBtn}>Open rider tracker →</a>
-      </section>
 
       <div style={{ marginTop: 14 }}>
         <SmsBroadcast recipients={riders} stops={stops} title="Text riders" />

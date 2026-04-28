@@ -154,8 +154,8 @@ function NextLoopHero({ loop }) {
 function ShortcutGrid() {
   return (
     <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
-      <Shortcut href="/my-tickets" label="My tickets" sub="Find yours" />
-      <Shortcut href="/track" label="Track shuttle" sub="Live map" accent />
+      <Shortcut href="/my-tickets" label="My tickets" sub="Find yours" accent />
+      <Shortcut href="/events" label="Upcoming Loops" sub="Pick a date" />
       <Shortcut href="/bars" label="Partner bars" sub="The route" />
       <Shortcut href="/about" label="About" sub="The story" />
     </div>

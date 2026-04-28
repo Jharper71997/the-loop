@@ -36,7 +36,6 @@ export default function Footer() {
           <FooterCol title="Ride">
             <FooterLink href="/events">Upcoming events</FooterLink>
             <FooterLink href="/my-tickets">My tickets</FooterLink>
-            <FooterLink href="/track">Track shuttle</FooterLink>
             <FooterLink href="/waiver">Sign waiver</FooterLink>
           </FooterCol>
 

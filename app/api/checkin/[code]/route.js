@@ -62,6 +62,7 @@ export async function POST(req, ctx) {
       contact_id,
       checked_in_at,
       checked_in_via,
+      voided_at,
       order:orders ( id, status, event:events ( id, name, event_date ) )
     `)
     .eq('id', qr.order_item_id)
@@ -75,6 +76,16 @@ export async function POST(req, ctx) {
     .filter(Boolean).join(' ') || 'Rider'
   const eventName = item.order?.event?.name || ''
   const eventDate = item.order?.event?.event_date || null
+
+  if (item.voided_at) {
+    return Response.json({
+      ok: false,
+      reason: 'voided',
+      rider_name: riderName,
+      event_name: eventName,
+      event_date: eventDate,
+    })
+  }
 
   if (item.order?.status !== 'paid') {
     return Response.json({

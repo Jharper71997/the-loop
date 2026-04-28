@@ -161,6 +161,7 @@ function reasonHeadline(reason) {
     case 'already_checked_in': return 'ALREADY USED'
     case 'waiver_unsigned': return 'WAIVER UNSIGNED'
     case 'not_paid': return 'PAYMENT PENDING'
+    case 'voided': return 'TICKET VOIDED'
     case 'unknown_code': return 'UNKNOWN CODE'
     case 'unknown_ticket': return 'TICKET MISSING'
     case 'forbidden': return 'NO ACCESS'
@@ -179,6 +180,9 @@ function reasonSubline(last) {
   }
   if (last.reason === 'not_paid') {
     return `${last.rider_name || 'Rider'}'s order hasn't cleared payment.`
+  }
+  if (last.reason === 'voided') {
+    return `${last.rider_name || 'This rider'}'s ticket was voided. Do not let them board.`
   }
   if (last.reason === 'unknown_code') return 'No matching ticket in the system.'
   if (last.reason === 'unknown_ticket') return 'QR is registered but the ticket record is missing.'
