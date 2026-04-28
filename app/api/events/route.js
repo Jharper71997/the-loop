@@ -3,6 +3,55 @@ import { supabaseAdmin } from '@/lib/supabaseAdmin'
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
 
+// Sync the group's schedule from the event's ticket_types. Each ticket type
+// with a stop_index becomes the schedule entry at that index — name comes
+// from the ticket type, start_time is preserved if already set in the
+// schedule, otherwise left blank for the admin to fill in. Ticket types
+// without a stop_index don't add a stop.
+async function syncScheduleFromTicketTypes(supabase, eventId) {
+  const { data: ev } = await supabase
+    .from('events')
+    .select('id, group_id, pickup_time')
+    .eq('id', eventId)
+    .maybeSingle()
+  if (!ev?.group_id) return
+
+  const { data: tts } = await supabase
+    .from('ticket_types')
+    .select('name, stop_index, sort_order')
+    .eq('event_id', eventId)
+    .eq('active', true)
+    .order('stop_index', { ascending: true })
+
+  const stopMap = new Map()
+  for (const tt of tts || []) {
+    if (tt.stop_index == null || tt.stop_index < 0) continue
+    if (!stopMap.has(tt.stop_index)) stopMap.set(tt.stop_index, tt.name)
+  }
+  if (stopMap.size === 0) return
+
+  const { data: g } = await supabase
+    .from('groups')
+    .select('schedule')
+    .eq('id', ev.group_id)
+    .maybeSingle()
+  const existing = Array.isArray(g?.schedule) ? g.schedule : []
+
+  const maxIdx = Math.max(...stopMap.keys(), existing.length - 1)
+  const next = []
+  for (let i = 0; i <= maxIdx; i++) {
+    const ttName = stopMap.get(i)
+    const prior = existing[i] || {}
+    const start = prior.start_time || (i === 0 ? ev.pickup_time : '') || ''
+    next.push({
+      name: ttName || prior.name || `Stop ${i + 1}`,
+      start_time: start,
+    })
+  }
+
+  await supabase.from('groups').update({ schedule: next }).eq('id', ev.group_id)
+}
+
 // POST /api/events
 // Body: {
 //   event: { name, event_date, pickup_time?, description?, capacity?, status?, create_group? },
@@ -63,6 +112,10 @@ export async function POST(req) {
     if (ttErr) return Response.json({ error: `ticket_types_insert: ${ttErr.message}` }, { status: 500 })
   }
 
+  // Initialize the group schedule from the ticket types so admin doesn't have
+  // to set it twice.
+  await syncScheduleFromTicketTypes(supabase, event.id)
+
   return Response.json({ ok: true, event_id: event.id, group_id: groupId })
 }
 
@@ -113,6 +166,9 @@ export async function PUT(req) {
         if (error) return Response.json({ error: `ticket_type_insert: ${error.message}` }, { status: 500 })
       }
     }
+    // Re-derive the schedule from the now-current ticket types so the
+    // dispatch view, public schedule, and admin schedule editor all match.
+    await syncScheduleFromTicketTypes(supabase, eventId)
   }
 
   return Response.json({ ok: true })
