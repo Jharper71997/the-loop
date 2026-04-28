@@ -24,41 +24,21 @@ export default function Contacts() {
 
   async function loadOrders(contactId) {
     if (!contactId) { setOrders([]); return }
-    // Pull orders where this contact is buyer OR a rider on any item.
-    const [{ data: byBuyer }, { data: itemHits }] = await Promise.all([
-      supabase
-        .from('orders')
-        .select(`
-          id, status, total_cents, party_size, paid_at, created_at, stripe_payment_intent_id,
-          event:events ( id, name, event_date, pickup_time ),
-          order_items ( id, rider_first_name, rider_last_name, contact_id, unit_price_cents, voided_at, voided_by, void_reason )
-        `)
-        .eq('contact_id', contactId)
-        .order('created_at', { ascending: false })
-        .limit(50),
-      supabase
-        .from('order_items')
-        .select('order_id')
-        .eq('contact_id', contactId)
-        .limit(100),
-    ])
-    const buyerIds = new Set((byBuyer || []).map(o => o.id))
-    const extraIds = (itemHits || []).map(r => r.order_id).filter(id => !buyerIds.has(id))
-    let extra = []
-    if (extraIds.length) {
-      const { data } = await supabase
-        .from('orders')
-        .select(`
-          id, status, total_cents, party_size, paid_at, created_at, stripe_payment_intent_id,
-          event:events ( id, name, event_date, pickup_time ),
-          order_items ( id, rider_first_name, rider_last_name, contact_id, unit_price_cents, voided_at, voided_by, void_reason )
-        `)
-        .in('id', extraIds)
-      extra = data || []
+    // Server endpoint uses the service-role client to bypass RLS on
+    // orders/order_items; the browser anon client can't read them.
+    try {
+      const res = await fetch(`/api/admin/contact-orders?contact_id=${encodeURIComponent(contactId)}`)
+      const json = await res.json().catch(() => ({}))
+      if (!res.ok) {
+        console.error('[contacts] loadOrders failed', json.error || res.status)
+        setOrders([])
+        return
+      }
+      setOrders(json.orders || [])
+    } catch (err) {
+      console.error('[contacts] loadOrders threw', err)
+      setOrders([])
     }
-    const all = [...(byBuyer || []), ...extra]
-      .sort((a, b) => (b.created_at || '').localeCompare(a.created_at || ''))
-    setOrders(all)
   }
 
   async function voidOrderItem(item, order) {
