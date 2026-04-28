@@ -157,6 +157,14 @@ input:focus, textarea:focus, select:focus {
   box-shadow: 0 0 0 3px var(--gold-wash), 0 0 20px var(--gold-glow);
 }
 
+/* Native <select> dropdown options use OS chrome by default and render as
+   invisible white-on-white on dark theme. Force readable colors for both
+   the closed value and the open option panel. */
+select option, select optgroup {
+  background: #0a0a0b;
+  color: #f5f5f7;
+}
+
 textarea { resize: vertical; min-height: 44px; }
 
 /* ============================================================
