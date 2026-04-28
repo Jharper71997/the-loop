@@ -9,7 +9,7 @@
 //   - Aggressive offline. The Stripe / Supabase / scanner flows all need
 //     the network. We never serve stale API responses.
 
-const SHELL_CACHE = 'brew-loop-shell-v1'
+const SHELL_CACHE = 'brew-loop-shell-v2'
 const SHELL_PRELOAD = ['/', '/tickets']
 
 self.addEventListener('install', event => {
@@ -73,19 +73,19 @@ self.addEventListener('fetch', event => {
   if (url.pathname.startsWith('/api/')) return
   if (url.pathname.startsWith('/r/')) return
 
-  // Stale-while-revalidate for HTML / static-ish routes.
+  // Network-first for HTML — admin edits/deletes need to be visible to
+  // riders immediately, so we never serve stale page HTML when the network
+  // is reachable. The cache only kicks in when fetch fails (offline / dead
+  // bar wifi), and a successful fetch refreshes the cached copy.
   if (req.mode === 'navigate' || req.destination === 'document') {
     event.respondWith(
-      caches.match(req).then(cached => {
-        const fresh = fetch(req).then(res => {
-          if (res.ok) {
-            const copy = res.clone()
-            caches.open(SHELL_CACHE).then(c => c.put(req, copy)).catch(() => {})
-          }
-          return res
-        }).catch(() => cached)
-        return cached || fresh
-      })
+      fetch(req).then(res => {
+        if (res.ok) {
+          const copy = res.clone()
+          caches.open(SHELL_CACHE).then(c => c.put(req, copy)).catch(() => {})
+        }
+        return res
+      }).catch(() => caches.match(req).then(cached => cached || Response.error()))
     )
   }
 })
