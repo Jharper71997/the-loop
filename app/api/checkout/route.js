@@ -101,14 +101,25 @@ export async function POST(req) {
   }
 
   // Per-ticket-type capacity check. Counts already-paid orders + recent
-  // pendings (< 1 hour old, the typical Stripe Checkout window) against the
-  // configured ticket_types.capacity. Tickets with capacity = null are
-  // unlimited.
+  // pendings (< 15 min, abandoned Stripe sessions older than that don't
+  // realistically pay) against the configured ticket_types.capacity. Tickets
+  // with capacity = null are unlimited. VOIDED items are excluded — voiding
+  // is meant to free a seat back up.
   const requestedByType = new Map()
   for (const r of riders) {
     requestedByType.set(r.ticket_type_id, (requestedByType.get(r.ticket_type_id) || 0) + 1)
   }
-  const pendingCutoff = new Date(Date.now() - 60 * 60 * 1000).toISOString()
+  const pendingCutoff = new Date(Date.now() - 15 * 60 * 1000).toISOString()
+
+  // Self-heal: clear pending orders for this event older than the cutoff so
+  // their items stop holding seats. Cascade deletes order_items.
+  await supabase
+    .from('orders')
+    .delete()
+    .eq('event_id', event_id)
+    .eq('status', 'pending')
+    .lt('created_at', pendingCutoff)
+
   for (const [ttId, requested] of requestedByType.entries()) {
     const tt = ttById.get(ttId)
     if (tt.capacity == null) continue
@@ -117,11 +128,13 @@ export async function POST(req) {
       .from('order_items')
       .select('id, orders!inner(id, status)', { count: 'exact', head: true })
       .eq('ticket_type_id', ttId)
+      .is('voided_at', null)
       .eq('orders.status', 'paid')
     const { count: pendingCount } = await supabase
       .from('order_items')
       .select('id, orders!inner(id, status, created_at)', { count: 'exact', head: true })
       .eq('ticket_type_id', ttId)
+      .is('voided_at', null)
       .eq('orders.status', 'pending')
       .gte('orders.created_at', pendingCutoff)
 
@@ -302,11 +315,13 @@ export async function POST(req) {
       .from('order_items')
       .select('id, orders!inner(id, status)', { count: 'exact', head: true })
       .eq('ticket_type_id', ttId)
+      .is('voided_at', null)
       .eq('orders.status', 'paid')
     const { count: pendingCount } = await supabase
       .from('order_items')
       .select('id, orders!inner(id, status, created_at)', { count: 'exact', head: true })
       .eq('ticket_type_id', ttId)
+      .is('voided_at', null)
       .eq('orders.status', 'pending')
       .gte('orders.created_at', pendingCutoff)
     const taken = (paidCount || 0) + (pendingCount || 0)
