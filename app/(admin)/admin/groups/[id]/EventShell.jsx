@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react'
 import SummaryView from './views/SummaryView'
 import EditView from './views/EditView'
 import TicketsView from './views/TicketsView'
+import RosterView from './views/RosterView'
 
 const ACCENT = '#d4a333'
 const ACCENT_HI = '#f0c24a'
@@ -15,6 +16,7 @@ const INK_DIM = '#9c9ca3'
 
 const VIEWS = [
   { id: 'summary', label: 'Event summary', section: 'Overview' },
+  { id: 'roster', label: 'Roster', section: 'Overview' },
   { id: 'edit', label: 'Edit event and tickets', section: 'Settings' },
   { id: 'tickets', label: 'Tickets and items', section: 'Settings' },
 ]
@@ -123,6 +125,12 @@ export default function EventShell({
             waiverSigs={waiverSigs}
             onJumpToEdit={() => go('edit')}
             onJumpToTickets={() => go('tickets')}
+          />
+        )}
+        {view === 'roster' && (
+          <RosterView
+            items={orderItems || []}
+            ticketTypes={ticketTypes}
           />
         )}
         {view === 'edit' && <EditView group={group} event={event} />}

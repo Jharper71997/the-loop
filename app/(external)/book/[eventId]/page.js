@@ -24,7 +24,7 @@ export default async function EventBookingPage({ params }) {
 
   const { data: event } = await supabase
     .from('events')
-    .select('id, name, event_date, pickup_time, description, status')
+    .select('id, name, event_date, pickup_time, description, status, cover_image_url')
     .eq('id', eventId)
     .maybeSingle()
   if (!event || event.status !== 'on_sale') notFound()
@@ -60,6 +60,17 @@ export default async function EventBookingPage({ params }) {
       </header>
 
       <div style={{ maxWidth: 640, margin: '0 auto', padding: '20px 16px' }}>
+        {event.cover_image_url && (
+          <div style={{
+            position: 'relative',
+            aspectRatio: '16/9',
+            borderRadius: 14,
+            overflow: 'hidden',
+            marginBottom: 16,
+            border: '1px solid rgba(255,255,255,0.08)',
+            background: `url(${event.cover_image_url}) center/cover`,
+          }} />
+        )}
         <div style={{ color: '#d4a333', fontSize: 12, letterSpacing: '0.08em', textTransform: 'uppercase' }}>
           {formatDate(event.event_date)}{event.pickup_time ? ` · ${formatTime(event.pickup_time)}` : ''}
         </div>

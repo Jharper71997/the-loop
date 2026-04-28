@@ -19,7 +19,7 @@ export default async function ManageLoopPage({ params }) {
 
   const { data: event } = await supabase
     .from('events')
-    .select('id, name, event_date, pickup_time, description, capacity, status, group_id')
+    .select('id, name, event_date, pickup_time, description, capacity, status, group_id, cover_image_url')
     .eq('group_id', id)
     .maybeSingle()
 
@@ -43,15 +43,20 @@ export default async function ManageLoopPage({ params }) {
         .select('id, name, price_cents, stop_index, capacity, active, sort_order')
         .eq('event_id', event.id)
         .order('sort_order', { ascending: true }),
-      // Real per-ticket-type counts: pull every active order_item for this
-      // event's paid orders. Filter voided so retired seats don't inflate
-      // the issued column. Used by SummaryView.countIssued.
+      // Per-ticket-type counts AND the Roster tab both feed off this. Pull
+      // every order_item (including voided so the roster can show audit
+      // trail). Joined with the contact for waiver status + the order for
+      // status/payment_intent.
       supabase
         .from('order_items')
-        .select('id, ticket_type_id, voided_at, orders!inner(id, event_id, status)')
-        .eq('orders.event_id', event.id)
-        .eq('orders.status', 'paid')
-        .is('voided_at', null),
+        .select(`
+          id, ticket_type_id, contact_id, rider_first_name, rider_last_name,
+          rider_phone, rider_email, voided_at, voided_by, void_reason,
+          checked_in_at, created_at,
+          contact:contacts ( id, first_name, last_name, phone, email, has_signed_waiver ),
+          order:orders!inner ( id, event_id, status, stripe_payment_intent_id )
+        `)
+        .eq('order.event_id', event.id),
     ])
     orders = oRes.data || []
     ticketTypes = ttRes.data || []

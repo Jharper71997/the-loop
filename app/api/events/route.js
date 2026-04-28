@@ -89,6 +89,7 @@ export async function POST(req) {
       event_date: body.event.event_date,
       pickup_time: body.event.pickup_time || null,
       description: body.event.description || null,
+      cover_image_url: body.event.cover_image_url || null,
       capacity: body.event.capacity || null,
       status: body.event.status || 'on_sale',
       group_id: groupId,
@@ -136,7 +137,7 @@ export async function PUT(req) {
 
   if (body.event) {
     const patch = {}
-    for (const k of ['name', 'event_date', 'pickup_time', 'description', 'capacity', 'status']) {
+    for (const k of ['name', 'event_date', 'pickup_time', 'description', 'capacity', 'status', 'cover_image_url']) {
       if (k in body.event) patch[k] = body.event[k] || null
     }
     patch.updated_at = new Date().toISOString()

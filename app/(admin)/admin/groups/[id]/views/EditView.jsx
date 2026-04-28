@@ -17,6 +17,7 @@ export default function EditView({ group, event }) {
     event_date: event?.event_date || group?.event_date || '',
     pickup_time: event?.pickup_time || group?.pickup_time || '',
     description: event?.description || '',
+    cover_image_url: event?.cover_image_url || '',
     capacity: event?.capacity ?? '',
     status: event?.status || 'on_sale',
   }))
@@ -45,6 +46,7 @@ export default function EditView({ group, event }) {
               event_date: draft.event_date,
               pickup_time: draft.pickup_time || null,
               description: draft.description || null,
+              cover_image_url: draft.cover_image_url || null,
               capacity: draft.capacity ? Number(draft.capacity) : null,
               status: draft.status,
             },
@@ -60,6 +62,7 @@ export default function EditView({ group, event }) {
               event_date: draft.event_date,
               pickup_time: draft.pickup_time || null,
               description: draft.description || null,
+              cover_image_url: draft.cover_image_url || null,
               capacity: draft.capacity ? Number(draft.capacity) : null,
               status: draft.status,
               create_group: false,
@@ -131,6 +134,26 @@ export default function EditView({ group, event }) {
             placeholder="What riders will see on /book/[id]. Tone matters — keep it short."
             style={{ ...inputStyle, resize: 'vertical', minHeight: 100 }}
           />
+        </Field>
+        <Field label="Cover image URL (optional)">
+          <input
+            type="url"
+            value={draft.cover_image_url}
+            onChange={e => patch({ cover_image_url: e.target.value })}
+            placeholder="https://images.squarespace-cdn.com/content/..."
+            style={inputStyle}
+          />
+          <span style={{ fontSize: 11, color: INK_DIM }}>
+            Used as the hero image on /events and /book/[id]. Leave blank for the default placeholder.
+          </span>
+          {draft.cover_image_url && (
+            <img
+              src={draft.cover_image_url}
+              alt="Cover preview"
+              style={{ marginTop: 6, width: '100%', maxWidth: 320, aspectRatio: '16/9', objectFit: 'cover', borderRadius: 8, border: `1px solid ${BORDER}` }}
+              onError={e => { e.currentTarget.style.display = 'none' }}
+            />
+          )}
         </Field>
       </Section>
 
