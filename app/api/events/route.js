@@ -115,8 +115,12 @@ export async function POST(req) {
   }
 
   // Initialize the group schedule from the ticket types so admin doesn't have
-  // to set it twice.
-  await syncScheduleFromTicketTypes(supabase, event.id)
+  // to set it twice. Don't fail the whole event creation if the sync trips.
+  try {
+    await syncScheduleFromTicketTypes(supabase, event.id)
+  } catch (err) {
+    console.error('[/api/events POST] syncScheduleFromTicketTypes threw', err)
+  }
 
   return Response.json({ ok: true, event_id: event.id, group_id: groupId })
 }
@@ -170,7 +174,13 @@ export async function PUT(req) {
     }
     // Re-derive the schedule from the now-current ticket types so the
     // dispatch view, public schedule, and admin schedule editor all match.
-    await syncScheduleFromTicketTypes(supabase, eventId)
+    // Don't let a sync hiccup (e.g. duplicate group rows) block the actual
+    // ticket-type save the admin just made.
+    try {
+      await syncScheduleFromTicketTypes(supabase, eventId)
+    } catch (err) {
+      console.error('[/api/events PUT] syncScheduleFromTicketTypes threw', err)
+    }
   }
 
   return Response.json({ ok: true })
