@@ -10,16 +10,16 @@ export default function LeaderboardAdminClient({ bars = [] }) {
   const [editingSlug, setEditingSlug] = useState(null)
   const [adding, setAdding] = useState(false)
 
+  async function refetchAll({ fresh = false } = {}) {
+    const board = await fetch(`/api/leaderboard${fresh ? '?fresh=1' : ''}`).then(r => r.json())
+    const r = await fetch('/api/admin/bartenders').then(r => r.json())
+    setBoard(board)
+    setRoster(r.bartenders || [])
+  }
+
   useEffect(() => {
     let cancelled = false
-    Promise.all([
-      fetch('/api/leaderboard').then(r => r.json()),
-      fetch('/api/admin/bartenders').then(r => r.json()),
-    ]).then(([b, r]) => {
-      if (cancelled) return
-      setBoard(b)
-      setRoster(r.bartenders || [])
-    }).catch(e => { if (!cancelled) setError(e.message) })
+    refetchAll().catch(e => { if (!cancelled) setError(e.message) })
     return () => { cancelled = true }
   }, [])
 
@@ -34,6 +34,7 @@ export default function LeaderboardAdminClient({ bars = [] }) {
       const data = await res.json().catch(() => ({}))
       if (!res.ok) throw new Error(data?.error || `update failed (${res.status})`)
       setRoster(prev => prev.map(b => b.slug === slug ? { ...b, ...data.bartender } : b))
+      refetchAll({ fresh: true }).catch(() => {})
     } catch (e) {
       alert(e.message)
     } finally {
@@ -49,6 +50,7 @@ export default function LeaderboardAdminClient({ bars = [] }) {
       const data = await res.json().catch(() => ({}))
       if (!res.ok) throw new Error(data?.error || `delete failed (${res.status})`)
       setRoster(prev => prev.filter(b => b.slug !== slug))
+      refetchAll({ fresh: true }).catch(() => {})
     } catch (e) {
       alert(e.message)
     } finally {
@@ -66,6 +68,7 @@ export default function LeaderboardAdminClient({ bars = [] }) {
     if (!res.ok) throw new Error(data?.error || `create failed (${res.status})`)
     setRoster(prev => [data.bartender, ...prev])
     setAdding(false)
+    refetchAll({ fresh: true }).catch(() => {})
   }
 
   if (error) return <main><h1>Leaderboard</h1><p className="muted">{error}</p></main>

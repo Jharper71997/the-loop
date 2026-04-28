@@ -13,11 +13,18 @@ let cache = { key: null, data: null, at: 0 }
 // referral_tag, joins display_name + bar from the `bartenders` table, returns
 // a ranked standings list. 5-minute in-memory cache (per process) so phone
 // refreshes don't hammer the TT API.
-export async function GET() {
+//
+// ?fresh=1 bypasses the cache. Used by the admin panel right after an
+// Add/Edit/Delete/Toggle so deletions show up immediately instead of 5 min
+// later.
+export async function GET(req) {
+  const url = new URL(req.url)
+  const fresh = url.searchParams.get('fresh') === '1'
+
   const now = new Date()
   const monthKey = `${now.getUTCFullYear()}-${String(now.getUTCMonth() + 1).padStart(2, '0')}`
 
-  if (cache.key === monthKey && cache.data && (Date.now() - cache.at) < CACHE_TTL_MS) {
+  if (!fresh && cache.key === monthKey && cache.data && (Date.now() - cache.at) < CACHE_TTL_MS) {
     return Response.json(cache.data)
   }
 
