@@ -1,6 +1,8 @@
+import QRCode from 'qrcode'
 import { supabaseAdmin } from '@/lib/supabaseAdmin'
 import { contactHasSignedCurrent } from '@/lib/waiver'
 import { normalizePhone } from '@/lib/phone'
+import { appUrl } from '@/lib/stripe'
 
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
@@ -124,6 +126,29 @@ export async function POST(req) {
     for (const q of qrs || []) codeByItem[q.order_item_id] = q.code
   }
 
+  // Server-render each QR as a data URL so the client renders inline without
+  // a JS QR library. Same target_url as boarding pass: /r/<code> — that's
+  // what the staff scanner expects. Smaller width than /tickets/<code>'s QR
+  // (600px) since this is a thumbnail row.
+  const qrByItem = {}
+  const codeEntries = Object.entries(codeByItem)
+  if (codeEntries.length) {
+    const base = appUrl()
+    await Promise.all(codeEntries.map(async ([itemId, code]) => {
+      try {
+        qrByItem[itemId] = await QRCode.toDataURL(`${base}/r/${code}`, {
+          margin: 1,
+          width: 360,
+          color: { dark: '#0a0a0b', light: '#ffffff' },
+          errorCorrectionLevel: 'M',
+        })
+      } catch {
+        // Don't fail the whole response if one QR fails to render — the
+        // client still has ticket_code and the "Boarding pass" deep-link.
+      }
+    }))
+  }
+
   const result = all.map(o => {
     const activeItems = (o.order_items || []).filter(i => !i.voided_at)
     const firstStop = o.event?.group?.schedule?.[0] || null
@@ -151,6 +176,7 @@ export async function POST(req) {
         waiver_signed: i.contact_id ? !!waiverByContact[i.contact_id] : false,
         unclaimed: !!(i.claim_token && !i.claimed_at),
         ticket_code: codeByItem[i.id] || null,
+        ticket_qr_data_url: qrByItem[i.id] || null,
       })),
     }
   })

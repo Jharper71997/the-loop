@@ -3,10 +3,10 @@ import { createServerClient } from '@supabase/ssr'
 import {
   isLeadership,
   isLeadershipOnlyPath,
-  isSecurity,
   isSecurityPath,
   isDriver,
   isDriverPath,
+  canCheckIn,
 } from '@/lib/roles'
 
 const PUBLIC_PREFIXES = [
@@ -125,7 +125,7 @@ export async function middleware(req) {
     return NextResponse.redirect(url)
   }
 
-  if (isSecurityPath(pathname) && !isSecurity(user.email)) {
+  if (isSecurityPath(pathname) && !canCheckIn(user.email)) {
     const url = req.nextUrl.clone()
     url.pathname = '/admin'
     return NextResponse.redirect(url)

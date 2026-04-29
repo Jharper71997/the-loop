@@ -1,7 +1,7 @@
 import { createServerClient } from '@supabase/ssr'
 import { cookies } from 'next/headers'
 import { supabaseAdmin } from '@/lib/supabaseAdmin'
-import { isSecurity } from '@/lib/roles'
+import { canCheckIn } from '@/lib/roles'
 import { contactHasSignedCurrent } from '@/lib/waiver'
 
 export const runtime = 'nodejs'
@@ -33,7 +33,7 @@ export async function POST(req, ctx) {
   if (!user) {
     return Response.json({ ok: false, reason: 'unauthenticated' }, { status: 401 })
   }
-  if (!isSecurity(user.email)) {
+  if (!canCheckIn(user.email)) {
     return Response.json({ ok: false, reason: 'forbidden' }, { status: 403 })
   }
 

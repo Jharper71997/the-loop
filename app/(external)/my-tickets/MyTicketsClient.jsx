@@ -316,44 +316,81 @@ function OrderCard({ order, phone }) {
             <div
               key={i}
               style={{
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'space-between',
+                display: 'grid',
                 gap: 10,
-                padding: '10px 12px',
+                padding: '12px',
                 background: 'rgba(255,255,255,0.025)',
                 border: `1px solid ${LINE}`,
                 borderRadius: 10,
               }}
             >
-              <div style={{ minWidth: 0, flex: 1 }}>
-                <div style={{ color: INK, fontSize: 14, fontWeight: 600, display: 'flex', alignItems: 'center', gap: 6 }}>
-                  <span>{r.name || (r.unclaimed ? 'Unclaimed seat' : 'Guest')}</span>
-                  {r.waiver_signed && <span style={{ color: GREEN, fontSize: 12 }}>✓ waiver</span>}
-                </div>
-                {r.unclaimed && (
-                  <div style={{ color: INK_MUTED, fontSize: 11, marginTop: 2 }}>
-                    Forward the claim link from your confirmation SMS to the friend taking this seat.
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10 }}>
+                <div style={{ minWidth: 0, flex: 1 }}>
+                  <div style={{ color: INK, fontSize: 14, fontWeight: 600, display: 'flex', alignItems: 'center', gap: 6 }}>
+                    <span>{r.name || (r.unclaimed ? 'Unclaimed seat' : 'Guest')}</span>
+                    {r.waiver_signed && <span style={{ color: GREEN, fontSize: 12 }}>✓ waiver</span>}
                   </div>
+                  {r.unclaimed && (
+                    <div style={{ color: INK_MUTED, fontSize: 11, marginTop: 2 }}>
+                      Forward the claim link from your confirmation SMS to the friend taking this seat.
+                    </div>
+                  )}
+                </div>
+                {r.ticket_code && (
+                  <a
+                    href={`/tickets/${r.ticket_code}`}
+                    target="_blank"
+                    rel="noreferrer"
+                    style={{
+                      padding: '6px 12px',
+                      borderRadius: 8,
+                      background: 'transparent',
+                      color: INK_DIM,
+                      border: `1px solid ${LINE}`,
+                      fontWeight: 600,
+                      fontSize: 11,
+                      textDecoration: 'none',
+                      whiteSpace: 'nowrap',
+                    }}
+                  >
+                    Open full pass
+                  </a>
                 )}
               </div>
-              {r.ticket_code && (
+
+              {r.ticket_qr_data_url && (
                 <a
                   href={`/tickets/${r.ticket_code}`}
                   target="_blank"
                   rel="noreferrer"
                   style={{
-                    padding: '8px 14px',
-                    borderRadius: 8,
-                    background: `linear-gradient(180deg, ${GOLD_HI}, ${GOLD})`,
-                    color: '#0a0a0b',
-                    fontWeight: 700,
-                    fontSize: 12,
+                    background: '#ffffff',
+                    borderRadius: 12,
+                    padding: 12,
+                    display: 'flex',
+                    flexDirection: 'column',
+                    alignItems: 'center',
+                    gap: 6,
                     textDecoration: 'none',
-                    whiteSpace: 'nowrap',
+                    boxShadow: '0 0 0 1px rgba(212,163,51,0.4)',
                   }}
                 >
-                  Boarding pass
+                  <img
+                    src={r.ticket_qr_data_url}
+                    alt={`Boarding pass QR for ${r.name || 'rider'}`}
+                    style={{ width: '100%', maxWidth: 220, height: 'auto', display: 'block' }}
+                  />
+                  <div
+                    style={{
+                      fontFamily: 'ui-monospace, SFMono-Regular, Menlo, monospace',
+                      fontSize: 10,
+                      letterSpacing: '0.2em',
+                      color: '#3a3a44',
+                      textTransform: 'uppercase',
+                    }}
+                  >
+                    {r.ticket_code}
+                  </div>
                 </a>
               )}
             </div>
