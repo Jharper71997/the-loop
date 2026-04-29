@@ -21,6 +21,7 @@ export default function TicketView({
   eventName,
   eventDate,
   pickupTime,
+  pickupSpot,
   isPaid,
   isVoided,
   waiverSigned,
@@ -151,9 +152,42 @@ export default function TicketView({
           <div style={{ color: INK_DIM, fontSize: 14, marginTop: 4 }}>
             {eventName}
             {dateLabel ? ` · ${dateLabel}` : ''}
-            {timeLabel ? ` · ${timeLabel}` : ''}
           </div>
         </header>
+
+        {/* Pickup card — what riders need to know FIRST: where to be and when. */}
+        {(pickupSpot || timeLabel) && (
+          <div
+            style={{
+              background: 'rgba(212,163,51,0.08)',
+              border: `1px solid rgba(212,163,51,0.35)`,
+              borderRadius: 14,
+              padding: '14px 16px',
+              display: 'grid',
+              gap: 4,
+            }}
+          >
+            <div
+              style={{
+                color: GOLD,
+                fontSize: 11,
+                letterSpacing: '0.18em',
+                textTransform: 'uppercase',
+                fontWeight: 700,
+              }}
+            >
+              Pickup
+            </div>
+            <div style={{ color: INK, fontSize: 18, fontWeight: 700 }}>
+              {pickupSpot || 'Location TBA'}
+            </div>
+            {timeLabel && (
+              <div style={{ color: INK_DIM, fontSize: 14 }}>
+                {timeLabel}{dateLabel ? ` · ${dateLabel}` : ''}
+              </div>
+            )}
+          </div>
+        )}
 
         {/* QR card — white background so the camera reads it cleanly even at
             low brightness. */}

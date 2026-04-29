@@ -56,14 +56,17 @@ export async function POST(req) {
 
   // Two queries: orders where the buyer's phone matches, OR orders that have
   // any order_item with this rider phone. Union client-side by id.
+  // Also pull events.group → groups.schedule so we can render the pickup spot
+  // (first stop on the route) on each card.
+  const orderSelect = `
+    id, status, total_cents, buyer_phone, buyer_name, party_size,
+    paid_at, created_at, contact_id,
+    event:events ( id, name, event_date, pickup_time, status, group:groups ( id, schedule ) ),
+    order_items ( id, rider_first_name, rider_last_name, contact_id, rider_phone, voided_at, claim_token, claimed_at )
+  `
   const [{ data: byBuyer }, { data: byRider }] = await Promise.all([
     sb.from('orders')
-      .select(`
-        id, status, total_cents, buyer_phone, buyer_name, party_size,
-        paid_at, created_at, contact_id,
-        event:events ( id, name, event_date, pickup_time, status ),
-        order_items ( id, rider_first_name, rider_last_name, contact_id, rider_phone, voided_at, claim_token, claimed_at )
-      `)
+      .select(orderSelect)
       .eq('buyer_phone', normPhone)
       .in('status', ['paid', 'pending'])
       .order('created_at', { ascending: false })
@@ -82,12 +85,7 @@ export async function POST(req) {
   if (extraIds.length) {
     const { data } = await sb
       .from('orders')
-      .select(`
-        id, status, total_cents, buyer_phone, buyer_name, party_size,
-        paid_at, created_at, contact_id,
-        event:events ( id, name, event_date, pickup_time, status ),
-        order_items ( id, rider_first_name, rider_last_name, contact_id, rider_phone, voided_at, claim_token, claimed_at )
-      `)
+      .select(orderSelect)
       .in('id', extraIds)
       .in('status', ['paid', 'pending'])
     extraOrders = data || []
@@ -110,8 +108,25 @@ export async function POST(req) {
     waiverByContact[cid] = await contactHasSignedCurrent(sb, cid)
   }
 
+  // One per-rider QR code lookup so the client can deep-link each rider to
+  // their boarding pass at /tickets/<code>. Pending orders won't have any
+  // (QRs are minted by finalizeBooking after Stripe webhook fires).
+  const activeItemIds = all.flatMap(o =>
+    (o.order_items || []).filter(i => !i.voided_at).map(i => i.id)
+  )
+  const codeByItem = {}
+  if (activeItemIds.length) {
+    const { data: qrs } = await sb
+      .from('qr_codes')
+      .select('order_item_id, code')
+      .eq('kind', 'checkin')
+      .in('order_item_id', activeItemIds)
+    for (const q of qrs || []) codeByItem[q.order_item_id] = q.code
+  }
+
   const result = all.map(o => {
     const activeItems = (o.order_items || []).filter(i => !i.voided_at)
+    const firstStop = o.event?.group?.schedule?.[0] || null
     return {
       id: o.id,
       status: o.status,
@@ -120,7 +135,14 @@ export async function POST(req) {
       buyer_first_name: splitFirst(o.buyer_name),
       paid_at: o.paid_at,
       created_at: o.created_at,
-      event: o.event,
+      event: o.event ? {
+        id: o.event.id,
+        name: o.event.name,
+        event_date: o.event.event_date,
+        pickup_time: firstStop?.start_time || o.event.pickup_time,
+        pickup_spot: firstStop?.name || null,
+        status: o.event.status,
+      } : null,
       contact_id: o.contact_id,
       waiver_signed: o.contact_id ? !!waiverByContact[o.contact_id] : false,
       riders: activeItems.map(i => ({
@@ -128,6 +150,7 @@ export async function POST(req) {
         contact_id: i.contact_id,
         waiver_signed: i.contact_id ? !!waiverByContact[i.contact_id] : false,
         unclaimed: !!(i.claim_token && !i.claimed_at),
+        ticket_code: codeByItem[i.id] || null,
       })),
     }
   })

@@ -148,6 +148,7 @@ function OrderCard({ order, phone }) {
   const ev = order.event
   const eventDate = ev?.event_date ? formatDate(ev.event_date) : null
   const pickupTime = ev?.pickup_time ? formatTime(ev.pickup_time) : null
+  const pickupSpot = ev?.pickup_spot || null
   const waiverHref = order.contact_id ? `/waiver/${order.contact_id}` : '/waiver'
 
   const [resending, setResending] = useState(false)
@@ -223,6 +224,38 @@ function OrderCard({ order, phone }) {
         {order.total_cents != null && <span>${(order.total_cents / 100).toFixed(2)} total</span>}
       </div>
 
+      {(pickupSpot || pickupTime) && (
+        <div
+          style={{
+            background: 'rgba(212,163,51,0.08)',
+            border: '1px solid rgba(212,163,51,0.32)',
+            borderRadius: 10,
+            padding: '10px 12px',
+            marginBottom: 12,
+            display: 'grid',
+            gap: 2,
+          }}
+        >
+          <div
+            style={{
+              color: GOLD,
+              fontSize: 10,
+              letterSpacing: '0.18em',
+              textTransform: 'uppercase',
+              fontWeight: 700,
+            }}
+          >
+            Pickup
+          </div>
+          <div style={{ color: INK, fontWeight: 700, fontSize: 15 }}>
+            {pickupSpot || 'Location TBA'}
+          </div>
+          {pickupTime && (
+            <div style={{ color: INK_DIM, fontSize: 12 }}>{pickupTime}</div>
+          )}
+        </div>
+      )}
+
       <div
         style={{
           padding: '12px 14px',
@@ -267,15 +300,69 @@ function OrderCard({ order, phone }) {
       </div>
 
       {order.riders?.length > 0 && (
-        <div style={{ marginTop: 12, fontSize: 12, color: INK_MUTED }}>
-          Riders:{' '}
+        <div style={{ marginTop: 14, display: 'grid', gap: 8 }}>
+          <div
+            style={{
+              color: INK_MUTED,
+              fontSize: 11,
+              letterSpacing: '0.14em',
+              textTransform: 'uppercase',
+              fontWeight: 600,
+            }}
+          >
+            Riders
+          </div>
           {order.riders.map((r, i) => (
-            <span key={i}>
-              {r.name || (r.unclaimed ? 'Unclaimed' : 'Guest')}
-              {r.waiver_signed ? <span style={{ color: GREEN, marginLeft: 4 }}>✓</span> : null}
-              {i < order.riders.length - 1 ? ', ' : ''}
-            </span>
+            <div
+              key={i}
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                gap: 10,
+                padding: '10px 12px',
+                background: 'rgba(255,255,255,0.025)',
+                border: `1px solid ${LINE}`,
+                borderRadius: 10,
+              }}
+            >
+              <div style={{ minWidth: 0, flex: 1 }}>
+                <div style={{ color: INK, fontSize: 14, fontWeight: 600, display: 'flex', alignItems: 'center', gap: 6 }}>
+                  <span>{r.name || (r.unclaimed ? 'Unclaimed seat' : 'Guest')}</span>
+                  {r.waiver_signed && <span style={{ color: GREEN, fontSize: 12 }}>✓ waiver</span>}
+                </div>
+                {r.unclaimed && (
+                  <div style={{ color: INK_MUTED, fontSize: 11, marginTop: 2 }}>
+                    Forward the claim link from your confirmation SMS to the friend taking this seat.
+                  </div>
+                )}
+              </div>
+              {r.ticket_code && (
+                <a
+                  href={`/tickets/${r.ticket_code}`}
+                  target="_blank"
+                  rel="noreferrer"
+                  style={{
+                    padding: '8px 14px',
+                    borderRadius: 8,
+                    background: `linear-gradient(180deg, ${GOLD_HI}, ${GOLD})`,
+                    color: '#0a0a0b',
+                    fontWeight: 700,
+                    fontSize: 12,
+                    textDecoration: 'none',
+                    whiteSpace: 'nowrap',
+                  }}
+                >
+                  Boarding pass
+                </a>
+              )}
+            </div>
           ))}
+          {order.status !== 'paid' && !order.riders.some(r => r.ticket_code) && (
+            <div style={{ color: INK_MUTED, fontSize: 11, lineHeight: 1.4 }}>
+              Boarding passes appear here once your payment finishes processing.
+            </div>
+          )}
         </div>
       )}
 

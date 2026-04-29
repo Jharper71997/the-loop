@@ -27,6 +27,7 @@ const PUBLIC_PREFIXES = [
   '/api/waiver',
   '/api/leaderboard',
   '/api/bartender-signup',
+  '/api/my-tickets',
   // Cron entry points — Vercel hits them without a Supabase cookie. Each route
   // verifies CRON_SECRET internally; middleware just lets the request reach it.
   '/api/cron/',

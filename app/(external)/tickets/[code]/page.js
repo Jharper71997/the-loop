@@ -31,7 +31,7 @@ export default async function TicketPage({ params }) {
       contact_id,
       checked_in_at,
       voided_at,
-      order:orders ( id, status, event:events ( id, name, event_date, pickup_time ) )
+      order:orders ( id, status, event:events ( id, name, event_date, pickup_time, group:groups ( id, schedule ) ) )
     `)
     .eq('id', qr.order_item_id)
     .maybeSingle()
@@ -41,6 +41,13 @@ export default async function TicketPage({ params }) {
   const event = item.order?.event || null
   const isPaid = item.order?.status === 'paid'
   const isVoided = !!item.voided_at
+
+  // First stop on the route is the pickup location. groups.schedule shape:
+  // [{ name, start_time }]. Empty/missing schedule → fall back to whatever
+  // event.pickup_time we already had.
+  const firstStop = event?.group?.schedule?.[0] || null
+  const pickupSpot = firstStop?.name || null
+  const pickupTimeFromStop = firstStop?.start_time || null
 
   // Waiver status — show the rider whether they still need to sign before
   // pickup. We render a deep link to /waiver/<contactId> right on the ticket.
@@ -73,7 +80,8 @@ export default async function TicketPage({ params }) {
       riderName={riderName}
       eventName={event?.name || 'Brew Loop'}
       eventDate={event?.event_date || null}
-      pickupTime={event?.pickup_time || null}
+      pickupTime={pickupTimeFromStop || event?.pickup_time || null}
+      pickupSpot={pickupSpot}
       isPaid={isPaid}
       isVoided={isVoided}
       waiverSigned={waiverSigned}
