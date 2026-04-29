@@ -271,7 +271,7 @@ export default function TicketView({
         )}
 
         <p style={{ color: INK_MUTED, fontSize: 12, textAlign: 'center', margin: '4px 0 0' }}>
-          Show this screen to security at the bar door.
+          Show this screen to the driver when you board the shuttle.
         </p>
       </div>
     </div>

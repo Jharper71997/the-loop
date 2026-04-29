@@ -1,4 +1,4 @@
-import { notFound } from 'next/navigation'
+import { notFound, redirect } from 'next/navigation'
 import QRCode from 'qrcode'
 import { supabaseAdmin } from '@/lib/supabaseAdmin'
 import { contactHasSignedCurrent } from '@/lib/waiver'
@@ -31,12 +31,22 @@ export default async function TicketPage({ params }) {
       contact_id,
       checked_in_at,
       voided_at,
+      claim_token,
+      claimed_at,
       order:orders ( id, status, event:events ( id, name, event_date, pickup_time, group:groups ( id, schedule ) ) )
     `)
     .eq('id', qr.order_item_id)
     .maybeSingle()
 
   if (!item) notFound()
+
+  // Unclaimed claim-link seat: a friend the buyer paid for hasn't filled in
+  // their info or signed the waiver yet. The boarding pass at this URL has no
+  // rider name and no signable waiver, so the friend has no path forward.
+  // Bounce them into the claim flow — same URL works once they finish.
+  if (item.claim_token && !item.claimed_at && !item.voided_at) {
+    redirect(`/c/${item.claim_token}`)
+  }
 
   const event = item.order?.event || null
   const isPaid = item.order?.status === 'paid'

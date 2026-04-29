@@ -313,87 +313,7 @@ function OrderCard({ order, phone }) {
             Riders
           </div>
           {order.riders.map((r, i) => (
-            <div
-              key={i}
-              style={{
-                display: 'grid',
-                gap: 10,
-                padding: '12px',
-                background: 'rgba(255,255,255,0.025)',
-                border: `1px solid ${LINE}`,
-                borderRadius: 10,
-              }}
-            >
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10 }}>
-                <div style={{ minWidth: 0, flex: 1 }}>
-                  <div style={{ color: INK, fontSize: 14, fontWeight: 600, display: 'flex', alignItems: 'center', gap: 6 }}>
-                    <span>{r.name || (r.unclaimed ? 'Unclaimed seat' : 'Guest')}</span>
-                    {r.waiver_signed && <span style={{ color: GREEN, fontSize: 12 }}>✓ waiver</span>}
-                  </div>
-                  {r.unclaimed && (
-                    <div style={{ color: INK_MUTED, fontSize: 11, marginTop: 2 }}>
-                      Forward the claim link from your confirmation SMS to the friend taking this seat.
-                    </div>
-                  )}
-                </div>
-                {r.ticket_code && (
-                  <a
-                    href={`/tickets/${r.ticket_code}`}
-                    target="_blank"
-                    rel="noreferrer"
-                    style={{
-                      padding: '6px 12px',
-                      borderRadius: 8,
-                      background: 'transparent',
-                      color: INK_DIM,
-                      border: `1px solid ${LINE}`,
-                      fontWeight: 600,
-                      fontSize: 11,
-                      textDecoration: 'none',
-                      whiteSpace: 'nowrap',
-                    }}
-                  >
-                    Open full pass
-                  </a>
-                )}
-              </div>
-
-              {r.ticket_qr_data_url && (
-                <a
-                  href={`/tickets/${r.ticket_code}`}
-                  target="_blank"
-                  rel="noreferrer"
-                  style={{
-                    background: '#ffffff',
-                    borderRadius: 12,
-                    padding: 12,
-                    display: 'flex',
-                    flexDirection: 'column',
-                    alignItems: 'center',
-                    gap: 6,
-                    textDecoration: 'none',
-                    boxShadow: '0 0 0 1px rgba(212,163,51,0.4)',
-                  }}
-                >
-                  <img
-                    src={r.ticket_qr_data_url}
-                    alt={`Boarding pass QR for ${r.name || 'rider'}`}
-                    style={{ width: '100%', maxWidth: 220, height: 'auto', display: 'block' }}
-                  />
-                  <div
-                    style={{
-                      fontFamily: 'ui-monospace, SFMono-Regular, Menlo, monospace',
-                      fontSize: 10,
-                      letterSpacing: '0.2em',
-                      color: '#3a3a44',
-                      textTransform: 'uppercase',
-                    }}
-                  >
-                    {r.ticket_code}
-                  </div>
-                </a>
-              )}
-            </div>
+            <RiderRow key={i} rider={r} />
           ))}
           {order.status !== 'paid' && !order.riders.some(r => r.ticket_code) && (
             <div style={{ color: INK_MUTED, fontSize: 11, lineHeight: 1.4 }}>
@@ -436,6 +356,144 @@ function OrderCard({ order, phone }) {
         </div>
       )}
     </Card>
+  )
+}
+
+function RiderRow({ rider: r }) {
+  const claimUrl = r.claim_token
+    ? (typeof window !== 'undefined'
+        ? `${window.location.origin}/c/${r.claim_token}`
+        : `/c/${r.claim_token}`)
+    : null
+
+  const [shareMsg, setShareMsg] = useState(null)
+
+  async function onShareClaim() {
+    if (!claimUrl) return
+    const text = `You've got a seat on the Brew Loop. Tap to fill in your info and sign the waiver: ${claimUrl}`
+    if (typeof navigator !== 'undefined' && navigator.share) {
+      try {
+        await navigator.share({ title: 'Brew Loop ticket', text, url: claimUrl })
+        return
+      } catch {}
+    }
+    if (typeof navigator !== 'undefined' && navigator.clipboard) {
+      try {
+        await navigator.clipboard.writeText(claimUrl)
+        setShareMsg('Link copied — paste it in a text to your friend.')
+        setTimeout(() => setShareMsg(null), 3000)
+        return
+      } catch {}
+    }
+    setShareMsg(`Copy this: ${claimUrl}`)
+  }
+
+  return (
+    <div
+      style={{
+        display: 'grid',
+        gap: 10,
+        padding: '12px',
+        background: 'rgba(255,255,255,0.025)',
+        border: `1px solid ${LINE}`,
+        borderRadius: 10,
+      }}
+    >
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10 }}>
+        <div style={{ minWidth: 0, flex: 1 }}>
+          <div style={{ color: INK, fontSize: 14, fontWeight: 600, display: 'flex', alignItems: 'center', gap: 6 }}>
+            <span>{r.name || (r.unclaimed ? 'Unclaimed seat' : 'Guest')}</span>
+            {r.waiver_signed && <span style={{ color: GREEN, fontSize: 12 }}>✓ waiver</span>}
+          </div>
+          {r.unclaimed && (
+            <div style={{ color: INK_MUTED, fontSize: 11, marginTop: 2 }}>
+              Send this claim link to the friend taking this seat. They fill in their info and sign the waiver.
+            </div>
+          )}
+        </div>
+        {r.ticket_code && !r.unclaimed && (
+          <a
+            href={`/tickets/${r.ticket_code}`}
+            target="_blank"
+            rel="noreferrer"
+            style={{
+              padding: '6px 12px',
+              borderRadius: 8,
+              background: 'transparent',
+              color: INK_DIM,
+              border: `1px solid ${LINE}`,
+              fontWeight: 600,
+              fontSize: 11,
+              textDecoration: 'none',
+              whiteSpace: 'nowrap',
+            }}
+          >
+            Open full pass
+          </a>
+        )}
+      </div>
+
+      {r.ticket_qr_data_url && !r.unclaimed && (
+        <a
+          href={`/tickets/${r.ticket_code}`}
+          target="_blank"
+          rel="noreferrer"
+          style={{
+            background: '#ffffff',
+            borderRadius: 12,
+            padding: 12,
+            display: 'flex',
+            flexDirection: 'column',
+            alignItems: 'center',
+            gap: 6,
+            textDecoration: 'none',
+            boxShadow: '0 0 0 1px rgba(212,163,51,0.4)',
+          }}
+        >
+          <img
+            src={r.ticket_qr_data_url}
+            alt={`Boarding pass QR for ${r.name || 'rider'}`}
+            style={{ width: '100%', maxWidth: 220, height: 'auto', display: 'block' }}
+          />
+          <div
+            style={{
+              fontFamily: 'ui-monospace, SFMono-Regular, Menlo, monospace',
+              fontSize: 10,
+              letterSpacing: '0.2em',
+              color: '#3a3a44',
+              textTransform: 'uppercase',
+            }}
+          >
+            {r.ticket_code}
+          </div>
+        </a>
+      )}
+
+      {r.unclaimed && claimUrl && (
+        <div style={{ display: 'grid', gap: 6 }}>
+          <button
+            type="button"
+            onClick={onShareClaim}
+            style={{
+              padding: '10px 14px',
+              borderRadius: 10,
+              background: `linear-gradient(180deg, ${GOLD_HI}, ${GOLD})`,
+              color: '#0a0a0b',
+              border: 0,
+              fontWeight: 700,
+              fontSize: 13,
+              cursor: 'pointer',
+              boxShadow: '0 6px 20px rgba(212,163,51,0.18)',
+            }}
+          >
+            Send claim link to friend
+          </button>
+          {shareMsg && (
+            <div style={{ color: GREEN, fontSize: 11, textAlign: 'center' }}>{shareMsg}</div>
+          )}
+        </div>
+      )}
+    </div>
   )
 }
 

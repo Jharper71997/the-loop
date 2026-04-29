@@ -170,14 +170,21 @@ export async function POST(req) {
       } : null,
       contact_id: o.contact_id,
       waiver_signed: o.contact_id ? !!waiverByContact[o.contact_id] : false,
-      riders: activeItems.map(i => ({
-        name: i.rider_first_name || null,
-        contact_id: i.contact_id,
-        waiver_signed: i.contact_id ? !!waiverByContact[i.contact_id] : false,
-        unclaimed: !!(i.claim_token && !i.claimed_at),
-        ticket_code: codeByItem[i.id] || null,
-        ticket_qr_data_url: qrByItem[i.id] || null,
-      })),
+      riders: activeItems.map(i => {
+        const unclaimed = !!(i.claim_token && !i.claimed_at)
+        return {
+          name: i.rider_first_name || null,
+          contact_id: i.contact_id,
+          waiver_signed: i.contact_id ? !!waiverByContact[i.contact_id] : false,
+          unclaimed,
+          // Suppress the boarding pass code/QR for unclaimed seats — they
+          // resolve to a "Guest" pass with no waiver CTA. The buyer should
+          // forward the claim link instead.
+          ticket_code: unclaimed ? null : (codeByItem[i.id] || null),
+          ticket_qr_data_url: unclaimed ? null : (qrByItem[i.id] || null),
+          claim_token: unclaimed ? i.claim_token : null,
+        }
+      }),
     }
   })
 

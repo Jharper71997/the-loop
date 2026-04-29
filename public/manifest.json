@@ -1,7 +1,7 @@
 {
   "name": "Brew Loop",
   "short_name": "Brew Loop",
-  "description": "Jville Brew Loop — book a ride, sign your waiver, show your QR at the bar.",
+  "description": "Jville Brew Loop — book a ride, sign your waiver, show your QR when you board.",
   "start_url": "/",
   "scope": "/",
   "display": "standalone",

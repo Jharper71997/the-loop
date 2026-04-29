@@ -1,6 +1,7 @@
 'use client'
 
 import { useState } from 'react'
+import Link from 'next/link'
 import Scanner from '../_components/Scanner'
 
 const GOLD = '#d4a333'
@@ -70,6 +71,26 @@ export default function SecurityClient() {
             <Counter label="Rejected" value={tally.rejected} color={RED} />
           </div>
         </header>
+
+        <Link
+          href="/security/door-list"
+          style={{
+            padding: '12px 14px',
+            borderRadius: 10,
+            border: `1px solid ${LINE}`,
+            background: SURFACE,
+            color: INK,
+            textDecoration: 'none',
+            fontSize: 13,
+            fontWeight: 600,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+          }}
+        >
+          <span>Door list — see who&apos;s riding tonight</span>
+          <span style={{ color: GOLD, fontWeight: 700 }}>→</span>
+        </Link>
 
         <Scanner
           onScan={onScan}
