@@ -19,6 +19,7 @@ const DAY_TABS = [
 
 export default function Groups() {
   const [groups, setGroups] = useState([])
+  const [groupHasEvent, setGroupHasEvent] = useState({})
   const [ticketsByGroup, setTicketsByGroup] = useState({})
   const [ticketsByContact, setTicketsByContact] = useState({})
   const [now, setNow] = useState(() => nowInTZ())
@@ -70,6 +71,12 @@ export default function Groups() {
       .select('id, group_id')
       .in('group_id', groupIds)
     const eventToGroup = new Map((events || []).map(e => [e.id, e.group_id]))
+    // Track which groups have a paired event so the list view can dedupe
+    // dates that ended up with both an old orphan group and a new
+    // group-with-event from a re-create.
+    const hasEvent = {}
+    for (const e of events || []) hasEvent[e.group_id] = true
+    setGroupHasEvent(hasEvent)
     const ttToGroup = new Map(
       groupRows.filter(g => g.tt_event_id).map(g => [String(g.tt_event_id), g.id])
     )
@@ -169,15 +176,20 @@ export default function Groups() {
 
   const filtered = useMemo(() => {
     const target = DAY_TABS.find(d => d.key === activeDay)?.weekday
-    return groups
-      .filter(g => {
-        if (!g.event_date) return false
-        if (g.event_date < today) return false
-        const d = new Date(`${g.event_date}T12:00:00-05:00`).getDay()
-        return d === target
-      })
-      .sort((a, b) => (a.event_date || '').localeCompare(b.event_date || ''))
-  }, [groups, activeDay, today])
+    const matching = groups.filter(g => {
+      if (!g.event_date) return false
+      if (g.event_date < today) return false
+      const d = new Date(`${g.event_date}T12:00:00-05:00`).getDay()
+      return d === target
+    })
+    // Dedupe by event_date — if the date has a group with a paired event,
+    // hide the orphan group rows for that same date so admin doesn't click
+    // into the wrong one.
+    const datesWithEvent = new Set()
+    for (const g of matching) if (groupHasEvent[g.id]) datesWithEvent.add(g.event_date)
+    const deduped = matching.filter(g => groupHasEvent[g.id] || !datesWithEvent.has(g.event_date))
+    return deduped.sort((a, b) => (a.event_date || '').localeCompare(b.event_date || ''))
+  }, [groups, activeDay, today, groupHasEvent])
 
   const counts = useMemo(() => {
     const out = {}
