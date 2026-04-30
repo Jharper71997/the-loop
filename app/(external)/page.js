@@ -1,5 +1,5 @@
 import { getUpcomingLoops } from '@/lib/upcomingLoops'
-import PlaceholderArt from './_components/PlaceholderArt'
+import Image from 'next/image'
 
 export const metadata = {
   title: { absolute: 'Brew Loop' },
@@ -18,71 +18,54 @@ const LINE = 'rgba(255,255,255,0.08)'
 export default async function LandingPage() {
   const loops = await getUpcomingLoops({ limit: 4 })
   const next = loops[0] || null
+  const more = loops.slice(1, 4)
 
   return (
-    <main style={{ padding: '20px 16px 32px' }}>
-      <div style={{ maxWidth: 520, margin: '0 auto', display: 'grid', gap: 14 }}>
-        <header style={{ paddingTop: 8 }}>
-          <div
-            style={{
-              color: GOLD,
-              fontSize: 11,
-              letterSpacing: '0.22em',
-              textTransform: 'uppercase',
-              fontWeight: 700,
-            }}
-          >
-            Jville Brew Loop
-          </div>
-          <h1 style={{
-            color: INK,
-            fontSize: 'clamp(26px, 7vw, 32px)',
-            fontWeight: 800,
-            margin: '6px 0 0',
-            letterSpacing: '-0.01em',
-          }}>
-            Hop bars. Don&apos;t drive.
-          </h1>
-        </header>
+    <main style={{ padding: '14px 14px 24px' }}>
+      <div style={{ maxWidth: 520, margin: '0 auto', display: 'grid', gap: 12 }}>
+        <NextLoopCard loop={next} />
 
-        <NextLoopHero loop={next} />
+        <QuickChips />
 
-        <ShortcutGrid />
-
-        {loops.length > 1 && (
-          <section style={{ marginTop: 8 }}>
-            <h2 style={sectionHeader}>More loops</h2>
-            <div style={{ display: 'grid', gap: 10, marginTop: 8 }}>
-              {loops.slice(1).map(loop => <LoopRow key={`${loop.kind}-${loop.id}`} loop={loop} />)}
+        {more.length > 0 && (
+          <section style={{ marginTop: 4 }}>
+            <div style={sectionLabel}>Upcoming</div>
+            <div style={{ display: 'grid', gap: 8, marginTop: 6 }}>
+              {more.map(loop => <LoopRow key={`${loop.kind}-${loop.id}`} loop={loop} />)}
             </div>
           </section>
         )}
-
-        <p style={{ color: INK_DIM, fontSize: 12, textAlign: 'center', margin: '10px 0 0' }}>
-          $20 a seat · One ticket, all night · Fri &amp; Sat in Jacksonville.
-        </p>
       </div>
     </main>
   )
 }
 
-function NextLoopHero({ loop }) {
+function NextLoopCard({ loop }) {
   if (!loop) {
     return (
-      <section style={emptyHero}>
-        <div style={{ color: GOLD, fontSize: 11, letterSpacing: '0.2em', textTransform: 'uppercase', fontWeight: 700 }}>
+      <section style={{ ...cardBase, padding: '28px 22px', display: 'grid', justifyItems: 'center', textAlign: 'center', gap: 12 }}>
+        <Image
+          src="/brand/badge-gold.png"
+          alt=""
+          width={80}
+          height={80}
+          style={{ opacity: 0.55 }}
+        />
+        <div style={{ color: GOLD, fontSize: 11, letterSpacing: '0.22em', textTransform: 'uppercase', fontWeight: 700 }}>
           No loops scheduled
         </div>
-        <h2 style={{ color: INK, fontSize: 22, fontWeight: 700, margin: '6px 0 12px' }}>
-          Check back soon.
-        </h2>
-        <a href="/events" style={ghostCta}>See full calendar →</a>
+        <div style={{ color: INK_DIM, fontSize: 14, maxWidth: 320 }}>
+          New dates drop on Instagram first. Check back soon.
+        </div>
+        <a href="/events" style={ghostCta}>See full calendar</a>
       </section>
     )
   }
 
-  const isBookable = loop.kind === 'event'
-  const href = isBookable ? `/book/${loop.id}` : '/events'
+  const href = `/book/${loop.id}`
+  const bg = loop.coverImageUrl
+    ? `linear-gradient(180deg, rgba(10,10,11,0.45), rgba(10,10,11,0.92)), url(${loop.coverImageUrl}) center/cover`
+    : 'radial-gradient(120% 80% at 50% 0%, rgba(212,163,51,0.22), transparent 60%), #15151a'
 
   return (
     <section
@@ -92,27 +75,28 @@ function NextLoopHero({ loop }) {
         borderRadius: 18,
         background: SURFACE,
         border: `1px solid ${LINE}`,
-        minHeight: 220,
+        minHeight: 240,
         boxShadow: '0 30px 60px rgba(0,0,0,0.4)',
       }}
     >
+      <div aria-hidden style={{ position: 'absolute', inset: 0, background: bg }} />
+
       <div
         aria-hidden
         style={{
           position: 'absolute',
-          inset: 0,
-          background: loop.coverImageUrl
-            ? `linear-gradient(180deg, rgba(10,10,11,0.5), rgba(10,10,11,0.92)), url(${loop.coverImageUrl}) center/cover`
-            : 'radial-gradient(120% 80% at 50% 0%, rgba(212,163,51,0.18), transparent 60%)',
+          right: -28,
+          bottom: -28,
+          width: 220,
+          height: 220,
+          opacity: loop.coverImageUrl ? 0.08 : 0.14,
+          pointerEvents: 'none',
         }}
-      />
-      {!loop.coverImageUrl && (
-        <div style={{ position: 'absolute', inset: 0, opacity: 0.22 }}>
-          <PlaceholderArt label="Brew Loop" />
-        </div>
-      )}
+      >
+        <Image src="/brand/badge-gold.png" alt="" fill style={{ objectFit: 'contain' }} />
+      </div>
 
-      <div style={{ position: 'relative', padding: '20px 20px 22px', display: 'grid', gap: 14 }}>
+      <div style={{ position: 'relative', padding: '18px 18px 20px', display: 'grid', gap: 14 }}>
         <div>
           <div style={{
             color: GOLD,
@@ -127,64 +111,64 @@ function NextLoopHero({ loop }) {
             <span style={pulseDotStyle} />
             Next loop
           </div>
-          <h2 style={{ color: INK, fontSize: 26, fontWeight: 800, margin: '6px 0 4px' }}>
+          <h2 style={{ color: INK, fontSize: 26, fontWeight: 800, margin: '4px 0 4px', letterSpacing: '-0.01em' }}>
             {formatDate(loop.eventDate)}
             {loop.pickupTime ? ` · ${formatTime(loop.pickupTime)}` : ''}
           </h2>
-          <div style={{ color: INK_DIM, fontSize: 14 }}>
+          <div style={{ color: INK_DIM, fontSize: 13 }}>
             {loop.name || 'Jville Brew Loop'}
           </div>
         </div>
 
-        <div style={{ display: 'flex', gap: 10, alignItems: 'center' }}>
-          <a href={href} style={primaryCta}>
-            {isBookable ? 'Book a seat' : 'See details'}
-          </a>
-          {isBookable && loop.fromPriceCents != null && (
+        <div style={{ display: 'flex', gap: 10, alignItems: 'center', flexWrap: 'wrap' }}>
+          <a href={href} style={primaryCta}>Book a seat</a>
+          {loop.fromPriceCents != null && (
             <span style={{ color: GOLD_HI, fontSize: 13, fontWeight: 700 }}>
               from ${(loop.fromPriceCents / 100).toFixed(0)}
             </span>
           )}
+          <a href="/my-tickets" style={ghostCtaInline}>I have a ticket</a>
         </div>
       </div>
     </section>
   )
 }
 
-function ShortcutGrid() {
+function QuickChips() {
   return (
-    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
-      <Shortcut href="/my-tickets" label="My tickets" sub="Find yours" accent />
-      <Shortcut href="/events" label="Upcoming Loops" sub="Pick a date" />
-      <Shortcut href="/bars" label="Partner bars" sub="The route" />
-      <Shortcut href="/about" label="About" sub="The story" />
+    <div style={{ display: 'flex', gap: 8, overflowX: 'auto', paddingBottom: 2, WebkitOverflowScrolling: 'touch' }}>
+      <Chip href="/my-tickets" label="My tickets" accent />
+      <Chip href="/bars" label="Partner bars" />
+      <Chip href="/about" label="How it works" />
+      <Chip href="/leaderboard" label="Leaderboard" />
     </div>
   )
 }
 
-function Shortcut({ href, label, sub, accent }) {
+function Chip({ href, label, accent }) {
   return (
     <a
       href={href}
       style={{
-        padding: '14px 14px 16px',
-        borderRadius: 14,
-        background: accent ? 'rgba(212,163,51,0.08)' : SURFACE,
-        border: `1px solid ${accent ? 'rgba(212,163,51,0.35)' : LINE}`,
+        flex: '0 0 auto',
+        padding: '10px 14px',
+        borderRadius: 999,
+        background: accent ? 'rgba(212,163,51,0.10)' : 'rgba(255,255,255,0.04)',
+        border: `1px solid ${accent ? 'rgba(212,163,51,0.4)' : LINE}`,
+        color: accent ? GOLD_HI : INK,
+        fontSize: 13,
+        fontWeight: 600,
         textDecoration: 'none',
-        color: INK,
-        display: 'block',
+        whiteSpace: 'nowrap',
       }}
     >
-      <div style={{ color: accent ? GOLD_HI : INK, fontWeight: 700, fontSize: 15 }}>{label}</div>
-      <div style={{ color: INK_DIM, fontSize: 12, marginTop: 2 }}>{sub}</div>
+      {label}
     </a>
   )
 }
 
 function LoopRow({ loop }) {
-  const isBookable = loop.kind === 'event'
-  const href = isBookable ? `/book/${loop.id}` : '/events'
+  const href = `/book/${loop.id}`
   return (
     <a
       href={href}
@@ -201,15 +185,15 @@ function LoopRow({ loop }) {
         color: INK,
       }}
     >
-      <div>
+      <div style={{ minWidth: 0 }}>
         <div style={{ color: GOLD, fontSize: 11, letterSpacing: '0.16em', textTransform: 'uppercase', fontWeight: 700 }}>
           {formatDate(loop.eventDate)}{loop.pickupTime ? ` · ${formatTime(loop.pickupTime)}` : ''}
         </div>
-        <div style={{ fontSize: 14, fontWeight: 600, marginTop: 2 }}>{loop.name || 'Brew Loop'}</div>
+        <div style={{ fontSize: 14, fontWeight: 600, marginTop: 2, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+          {loop.name || 'Brew Loop'}
+        </div>
       </div>
-      <span style={{ color: INK_DIM, fontSize: 13 }}>
-        {isBookable ? '→' : 'Soon'}
-      </span>
+      <span style={{ color: INK_DIM, fontSize: 18, flex: '0 0 auto' }}>&rsaquo;</span>
     </a>
   )
 }
@@ -218,9 +202,7 @@ function formatDate(iso) {
   if (!iso) return ''
   try {
     const d = new Date(`${iso}T12:00:00-05:00`)
-    return d.toLocaleDateString('en-US', {
-      weekday: 'short', month: 'short', day: 'numeric',
-    })
+    return d.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })
   } catch { return iso }
 }
 
@@ -234,30 +216,36 @@ function formatTime(hhmm) {
   return `${h12}:${String(m).padStart(2, '0')} ${suffix}`
 }
 
-const sectionHeader = {
+const cardBase = {
+  borderRadius: 18,
+  background: SURFACE,
+  border: `1px solid ${LINE}`,
+}
+
+const sectionLabel = {
   fontSize: 11,
   color: INK_DIM,
   letterSpacing: '0.22em',
   textTransform: 'uppercase',
   fontWeight: 700,
-  margin: 0,
 }
 
 const primaryCta = {
   display: 'inline-block',
-  padding: '14px 22px',
+  padding: '13px 22px',
   borderRadius: 12,
   background: `linear-gradient(180deg, ${GOLD_HI}, ${GOLD})`,
   color: '#0a0a0b',
   fontWeight: 800,
   textDecoration: 'none',
   fontSize: 15,
+  letterSpacing: '0.01em',
   boxShadow: '0 10px 28px rgba(212,163,51,0.3)',
 }
 
 const ghostCta = {
   display: 'inline-block',
-  padding: '12px 20px',
+  padding: '11px 18px',
   borderRadius: 999,
   background: 'transparent',
   color: INK,
@@ -267,11 +255,11 @@ const ghostCta = {
   fontSize: 14,
 }
 
-const emptyHero = {
-  padding: '24px 20px',
-  borderRadius: 18,
-  background: SURFACE,
-  border: `1px solid ${LINE}`,
+const ghostCtaInline = {
+  ...ghostCta,
+  padding: '11px 14px',
+  fontSize: 13,
+  color: INK_DIM,
 }
 
 const pulseDotStyle = {

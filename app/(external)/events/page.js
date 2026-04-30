@@ -1,5 +1,5 @@
 import { getUpcomingLoops } from '@/lib/upcomingLoops'
-import PlaceholderArt from '../_components/PlaceholderArt'
+import Image from 'next/image'
 
 export const metadata = {
   title: 'Upcoming Loops',
@@ -51,10 +51,9 @@ export default async function EventsPage() {
       )}
         <section
           style={{
-            padding: '56px 20px 32px',
+            padding: '20px 16px 16px',
             textAlign: 'center',
-            borderBottom: '1px solid rgba(255,255,255,0.05)',
-            background: 'radial-gradient(700px 300px at 50% 0%, rgba(212,163,51,0.12), transparent 70%)',
+            background: 'radial-gradient(700px 240px at 50% 0%, rgba(212,163,51,0.10), transparent 70%)',
           }}
         >
           <div style={{ maxWidth: 720, margin: '0 auto' }}>
@@ -62,22 +61,21 @@ export default async function EventsPage() {
               style={{
                 color: GOLD,
                 fontSize: 11,
-                letterSpacing: '0.2em',
+                letterSpacing: '0.22em',
                 textTransform: 'uppercase',
                 fontWeight: 700,
-                marginBottom: 12,
               }}
             >
               Upcoming loops
             </div>
-            <h1 style={{ color: INK }}>Pick a night. Grab a seat.</h1>
-            <p style={{ marginTop: 14, fontSize: 16 }}>
-              $20 covers your whole loop. Shuttle runs from ~7:30 PM to ~1:30 AM.
+            <h1 style={{ color: INK, fontSize: 'clamp(22px, 6vw, 28px)', margin: '6px 0 4px' }}>Pick a night.</h1>
+            <p style={{ marginTop: 4, fontSize: 14, color: INK_DIM }}>
+              $20 a seat. Shuttle runs 7:30 PM to 1:30 AM.
             </p>
           </div>
         </section>
 
-        <section style={{ maxWidth: 1100, margin: '0 auto', padding: '40px 20px 72px' }}>
+        <section style={{ maxWidth: 1100, margin: '0 auto', padding: '16px 16px 32px' }}>
           {!loops.length ? (
             <EmptyState />
           ) : (
@@ -162,7 +160,19 @@ function LoopCard({ loop }) {
             }}
           />
         ) : (
-          <PlaceholderArt label="Brew Loop" />
+          <div
+            aria-hidden
+            style={{
+              position: 'absolute',
+              inset: 0,
+              background: 'radial-gradient(120% 80% at 50% 30%, rgba(212,163,51,0.22), transparent 70%), #0f0f12',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+            }}
+          >
+            <Image src="/brand/badge-gold.png" alt="" width={120} height={120} style={{ opacity: 0.45 }} />
+          </div>
         )}
         <span
           style={{

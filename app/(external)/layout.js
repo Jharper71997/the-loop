@@ -1,6 +1,8 @@
 import PwaShell from './_components/PwaShell'
 import TabBar from './_components/TabBar'
 import TopBar from './_components/TopBar'
+import LiveStatusStrip from './_components/LiveStatusStrip'
+import { getUpcomingLoops } from '@/lib/upcomingLoops'
 
 export const metadata = {
   title: { default: 'Brew Loop', template: '%s · Brew Loop' },
@@ -15,7 +17,7 @@ export const metadata = {
   formatDetection: { telephone: false },
   icons: {
     icon: [{ url: '/icon.svg', type: 'image/svg+xml' }],
-    apple: [{ url: '/flyers/jbl-logo-gold.png', sizes: '180x180' }],
+    apple: [{ url: '/brand/badge-gold.png', sizes: '180x180' }],
   },
 }
 
@@ -26,7 +28,13 @@ export const viewport = {
   themeColor: '#0a0a0b',
 }
 
-export default function ExternalLayout({ children }) {
+export default async function ExternalLayout({ children }) {
+  let nextLoop = null
+  try {
+    const loops = await getUpcomingLoops({ limit: 1 })
+    nextLoop = loops[0] || null
+  } catch {}
+
   return (
     <div
       className="external-shell"
@@ -39,6 +47,7 @@ export default function ExternalLayout({ children }) {
     >
       <PwaShell />
       <TopBar />
+      <LiveStatusStrip nextLoop={nextLoop} />
       {children}
       <TabBar />
     </div>

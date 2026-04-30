@@ -32,7 +32,7 @@ export default function MyTicketsClient() {
       const json = await res.json()
       if (!res.ok) {
         if (json.error === 'rate_limited') {
-          setError(`Slow down — try again in ${json.retry_after_seconds || 60} seconds.`)
+          setError(`Slow down. Try again in ${json.retry_after_seconds || 60} seconds.`)
         } else {
           setError(json.error || 'Something went wrong. Try again.')
         }
@@ -138,7 +138,7 @@ export default function MyTicketsClient() {
       </button>
 
       <p style={{ color: INK_MUTED, fontSize: 12, textAlign: 'center', margin: '8px 0 0' }}>
-        Enter the phone you booked with — we’ll show your tickets and waiver.
+        Enter the phone you booked with. We&rsquo;ll show your tickets and waiver.
       </p>
     </form>
   )
@@ -173,7 +173,7 @@ function OrderCard({ order, phone }) {
           setResendMsg({ kind: 'err', text: json.error || 'Resend failed.' })
         }
       } else {
-        setResendMsg({ kind: 'ok', text: 'Sent — check your phone & email.' })
+        setResendMsg({ kind: 'ok', text: 'Sent. Check your phone and email.' })
       }
     } catch (err) {
       setResendMsg({ kind: 'err', text: err.message })
@@ -272,7 +272,7 @@ function OrderCard({ order, phone }) {
         </span>
         <div style={{ flex: 1, minWidth: 0 }}>
           <div style={{ color: INK, fontWeight: 600, fontSize: 14 }}>
-            {order.waiver_signed ? 'Waiver signed — you’re clear to ride' : 'Waiver not signed yet'}
+            {order.waiver_signed ? 'Waiver signed. You’re clear to ride' : 'Waiver not signed yet'}
           </div>
           <div style={{ color: INK_DIM, fontSize: 12, marginTop: 2 }}>
             {order.waiver_signed
@@ -380,7 +380,7 @@ function RiderRow({ rider: r }) {
     if (typeof navigator !== 'undefined' && navigator.clipboard) {
       try {
         await navigator.clipboard.writeText(claimUrl)
-        setShareMsg('Link copied — paste it in a text to your friend.')
+        setShareMsg('Link copied. Paste it in a text to your friend.')
         setTimeout(() => setShareMsg(null), 3000)
         return
       } catch {}

@@ -112,7 +112,7 @@ export default async function BarDetail({ params }) {
           >
             <InfoCard eyebrow="On the Loop" title="A rotating partner">
               {bar.name} is one of eight Jville Brew Loop partner bars. Whether we&apos;re stopping here this
-              Friday or Saturday depends on the weekend&apos;s route &mdash; check upcoming events for the exact stops.
+              Friday or Saturday depends on the weekend&apos;s route. Check upcoming events for the exact stops.
             </InfoCard>
 
             {bar.address && (

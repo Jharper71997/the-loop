@@ -1,3 +1,4 @@
+import Image from 'next/image'
 
 export const metadata = {
   title: 'About',
@@ -22,21 +23,28 @@ const INK_DIM = '#b8b8bf'
 export default function AboutPage() {
   return (
     <main>
-        <section style={{ padding: '56px 20px 24px', maxWidth: 760, margin: '0 auto', textAlign: 'center' }}>
+        <section style={{ padding: '20px 20px 16px', maxWidth: 760, margin: '0 auto', textAlign: 'center' }}>
+          <Image
+            src="/brand/badge-gold.png"
+            alt=""
+            width={72}
+            height={72}
+            style={{ opacity: 0.85, marginBottom: 8 }}
+          />
           <div
             style={{
               color: GOLD,
               fontSize: 11,
-              letterSpacing: '0.2em',
+              letterSpacing: '0.22em',
               textTransform: 'uppercase',
               fontWeight: 700,
-              marginBottom: 12,
+              marginBottom: 6,
             }}
           >
             About
           </div>
-          <h1 style={{ color: INK }}>The Brew Loop, end to end.</h1>
-          <p style={{ marginTop: 14, fontSize: 16 }}>
+          <h1 style={{ color: INK, fontSize: 'clamp(22px, 6vw, 28px)', margin: '4px 0 4px' }}>The Brew Loop.</h1>
+          <p style={{ marginTop: 4, fontSize: 14, color: INK_DIM }}>
             Why we built it, how a night runs, and how to get on board.
           </p>
         </section>
@@ -197,12 +205,12 @@ function Faq() {
       a: 'Yes. The Loop is strictly 21+.',
     },
     {
-      q: 'We have a group of 5 or more &mdash; can you pick us up somewhere?',
+      q: 'We have a group of 5 or more, can you pick us up somewhere?',
       a: 'On request, availability-dependent. <a href="mailto:hello@jvillebrewloop.com" style="color:#d4a333;text-decoration:none;font-weight:600">Email us</a> the date, party size, and where you&rsquo;re starting and we&rsquo;ll see if we can line it up.',
     },
     {
       q: 'Which bars are on the route?',
-      a: 'Eight partner bars around Jacksonville rotate weekend to weekend &mdash; and Friday&rsquo;s route can differ from Saturday&rsquo;s. Check the <a href="/events" style="color:#d4a333;text-decoration:none;font-weight:600">event page</a> for exact stops on the night you book.',
+      a: 'Eight partner bars around Jacksonville rotate weekend to weekend, and Friday&rsquo;s route can differ from Saturday&rsquo;s. Check the <a href="/events" style="color:#d4a333;text-decoration:none;font-weight:600">event page</a> for exact stops on the night you book.',
     },
   ]
 

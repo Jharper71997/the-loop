@@ -17,7 +17,7 @@ const RED = '#e07a7a'
 const MIN_POST_INTERVAL_MS = 8000
 const MIN_DELTA_METERS = 5
 
-export default function DriverClient() {
+export default function DriverClient({ groupId = null, loopName = null, eventDate = null, pickupTime = null }) {
   const [running, setRunning] = useState(false)
   const [position, setPosition] = useState(null)
   const [error, setError] = useState(null)
@@ -83,6 +83,7 @@ export default function DriverClient() {
             lng: position.lng,
             speed: position.speed,
             heading: position.heading,
+            group_id: groupId,
             is_active: false,
           }),
         })
@@ -114,7 +115,7 @@ export default function DriverClient() {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          lat, lng, speed: speedMph, heading, is_active: true,
+          lat, lng, speed: speedMph, heading, group_id: groupId, is_active: true,
         }),
       })
       if (res.ok) {
@@ -160,6 +161,18 @@ export default function DriverClient() {
           <h1 style={{ color: INK, fontSize: 26, fontWeight: 800, margin: '4px 0 0' }}>
             {running ? 'Live' : 'Off duty'}
           </h1>
+          {loopName && (
+            <div style={{ color: INK_DIM, fontSize: 13, marginTop: 4 }}>
+              {loopName}
+              {eventDate ? ` · ${formatLoopDate(eventDate)}` : ''}
+              {pickupTime ? ` · ${formatPickup(pickupTime)} pickup` : ''}
+            </div>
+          )}
+          {!groupId && (
+            <div style={{ color: '#e07a7a', fontSize: 12, marginTop: 6 }}>
+              No on-sale Loop scheduled. Pings will save without a group link.
+            </div>
+          )}
         </header>
 
         <div
@@ -262,6 +275,24 @@ const primaryBtn = {
   cursor: 'pointer',
   width: '100%',
   boxShadow: '0 10px 30px rgba(212,163,51,0.25)',
+}
+
+function formatLoopDate(iso) {
+  if (!iso) return ''
+  try {
+    const d = new Date(`${iso}T12:00:00-05:00`)
+    return d.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })
+  } catch { return iso }
+}
+
+function formatPickup(hhmm) {
+  if (!hhmm) return ''
+  const [hStr, mStr] = String(hhmm).split(':')
+  const h = Number(hStr); const m = Number(mStr)
+  if (!Number.isFinite(h) || !Number.isFinite(m)) return ''
+  const suffix = h >= 12 ? 'PM' : 'AM'
+  const h12 = ((h + 11) % 12) + 1
+  return `${h12}:${String(m).padStart(2, '0')} ${suffix}`
 }
 
 // Haversine distance in meters between two lat/lng pairs.
