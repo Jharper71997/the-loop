@@ -189,7 +189,7 @@ function Card({ title, children }) {
 }
 
 function Row({ children }) {
-  return <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>{children}</div>
+  return <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))', gap: 8 }}>{children}</div>
 }
 
 function Field({ label, value, onChange, type = 'text', placeholder }) {

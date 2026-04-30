@@ -1,5 +1,6 @@
 import PwaShell from './_components/PwaShell'
 import TabBar from './_components/TabBar'
+import TopBar from './_components/TopBar'
 
 export const metadata = {
   title: { default: 'Brew Loop', template: '%s · Brew Loop' },
@@ -37,6 +38,7 @@ export default function ExternalLayout({ children }) {
       }}
     >
       <PwaShell />
+      <TopBar />
       {children}
       <TabBar />
     </div>

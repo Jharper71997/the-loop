@@ -616,7 +616,7 @@ export default function Contacts() {
           style={{
             position: 'fixed',
             left: '50%',
-            bottom: 20,
+            bottom: 'max(20px, calc(20px + env(safe-area-inset-bottom)))',
             transform: 'translateX(-50%)',
             zIndex: 50,
             background: 'linear-gradient(180deg, #1a1a22, #121216)',

@@ -84,7 +84,12 @@ export default function RosterView({ items, ticketTypes }) {
           No riders on this Loop yet.
         </div>
       ) : (
-        <div style={{ display: 'grid', gap: 6 }}>
+        <div style={{
+          display: 'grid',
+          gap: 6,
+          overflowX: 'auto',
+          WebkitOverflowScrolling: 'touch',
+        }}>
           <HeaderRow />
           {visible.map(item => {
             const tt = item.ticket_type_id ? ttById.get(item.ticket_type_id) : null
@@ -220,4 +225,7 @@ const rowStyle = {
   border: `1px solid ${BORDER}`,
   borderRadius: 10,
   fontSize: 13,
+  // Roster has 7 columns — keep its full layout but let it scroll horizontally
+  // inside the wrapper rather than overflowing the page on iPhone.
+  minWidth: 720,
 }

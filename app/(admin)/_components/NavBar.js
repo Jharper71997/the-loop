@@ -67,12 +67,15 @@ export default function NavBar() {
       position: 'sticky',
       top: 0,
       zIndex: 10,
+      paddingTop: 'env(safe-area-inset-top)',
     }}>
       <div className="admin-nav-top" style={{
         display: 'flex',
         alignItems: 'center',
         gap: 14,
         padding: '10px 14px',
+        paddingLeft: 'max(14px, env(safe-area-inset-left))',
+        paddingRight: 'max(14px, env(safe-area-inset-right))',
       }}>
         <a href="/admin" style={{
           color: '#d4a333',
