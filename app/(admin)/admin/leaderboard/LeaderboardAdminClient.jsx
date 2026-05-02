@@ -9,6 +9,18 @@ export default function LeaderboardAdminClient({ bars = [] }) {
   const [busySlug, setBusySlug] = useState(null)
   const [editingSlug, setEditingSlug] = useState(null)
   const [adding, setAdding] = useState(false)
+  const [refreshing, setRefreshing] = useState(false)
+
+  async function manualRefresh() {
+    setRefreshing(true)
+    try {
+      await refetchAll({ fresh: true })
+    } catch (e) {
+      alert(e.message)
+    } finally {
+      setRefreshing(false)
+    }
+  }
 
   async function refetchAll({ fresh = false } = {}) {
     const board = await fetch(`/api/leaderboard${fresh ? '?fresh=1' : ''}`).then(r => r.json())
@@ -84,11 +96,21 @@ export default function LeaderboardAdminClient({ bars = [] }) {
     <main style={{ maxWidth: 1100, margin: '0 auto', padding: '20px 16px' }}>
       <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', flexWrap: 'wrap', gap: 8 }}>
         <h1>Leaderboard</h1>
-        <span className="tag-status">{board.month} · {board.days_remaining}d left</span>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
+          <span className="tag-status">{board.month} · {board.days_remaining}d left</span>
+          <button onClick={manualRefresh} disabled={refreshing} style={btnPrimary}>
+            {refreshing ? 'Refreshing…' : 'Refresh'}
+          </button>
+        </div>
       </div>
 
       <div className="card" style={{ marginTop: 14 }}>
-        <div className="hud-heading">Standings · this month</div>
+        <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', flexWrap: 'wrap', gap: 8 }}>
+          <div className="hud-heading">Standings · this month</div>
+          {board.updated_at && (
+            <div className="tiny muted">Updated {formatTime(board.updated_at)}</div>
+          )}
+        </div>
         {standings.length === 0 ? (
           <div className="muted">No bartenders signed up yet. Share the signup link below.</div>
         ) : (
@@ -346,6 +368,15 @@ function formatDate(iso) {
     return new Date(iso).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
   } catch {
     return iso.slice(0, 10)
+  }
+}
+
+function formatTime(iso) {
+  if (!iso) return '—'
+  try {
+    return new Date(iso).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })
+  } catch {
+    return iso
   }
 }
 
