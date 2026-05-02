@@ -27,6 +27,7 @@ export default async function IncomePage() {
         .select('total_cents')
         .eq('status', 'paid')
         .is('refunded_at', null)
+        .not('stripe_checkout_session_id', 'is', null)
         .gte('paid_at', since),
       supabase.from('sponsor_payments')
         .select('amount_cents')
@@ -65,6 +66,7 @@ export default async function IncomePage() {
     .select('id, total_cents, paid_at, buyer_name')
     .eq('status', 'paid')
     .is('refunded_at', null)
+    .not('stripe_checkout_session_id', 'is', null)
     .order('paid_at', { ascending: false })
     .limit(10)
 
