@@ -38,13 +38,12 @@ export default async function CashPage() {
 
         <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', flexWrap: 'wrap', gap: 12, marginBottom: 24 }}>
           <h1 style={{
-            color: '#d4a333',
-            fontFamily: "'Orbitron', system-ui, sans-serif",
-            fontSize: 22,
-            letterSpacing: '0.18em',
-            textTransform: 'uppercase',
+            color: '#e8e8ea',
+            fontFamily: '-apple-system, "Segoe UI", Roboto, sans-serif',
+            fontSize: 24,
+            fontWeight: 700,
+            letterSpacing: '-0.01em',
             margin: 0,
-            textShadow: '0 0 14px rgba(212,163,51,0.45)',
           }}>
             Cash Position
           </h1>
@@ -77,7 +76,7 @@ export default async function CashPage() {
           </div>
           <div style={{
             color: latest ? '#e8e8ea' : '#6f6f76',
-            fontFamily: "'Orbitron', system-ui, sans-serif",
+            fontFamily: '"JetBrains Mono", ui-monospace, monospace',
             fontSize: 36,
             fontWeight: 800,
             letterSpacing: '0.04em',
@@ -101,9 +100,10 @@ export default async function CashPage() {
 
         <h2 style={{
           color: '#e8e8ea',
-          fontFamily: "'Orbitron', system-ui, sans-serif",
+          fontFamily: '-apple-system, "Segoe UI", Roboto, sans-serif',
           fontSize: 13,
-          letterSpacing: '0.22em',
+          fontWeight: 600,
+          letterSpacing: '0.06em',
           textTransform: 'uppercase',
           margin: '0 0 12px 0',
           borderBottom: '1px solid #2a2a31',
@@ -131,7 +131,7 @@ export default async function CashPage() {
                 <tr key={row.id} style={{ borderBottom: '1px solid #2a2a31' }}>
                   <td style={td}>{new Date(row.as_of).toLocaleString('en-US', { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' })}</td>
                   <td style={td}>{row.account_name}</td>
-                  <td style={{ ...td, textAlign: 'right', fontFamily: "'Orbitron', system-ui, sans-serif", fontWeight: 700 }}>{formatCents(row.balance_cents)}</td>
+                  <td style={{ ...td, textAlign: 'right', fontFamily: '"JetBrains Mono", ui-monospace, monospace', fontWeight: 700 }}>{formatCents(row.balance_cents)}</td>
                   <td style={{ ...td, color: '#9c9ca3' }}>{row.notes || ''}</td>
                 </tr>
               ))}

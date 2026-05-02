@@ -52,13 +52,12 @@ export default async function ExpensesPage({ searchParams }) {
           marginBottom: 22,
         }}>
           <h1 style={{
-            color: '#d4a333',
-            fontFamily: "'Orbitron', system-ui, sans-serif",
-            fontSize: 22,
-            letterSpacing: '0.18em',
-            textTransform: 'uppercase',
+            color: '#e8e8ea',
+            fontFamily: '-apple-system, "Segoe UI", Roboto, sans-serif',
+            fontSize: 24,
+            fontWeight: 700,
+            letterSpacing: '-0.01em',
             margin: 0,
-            textShadow: '0 0 14px rgba(212,163,51,0.45)',
           }}>
             Expenses
           </h1>
@@ -127,9 +126,10 @@ export default async function ExpensesPage({ searchParams }) {
                 }}>
                   <h2 style={{
                     color: '#e8e8ea',
-                    fontFamily: "'Orbitron', system-ui, sans-serif",
+                    fontFamily: '-apple-system, "Segoe UI", Roboto, sans-serif',
                     fontSize: 13,
-                    letterSpacing: '0.22em',
+                    fontWeight: 600,
+                    letterSpacing: '0.06em',
                     textTransform: 'uppercase',
                     margin: 0,
                   }}>
@@ -137,7 +137,7 @@ export default async function ExpensesPage({ searchParams }) {
                   </h2>
                   <div style={{
                     color: '#d4a333',
-                    fontFamily: "'Orbitron', system-ui, sans-serif",
+                    fontFamily: '"JetBrains Mono", ui-monospace, monospace',
                     fontSize: 16,
                     fontWeight: 800,
                   }}>
@@ -154,7 +154,7 @@ export default async function ExpensesPage({ searchParams }) {
                         <td style={{ padding: '8px 6px', color: '#9c9ca3', fontSize: 11 }}>
                           {r.vendor || ''}
                         </td>
-                        <td style={{ padding: '8px 6px', textAlign: 'right', fontFamily: "'Orbitron', system-ui, sans-serif", fontWeight: 700 }}>
+                        <td style={{ padding: '8px 6px', textAlign: 'right', fontFamily: '"JetBrains Mono", ui-monospace, monospace', fontWeight: 700 }}>
                           {formatCents(r.amount_cents)}
                         </td>
                       </tr>

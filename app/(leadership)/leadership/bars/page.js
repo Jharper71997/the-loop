@@ -90,17 +90,37 @@ export default async function BarsPage() {
           ← Scoreboard
         </a>
 
-        <h1 style={{
-          color: '#d4a333',
-          fontFamily: "'Orbitron', system-ui, sans-serif",
-          fontSize: 22,
-          letterSpacing: '0.18em',
-          textTransform: 'uppercase',
-          margin: '0 0 18px 0',
-          textShadow: '0 0 14px rgba(212,163,51,0.45)',
+        <div style={{
+          display: 'flex',
+          alignItems: 'baseline',
+          justifyContent: 'space-between',
+          gap: 12,
+          flexWrap: 'wrap',
+          marginBottom: 18,
         }}>
-          Bars
-        </h1>
+          <h1 style={{
+            color: '#e8e8ea',
+            fontFamily: '-apple-system, "Segoe UI", Roboto, sans-serif',
+            fontSize: 24,
+            fontWeight: 700,
+            letterSpacing: '-0.01em',
+            margin: 0,
+          }}>
+            Bars
+          </h1>
+          <a href="/leadership/bars/new" style={{
+            background: '#d4a333',
+            color: '#0a0a0b',
+            fontFamily: '-apple-system, "Segoe UI", Roboto, sans-serif',
+            fontSize: 13,
+            fontWeight: 600,
+            padding: '8px 14px',
+            borderRadius: 6,
+            textDecoration: 'none',
+          }}>
+            + Add bar
+          </a>
+        </div>
 
         <OutstandingBanner
           period={new Date().toLocaleString('en-US', { month: 'long', year: 'numeric' })}
@@ -152,7 +172,7 @@ export default async function BarsPage() {
                         borderRadius: 4,
                       }}>{b.status}</span>
                     </td>
-                    <td style={{ ...td, textAlign: 'right', fontFamily: "'Orbitron', system-ui, sans-serif" }}>
+                    <td style={{ ...td, textAlign: 'right', fontFamily: '"JetBrains Mono", ui-monospace, monospace' }}>
                       {b.monthly_fee_cents > 0 ? formatCents(b.monthly_fee_cents) : '—'}
                     </td>
                     <td style={td}>
@@ -206,7 +226,7 @@ function OutstandingBanner({ period, expected, paid, owed, countOwed }) {
         <div style={{ fontSize: 10, color: '#9c9ca3', letterSpacing: '0.18em', textTransform: 'uppercase', marginBottom: 2 }}>
           {period} · Bars Outstanding
         </div>
-        <div style={{ fontFamily: "'Orbitron', system-ui, sans-serif", fontSize: 22, fontWeight: 800, color }}>
+        <div style={{ fontFamily: '"JetBrains Mono", ui-monospace, monospace', fontSize: 22, fontWeight: 800, color }}>
           {formatCents(owed)}
         </div>
       </div>
@@ -214,7 +234,7 @@ function OutstandingBanner({ period, expected, paid, owed, countOwed }) {
         <div style={{ fontSize: 10, color: '#9c9ca3', letterSpacing: '0.18em', textTransform: 'uppercase', marginBottom: 2 }}>
           Paid / Expected
         </div>
-        <div style={{ fontFamily: "'Orbitron', system-ui, sans-serif", fontSize: 16, fontWeight: 700 }}>
+        <div style={{ fontFamily: '"JetBrains Mono", ui-monospace, monospace', fontSize: 16, fontWeight: 700 }}>
           {formatCents(paid)} / {formatCents(expected)} <span style={{ color: '#9c9ca3', fontWeight: 400 }}>({pct}%)</span>
         </div>
       </div>
@@ -223,7 +243,7 @@ function OutstandingBanner({ period, expected, paid, owed, countOwed }) {
           <div style={{ fontSize: 10, color: '#9c9ca3', letterSpacing: '0.18em', textTransform: 'uppercase', marginBottom: 2 }}>
             Bars Behind
           </div>
-          <div style={{ fontFamily: "'Orbitron', system-ui, sans-serif", fontSize: 16, fontWeight: 700, color: '#d4a333' }}>
+          <div style={{ fontFamily: '"JetBrains Mono", ui-monospace, monospace', fontSize: 16, fontWeight: 700, color: '#d4a333' }}>
             {countOwed}
           </div>
         </div>

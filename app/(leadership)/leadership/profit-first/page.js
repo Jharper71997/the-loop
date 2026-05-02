@@ -41,7 +41,7 @@ export default async function ProfitFirstPage() {
 
         <h1 style={{
           color: '#d4a333',
-          fontFamily: "'Orbitron', system-ui, sans-serif",
+          fontFamily: '"JetBrains Mono", ui-monospace, monospace',
           fontSize: 22,
           letterSpacing: '0.18em',
           textTransform: 'uppercase',
@@ -63,9 +63,10 @@ export default async function ProfitFirstPage() {
         }}>
           <h2 style={{
             color: '#e8e8ea',
-            fontFamily: "'Orbitron', system-ui, sans-serif",
+            fontFamily: '-apple-system, "Segoe UI", Roboto, sans-serif',
             fontSize: 13,
-            letterSpacing: '0.22em',
+            fontWeight: 600,
+            letterSpacing: '0.06em',
             textTransform: 'uppercase',
             margin: '0 0 14px 0',
           }}>
@@ -83,7 +84,7 @@ export default async function ProfitFirstPage() {
                 ].map(([label, pct]) => (
                   <tr key={label} style={{ borderBottom: '1px solid #2a2a31' }}>
                     <td style={{ padding: '10px 6px', color: '#9c9ca3', letterSpacing: '0.04em' }}>{label}</td>
-                    <td style={{ padding: '10px 6px', textAlign: 'right', fontFamily: "'Orbitron', system-ui, sans-serif", fontWeight: 700 }}>
+                    <td style={{ padding: '10px 6px', textAlign: 'right', fontFamily: '"JetBrains Mono", ui-monospace, monospace', fontWeight: 700 }}>
                       {(Number(pct) * 100).toFixed(0)}%
                     </td>
                   </tr>
