@@ -732,6 +732,41 @@ export default function Contacts() {
           >
             Message {checkedCount}
           </button>
+          <button
+            onClick={async () => {
+              if (!confirm(`Delete ${checkedCount} contact${checkedCount === 1 ? '' : 's'}? This removes them from every Loop they're on.`)) return
+              const ids = Array.from(checkedIds)
+              const failures = []
+              for (const id of ids) {
+                try {
+                  const res = await fetch(`/api/admin/contacts/${encodeURIComponent(id)}`, { method: 'DELETE' })
+                  if (!res.ok) {
+                    const j = await res.json().catch(() => ({}))
+                    failures.push(`${id.slice(0, 6)}: ${j.error || res.status}`)
+                  }
+                } catch (err) {
+                  failures.push(`${id.slice(0, 6)}: ${err?.message || 'network error'}`)
+                }
+              }
+              setCheckedIds(new Set())
+              refresh()
+              if (failures.length) alert(`Some deletes failed:\n${failures.join('\n')}`)
+            }}
+            style={{
+              padding: '10px 16px',
+              borderRadius: 10,
+              border: '1px solid #3a1f1f',
+              background: 'transparent',
+              color: '#e07a7a',
+              fontWeight: 700,
+              fontSize: 13,
+              letterSpacing: '0.05em',
+              textTransform: 'uppercase',
+              cursor: 'pointer',
+            }}
+          >
+            Delete {checkedCount}
+          </button>
         </div>
       )}
 
