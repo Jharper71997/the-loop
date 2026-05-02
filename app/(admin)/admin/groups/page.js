@@ -276,7 +276,7 @@ export default function Groups() {
         const isEditing = editingSchedule === group.id
         const isExpanded = expanded === group.id
         const tickets = ticketsByGroup[group.id] || 0
-        const showTickets = tickets > 0 && tickets !== members.length
+        const hasGap = tickets > 0 && tickets !== members.length
 
         return (
           <div key={group.id} className="card">
@@ -331,8 +331,22 @@ export default function Groups() {
                 >
                   Settings
                 </a>
-                {showTickets ? (
-                  <span className="chip chip-gold">{tickets} tix</span>
+                {hasGap ? (
+                  // Tickets sold > named contacts on roster — usually TT orders
+                  // shipped without buyer details. Surface both numbers + a
+                  // warning tint so the admin knows to chase the missing info.
+                  <span
+                    className="chip"
+                    title={`${tickets} ticket${tickets === 1 ? '' : 's'} sold, ${members.length} rider${members.length === 1 ? '' : 's'} with contact info — ${tickets - members.length} missing`}
+                    style={{
+                      background: 'rgba(212,163,51,0.12)',
+                      borderColor: 'rgba(212,163,51,0.5)',
+                      color: '#f0c24a',
+                      fontWeight: 700,
+                    }}
+                  >
+                    {members.length}/{tickets} riders
+                  </span>
                 ) : (
                   <span className="chip">{members.length} rider{members.length === 1 ? '' : 's'}</span>
                 )}
