@@ -38,8 +38,13 @@ export default async function SponsorsPage() {
 
   const lastPaidBy = new Map()
   const paidThisMonth = new Map()
+  const stripeActive = new Set()
+  const stripeCutoff = Date.now() - 45 * 24 * 60 * 60 * 1000
   for (const p of (payments || [])) {
     if (!lastPaidBy.has(p.sponsor_id)) lastPaidBy.set(p.sponsor_id, p)
+    if (p.method === 'stripe' && new Date(p.paid_at).getTime() >= stripeCutoff) {
+      stripeActive.add(p.sponsor_id)
+    }
     const inMonth = p.paid_for_period
       ? p.paid_for_period.startsWith(monthStr)
       : (p.paid_at >= startISO && p.paid_at < endISO)
@@ -166,8 +171,22 @@ export default async function SponsorsPage() {
                   return (
                     <tr key={s.id} style={{ borderBottom: '1px solid #2a2a31' }}>
                       <td style={td}>
-                        <div style={{ fontWeight: 700 }}>{s.name}</div>
-                        {s.tier && <div style={{ fontSize: 10, color: '#9c9ca3', letterSpacing: '0.12em', textTransform: 'uppercase', marginTop: 2 }}>{s.tier}</div>}
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                          <a href={`/leadership/sponsors/${s.id}`} style={{ fontWeight: 600, color: '#e8e8ea', textDecoration: 'none' }}>{s.name}</a>
+                          {stripeActive.has(s.id) && (
+                            <span title="Active Stripe subscription" style={{
+                              background: 'rgba(99,91,255,0.15)',
+                              color: '#8b85ff',
+                              border: '1px solid rgba(99,91,255,0.35)',
+                              fontSize: 10,
+                              fontWeight: 600,
+                              padding: '1px 6px',
+                              borderRadius: 4,
+                              letterSpacing: '0.04em',
+                            }}>✓ Stripe</span>
+                          )}
+                        </div>
+                        {s.tier && <div style={{ fontSize: 11, color: '#9c9ca3', marginTop: 2 }}>{s.tier}</div>}
                       </td>
                       <td style={td}>
                         <span style={{
