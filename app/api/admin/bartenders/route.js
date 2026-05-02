@@ -10,9 +10,12 @@ import {
 } from '@/lib/bartenders'
 import { normalizeEmail } from '@/lib/contacts'
 import { normalizePhone } from '@/lib/phone'
+import { ensureBartenderVoucher } from '@/lib/ticketTailorVouchers'
 
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
+
+const SCHEMA_MISSING_CODES = new Set(['42P01', '42703'])
 
 // Middleware gates this endpoint behind leadership auth via the parent /admin
 // route prefix. Editing here can change display_name + bar but never the slug
@@ -23,7 +26,7 @@ export async function GET() {
   const supabase = supabaseAdmin()
   const { data, error } = await supabase
     .from('bartenders')
-    .select('slug, display_name, bar, qr_image_url, active, share_code, email, phone, created_at')
+    .select('slug, display_name, bar, qr_image_url, active, share_code, email, phone, tt_voucher_id, created_at')
     .order('created_at', { ascending: false })
 
   if (error) return Response.json({ error: error.message }, { status: 500 })
@@ -84,7 +87,18 @@ export async function POST(req) {
   }
 
   const { error } = await supabase.from('bartenders').insert(row)
-  if (error) return Response.json({ error: error.message }, { status: 500 })
+  if (error) {
+    if (SCHEMA_MISSING_CODES.has(error.code)) {
+      return Response.json({
+        error: 'Schema columns missing. Run sql/021_bartender_share_code.sql in Supabase before adding bartenders.',
+      }, { status: 503 })
+    }
+    return Response.json({ error: error.message }, { status: 500 })
+  }
+
+  ensureBartenderVoucher(supabase, { slug, shareCode, displayName: firstName }).catch(err => {
+    console.error('[admin/bartenders] TT voucher create failed', err)
+  })
 
   return Response.json({ bartender: row })
 }
@@ -134,7 +148,7 @@ export async function PATCH(req) {
     .from('bartenders')
     .update(updates)
     .eq('slug', slug)
-    .select('slug, display_name, bar, qr_image_url, active, share_code, email, phone, created_at')
+    .select('slug, display_name, bar, qr_image_url, active, share_code, email, phone, tt_voucher_id, created_at')
     .maybeSingle()
 
   if (error) return Response.json({ error: error.message }, { status: 500 })

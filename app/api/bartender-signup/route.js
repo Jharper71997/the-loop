@@ -1,21 +1,32 @@
-import QRCode from 'qrcode'
 import { supabaseAdmin } from '@/lib/supabaseAdmin'
 import { BARS } from '@/lib/bars'
 import { recordAlert } from '@/lib/alerts'
-import { shareCodeBase, pickFreeShareCode } from '@/lib/bartenders'
+import {
+  shareCodeBase,
+  pickFreeShareCode,
+  pickFreeSlug,
+  slugifyName,
+  referralUrlFor,
+  renderBartenderQr,
+  buildBartenderPayload,
+} from '@/lib/bartenders'
 import { normalizeEmail } from '@/lib/contacts'
 import { normalizePhone } from '@/lib/phone'
+import { ensureBartenderVoucher } from '@/lib/ticketTailorVouchers'
 
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
 
+// 42P01 = undefined_table, 42703 = undefined_column. Both mean a migration
+// hasn't been applied to this Supabase environment. Surface the same friendly
+// "temporarily unavailable" UX in either case so a missed migration is loud
+// instead of silent.
+const SCHEMA_MISSING_CODES = new Set(['42P01', '42703'])
+
 // POST /api/bartender-signup
-// Body: { first_name, bar_slug, code }
-// Returns: { slug, display_name, bar, referral_url, qr_image_url, leaderboard_url }
-//
-// Idempotent: re-submitting the same first_name + bar_slug returns the existing
-// row's slug + QR. Slug collisions (different person, same first name + bar) are
-// resolved with -2, -3, ... suffixes.
+// Body: { first_name, bar_slug, code, email, phone }
+// Returns: { slug, display_name, bar, bar_slug, referral_url, qr_image_url,
+//            leaderboard_url, share_code }
 export async function POST(req) {
   let body
   try { body = await req.json() } catch { return bad('invalid json') }
@@ -38,15 +49,38 @@ export async function POST(req) {
   const bar = BARS.find(b => b.slug === barSlug)
   if (!bar) return bad('unknown bar')
 
-  const firstSlug = slugify(firstName)
+  const firstSlug = slugifyName(firstName)
   if (!firstSlug) return bad('first_name has no usable letters')
 
   const supabase = supabaseAdmin()
-  const baseSlug = `${bar.slug}-${firstSlug}`
 
-  // Idempotency: if a row already exists for this exact (bar, display_name),
-  // return it. Cheap dedupe so a bartender hitting submit twice doesn't end up
-  // with two slugs.
+  // Contact-first lookup: a returning bartender who forgot which bar she
+  // originally picked still gets her existing row back as long as her phone
+  // or email matches. Two different "Alyssa"s at two different bars stay
+  // disambiguated because their contact info differs.
+  if (email || phone) {
+    const filters = []
+    if (email) filters.push(`email.ilike.${email}`)
+    if (phone) filters.push(`phone.eq.${phone}`)
+    const { data: byContact, error: contactErr } = await supabase
+      .from('bartenders')
+      .select('slug, display_name, bar, qr_image_url, active, share_code, email, phone')
+      .or(filters.join(','))
+      .limit(2)
+
+    if (contactErr && SCHEMA_MISSING_CODES.has(contactErr.code)) {
+      return await schemaMissing(supabase)
+    }
+
+    if (byContact?.length === 1) {
+      return Response.json(await buildBartenderPayload(supabase, byContact[0]))
+    }
+    // 0 or 2+ matches → fall through to the bar+name path. 2+ is rare (same
+    // contact info across multiple bartender rows); falling through lets the
+    // form's bar+name disambiguate it.
+  }
+
+  // Bar+name lookup (legacy idempotent path).
   const { data: existing, error: lookupErr } = await supabase
     .from('bartenders')
     .select('slug, display_name, bar, qr_image_url, active, share_code, email, phone')
@@ -54,24 +88,13 @@ export async function POST(req) {
     .ilike('display_name', firstName)
     .maybeSingle()
 
-  // 42P01 = relation does not exist. Means the migration was forgotten in
-  // this environment — surface a friendly message and alert Jacob.
-  if (lookupErr?.code === '42P01') {
-    await recordAlert(supabase, {
-      kind: 'schema_missing',
-      severity: 'error',
-      subject: 'Bartender signup failed — bartenders table missing',
-      body: 'sql/010_bartender_referrals.sql has not been applied to this Supabase. Run it in the SQL editor.',
-      context: { table: 'bartenders', endpoint: '/api/bartender-signup' },
-    })
-    return Response.json({
-      error: 'Signups are temporarily unavailable. Text us at (636) 266-1801 and we’ll get you set up.',
-    }, { status: 503 })
+  if (lookupErr && SCHEMA_MISSING_CODES.has(lookupErr.code)) {
+    return await schemaMissing(supabase)
   }
 
   if (existing) {
-    // Re-submitting with new contact info should fill it in. Don't overwrite
-    // a previously-saved value with null.
+    // Backfill missing contact info on the existing row (don't overwrite
+    // a value that's already there).
     const contactPatch = {}
     if (email && !existing.email) contactPatch.email = email
     if (phone && !existing.phone) contactPatch.phone = phone
@@ -79,24 +102,16 @@ export async function POST(req) {
       await supabase.from('bartenders').update(contactPatch).eq('slug', existing.slug)
       Object.assign(existing, contactPatch)
     }
-    return Response.json(await buildPayload(supabase, existing, bar))
+    return Response.json(await buildBartenderPayload(supabase, existing))
   }
 
-  // Resolve slug collision: -2, -3, ... if base is taken by a different name.
-  let slug = baseSlug
-  for (let i = 2; i < 50; i++) {
-    const { data: clash } = await supabase
-      .from('bartenders')
-      .select('slug')
-      .eq('slug', slug)
-      .maybeSingle()
-    if (!clash) break
-    slug = `${baseSlug}-${i}`
-  }
+  // Fresh signup.
+  const baseSlug = `${bar.slug}-${firstSlug}`
+  const slug = await pickFreeSlug(supabase, baseSlug)
+  if (!slug) return Response.json({ error: 'could not find a free slug' }, { status: 500 })
 
   const referralUrl = referralUrlFor(slug)
-  const qrDataUrl = await renderQr(referralUrl)
-
+  const qrDataUrl = await renderBartenderQr(referralUrl)
   const shareCode = await pickFreeShareCode(supabase, shareCodeBase(firstName))
 
   const row = {
@@ -110,104 +125,42 @@ export async function POST(req) {
     phone,
   }
 
-  const { error } = await supabase.from('bartenders').insert(row)
-  if (error) {
-    if (error.code === '42P01') {
-      await recordAlert(supabase, {
-        kind: 'schema_missing',
-        severity: 'error',
-        subject: 'Bartender signup failed — bartenders table missing',
-        body: 'sql/010_bartender_referrals.sql has not been applied to this Supabase. Run it in the SQL editor.',
-        context: { table: 'bartenders', endpoint: '/api/bartender-signup' },
-      })
-      return Response.json({
-        error: 'Signups are temporarily unavailable. Text us at (636) 266-1801 and we’ll get you set up.',
-      }, { status: 503 })
+  const { error: insertErr } = await supabase.from('bartenders').insert(row)
+  if (insertErr) {
+    if (SCHEMA_MISSING_CODES.has(insertErr.code)) {
+      return await schemaMissing(supabase)
     }
     await recordAlert(supabase, {
       kind: 'finalize_failed',
       subject: 'Bartender signup insert failed',
-      body: error.message,
+      body: insertErr.message,
       context: { display_name: firstName, bar: bar.name },
     })
     return Response.json({ error: 'Could not complete signup. Please try again.' }, { status: 500 })
   }
 
-  return Response.json(await buildPayload(supabase, row, bar))
+  // Fire-and-forget: create a TT voucher so the customer can type this
+  // bartender's share_code in TT's "promo credit or voucher code" field at
+  // checkout. Failing here doesn't block signup — the URL referral path
+  // still works.
+  ensureBartenderVoucher(supabase, { slug, shareCode, displayName: firstName }).catch(err => {
+    console.error('[bartender-signup] TT voucher create failed', err)
+  })
+
+  return Response.json(await buildBartenderPayload(supabase, row))
 }
 
-// Server-render the QR locally with the `qrcode` library. No external API
-// dependency — same approach as the rider boarding pass at /tickets/<code>.
-async function renderQr(url) {
-  try {
-    return await QRCode.toDataURL(url, {
-      margin: 1,
-      width: 600,
-      color: { dark: '#0a0a0b', light: '#ffffff' },
-      errorCorrectionLevel: 'M',
-    })
-  } catch (err) {
-    console.error('[bartender-signup] QR render failed', err)
-    return null
-  }
-}
-
-async function buildPayload(supabase, row, bar) {
-  const referralUrl = referralUrlFor(row.slug)
-  const token = process.env.LEADERBOARD_TOKEN || ''
-  const leaderboardUrl = token ? `/leaderboard?t=${encodeURIComponent(token)}` : '/leaderboard'
-
-  // Older rows may have a null or stale qr_image_url (signed up before this
-  // path was switched to local rendering). Lazily generate + persist so the
-  // bartender always sees a working QR.
-  let qrImageUrl = row.qr_image_url
-  if (!qrImageUrl) {
-    qrImageUrl = await renderQr(referralUrl)
-    if (qrImageUrl) {
-      await supabase
-        .from('bartenders')
-        .update({ qr_image_url: qrImageUrl })
-        .eq('slug', row.slug)
-    }
-  }
-
-  // Older rows may pre-date the share_code column. Backfill on demand so the
-  // bartender always sees a code on the success card.
-  let shareCode = row.share_code
-  if (!shareCode) {
-    shareCode = await pickFreeShareCode(supabase, shareCodeBase(row.display_name))
-    if (shareCode) {
-      await supabase
-        .from('bartenders')
-        .update({ share_code: shareCode })
-        .eq('slug', row.slug)
-    }
-  }
-
-  return {
-    slug: row.slug,
-    display_name: row.display_name,
-    bar: row.bar,
-    bar_slug: bar.slug,
-    referral_url: referralUrl,
-    qr_image_url: qrImageUrl,
-    leaderboard_url: leaderboardUrl,
-    share_code: shareCode,
-  }
-}
-
-function referralUrlFor(slug) {
-  const base = process.env.TICKET_TAILOR_PUBLIC_URL || 'https://buytickets.at/jvillebrewloop'
-  return `${base}?ref=${encodeURIComponent(slug)}`
-}
-
-function slugify(s) {
-  return String(s)
-    .toLowerCase()
-    .normalize('NFKD')
-    .replace(/[̀-ͯ]/g, '')
-    .replace(/[^a-z0-9]+/g, '-')
-    .replace(/^-+|-+$/g, '')
+async function schemaMissing(supabase) {
+  await recordAlert(supabase, {
+    kind: 'schema_missing',
+    severity: 'error',
+    subject: 'Bartender signup failed — schema columns missing',
+    body: 'sql/021_bartender_share_code.sql has not been applied to this Supabase. Run it in the SQL editor.',
+    context: { table: 'bartenders', endpoint: '/api/bartender-signup' },
+  })
+  return Response.json({
+    error: 'Signups are temporarily unavailable. Text us at (636) 266-1801 and we’ll get you set up.',
+  }, { status: 503 })
 }
 
 function bad(msg) {

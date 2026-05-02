@@ -33,31 +33,49 @@ export async function GET(req) {
 
   const supabase = supabaseAdmin()
   const [bartendersRes, orders] = await Promise.all([
-    supabase.from('bartenders').select('slug, display_name, bar, active'),
+    supabase.from('bartenders').select('slug, display_name, bar, active, share_code'),
     fetchAllOrdersSince(monthStartUnix),
   ])
 
   const bartenders = bartendersRes.data || []
   const bartenderBySlug = new Map(bartenders.map(b => [b.slug, b]))
+  // Lowercased share_code → bartender, so a customer-typed code at TT
+  // checkout (case-insensitive) can be resolved back to a slug.
+  const bartenderByShareCode = new Map(
+    bartenders
+      .filter(b => b.share_code)
+      .map(b => [String(b.share_code).toLowerCase(), b]),
+  )
 
-  // Aggregate ticket count + revenue by referral_tag.
+  // Aggregate ticket count + revenue. An order is credited to the bartender
+  // whose slug matches `referral_tag` (URL-attribution), OR — if there's no
+  // referral_tag — whose `share_code` matches the voucher code applied at TT
+  // checkout. referral_tag wins when both are present (it's the more specific
+  // signal: the customer actually used that bartender's URL).
   const agg = new Map()
   for (const order of orders) {
-    const tag = order.referral_tag
-    if (!tag) continue
-    const bartender = bartenderBySlug.get(tag)
+    let bartender = null
+    if (order.referral_tag) {
+      bartender = bartenderBySlug.get(order.referral_tag) || null
+    }
+    if (!bartender) {
+      const code = orderVoucherCode(order)
+      if (code) {
+        bartender = bartenderByShareCode.get(code.toLowerCase()) || null
+      }
+    }
     if (!bartender || !bartender.active) continue
 
-    let row = agg.get(tag)
+    let row = agg.get(bartender.slug)
     if (!row) {
       row = {
-        slug: tag,
+        slug: bartender.slug,
         name: bartender.display_name,
         bar: bartender.bar,
         tickets: 0,
         revenue_cents: 0,
       }
-      agg.set(tag, row)
+      agg.set(bartender.slug, row)
     }
 
     for (const li of (order.line_items || [])) {
@@ -136,4 +154,30 @@ async function fetchAllOrdersSince(unixSeconds) {
     if (data.length < 100) break
   }
   return all
+}
+
+// Pull the voucher / discount code applied to a TT order, if any. TT's API
+// has historically used a few different field names for this, depending on
+// whether it's a voucher (gift-card-like) or a percentage discount. Try the
+// common shapes and return the first non-empty code found. Returns null if
+// the order didn't apply any code.
+function orderVoucherCode(order) {
+  if (!order) return null
+  // Voucher applied at checkout — gift-card / promo credit shape.
+  const voucher = order.voucher || order.applied_voucher
+  if (typeof voucher === 'string' && voucher.trim()) return voucher.trim()
+  if (voucher && typeof voucher.code === 'string' && voucher.code.trim()) return voucher.code.trim()
+  // Discount code applied at checkout.
+  const discount = order.discount || order.applied_discount
+  if (typeof discount === 'string' && discount.trim()) return discount.trim()
+  if (discount && typeof discount.code === 'string' && discount.code.trim()) return discount.code.trim()
+  // Some TT order payloads expose an array of codes under `applied_vouchers`
+  // or `vouchers`. Take the first one's code.
+  const arr = order.applied_vouchers || order.vouchers || order.discounts
+  if (Array.isArray(arr) && arr.length) {
+    const first = arr[0]
+    if (typeof first === 'string' && first.trim()) return first.trim()
+    if (first && typeof first.code === 'string' && first.code.trim()) return first.code.trim()
+  }
+  return null
 }
