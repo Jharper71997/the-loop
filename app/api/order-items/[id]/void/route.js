@@ -113,17 +113,8 @@ export async function POST(req, ctx) {
     }
   }
 
-  // Apology SMS to buyer when whole order is voided + refund issued.
-  if (orderVoided && wantRefund && item.order?.buyer_phone) {
-    try {
-      await sendSms(
-        item.order.buyer_phone,
-        `Brew Loop: your booking has been refunded. ${reason ? `Reason: ${reason}. ` : ''}Hope to see you on a future Loop.`
-      )
-    } catch (err) {
-      console.error('[void] apology SMS failed', err)
-    }
-  }
+  // Apology SMS removed 2026-05-02 — all automatic texts off per product
+  // decision. Stripe still emails the buyer the refund receipt.
 
   return Response.json({
     ok: true,

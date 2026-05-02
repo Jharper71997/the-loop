@@ -270,16 +270,8 @@ async function handleRefund(supabase, obj) {
       }
     }
 
-    if (order.buyer_phone) {
-      const dateLabel = formatRefundDate(event?.event_date)
-      const dollars = (order.total_cents / 100).toFixed(2)
-      const body = `Brew Loop: your booking${dateLabel ? ` for ${dateLabel}` : ''} has been refunded ($${dollars}). Hope to see you on a future Loop.`
-      try {
-        await sendSms(order.buyer_phone, body)
-      } catch (err) {
-        console.error('[stripe-webhook] refund SMS failed', err)
-      }
-    }
+    // Refund-confirmation SMS removed 2026-05-02 — all automatic texts off
+    // per product decision. Stripe still emails the buyer the refund receipt.
   }
 }
 
