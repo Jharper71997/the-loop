@@ -38,12 +38,17 @@ const PUBLIC_PREFIXES = [
 
 const LEGACY_ADMIN_PREFIXES = ['/groups', '/contacts', '/finance']
 
+// Old admin-side leadership pages now live under /leadership. Keep these
+// here so any bookmarks / links land on the right place.
+const LEADERSHIP_RELOCATIONS = {
+  '/admin/finance': '/leadership/finance',
+  '/admin/metrics': '/leadership',
+  '/admin/qr': '/leadership/qr',
+}
+
 // Soft-removed routes — files may still exist on disk but middleware blocks
 // every request so direct URLs land somewhere sensible.
 const REMOVED_PREFIXES = [
-  '/admin/finance',
-  '/admin/metrics',
-  '/admin/qr',
   '/api/qr',
   '/api/finance-summary',
   '/api/finance-data',
@@ -66,6 +71,11 @@ function legacyRedirect(pathname) {
   for (const prefix of LEGACY_ADMIN_PREFIXES) {
     if (pathname === prefix || pathname.startsWith(prefix + '/')) {
       return '/admin' + pathname
+    }
+  }
+  for (const [oldPrefix, newPrefix] of Object.entries(LEADERSHIP_RELOCATIONS)) {
+    if (pathname === oldPrefix || pathname.startsWith(oldPrefix + '/')) {
+      return newPrefix + pathname.slice(oldPrefix.length)
     }
   }
   return null
