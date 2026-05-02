@@ -2,6 +2,9 @@ import QRCode from 'qrcode'
 import { supabaseAdmin } from '@/lib/supabaseAdmin'
 import { BARS } from '@/lib/bars'
 import { recordAlert } from '@/lib/alerts'
+import { shareCodeBase, pickFreeShareCode } from '@/lib/bartenders'
+import { normalizeEmail } from '@/lib/contacts'
+import { normalizePhone } from '@/lib/phone'
 
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
@@ -20,9 +23,12 @@ export async function POST(req) {
   const firstName = String(body?.first_name || '').trim()
   const barSlug = String(body?.bar_slug || '').trim()
   const code = String(body?.code || '').trim()
+  const email = normalizeEmail(body?.email)
+  const phone = normalizePhone(body?.phone)
 
   if (!firstName) return bad('first_name required')
   if (!barSlug) return bad('bar_slug required')
+  if (!email && !phone) return bad('email or phone required')
 
   const expectedCode = (process.env.BARTENDER_SIGNUP_CODE || '').trim()
   if (expectedCode && code !== expectedCode) {
@@ -43,7 +49,7 @@ export async function POST(req) {
   // with two slugs.
   const { data: existing, error: lookupErr } = await supabase
     .from('bartenders')
-    .select('slug, display_name, bar, qr_image_url, active')
+    .select('slug, display_name, bar, qr_image_url, active, share_code, email, phone')
     .eq('bar', bar.name)
     .ilike('display_name', firstName)
     .maybeSingle()
@@ -64,6 +70,15 @@ export async function POST(req) {
   }
 
   if (existing) {
+    // Re-submitting with new contact info should fill it in. Don't overwrite
+    // a previously-saved value with null.
+    const contactPatch = {}
+    if (email && !existing.email) contactPatch.email = email
+    if (phone && !existing.phone) contactPatch.phone = phone
+    if (Object.keys(contactPatch).length) {
+      await supabase.from('bartenders').update(contactPatch).eq('slug', existing.slug)
+      Object.assign(existing, contactPatch)
+    }
     return Response.json(await buildPayload(supabase, existing, bar))
   }
 
@@ -82,12 +97,17 @@ export async function POST(req) {
   const referralUrl = referralUrlFor(slug)
   const qrDataUrl = await renderQr(referralUrl)
 
+  const shareCode = await pickFreeShareCode(supabase, shareCodeBase(firstName))
+
   const row = {
     slug,
     display_name: firstName,
     bar: bar.name,
     qr_image_url: qrDataUrl,
     active: true,
+    share_code: shareCode,
+    email,
+    phone,
   }
 
   const { error } = await supabase.from('bartenders').insert(row)
@@ -151,6 +171,19 @@ async function buildPayload(supabase, row, bar) {
     }
   }
 
+  // Older rows may pre-date the share_code column. Backfill on demand so the
+  // bartender always sees a code on the success card.
+  let shareCode = row.share_code
+  if (!shareCode) {
+    shareCode = await pickFreeShareCode(supabase, shareCodeBase(row.display_name))
+    if (shareCode) {
+      await supabase
+        .from('bartenders')
+        .update({ share_code: shareCode })
+        .eq('slug', row.slug)
+    }
+  }
+
   return {
     slug: row.slug,
     display_name: row.display_name,
@@ -159,6 +192,7 @@ async function buildPayload(supabase, row, bar) {
     referral_url: referralUrl,
     qr_image_url: qrImageUrl,
     leaderboard_url: leaderboardUrl,
+    share_code: shareCode,
   }
 }
 

@@ -10,6 +10,8 @@ const BG_PANEL = 'linear-gradient(180deg, rgba(255,255,255,0.03), rgba(255,255,2
 export default function SignupClient({ bars }) {
   const [code, setCode] = useState('')
   const [firstName, setFirstName] = useState('')
+  const [email, setEmail] = useState('')
+  const [phone, setPhone] = useState('')
   const [barSlug, setBarSlug] = useState(bars[0]?.slug || '')
   const [submitting, setSubmitting] = useState(false)
   const [error, setError] = useState(null)
@@ -28,7 +30,13 @@ export default function SignupClient({ bars }) {
       const res = await fetch('/api/bartender-signup', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ first_name: firstName, bar_slug: barSlug, code }),
+        body: JSON.stringify({
+          first_name: firstName,
+          bar_slug: barSlug,
+          code,
+          email: email.trim(),
+          phone: phone.trim(),
+        }),
       })
       const data = await res.json().catch(() => ({}))
       if (!res.ok) {
@@ -101,6 +109,32 @@ export default function SignupClient({ bars }) {
           </select>
         </Field>
 
+        <Field label="Phone">
+          <input
+            type="tel"
+            value={phone}
+            onChange={e => setPhone(e.target.value)}
+            autoComplete="tel"
+            placeholder="(555) 555-5555"
+            style={inputStyle}
+          />
+        </Field>
+
+        <Field label="Email">
+          <input
+            type="email"
+            value={email}
+            onChange={e => setEmail(e.target.value)}
+            autoComplete="email"
+            placeholder="you@example.com"
+            style={inputStyle}
+          />
+        </Field>
+
+        <p style={{ color: INK_DIM, fontSize: 12, margin: '-4px 0 0', lineHeight: 1.5 }}>
+          We need at least one — that&apos;s how we&apos;ll send you your prize.
+        </p>
+
         {error && (
           <div style={{
             color: '#ff8b8b',
@@ -116,7 +150,7 @@ export default function SignupClient({ bars }) {
 
         <button
           type="submit"
-          disabled={submitting || !firstName.trim() || !barSlug}
+          disabled={submitting || !firstName.trim() || !barSlug || (!email.trim() && !phone.trim())}
           style={{
             background: GOLD,
             color: '#0a0a0b',
@@ -144,12 +178,21 @@ export default function SignupClient({ bars }) {
 
 function SuccessCard({ result }) {
   const [copied, setCopied] = useState(false)
+  const [codeCopied, setCodeCopied] = useState(false)
 
   async function copyUrl() {
     try {
       await navigator.clipboard.writeText(result.referral_url)
       setCopied(true)
       setTimeout(() => setCopied(false), 1500)
+    } catch {}
+  }
+
+  async function copyCode() {
+    try {
+      await navigator.clipboard.writeText(result.share_code)
+      setCodeCopied(true)
+      setTimeout(() => setCodeCopied(false), 1500)
     } catch {}
   }
 
@@ -166,9 +209,60 @@ function SuccessCard({ result }) {
           {result.display_name} — {result.bar}
         </h1>
         <p style={{ color: INK_DIM, fontSize: 14, margin: 0 }}>
-          Show this QR to riders. Every ticket through it counts toward your total.
+          Two ways to get credit: the QR, or your personal code.
         </p>
       </div>
+
+      {result.share_code && (
+        <div style={{
+          background: BG_PANEL,
+          border: `1px solid ${GOLD}`,
+          borderRadius: 14,
+          padding: 20,
+          marginBottom: 16,
+          textAlign: 'center',
+        }}>
+          <div style={{
+            color: GOLD, fontSize: 10, letterSpacing: '0.2em',
+            textTransform: 'uppercase', fontWeight: 700, marginBottom: 10,
+          }}>
+            Your code
+          </div>
+          <div style={{
+            color: INK,
+            fontSize: 36,
+            fontWeight: 800,
+            letterSpacing: '0.06em',
+            textTransform: 'uppercase',
+            marginBottom: 12,
+            fontFamily: "'JetBrains Mono', ui-monospace, monospace",
+          }}>
+            {result.share_code}
+          </div>
+          <p style={{ color: INK_DIM, fontSize: 13, margin: '0 0 14px', lineHeight: 1.5 }}>
+            Tell riders: <strong style={{ color: INK }}>“type {result.share_code} at checkout”</strong>.
+            No phone, no link — every ticket with that code counts toward your total.
+          </p>
+          <button
+            onClick={copyCode}
+            style={{
+              background: 'transparent',
+              color: GOLD,
+              border: `1px solid ${GOLD}`,
+              borderRadius: 8,
+              padding: '10px 14px',
+              fontSize: 13,
+              fontWeight: 600,
+              letterSpacing: '0.04em',
+              cursor: 'pointer',
+              width: '100%',
+              minHeight: 44,
+            }}
+          >
+            {codeCopied ? 'Copied' : 'Copy code'}
+          </button>
+        </div>
+      )}
 
       <div style={{
         background: BG_PANEL,

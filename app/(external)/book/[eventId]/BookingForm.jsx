@@ -10,6 +10,7 @@ export default function BookingForm({ eventId, eventName, ticketTypes, waiver })
   const defaultTtId = ticketTypes[0]?.id || ''
 
   const [attribution, setAttribution] = useState(null)
+  const [bartenderCode, setBartenderCode] = useState('')
   useEffect(() => {
     if (typeof window === 'undefined') return
     const p = new URLSearchParams(window.location.search)
@@ -125,6 +126,13 @@ export default function BookingForm({ eventId, eventName, ticketTypes, waiver })
       }
     })
 
+    // Bartender code, if typed, rides on attribution. Server resolves it
+    // case-insensitively against bartenders.share_code → slug.
+    const bartenderCodeTrim = bartenderCode.trim()
+    const submittedAttribution = bartenderCodeTrim
+      ? { ...(attribution || {}), bartender_code: bartenderCodeTrim }
+      : attribution
+
     try {
       const res = await fetch('/api/checkout', {
         method: 'POST',
@@ -134,7 +142,7 @@ export default function BookingForm({ eventId, eventName, ticketTypes, waiver })
           buyer,
           riders: ridersPayload,
           buyer_typed_name: buyerTypedName.trim(),
-          attribution,
+          attribution: submittedAttribution,
           client_token: clientToken,
         }),
       })
@@ -374,6 +382,21 @@ export default function BookingForm({ eventId, eventName, ticketTypes, waiver })
             )}
           </div>
         )}
+      </Section>
+
+      <Section title="Bartender code (optional)">
+        <p style={{ fontSize: 12, color: '#9c9ca3', margin: 0 }}>
+          Did a bartender send you? Type their code to give them credit.
+        </p>
+        <input
+          value={bartenderCode}
+          onChange={e => setBartenderCode(e.target.value)}
+          placeholder="e.g. BRITTANY"
+          autoCapitalize="characters"
+          autoCorrect="off"
+          spellCheck={false}
+          style={{ ...input, textTransform: 'uppercase', letterSpacing: '0.05em' }}
+        />
       </Section>
 
       {error && (

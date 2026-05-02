@@ -5,7 +5,11 @@ import {
   referralUrlFor,
   renderBartenderQr,
   pickFreeSlug,
+  shareCodeBase,
+  pickFreeShareCode,
 } from '@/lib/bartenders'
+import { normalizeEmail } from '@/lib/contacts'
+import { normalizePhone } from '@/lib/phone'
 
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
@@ -19,7 +23,7 @@ export async function GET() {
   const supabase = supabaseAdmin()
   const { data, error } = await supabase
     .from('bartenders')
-    .select('slug, display_name, bar, qr_image_url, active, created_at')
+    .select('slug, display_name, bar, qr_image_url, active, share_code, email, phone, created_at')
     .order('created_at', { ascending: false })
 
   if (error) return Response.json({ error: error.message }, { status: 500 })
@@ -36,6 +40,8 @@ export async function POST(req) {
 
   const firstName = String(body?.first_name || '').trim()
   const barSlug = String(body?.bar_slug || '').trim()
+  const email = normalizeEmail(body?.email)
+  const phone = normalizePhone(body?.phone)
   if (!firstName) return bad('first_name required')
   if (!barSlug) return bad('bar_slug required')
 
@@ -64,6 +70,7 @@ export async function POST(req) {
   if (!slug) return Response.json({ error: 'could not find a free slug' }, { status: 500 })
 
   const qrImageUrl = await renderBartenderQr(referralUrlFor(slug))
+  const shareCode = await pickFreeShareCode(supabase, shareCodeBase(firstName))
 
   const row = {
     slug,
@@ -71,6 +78,9 @@ export async function POST(req) {
     bar: bar.name,
     qr_image_url: qrImageUrl,
     active: true,
+    share_code: shareCode,
+    email,
+    phone,
   }
 
   const { error } = await supabase.from('bartenders').insert(row)
@@ -109,6 +119,14 @@ export async function PATCH(req) {
     updates.active = Boolean(body.active)
   }
 
+  if ('email' in body) {
+    updates.email = normalizeEmail(body.email) // null clears the field
+  }
+
+  if ('phone' in body) {
+    updates.phone = normalizePhone(body.phone)
+  }
+
   if (Object.keys(updates).length === 0) return bad('no changes provided')
 
   const supabase = supabaseAdmin()
@@ -116,7 +134,7 @@ export async function PATCH(req) {
     .from('bartenders')
     .update(updates)
     .eq('slug', slug)
-    .select('slug, display_name, bar, qr_image_url, active, created_at')
+    .select('slug, display_name, bar, qr_image_url, active, share_code, email, phone, created_at')
     .maybeSingle()
 
   if (error) return Response.json({ error: error.message }, { status: 500 })

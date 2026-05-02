@@ -140,7 +140,6 @@ function QuickChips() {
       <Chip href="/my-tickets" label="My tickets" accent />
       <Chip href="/bars" label="Partner bars" />
       <Chip href="/about" label="How it works" />
-      <Chip href="/leaderboard" label="Leaderboard" />
     </div>
   )
 }

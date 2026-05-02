@@ -227,6 +227,26 @@ export async function POST(req) {
     }
   }
 
+  // Bartender code → slug. Customer types e.g. "BRITTANY" at checkout; we
+  // look it up case-insensitively against bartenders.share_code and stamp the
+  // slug as qr_code so the existing attribution path (Stripe metadata →
+  // webhook → orders.metadata.qr_code → leaderboard) credits the bartender.
+  // Unknown / inactive codes are silently ignored — we don't want to block a
+  // sale because a customer fat-fingered a code.
+  let resolvedAttribution = body.attribution || null
+  const bartenderCodeRaw = String(resolvedAttribution?.bartender_code || '').trim()
+  if (bartenderCodeRaw) {
+    const { data: bt } = await supabase
+      .from('bartenders')
+      .select('slug, active')
+      .ilike('share_code', bartenderCodeRaw)
+      .maybeSingle()
+    if (bt && bt.active) {
+      resolvedAttribution = { ...resolvedAttribution, qr_code: bt.slug }
+    }
+    delete resolvedAttribution.bartender_code
+  }
+
   const totalCents = riders.reduce((s, r) => s + (ttById.get(r.ticket_type_id)?.price_cents || 0), 0)
 
   const { data: order, error: orderErr } = await supabase
@@ -360,7 +380,7 @@ export async function POST(req) {
       },
       orderId: order.id,
       waiverPayload: JSON.stringify({ sigs: waiverQueue }),
-      attribution: body.attribution || null,
+      attribution: resolvedAttribution,
       origin: req.headers.get('origin') || req.headers.get('referer'),
     })
   } catch (err) {
