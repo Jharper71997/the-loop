@@ -1,6 +1,42 @@
+import { redirect } from 'next/navigation'
+import { revalidatePath } from 'next/cache'
 import { supabaseAdmin } from '@/lib/supabaseAdmin'
 import { formatCents } from '@/lib/leadershipScoreboard'
 import StripeSyncButton from '../../_components/StripeSyncButton'
+import MarkPaidButton from '../../_components/MarkPaidButton'
+
+async function markBarPaid(barSlug) {
+  'use server'
+  const supabase = supabaseAdmin()
+  const { data: bar } = await supabase
+    .from('bars')
+    .select('monthly_fee_cents, payment_method, status, started_at')
+    .eq('slug', barSlug)
+    .maybeSingle()
+  if (!bar || !bar.monthly_fee_cents) return
+  const today = new Date()
+  const period = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-01`
+  await supabase.from('bar_payments').insert({
+    bar_slug: barSlug,
+    amount_cents: bar.monthly_fee_cents,
+    paid_for_period: period,
+    method: bar.payment_method || 'cash',
+    notes: 'Marked paid via one-click button',
+  })
+  if (bar.status === 'prospect') {
+    await supabase
+      .from('bars')
+      .update({
+        status: 'active',
+        started_at: bar.started_at || new Date().toISOString().slice(0, 10),
+        updated_at: new Date().toISOString(),
+      })
+      .eq('slug', barSlug)
+  }
+  revalidatePath('/leadership')
+  revalidatePath('/leadership/bars')
+  redirect('/leadership/bars')
+}
 
 export const dynamic = 'force-dynamic'
 
@@ -227,14 +263,17 @@ export default async function BarsPage() {
                       ) : '—'}
                     </td>
                     <td style={{ ...td, textAlign: 'right' }}>
-                      <a href={`/leadership/bars/${b.slug}/payments/new`} style={{
-                        color: '#d4a333',
-                        fontSize: 10,
-                        letterSpacing: '0.18em',
-                        textTransform: 'uppercase',
-                        textDecoration: 'none',
-                        fontWeight: 700,
-                      }}>+ Payment</a>
+                      <div style={{ display: 'inline-flex', gap: 6, alignItems: 'center' }}>
+                        {!paidMethodThisMonth.has(b.slug) && b.status === 'active' && b.monthly_fee_cents > 0 && (
+                          <MarkPaidButton action={markBarPaid.bind(null, b.slug)} />
+                        )}
+                        <a href={`/leadership/bars/${b.slug}/payments/new`} style={{
+                          color: '#d4a333',
+                          fontSize: 11,
+                          fontWeight: 600,
+                          textDecoration: 'none',
+                        }}>+ Payment</a>
+                      </div>
                     </td>
                   </tr>
                 )

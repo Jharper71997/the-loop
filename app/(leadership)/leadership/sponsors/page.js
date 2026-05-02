@@ -1,6 +1,50 @@
+import { redirect } from 'next/navigation'
+import { revalidatePath } from 'next/cache'
 import { supabaseAdmin } from '@/lib/supabaseAdmin'
 import { formatCents } from '@/lib/leadershipScoreboard'
 import StripeSyncButton from '../../_components/StripeSyncButton'
+import MarkPaidButton from '../../_components/MarkPaidButton'
+
+async function markSponsorPaid(sponsorId) {
+  'use server'
+  const supabase = supabaseAdmin()
+  const { data: sponsor } = await supabase
+    .from('sponsors')
+    .select('amount_committed, status, amount_paid')
+    .eq('id', sponsorId)
+    .maybeSingle()
+  if (!sponsor) return
+  const amount = Number(sponsor.amount_committed || 0)
+  if (amount <= 0) return  // in-kind partner; no payment to record
+  const { data: lastPayment } = await supabase
+    .from('sponsor_payments')
+    .select('method')
+    .eq('sponsor_id', sponsorId)
+    .order('paid_at', { ascending: false })
+    .limit(1)
+    .maybeSingle()
+  const method = lastPayment?.method || 'cash'
+  const today = new Date()
+  const period = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-01`
+  await supabase.from('sponsor_payments').insert({
+    sponsor_id: sponsorId,
+    amount_cents: Math.round(amount * 100),
+    paid_for_period: period,
+    method,
+    notes: 'Marked paid via one-click button',
+  })
+  await supabase
+    .from('sponsors')
+    .update({
+      amount_paid: Number(sponsor.amount_paid || 0) + amount,
+      status: sponsor.status === 'prospect' || sponsor.status === 'committed' ? 'paid' : sponsor.status,
+      updated_at: new Date().toISOString(),
+    })
+    .eq('id', sponsorId)
+  revalidatePath('/leadership')
+  revalidatePath('/leadership/sponsors')
+  redirect('/leadership/sponsors')
+}
 
 export const dynamic = 'force-dynamic'
 
@@ -234,14 +278,17 @@ export default async function SponsorsPage() {
                         ) : '—'}
                       </td>
                       <td style={{ ...td, textAlign: 'right' }}>
-                        <a href={`/leadership/sponsors/${s.id}/payments/new`} style={{
-                          color: '#d4a333',
-                          fontSize: 10,
-                          letterSpacing: '0.18em',
-                          textTransform: 'uppercase',
-                          textDecoration: 'none',
-                          fontWeight: 700,
-                        }}>+ Payment</a>
+                        <div style={{ display: 'inline-flex', gap: 6, alignItems: 'center' }}>
+                          {!paidMethodThisMonth.has(s.id) && monthlyCents > 0 && (
+                            <MarkPaidButton action={markSponsorPaid.bind(null, s.id)} />
+                          )}
+                          <a href={`/leadership/sponsors/${s.id}/payments/new`} style={{
+                            color: '#d4a333',
+                            fontSize: 11,
+                            fontWeight: 600,
+                            textDecoration: 'none',
+                          }}>+ Payment</a>
+                        </div>
                       </td>
                     </tr>
                   )
