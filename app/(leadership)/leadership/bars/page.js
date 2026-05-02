@@ -212,7 +212,7 @@ export default async function BarsPage() {
                   <tr key={b.slug} style={{ borderBottom: '1px solid #2a2a31' }}>
                     <td style={td}>
                       <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
-                        <span style={{ fontWeight: 600, color: '#e8e8ea' }}>{b.name}</span>
+                        <a href={`/leadership/bars/${b.slug}`} style={{ fontWeight: 600, color: '#e8e8ea', textDecoration: 'none' }}>{b.name}</a>
                         {paidMethodThisMonth.has(b.slug) && (
                           <span title={`Paid this month via ${methodBadge(paidMethodThisMonth.get(b.slug))}`} style={{
                             background: 'rgba(63,178,127,0.15)',

@@ -100,7 +100,7 @@ export default async function DriversPage() {
                   return (
                     <tr key={d.id} style={{ borderBottom: '1px solid #2a2a31' }}>
                       <td style={td}>
-                        <div style={{ fontWeight: 600 }}>{d.name}</div>
+                        <a href={`/leadership/drivers/${d.id}`} style={{ fontWeight: 600, color: '#e8e8ea', textDecoration: 'none' }}>{d.name}</a>
                         {d.notes && <div style={{ fontSize: 12, color: '#9c9ca3', marginTop: 2 }}>{d.notes}</div>}
                       </td>
                       <td style={td}>
