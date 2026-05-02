@@ -13,7 +13,6 @@ const LINKS = [
   { href: '/leadership/cash',     label: 'Cash' },
   { href: '/leadership/sponsors', label: 'Sponsors' },
   { href: '/leadership/bars',     label: 'Bars' },
-  { href: '/leadership/drivers',  label: 'Drivers' },
   { href: '/admin',               label: 'Ops →' },
 ]
 
