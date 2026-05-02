@@ -178,16 +178,6 @@ export default function SummaryView({
         )}
       </Panel>
 
-      {!event && (
-        <Panel title="Sales not enabled">
-          <p style={{ color: INK_DIM, fontSize: 13, margin: 0 }}>
-            This Loop has no sales event yet. Open <em>Edit event and tickets</em> to add the basics, then jump to <em>Tickets and items</em> to add ticket types.
-          </p>
-          <button type="button" onClick={onJumpToEdit} style={primaryBtn}>
-            Set up event →
-          </button>
-        </Panel>
-      )}
     </div>
   )
 }

@@ -129,10 +129,15 @@ export async function POST(req) {
 async function fetchAllOrdersForEvent(eventId, auth) {
   const all = []
   let startingAfter = null
+  // Only replay orders from the last 7 days — historical TT orders don't need
+  // to flow through finalizeBooking (they predate native ticketing) and
+  // re-syncing the entire backlog every press of Sync is wasteful.
+  const sevenDaysAgoUnix = Math.floor((Date.now() - 7 * 24 * 60 * 60 * 1000) / 1000)
   for (let page = 0; page < 10; page++) {
     const url = new URL('https://api.tickettailor.com/v1/orders')
     url.searchParams.set('event_id', eventId)
     url.searchParams.set('limit', '100')
+    url.searchParams.set('created_at_gte', String(sevenDaysAgoUnix))
     if (startingAfter) url.searchParams.set('starting_after', startingAfter)
 
     let res
