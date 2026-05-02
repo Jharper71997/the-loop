@@ -87,11 +87,32 @@ export default async function TonightPage() {
 
   const { data: ordersToday } = await supabase
     .from('orders')
-    .select('id, buyer_name, total_cents, party_size, status, paid_at, metadata')
+    .select('id, buyer_name, buyer_phone, contact_id, event_id, total_cents, party_size, status, paid_at, metadata')
     .eq('status', 'paid')
     .gte('paid_at', `${today}T00:00:00`)
     .order('paid_at', { ascending: false })
     .limit(5)
+
+  // Per-order pickup-stop breakdown so the Orders today panel can render
+  // "3 × Hideaway Lounge" instead of just "3 tickets". Order_items mirror
+  // both Stripe-native checkouts and TT syncs (migration 008), so this
+  // works for either source.
+  const orderIds = (ordersToday || []).map(o => o.id)
+  const { data: orderItemsToday } = orderIds.length
+    ? await supabase
+        .from('order_items')
+        .select('order_id, stop_index')
+        .in('order_id', orderIds)
+    : { data: [] }
+
+  const activeSchedule = Array.isArray(activeGroup?.schedule) ? activeGroup.schedule : []
+  const orderStopBreakdown = {}
+  for (const it of orderItemsToday || []) {
+    const idx = it.stop_index
+    const stopName = (idx != null && activeSchedule[idx]?.name) || (idx != null ? `Stop ${idx + 1}` : 'Unassigned')
+    if (!orderStopBreakdown[it.order_id]) orderStopBreakdown[it.order_id] = {}
+    orderStopBreakdown[it.order_id][stopName] = (orderStopBreakdown[it.order_id][stopName] || 0) + 1
+  }
 
   return (
     <TonightClient
@@ -100,6 +121,7 @@ export default async function TonightPage() {
       group={activeGroup}
       currentIdx={currentIdx}
       ordersToday={ordersToday || []}
+      orderStopBreakdown={orderStopBreakdown}
       ticketsByContact={ticketsByContact}
       totalTickets={totalTickets}
       upcomingGroups={upcomingGroups}

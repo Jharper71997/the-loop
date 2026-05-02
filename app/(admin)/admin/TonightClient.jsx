@@ -11,7 +11,7 @@ const ACCENT = '#d4a333'
 const SURFACE = '#15151a'
 const BORDER = '#2a2a31'
 
-export default function TonightClient({ state, today, group, currentIdx, ordersToday, ticketsByContact = {}, totalTickets = 0, upcomingGroups = [] }) {
+export default function TonightClient({ state, today, group, currentIdx, ordersToday, orderStopBreakdown = {}, ticketsByContact = {}, totalTickets = 0, upcomingGroups = [] }) {
   return (
     <main style={{ maxWidth: 1100, margin: '0 auto', padding: '20px 16px', minHeight: '100vh', color: '#fff' }}>
       <Header today={today} group={group} state={state} />
@@ -34,25 +34,32 @@ export default function TonightClient({ state, today, group, currentIdx, ordersT
           <div style={{ display: 'grid', gap: 6, marginTop: 8 }}>
             {ordersToday.map(o => {
               const ttTagged = o.metadata?.source === 'ticket_tailor'
+              const stops = formatOrderStops(orderStopBreakdown[o.id], o.party_size)
               return (
                 <div key={o.id} style={{
                   padding: 8, background: '#0e0e12', borderRadius: 6, fontSize: 12,
                   display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 8,
                 }}>
-                  <span>
-                    {o.buyer_name || '(no name)'} · {o.party_size} ticket{o.party_size === 1 ? '' : 's'}
-                    {ttTagged && (
-                      <span style={{
-                        marginLeft: 8,
-                        fontSize: 9,
-                        letterSpacing: '0.18em',
-                        textTransform: 'uppercase',
-                        color: '#9c9ca3',
-                        border: '1px solid #2a2a31',
-                        padding: '1px 6px',
-                        borderRadius: 3,
-                      }}>TT</span>
-                    )}
+                  <span style={{ display: 'grid', gap: 2, minWidth: 0 }}>
+                    <span>
+                      <strong style={{ color: '#e8e8ea' }}>{o.buyer_name || '(no name)'}</strong>
+                      {o.buyer_phone && (
+                        <span style={{ color: '#9c9ca3', marginLeft: 6 }}>· {o.buyer_phone}</span>
+                      )}
+                      {ttTagged && (
+                        <span style={{
+                          marginLeft: 8,
+                          fontSize: 9,
+                          letterSpacing: '0.18em',
+                          textTransform: 'uppercase',
+                          color: '#9c9ca3',
+                          border: '1px solid #2a2a31',
+                          padding: '1px 6px',
+                          borderRadius: 3,
+                        }}>TT</span>
+                      )}
+                    </span>
+                    <span style={{ color: '#9c9ca3', fontSize: 11 }}>{stops}</span>
                   </span>
                   <span style={{ color: ACCENT, fontWeight: 600 }}>${(o.total_cents / 100).toFixed(2)}</span>
                 </div>
@@ -469,6 +476,22 @@ function flattenMembers(group, ticketsByContact = {}) {
     has_signed_waiver: !!m.contacts?.has_signed_waiver,
     tickets: m.contacts?.id ? (ticketsByContact[m.contacts.id] || 1) : 1,
   }))
+}
+
+function formatOrderStops(stopMap, partySize) {
+  // Compact summary like "3 × Hideaway Lounge" or "2 × Hideaway, 1 × Foster's".
+  // Falls back to plain ticket count when order_items haven't been mirrored
+  // yet (very old TT orders predating migration 008).
+  if (!stopMap || typeof stopMap !== 'object') {
+    const n = Number(partySize) || 1
+    return `${n} ticket${n === 1 ? '' : 's'}`
+  }
+  const entries = Object.entries(stopMap).sort((a, b) => b[1] - a[1])
+  if (!entries.length) {
+    const n = Number(partySize) || 1
+    return `${n} ticket${n === 1 ? '' : 's'}`
+  }
+  return entries.map(([name, count]) => `${count} × ${name}`).join(', ')
 }
 
 function formatSeatLabel(riderCount, totalTickets) {
