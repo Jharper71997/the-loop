@@ -1,5 +1,6 @@
 import { supabaseAdmin } from '@/lib/supabaseAdmin'
 import { formatCents } from '@/lib/leadershipScoreboard'
+import StripeSyncButton from '../../_components/StripeSyncButton'
 
 export const dynamic = 'force-dynamic'
 
@@ -39,6 +40,7 @@ export default async function BarsPage() {
 
   const lastPaidBy = new Map()
   const paidThisMonth = new Map()  // bar_slug → cents paid this month
+  const paidMethodThisMonth = new Map()
   const stripeActive = new Set()
   const stripeCutoff = Date.now() - 45 * 24 * 60 * 60 * 1000
 
@@ -53,7 +55,15 @@ export default async function BarsPage() {
       : (p.paid_at >= startISO && p.paid_at < endISO)
     if (inMonth) {
       paidThisMonth.set(p.bar_slug, (paidThisMonth.get(p.bar_slug) || 0) + p.amount_cents)
+      if (!paidMethodThisMonth.has(p.bar_slug)) {
+        paidMethodThisMonth.set(p.bar_slug, p.method)
+      }
     }
+  }
+
+  function methodBadge(method) {
+    const labels = { stripe: 'Stripe', check: 'Check', cash: 'Cash', venmo: 'Venmo', cashapp: 'Cash App', other: 'Other' }
+    return labels[method] || (method || '').replace(/^\w/, c => c.toUpperCase())
   }
 
   // Outstanding totals (active bars only)
@@ -112,18 +122,21 @@ export default async function BarsPage() {
           }}>
             Bars
           </h1>
-          <a href="/leadership/bars/new" style={{
-            background: '#d4a333',
-            color: '#0a0a0b',
-            fontFamily: '-apple-system, "Segoe UI", Roboto, sans-serif',
-            fontSize: 13,
-            fontWeight: 600,
-            padding: '8px 14px',
-            borderRadius: 6,
-            textDecoration: 'none',
-          }}>
-            + Add bar
-          </a>
+          <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
+            <StripeSyncButton />
+            <a href="/leadership/bars/new" style={{
+              background: '#d4a333',
+              color: '#0a0a0b',
+              fontFamily: '-apple-system, "Segoe UI", Roboto, sans-serif',
+              fontSize: 13,
+              fontWeight: 600,
+              padding: '8px 14px',
+              borderRadius: 6,
+              textDecoration: 'none',
+            }}>
+              + Add bar
+            </a>
+          </div>
         </div>
 
         <OutstandingBanner
@@ -162,10 +175,21 @@ export default async function BarsPage() {
                 return (
                   <tr key={b.slug} style={{ borderBottom: '1px solid #2a2a31' }}>
                     <td style={td}>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
                         <span style={{ fontWeight: 600, color: '#e8e8ea' }}>{b.name}</span>
-                        {stripeActive.has(b.slug) && (
-                          <span title="Active Stripe subscription" style={{
+                        {paidMethodThisMonth.has(b.slug) && (
+                          <span title={`Paid this month via ${methodBadge(paidMethodThisMonth.get(b.slug))}`} style={{
+                            background: 'rgba(63,178,127,0.15)',
+                            color: '#3fb27f',
+                            border: '1px solid rgba(63,178,127,0.35)',
+                            fontSize: 10,
+                            fontWeight: 600,
+                            padding: '1px 6px',
+                            borderRadius: 4,
+                          }}>✓ {methodBadge(paidMethodThisMonth.get(b.slug))}</span>
+                        )}
+                        {!paidMethodThisMonth.has(b.slug) && stripeActive.has(b.slug) && (
+                          <span title="Active Stripe subscription · auto-charges on anniversary" style={{
                             background: 'rgba(99,91,255,0.15)',
                             color: '#8b85ff',
                             border: '1px solid rgba(99,91,255,0.35)',
@@ -173,8 +197,7 @@ export default async function BarsPage() {
                             fontWeight: 600,
                             padding: '1px 6px',
                             borderRadius: 4,
-                            letterSpacing: '0.04em',
-                          }}>✓ Stripe</span>
+                          }}>Stripe sub</span>
                         )}
                       </div>
                       {b.contact_name && <div style={{ fontSize: 11, color: '#9c9ca3', marginTop: 2 }}>{b.contact_name}</div>}

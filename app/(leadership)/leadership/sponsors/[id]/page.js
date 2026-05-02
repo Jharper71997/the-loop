@@ -1,8 +1,19 @@
-import { notFound } from 'next/navigation'
+import { notFound, redirect } from 'next/navigation'
+import { revalidatePath } from 'next/cache'
 import { supabaseAdmin } from '@/lib/supabaseAdmin'
 import { formatCents } from '@/lib/leadershipScoreboard'
+import DeleteForm from '../../../_components/DeleteForm'
 
 export const dynamic = 'force-dynamic'
+
+async function deleteSponsor(id) {
+  'use server'
+  const supabase = supabaseAdmin()
+  await supabase.from('sponsors').delete().eq('id', id)
+  revalidatePath('/leadership')
+  revalidatePath('/leadership/sponsors')
+  redirect('/leadership/sponsors')
+}
 
 const STATUS_COLORS = {
   prospect:  { bg: 'rgba(111,111,118,0.15)', fg: '#c8c8cc' },
@@ -35,9 +46,18 @@ export default async function SponsorDetail({ params }) {
             <h1 style={titleStyle}>{sponsor.name}</h1>
             {sponsor.tier && <p style={subtitleStyle}>{sponsor.tier}</p>}
           </div>
-          <a href={`/leadership/sponsors/${id}/payments/new`} style={primaryButton}>
-            + Payment
-          </a>
+          <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+            <a href={`/leadership/sponsors/${id}/payments/new`} style={primaryButton}>
+              + Payment
+            </a>
+            <a href={`/leadership/sponsors/${id}/edit`} style={secondaryButton}>
+              Edit
+            </a>
+            <DeleteForm
+              action={deleteSponsor.bind(null, id)}
+              confirmMessage={`Delete ${sponsor.name}? This also deletes all their payment records.`}
+            />
+          </div>
         </div>
 
         <div style={statsGrid}>
@@ -116,7 +136,8 @@ const backLink = { color: '#9c9ca3', fontSize: 11, letterSpacing: '0.18em', text
 const headerRow = { display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', flexWrap: 'wrap', gap: 12, marginBottom: 22 }
 const titleStyle = { color: '#e8e8ea', fontFamily: '-apple-system, "Segoe UI", Roboto, sans-serif', fontSize: 24, fontWeight: 700, letterSpacing: '-0.01em', margin: 0 }
 const subtitleStyle = { color: '#9c9ca3', fontSize: 13, margin: '4px 0 0 0' }
-const primaryButton = { background: 'linear-gradient(180deg, #f0c24a, #d4a333)', color: '#0a0a0b', fontFamily: "'JetBrains Mono', ui-monospace, monospace", fontSize: 11, fontWeight: 700, letterSpacing: '0.18em', textTransform: 'uppercase', padding: '10px 16px', borderRadius: 6, textDecoration: 'none', boxShadow: '0 0 20px rgba(212,163,51,0.35)' }
+const primaryButton = { background: '#d4a333', color: '#0a0a0b', fontFamily: '-apple-system, "Segoe UI", Roboto, sans-serif', fontSize: 13, fontWeight: 600, padding: '8px 14px', borderRadius: 6, textDecoration: 'none' }
+const secondaryButton = { background: 'transparent', color: '#e8e8ea', border: '1px solid #2a2a31', fontFamily: '-apple-system, "Segoe UI", Roboto, sans-serif', fontSize: 13, fontWeight: 600, padding: '8px 14px', borderRadius: 6, textDecoration: 'none' }
 const statsGrid = { display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))', gap: 10, marginBottom: 18 }
 const notesBox = { background: 'linear-gradient(180deg, #121216, #0d0d10)', border: '1px solid #2a2a31', borderRadius: 6, padding: '12px 14px', marginBottom: 22 }
 const notesLabel = { color: '#9c9ca3', fontSize: 10, letterSpacing: '0.18em', textTransform: 'uppercase', marginBottom: 6 }

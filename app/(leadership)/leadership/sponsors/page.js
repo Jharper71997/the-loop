@@ -1,5 +1,6 @@
 import { supabaseAdmin } from '@/lib/supabaseAdmin'
 import { formatCents } from '@/lib/leadershipScoreboard'
+import StripeSyncButton from '../../_components/StripeSyncButton'
 
 export const dynamic = 'force-dynamic'
 
@@ -39,6 +40,7 @@ export default async function SponsorsPage() {
   const lastPaidBy = new Map()
   const paidThisMonth = new Map()
   const stripeActive = new Set()
+  const paidMethodThisMonth = new Map()  // sponsor_id → method label of most recent this-month payment
   const stripeCutoff = Date.now() - 45 * 24 * 60 * 60 * 1000
   for (const p of (payments || [])) {
     if (!lastPaidBy.has(p.sponsor_id)) lastPaidBy.set(p.sponsor_id, p)
@@ -50,7 +52,15 @@ export default async function SponsorsPage() {
       : (p.paid_at >= startISO && p.paid_at < endISO)
     if (inMonth) {
       paidThisMonth.set(p.sponsor_id, (paidThisMonth.get(p.sponsor_id) || 0) + p.amount_cents)
+      if (!paidMethodThisMonth.has(p.sponsor_id)) {
+        paidMethodThisMonth.set(p.sponsor_id, p.method)
+      }
     }
+  }
+
+  function methodBadge(method) {
+    const labels = { stripe: 'Stripe', check: 'Check', cash: 'Cash', venmo: 'Venmo', cashapp: 'Cash App', other: 'Other' }
+    return labels[method] || (method || '').replace(/^\w/, c => c.toUpperCase())
   }
 
   // Monthly expected = amount_committed for active sponsors (committed/paid).
@@ -112,7 +122,8 @@ export default async function SponsorsPage() {
           }}>
             Sponsors
           </h1>
-          <div style={{ display: 'flex', gap: 8 }}>
+          <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
+            <StripeSyncButton />
             <a href="/leadership/sponsors/new" style={{
               background: '#d4a333',
               color: '#0a0a0b',
@@ -171,10 +182,21 @@ export default async function SponsorsPage() {
                   return (
                     <tr key={s.id} style={{ borderBottom: '1px solid #2a2a31' }}>
                       <td style={td}>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
                           <a href={`/leadership/sponsors/${s.id}`} style={{ fontWeight: 600, color: '#e8e8ea', textDecoration: 'none' }}>{s.name}</a>
-                          {stripeActive.has(s.id) && (
-                            <span title="Active Stripe subscription" style={{
+                          {paidMethodThisMonth.has(s.id) && (
+                            <span title={`Paid this month via ${methodBadge(paidMethodThisMonth.get(s.id))}`} style={{
+                              background: 'rgba(63,178,127,0.15)',
+                              color: '#3fb27f',
+                              border: '1px solid rgba(63,178,127,0.35)',
+                              fontSize: 10,
+                              fontWeight: 600,
+                              padding: '1px 6px',
+                              borderRadius: 4,
+                            }}>✓ {methodBadge(paidMethodThisMonth.get(s.id))}</span>
+                          )}
+                          {!paidMethodThisMonth.has(s.id) && stripeActive.has(s.id) && (
+                            <span title="Active Stripe subscription · auto-charges on anniversary" style={{
                               background: 'rgba(99,91,255,0.15)',
                               color: '#8b85ff',
                               border: '1px solid rgba(99,91,255,0.35)',
@@ -182,8 +204,7 @@ export default async function SponsorsPage() {
                               fontWeight: 600,
                               padding: '1px 6px',
                               borderRadius: 4,
-                              letterSpacing: '0.04em',
-                            }}>✓ Stripe</span>
+                            }}>Stripe sub</span>
                           )}
                         </div>
                         {s.tier && <div style={{ fontSize: 11, color: '#9c9ca3', marginTop: 2 }}>{s.tier}</div>}
