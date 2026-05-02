@@ -294,7 +294,7 @@ export default function Groups() {
                   Pickup {group.pickup_time || 'TBD'}
                 </p>
               </div>
-              <div style={{ display: 'flex', gap: '6px', alignItems: 'center' }}>
+              <div style={{ display: 'flex', gap: '6px', alignItems: 'center', flexWrap: 'wrap', justifyContent: 'flex-end' }}>
                 <a
                   href={`/admin/groups/${group.id}#summary`}
                   onClick={e => e.stopPropagation()}
@@ -306,6 +306,18 @@ export default function Groups() {
                   }}
                 >
                   Summary
+                </a>
+                <a
+                  href={`/admin/groups/${group.id}#tickets`}
+                  onClick={e => e.stopPropagation()}
+                  style={{
+                    color: '#c8c8cc', fontSize: '12px', textDecoration: 'none',
+                    padding: '6px 10px', border: '1px solid #2a2a31', borderRadius: '6px',
+                    minHeight: 32, display: 'inline-flex', alignItems: 'center',
+                    fontWeight: 600,
+                  }}
+                >
+                  Tickets
                 </a>
                 <a
                   href={`/admin/groups/${group.id}#edit`}

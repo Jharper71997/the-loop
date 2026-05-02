@@ -364,11 +364,25 @@ function StopCards({ stops, riders, currentIdx, showCheckoff = false }) {
                     padding: 8, background: '#0e0e12', borderRadius: 8, border: `1px solid ${BORDER}`,
                     display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 8,
                   }}>
-                    <div style={{ fontSize: 13 }}>
-                      <strong>{r.first_name} {r.last_name}</strong>
+                    <a
+                      href={r.id ? `/admin/contacts?id=${encodeURIComponent(r.id)}` : '#'}
+                      style={{
+                        fontSize: 13,
+                        color: 'inherit',
+                        textDecoration: 'none',
+                        flex: 1,
+                        minWidth: 0,
+                      }}
+                      title="Open contact to edit"
+                    >
+                      <strong style={{ borderBottom: '1px dashed #2a2a31' }}>
+                        {r.first_name || r.last_name ? `${r.first_name} ${r.last_name}`.trim() : '(no name)'}
+                      </strong>
                       {r.tickets > 1 && <TicketBadge tickets={r.tickets} />}
-                      {r.phone && <span style={{ color: '#9c9ca3', fontSize: 11, marginLeft: 6 }}>{r.phone}</span>}
-                    </div>
+                      {r.phone
+                        ? <span style={{ color: '#9c9ca3', fontSize: 11, marginLeft: 6 }}>{r.phone}</span>
+                        : <span style={{ color: '#e07a7a', fontSize: 11, marginLeft: 6 }}>no phone — tap to fix</span>}
+                    </a>
                     <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
                       {showCheckoff && (
                         <PickedUpToggle

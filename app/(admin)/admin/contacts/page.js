@@ -79,6 +79,21 @@ export default function Contacts() {
     refresh()
   }, [])
 
+  // Deep-link support: /admin/contacts?id=<uuid> auto-opens that contact's
+  // detail panel. Lets the StopCard rider names on /admin Schedule click
+  // straight into the edit form.
+  useEffect(() => {
+    if (!contacts.length) return
+    const params = new URLSearchParams(window.location.search)
+    const wantId = params.get('id')
+    if (!wantId) return
+    const match = contacts.find(c => c.id === wantId)
+    if (match && (!selected || selected.id !== wantId)) {
+      setSelected(match)
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [contacts])
+
   async function refresh() {
     const [c, g, m] = await Promise.all([
       supabase.from('contacts').select('*').order('last_name'),
@@ -135,16 +150,39 @@ export default function Contacts() {
 
   async function assignToGroup() {
     if (!assignedGroup || !selected) return
-    await supabase.from('group_members').insert([{
-      group_id: assignedGroup,
-      contact_id: selected.id,
-    }])
-    alert('Added to group!')
-    setAssignedGroup('')
-    refresh()
+    try {
+      const res = await fetch(`/api/admin/contacts/${encodeURIComponent(selected.id)}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ group_id: assignedGroup }),
+      })
+      const json = await res.json().catch(() => ({}))
+      if (!res.ok || json.error) {
+        alert(json.error || `Assign failed (${res.status})`)
+        return
+      }
+      alert(json.already ? 'Already on this Loop.' : 'Added to Loop!')
+      setAssignedGroup('')
+      refresh()
+    } catch (err) {
+      alert(err?.message || 'network error')
+    }
   }
 
-  const today = new Date().toISOString().slice(0, 10)
+  // Operational date in the Indianapolis TZ — UTC midnight rolls over at 8pm
+  // local, which would hide tonight's Loop from the assign dropdown after
+  // dinner. The schedule helper already does this calc for /admin Tonight.
+  const today = (() => {
+    try {
+      const fmt = new Intl.DateTimeFormat('en-CA', {
+        timeZone: 'America/Indiana/Indianapolis',
+        year: 'numeric', month: '2-digit', day: '2-digit',
+      })
+      return fmt.format(new Date())
+    } catch {
+      return new Date().toISOString().slice(0, 10)
+    }
+  })()
 
   const enriched = useMemo(() => {
     const groupById = new Map(groups.map(g => [g.id, g]))

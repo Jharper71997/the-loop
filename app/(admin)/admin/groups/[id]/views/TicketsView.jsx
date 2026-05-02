@@ -10,39 +10,19 @@ const BORDER = '#2a2a31'
 const INK = '#f5f5f7'
 const INK_DIM = '#9c9ca3'
 
-export default function TicketsView({ event, ticketTypes, stops }) {
+export default function TicketsView({ event, ticketTypes, stops, onJumpToEdit }) {
   const router = useRouter()
   const [editing, setEditing] = useState(null) // null | 'new' | ticket_type id
 
   function openNew() {
     if (!event?.id) {
-      alert('Set up the event first (Edit event and tickets) before adding ticket types.')
+      onJumpToEdit?.()
       return
     }
     setEditing('new')
   }
 
-  if (!event?.id) {
-    return (
-      <div style={{ display: 'grid', gap: 16, maxWidth: 800 }}>
-        <Header title="Tickets and items" />
-        <div style={{
-          background: SURFACE,
-          border: `1px solid ${BORDER}`,
-          borderRadius: 12,
-          padding: 24,
-          textAlign: 'center',
-          color: INK_DIM,
-          fontSize: 14,
-        }}>
-          Add the event basics in <strong style={{ color: INK }}>Edit event and tickets</strong> first.
-          Once that's saved you can come back here to define ticket types.
-        </div>
-      </div>
-    )
-  }
-
-  const sorted = [...ticketTypes].sort((a, b) => (a.sort_order || 0) - (b.sort_order || 0))
+  const sorted = [...(ticketTypes || [])].sort((a, b) => (a.sort_order || 0) - (b.sort_order || 0))
 
   return (
     <div style={{ display: 'grid', gap: 16, maxWidth: 900 }}>
