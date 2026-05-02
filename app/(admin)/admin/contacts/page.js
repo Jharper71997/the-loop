@@ -90,19 +90,47 @@ export default function Contacts() {
     setMembers(m.data || [])
   }
 
+  const [saveStatus, setSaveStatus] = useState(null) // 'saving' | 'ok' | { error }
+
   async function saveEdit() {
-    await supabase.from('contacts').update(editForm).eq('id', selected.id)
-    setSelected({ ...selected, ...editForm })
-    setEditing(false)
-    refresh()
+    setSaveStatus('saving')
+    try {
+      const res = await fetch(`/api/admin/contacts/${encodeURIComponent(selected.id)}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(editForm),
+      })
+      const json = await res.json().catch(() => ({}))
+      if (!res.ok || json.error) {
+        setSaveStatus({ error: json.error || `HTTP ${res.status}` })
+        return
+      }
+      setSelected(json.contact || { ...selected, ...editForm })
+      setEditing(false)
+      setSaveStatus('ok')
+      refresh()
+      setTimeout(() => setSaveStatus(null), 2500)
+    } catch (err) {
+      setSaveStatus({ error: err?.message || 'network error' })
+    }
   }
 
   async function deleteContact() {
     if (!confirm('Delete this contact?')) return
-    await supabase.from('group_members').delete().eq('contact_id', selected.id)
-    await supabase.from('contacts').delete().eq('id', selected.id)
-    setSelected(null)
-    refresh()
+    try {
+      const res = await fetch(`/api/admin/contacts/${encodeURIComponent(selected.id)}`, {
+        method: 'DELETE',
+      })
+      const json = await res.json().catch(() => ({}))
+      if (!res.ok || json.error) {
+        alert(json.error || `Delete failed (${res.status})`)
+        return
+      }
+      setSelected(null)
+      refresh()
+    } catch (err) {
+      alert(err?.message || 'network error')
+    }
   }
 
   async function assignToGroup() {
@@ -192,7 +220,18 @@ export default function Contacts() {
               <input placeholder="Last name" value={editForm.last_name || ''} onChange={e => setEditForm({ ...editForm, last_name: e.target.value })} />
               <input placeholder="Phone" value={editForm.phone || ''} onChange={e => setEditForm({ ...editForm, phone: e.target.value })} />
               <input placeholder="Email" value={editForm.email || ''} onChange={e => setEditForm({ ...editForm, email: e.target.value })} />
-              <button className="btn-primary" onClick={saveEdit}>Save Changes</button>
+              <button className="btn-primary" onClick={saveEdit} disabled={saveStatus === 'saving'}>
+                {saveStatus === 'saving' ? 'Saving…' : 'Save Changes'}
+              </button>
+              {saveStatus && saveStatus !== 'saving' && (
+                <p style={{
+                  marginTop: 8,
+                  fontSize: 12,
+                  color: saveStatus === 'ok' ? '#6fbf7f' : '#e07a7a',
+                }}>
+                  {saveStatus === 'ok' ? '✓ Saved' : `Save failed: ${saveStatus.error}`}
+                </p>
+              )}
               <button onClick={() => setEditing(false)} style={{ background: 'none', color: '#888', marginTop: '8px', width: '100%' }}>Cancel</button>
             </>
           ) : (
