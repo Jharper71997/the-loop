@@ -8,11 +8,9 @@ import { isLeadership, isSecurity, isDriver } from '@/lib/roles'
 const LINKS = [
   { href: '/admin', label: 'Schedule' },
   { href: '/admin/groups', label: 'Loops' },
-  { href: '/admin/loops', label: 'Manage', leadership: true },
   { href: '/admin/contacts', label: 'Contacts' },
   { href: '/admin/security', label: 'Security', security: true },
   { href: '/driver', label: 'Driver', driver: true },
-  { href: '/admin/notifications', label: 'Alerts', leadership: true },
 ]
 
 export default function NavBar() {

@@ -54,7 +54,7 @@ export default async function ManageLoopsListPage() {
           </p>
         </div>
         <a
-          href="/admin/loops/new"
+          href="/leadership/loops/new"
           style={{
             background: ACCENT,
             color: '#0a0a0b',
@@ -92,7 +92,7 @@ export default async function ManageLoopsListPage() {
           return (
             <a
               key={g.id}
-              href={`/admin/loops/${g.id}`}
+              href={`/leadership/loops/${g.id}`}
               style={{
                 display: 'flex',
                 alignItems: 'center',

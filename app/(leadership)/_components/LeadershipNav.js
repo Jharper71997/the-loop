@@ -14,7 +14,8 @@ const TOP_LINKS = [
   { href: '/leadership',             label: 'Scoreboard' },
   { href: '/leadership/income',      label: 'Income', groupPaths: INCOME_GROUP },
   { href: '/leadership/leaderboard', label: 'Leaderboard' },
-  { href: '/admin/loops',            label: 'Manage' },
+  { href: '/leadership/loops',       label: 'Loops' },
+  { href: '/leadership/alerts',      label: 'Alerts' },
 ]
 
 const INCOME_SUB_LINKS = [

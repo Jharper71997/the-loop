@@ -46,9 +46,10 @@ const LEADERSHIP_RELOCATIONS = {
   '/admin/finance': '/leadership/finance',
   '/admin/metrics': '/leadership',
   '/admin/qr': '/leadership/qr',
-  '/admin/groups/new': '/admin/loops/new',
+  '/admin/groups/new': '/leadership/loops/new',
   '/admin/leaderboard': '/leadership/leaderboard',
-  '/leadership/loops': '/admin/loops',
+  '/admin/loops': '/leadership/loops',
+  '/admin/notifications': '/leadership/alerts',
   '/security': '/admin/security',
 }
 

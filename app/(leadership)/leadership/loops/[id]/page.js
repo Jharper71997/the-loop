@@ -1,8 +1,8 @@
 import { notFound } from 'next/navigation'
 import { supabaseAdmin } from '@/lib/supabaseAdmin'
-import EventShell from '../../groups/[id]/EventShell'
-import WaiversPanel from '../../groups/[id]/WaiversPanel'
-import SmsBroadcast from '../../../_components/SmsBroadcast'
+import EventShell from '@/app/(admin)/admin/groups/[id]/EventShell'
+import WaiversPanel from '@/app/(admin)/admin/groups/[id]/WaiversPanel'
+import SmsBroadcast from '@/app/(admin)/_components/SmsBroadcast'
 
 export const dynamic = 'force-dynamic'
 
@@ -95,7 +95,7 @@ export default async function ManageLoopDetailPage({ params }) {
         orderItems={orderItems}
         waiverSigs={waiverSigs}
         canEdit={true}
-        basePath="/admin/loops"
+        basePath="/leadership/loops"
       />
 
       {(members || []).length > 0 && (

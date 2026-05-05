@@ -119,7 +119,7 @@ function EventQuickPanel({ group, totalTickets, isLeader = false }) {
       </a>
       {isLeader && (
         <a
-          href={`/admin/loops/${group.id}#edit`}
+          href={`/leadership/loops/${group.id}#edit`}
           style={{
             padding: '10px 14px', borderRadius: 8, border: `1px solid ${ACCENT}`,
             color: ACCENT, fontSize: 12, fontWeight: 700, textDecoration: 'none',
@@ -162,7 +162,7 @@ function Header({ today, group, state, isLeader = false }) {
         <span style={{ color: '#9c9ca3', fontSize: 13 }}>{formatToday(today)}</span>
       </div>
       {isLeader && (
-        <a href="/admin/loops/new" style={{
+        <a href="/leadership/loops/new" style={{
           background: ACCENT, color: '#0a0a0b',
           padding: '10px 16px', borderRadius: 8, fontWeight: 700, fontSize: 13, textDecoration: 'none',
           minHeight: 44, display: 'inline-flex', alignItems: 'center',
@@ -182,7 +182,7 @@ function NoLoopState({ isLeader = false }) {
         When you create a Loop on the Loops tab, this page will show its manifest, stops, and a one-tap broadcast.
       </p>
       {isLeader && (
-        <a href="/admin/loops/new" style={{
+        <a href="/leadership/loops/new" style={{
           display: 'inline-block', background: ACCENT, color: '#0a0a0b',
           padding: '10px 18px', borderRadius: 10, fontWeight: 700, fontSize: 14, textDecoration: 'none',
         }}>+ Create your first Loop</a>

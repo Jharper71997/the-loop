@@ -2,16 +2,18 @@
 
 import { useEffect, useMemo, useState } from 'react'
 import { supabase } from '@/lib/supabase'
-import { isLeadership } from '@/lib/roles'
 import { personalize } from '@/lib/personalize'
 import {
-  buildDefaultSchedule,
   currentStopIndex,
   formatStopTime,
   nowInTZ,
   operationalDateInTZ,
 } from '@/lib/schedule'
-import { PARTNER_BAR_NAMES } from '@/lib/bars'
+
+// Operational view of upcoming Loops. Day-of users (security, drivers,
+// staff, leadership) see who's riding which stop and can move riders +
+// broadcast SMS. ALL editing of loops/schedules/tickets lives at
+// /leadership/loops — this page is read + rider-management only.
 
 const DAY_TABS = [
   { key: 'friday', label: 'Friday', weekday: 5 },
@@ -26,22 +28,14 @@ export default function Groups() {
   const [now, setNow] = useState(() => nowInTZ())
   const [today] = useState(() => operationalDateInTZ())
   const [activeDay, setActiveDay] = useState(() => initialDay())
-  const [editingSchedule, setEditingSchedule] = useState(null)
-  const [scheduleDraft, setScheduleDraft] = useState([])
   const [stopMessage, setStopMessage] = useState({})
   const [sending, setSending] = useState({})
   const [expanded, setExpanded] = useState(null)
   const [openStop, setOpenStop] = useState(null)
   const [pickerMember, setPickerMember] = useState(null)
-  const [email, setEmail] = useState(null)
-  const isLeader = isLeadership(email)
 
   useEffect(() => {
-    // Auto bulk-sync was overwriting custom schedule edits when there were
-    // duplicate groups in the DB — disabled. Per-event sync still runs when
-    // a ticket type is added/edited from /api/events PUT.
     fetchGroups()
-    supabase.auth.getUser().then(({ data }) => setEmail(data?.user?.email || null))
     const t = setInterval(() => setNow(nowInTZ()), 60000)
     return () => clearInterval(t)
   }, [])
@@ -115,31 +109,6 @@ export default function Groups() {
     setTicketsByContact(contactTotals)
   }
 
-  async function generateScheduleFor(group) {
-    // Default rotation order for the bar picker — Jacob can rearrange in the
-    // editor afterward. Pulls 5 bars from PARTNER_BAR_NAMES so the schedule
-    // never starts with generic "Stop 2/3/4/5" labels.
-    const bars = PARTNER_BAR_NAMES.slice(0, 5)
-    const schedule = buildDefaultSchedule(group.pickup_time || '19:30', { bars })
-    if (!schedule) return alert('Set a pickup time on this group first.')
-    await supabase.from('groups').update({ schedule }).eq('id', group.id)
-    fetchGroups()
-  }
-
-  function startEditSchedule(group) {
-    setEditingSchedule(group.id)
-    const seeded = group.schedule || buildDefaultSchedule(group.pickup_time || '19:30', {
-      bars: PARTNER_BAR_NAMES.slice(0, 5),
-    }) || []
-    setScheduleDraft(seeded)
-  }
-
-  async function saveSchedule(group) {
-    await supabase.from('groups').update({ schedule: scheduleDraft }).eq('id', group.id)
-    setEditingSchedule(null)
-    fetchGroups()
-  }
-
   async function moveRider(memberId, stopIdx) {
     setGroups(prev => prev.map(g => ({
       ...g,
@@ -210,15 +179,8 @@ export default function Groups() {
 
   return (
     <main>
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: '4px', gap: 10, flexWrap: 'wrap' }}>
+      <div style={{ marginBottom: '4px' }}>
         <h1 style={{ margin: 0 }}>Loops</h1>
-        {isLeader && (
-          <a href="/admin/loops/new" style={{
-            background: '#d4a333', color: '#0a0a0b', padding: '10px 16px', borderRadius: 8,
-            fontWeight: 700, fontSize: 13, textDecoration: 'none',
-            minHeight: 44, display: 'inline-flex', alignItems: 'center',
-          }}>+ New Loop</a>
-        )}
       </div>
       <p className="muted" style={{ marginBottom: '14px' }}>
         Upcoming pickups by night · {now}
@@ -279,7 +241,6 @@ export default function Groups() {
           if (!membersByStop.has(bucket)) membersByStop.set(bucket, [])
           membersByStop.get(bucket).push(m)
         }
-        const isEditing = editingSchedule === group.id
         const isExpanded = expanded === group.id
         const tickets = ticketsByGroup[group.id] || 0
         const hasGap = tickets > 0 && tickets !== members.length
@@ -313,34 +274,6 @@ export default function Groups() {
                 >
                   Summary
                 </a>
-                {isLeader && (
-                  <a
-                    href={`/admin/loops/${group.id}#tickets`}
-                    onClick={e => e.stopPropagation()}
-                    style={{
-                      color: '#c8c8cc', fontSize: '12px', textDecoration: 'none',
-                      padding: '6px 10px', border: '1px solid #2a2a31', borderRadius: '6px',
-                      minHeight: 32, display: 'inline-flex', alignItems: 'center',
-                      fontWeight: 600,
-                    }}
-                  >
-                    Tickets
-                  </a>
-                )}
-                {isLeader && (
-                  <a
-                    href={`/admin/loops/${group.id}#edit`}
-                    onClick={e => e.stopPropagation()}
-                    style={{
-                      color: '#d4a333', fontSize: '12px', textDecoration: 'none',
-                      padding: '6px 10px', border: '1px solid #d4a333', borderRadius: '6px',
-                      minHeight: 32, display: 'inline-flex', alignItems: 'center',
-                      fontWeight: 600,
-                    }}
-                  >
-                    Settings
-                  </a>
-                )}
                 {hasGap ? (
                   // Tickets sold > named contacts on roster — usually TT orders
                   // shipped without buyer details. Surface both numbers + a
@@ -367,11 +300,9 @@ export default function Groups() {
             {isExpanded && (
               <>
                 {schedule.length === 0 ? (
-                  <div style={{ marginTop: '12px' }}>
-                    <button className="btn-subtle" style={{ width: '100%' }} onClick={() => generateScheduleFor(group)}>
-                      Generate 5-stop schedule
-                    </button>
-                  </div>
+                  <p className="muted" style={{ marginTop: '12px', textAlign: 'center', fontSize: 13 }}>
+                    No schedule yet. Set one in <a href={`/leadership/loops/${group.id}#edit`} style={{ color: '#d4a333' }}>Leadership → Loops</a>.
+                  </p>
                 ) : (
                   <>
                     <div style={{ display: 'flex', gap: '4px', margin: '12px 0 4px', overflowX: 'auto' }}>
@@ -400,51 +331,6 @@ export default function Groups() {
                         )
                       })}
                     </div>
-                    <button
-                      className="btn-link"
-                      onClick={() => isEditing ? setEditingSchedule(null) : startEditSchedule(group)}
-                    >
-                      {isEditing ? 'Cancel edit' : 'Edit schedule'}
-                    </button>
-
-                    {isEditing && (
-                      <div style={{ border: '1px solid #1e1e23', borderRadius: '8px', padding: '10px', margin: '8px 0 12px' }}>
-                        {scheduleDraft.map((stop, i) => {
-                          const isCustom = stop.name && !PARTNER_BAR_NAMES.includes(stop.name)
-                          return (
-                            <div key={i} style={{ display: 'flex', gap: '6px', marginBottom: '6px' }}>
-                              <select
-                                style={{ flex: 2, marginBottom: 0, fontSize: '13px' }}
-                                value={isCustom ? '__custom__' : (stop.name || '')}
-                                onChange={e => {
-                                  const next = [...scheduleDraft]
-                                  next[i] = { ...next[i], name: e.target.value === '__custom__' ? '' : e.target.value }
-                                  setScheduleDraft(next)
-                                }}
-                              >
-                                <option value="">Pick a bar…</option>
-                                {PARTNER_BAR_NAMES.map(bar => (
-                                  <option key={bar} value={bar}>{bar}</option>
-                                ))}
-                                <option value="__custom__">Other (type below)</option>
-                              </select>
-                              <input
-                                style={{ flex: 1, marginBottom: 0, fontSize: '13px' }}
-                                placeholder="HH:MM"
-                                value={stop.start_time}
-                                onChange={e => {
-                                  const next = [...scheduleDraft]
-                                  next[i] = { ...next[i], start_time: e.target.value }
-                                  setScheduleDraft(next)
-                                }}
-                              />
-                            </div>
-                          )
-                        })}
-                        <button className="btn-primary" onClick={() => saveSchedule(group)}>Save Schedule</button>
-                      </div>
-                    )}
-
                     <div style={{ marginTop: '10px' }}>
                       {(() => {
                         const unassigned = membersByStop.get('not_started') || []
