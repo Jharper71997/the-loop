@@ -24,7 +24,7 @@ export default async function CashPage() {
       fontFamily: "'JetBrains Mono', ui-monospace, monospace",
     }}>
       <div style={{ maxWidth: 900, margin: '0 auto' }}>
-        <a href="/leadership" style={{
+        <a href="/leadership/income" style={{
           color: '#9c9ca3',
           fontSize: 11,
           letterSpacing: '0.18em',
@@ -33,7 +33,7 @@ export default async function CashPage() {
           display: 'inline-block',
           marginBottom: 18,
         }}>
-          ← Scoreboard
+          ← Income
         </a>
 
         <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', flexWrap: 'wrap', gap: 12, marginBottom: 24 }}>

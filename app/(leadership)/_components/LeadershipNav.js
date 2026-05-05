@@ -6,19 +6,41 @@ import { supabase } from '@/lib/supabase'
 
 // Calmer redesign — system sans, mono only on numbers, subtler gold accents.
 
-const LINKS = [
-  { href: '/leadership',          label: 'Scoreboard' },
-  { href: '/leadership/income',   label: 'Income' },
+// Income is a tab group — when on any of the finance routes the top "Income"
+// pill stays active and a secondary sub-row reveals the children.
+const INCOME_GROUP = ['/leadership/income', '/leadership/expenses', '/leadership/cash', '/leadership/sponsors', '/leadership/bars']
+
+const TOP_LINKS = [
+  { href: '/leadership',             label: 'Scoreboard' },
+  { href: '/leadership/income',      label: 'Income', groupPaths: INCOME_GROUP },
+  { href: '/leadership/leaderboard', label: 'Leaderboard' },
+  { href: '/admin/loops',            label: 'Manage' },
+]
+
+const INCOME_SUB_LINKS = [
+  { href: '/leadership/income',   label: 'Overview' },
   { href: '/leadership/expenses', label: 'Expenses' },
   { href: '/leadership/cash',     label: 'Cash' },
   { href: '/leadership/sponsors', label: 'Sponsors' },
   { href: '/leadership/bars',     label: 'Bars' },
-  { href: '/admin',               label: 'Ops →' },
 ]
+
+function isActive(pathname, link) {
+  if (link.groupPaths) {
+    return link.groupPaths.some(p => pathname === p || pathname.startsWith(p + '/'))
+  }
+  if (link.href === '/leadership') return pathname === '/leadership'
+  return pathname === link.href || pathname.startsWith(link.href + '/')
+}
+
+function inIncomeGroup(pathname) {
+  return INCOME_GROUP.some(p => pathname === p || pathname.startsWith(p + '/'))
+}
 
 export default function LeadershipNav() {
   const pathname = usePathname()
   const [email, setEmail] = useState(null)
+  const showSubNav = inIncomeGroup(pathname)
 
   useEffect(() => {
     supabase.auth.getUser().then(({ data }) => setEmail(data?.user?.email || null))
@@ -68,7 +90,7 @@ export default function LeadershipNav() {
           alignItems: 'center',
           overflowX: 'auto',
         }}>
-          <Tabs pathname={pathname} />
+          <Tabs pathname={pathname} links={TOP_LINKS} />
         </div>
 
         <div className="leadership-nav-right" style={{
@@ -112,15 +134,48 @@ export default function LeadershipNav() {
         scrollbarWidth: 'none',
         WebkitOverflowScrolling: 'touch',
       }}>
-        <Tabs pathname={pathname} mobile />
+        <Tabs pathname={pathname} links={TOP_LINKS} mobile />
       </div>
+
+      {showSubNav && (
+        <>
+          <div className="leadership-subnav-desktop" style={{
+            display: 'flex',
+            gap: 2,
+            alignItems: 'center',
+            padding: '0 18px 10px',
+            paddingLeft: 'max(18px, env(safe-area-inset-left))',
+            paddingRight: 'max(18px, env(safe-area-inset-right))',
+            overflowX: 'auto',
+            borderTop: '1px solid #1a1a20',
+            paddingTop: 8,
+          }}>
+            <SubTabs pathname={pathname} />
+          </div>
+          <div className="leadership-subnav-mobile" style={{
+            display: 'none',
+            gap: 2,
+            padding: '8px 12px 10px',
+            overflowX: 'auto',
+            scrollbarWidth: 'none',
+            WebkitOverflowScrolling: 'touch',
+            borderTop: '1px solid #1a1a20',
+          }}>
+            <SubTabs pathname={pathname} mobile />
+          </div>
+        </>
+      )}
 
       <style>{`
         .leadership-nav-tabs-mobile::-webkit-scrollbar { display: none; }
+        .leadership-subnav-desktop::-webkit-scrollbar { display: none; }
+        .leadership-subnav-mobile::-webkit-scrollbar { display: none; }
         @media (max-width: 767px) {
           .leadership-nav-divider { display: none; }
           .leadership-nav-tabs-desktop { display: none !important; }
           .leadership-nav-tabs-mobile { display: flex !important; }
+          .leadership-subnav-desktop { display: none !important; }
+          .leadership-subnav-mobile { display: flex !important; }
           .leadership-nav-email { display: none !important; }
         }
       `}</style>
@@ -128,13 +183,11 @@ export default function LeadershipNav() {
   )
 }
 
-function Tabs({ pathname, mobile = false }) {
+function Tabs({ pathname, links, mobile = false }) {
   return (
     <>
-      {LINKS.map(l => {
-        const active = l.href === '/leadership'
-          ? pathname === '/leadership'
-          : pathname === l.href || pathname.startsWith(l.href + '/')
+      {links.map(l => {
+        const active = isActive(pathname, l)
         return (
           <a
             key={l.href}
@@ -151,6 +204,44 @@ function Tabs({ pathname, mobile = false }) {
               whiteSpace: 'nowrap',
               transition: 'color 0.12s, background 0.12s',
               minHeight: mobile ? 36 : undefined,
+              display: 'inline-flex',
+              alignItems: 'center',
+              flexShrink: 0,
+            }}
+          >
+            {l.label}
+          </a>
+        )
+      })}
+    </>
+  )
+}
+
+function SubTabs({ pathname, mobile = false }) {
+  return (
+    <>
+      {INCOME_SUB_LINKS.map(l => {
+        // Overview matches /leadership/income exactly so it doesn't stay active
+        // while you're on /leadership/expenses etc.
+        const active = l.href === '/leadership/income'
+          ? pathname === '/leadership/income'
+          : pathname === l.href || pathname.startsWith(l.href + '/')
+        return (
+          <a
+            key={l.href}
+            href={l.href}
+            style={{
+              color: active ? '#0a0a0b' : '#9c9ca3',
+              background: active ? 'rgba(212,163,51,0.85)' : 'transparent',
+              textDecoration: 'none',
+              fontFamily: '-apple-system, "Segoe UI", Roboto, sans-serif',
+              fontSize: mobile ? '12px' : '11px',
+              fontWeight: active ? 600 : 500,
+              padding: mobile ? '6px 12px' : '4px 10px',
+              borderRadius: 4,
+              whiteSpace: 'nowrap',
+              transition: 'color 0.12s, background 0.12s',
+              minHeight: mobile ? 32 : undefined,
               display: 'inline-flex',
               alignItems: 'center',
               flexShrink: 0,

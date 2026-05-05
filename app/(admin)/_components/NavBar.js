@@ -12,7 +12,6 @@ const LINKS = [
   { href: '/admin/contacts', label: 'Contacts' },
   { href: '/admin/security', label: 'Security', security: true },
   { href: '/driver', label: 'Driver', driver: true },
-  { href: '/admin/leaderboard', label: 'Leaderboard', leadership: true },
   { href: '/admin/notifications', label: 'Alerts', leadership: true },
 ]
 
