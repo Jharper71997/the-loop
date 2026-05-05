@@ -10,7 +10,7 @@ const INK_DIM = '#b8b8bf'
 const SURFACE = '#15151a'
 const LINE = 'rgba(255,255,255,0.08)'
 
-export default function TrackMap({ stops = [], fallbackCenter }) {
+export default function TrackMap({ stops = [], eventDate = null, fallbackCenter }) {
   const containerRef = useRef(null)
   const stateRef = useRef({ map: null, L: null, shuttleMarker: null, stopMarkers: [] })
   const [shuttle, setShuttle] = useState(null)
@@ -150,7 +150,7 @@ export default function TrackMap({ stops = [], fallbackCenter }) {
         }}
       />
 
-      <StatusRow shuttle={shuttle} lastSeenAt={lastSeenAt} now={now} stops={stops} />
+      <StatusRow shuttle={shuttle} lastSeenAt={lastSeenAt} now={now} stops={stops} eventDate={eventDate} />
 
       {stops.length > 0 && (
         <section
@@ -230,14 +230,15 @@ export default function TrackMap({ stops = [], fallbackCenter }) {
   )
 }
 
-function StatusRow({ shuttle, lastSeenAt, now, stops = [] }) {
+function StatusRow({ shuttle, lastSeenAt, now, stops = [], eventDate = null }) {
   const live = !!shuttle?.is_active
   const ageMin = lastSeenAt ? Math.floor((now - new Date(lastSeenAt).getTime()) / 60000) : null
 
-  // Google-Maps-style "next destination" card: pick the stop the shuttle is
-  // headed toward and show ETA + distance based on the shuttle's current
-  // position + speed.
-  const dest = live ? pickNextDestination(shuttle, stops) : null
+  // Schedule-order destination: target stop 1 first, then 2, then 3, etc.
+  // "Next stop" advances based on the schedule's start_time vs current clock,
+  // so the card always points at the upcoming stop in route order — not just
+  // the geographically nearest one.
+  const dest = live ? pickNextStopByOrder(stops, new Date(now), eventDate) : null
   const eta = dest ? computeEta(shuttle, dest) : null
 
   return (
@@ -314,11 +315,16 @@ function StatusRow({ shuttle, lastSeenAt, now, stops = [] }) {
           </span>
           <div style={{ flex: 1, minWidth: 0 }}>
             <div style={{ color: GOLD, fontSize: 10, letterSpacing: '0.22em', textTransform: 'uppercase', fontWeight: 700 }}>
-              {eta.status === 'arrived' ? 'At stop' : 'Next stop'}
+              {eta.status === 'arrived' ? 'At stop' : `Next stop · #${dest.index + 1}`}
             </div>
             <div style={{ color: INK, fontSize: 16, fontWeight: 800, marginTop: 2, lineHeight: 1.15 }}>
               {dest.name}
             </div>
+            {dest.startTime && (
+              <div style={{ color: INK_DIM, fontSize: 12, marginTop: 2 }}>
+                Scheduled {formatTime(dest.startTime)}
+              </div>
+            )}
           </div>
           <div style={{ textAlign: 'right', flex: '0 0 auto' }}>
             {eta.status === 'arrived' ? (
@@ -346,30 +352,45 @@ function StatusRow({ shuttle, lastSeenAt, now, stops = [] }) {
   )
 }
 
-// Pick the stop the shuttle is heading toward. Heuristic: nearest stop with
-// real coords; if shuttle is within 60m of that stop (considered "at" it),
-// jump to the next stop in schedule order so the card always shows the
-// upcoming destination, not the one we just arrived at.
-function pickNextDestination(shuttle, stops) {
-  if (!shuttle || !Array.isArray(stops) || stops.length === 0) return null
+// Pick the next stop in schedule order. Riders/drivers expect the card to
+// march through stop 1, 2, 3 like the printed schedule — not jump to the
+// geographically nearest bar (which would be wrong if the shuttle is en
+// route from stop 2 to 3 but stop 1 happens to be closer to the road).
+//
+// Logic:
+//   - If the event isn't today (i.e., we're testing on an off day), just
+//     target stop 1 so the card has something useful to show.
+//   - Otherwise target the first stop whose start_time is still in the
+//     future. If all start_times are in the past, target the last stop
+//     (route is winding down).
+//   - If no stops carry start_time, fall back to stop 1.
+function pickNextStopByOrder(stops, now, eventDate) {
+  if (!Array.isArray(stops) || stops.length === 0) return null
   const placed = stops.filter(s => Number.isFinite(s.lat) && Number.isFinite(s.lng))
   if (!placed.length) return null
 
-  let nearest = null
-  let nearestMeters = Infinity
-  for (const s of placed) {
-    const m = haversineMeters(shuttle.lat, shuttle.lng, s.lat, s.lng)
-    if (m < nearestMeters) { nearest = s; nearestMeters = m }
+  if (eventDate) {
+    const today = todayLocalISO(now)
+    if (eventDate !== today) return placed[0]
   }
-  if (!nearest) return null
 
-  if (nearestMeters < 60) {
-    // Shuttle is at this stop. Return the next-by-index placed stop instead,
-    // unless this is already the last one.
-    const after = placed.find(s => s.index > nearest.index)
-    return after || nearest
-  }
-  return nearest
+  const withTimes = placed.filter(s => s.startTime)
+  if (!withTimes.length) return placed[0]
+
+  const nowMin = now.getHours() * 60 + now.getMinutes()
+  const upcoming = withTimes.find(s => {
+    const [h, m] = String(s.startTime).split(':').map(Number)
+    if (!Number.isFinite(h) || !Number.isFinite(m)) return false
+    return (h * 60 + m) > nowMin
+  })
+  return upcoming || placed[placed.length - 1]
+}
+
+function todayLocalISO(d) {
+  const y = d.getFullYear()
+  const m = String(d.getMonth() + 1).padStart(2, '0')
+  const day = String(d.getDate()).padStart(2, '0')
+  return `${y}-${m}-${day}`
 }
 
 function computeEta(shuttle, dest) {

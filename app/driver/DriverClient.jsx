@@ -311,7 +311,7 @@ export default function DriverClient({ groupId = null, loopName = null, eventDat
             </div>
           )}
 
-          {position && stops.length > 0 && <NextStopCard position={position} stops={stops} />}
+          {position && stops.length > 0 && <NextStopCard position={position} stops={stops} eventDate={eventDate} />}
 
           {error && (
             <div style={{
@@ -476,27 +476,39 @@ function haversine(lat1, lng1, lat2, lng2) {
   return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a))
 }
 
-// Same destination logic as TrackMap: nearest placed stop, but if we're
-// within 60m we're "at" it so jump to the next-by-index stop instead.
-function pickNextDestination(position, stops) {
+// Schedule-order destination: target stop 1 first, then 2, then 3, etc.
+// Picks the first stop whose start_time is still in the future. Off days
+// (testing) fall back to stop 1 so the card always has something useful.
+function pickNextStopByOrder(stops, now, eventDate) {
   const placed = stops.filter(s => Number.isFinite(s.lat) && Number.isFinite(s.lng))
   if (!placed.length) return null
-  let nearest = null
-  let nearestMeters = Infinity
-  for (const s of placed) {
-    const m = haversine(position.lat, position.lng, s.lat, s.lng)
-    if (m < nearestMeters) { nearest = s; nearestMeters = m }
+
+  if (eventDate) {
+    const today = todayLocalISO(now)
+    if (eventDate !== today) return placed[0]
   }
-  if (!nearest) return null
-  if (nearestMeters < 60) {
-    const after = placed.find(s => s.index > nearest.index)
-    return after || nearest
-  }
-  return nearest
+
+  const withTimes = placed.filter(s => s.startTime)
+  if (!withTimes.length) return placed[0]
+
+  const nowMin = now.getHours() * 60 + now.getMinutes()
+  const upcoming = withTimes.find(s => {
+    const [h, m] = String(s.startTime).split(':').map(Number)
+    if (!Number.isFinite(h) || !Number.isFinite(m)) return false
+    return (h * 60 + m) > nowMin
+  })
+  return upcoming || placed[placed.length - 1]
 }
 
-function NextStopCard({ position, stops }) {
-  const dest = pickNextDestination(position, stops)
+function todayLocalISO(d) {
+  const y = d.getFullYear()
+  const m = String(d.getMonth() + 1).padStart(2, '0')
+  const day = String(d.getDate()).padStart(2, '0')
+  return `${y}-${m}-${day}`
+}
+
+function NextStopCard({ position, stops, eventDate }) {
+  const dest = pickNextStopByOrder(stops, new Date(), eventDate)
   if (!dest) return null
 
   const meters = haversine(position.lat, position.lng, dest.lat, dest.lng)
@@ -535,11 +547,16 @@ function NextStopCard({ position, stops }) {
       </span>
       <div style={{ flex: 1, minWidth: 0 }}>
         <div style={{ color: GOLD, fontSize: 10, letterSpacing: '0.22em', textTransform: 'uppercase', fontWeight: 700 }}>
-          {arrived ? 'At stop' : 'Next stop'}
+          {arrived ? 'At stop' : `Next stop · #${dest.index + 1}`}
         </div>
         <div style={{ color: INK, fontSize: 16, fontWeight: 800, marginTop: 2, lineHeight: 1.15 }}>
           {dest.name}
         </div>
+        {dest.startTime && (
+          <div style={{ color: INK_DIM, fontSize: 12, marginTop: 2 }}>
+            Scheduled {formatPickup(dest.startTime)}
+          </div>
+        )}
       </div>
       <div style={{ textAlign: 'right', flex: '0 0 auto' }}>
         {arrived ? (

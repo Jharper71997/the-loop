@@ -34,7 +34,7 @@ export default async function TrackPage() {
           )}
         </header>
 
-        <TrackMap stops={data.stops} fallbackCenter={JACKSONVILLE_NC} />
+        <TrackMap stops={data.stops} eventDate={data.eventDate} fallbackCenter={JACKSONVILLE_NC} />
 
         <PartnerBars />
       </div>
@@ -173,6 +173,7 @@ async function loadActiveLoop() {
     stops,
     loopLabel: eventRow.name || group?.name || 'Jville Brew Loop',
     subtitle: formatSubtitle(eventRow.event_date, eventRow.pickup_time),
+    eventDate: eventRow.event_date || null,
   }
 }
 
