@@ -278,14 +278,13 @@ function StatusRow({ shuttle, lastSeenAt, now, stops = [], eventDate = null }) {
             ) : (
               <>
                 <div style={{ color: INK_DIM, fontSize: 10, letterSpacing: '0.18em', textTransform: 'uppercase', fontWeight: 700 }}>
-                  {eta.status === 'estimated' ? 'ETA · est' : 'ETA'}
+                  {eta.status === 'estimated' ? 'Arrival · est' : 'Arrival'}
                 </div>
-                <div style={{ color: INK, fontSize: 16, fontWeight: 800, fontVariantNumeric: 'tabular-nums' }}>
-                  {eta.etaMin} min
+                <div style={{ color: INK, fontSize: 18, fontWeight: 800, fontVariantNumeric: 'tabular-nums', letterSpacing: '-0.01em' }}>
+                  {formatClock(now + eta.etaMin * 60_000)}
                 </div>
-                <div style={{ color: INK_DIM, fontSize: 10, letterSpacing: '0.18em', textTransform: 'uppercase', fontWeight: 700, marginTop: 4 }}>Distance</div>
-                <div style={{ color: INK, fontSize: 13, fontWeight: 800, fontVariantNumeric: 'tabular-nums' }}>
-                  {formatDistance(eta.distanceMi, eta.distanceMeters)}
+                <div style={{ color: INK_DIM, fontSize: 11, fontVariantNumeric: 'tabular-nums', marginTop: 4 }}>
+                  {eta.etaMin} min · {formatDistance(eta.distanceMi, eta.distanceMeters)}
                 </div>
               </>
             )}
@@ -374,14 +373,11 @@ function StopList({ stops, shuttle, eventDate, now }) {
                     <div style={{ color: GOLD_HI, fontSize: 12, fontWeight: 800 }}>At stop</div>
                   ) : (
                     <>
-                      <div style={{ color: INK_DIM, fontSize: 9, letterSpacing: '0.18em', textTransform: 'uppercase', fontWeight: 700 }}>
-                        ETA
+                      <div style={{ color: GOLD_HI, fontSize: 14, fontWeight: 800, fontVariantNumeric: 'tabular-nums', letterSpacing: '-0.01em' }}>
+                        {formatClock(now + eta.etaMin * 60_000)}
                       </div>
-                      <div style={{ color: INK, fontSize: 14, fontWeight: 800, fontVariantNumeric: 'tabular-nums' }}>
-                        {eta.etaMin} min
-                      </div>
-                      <div style={{ color: INK_DIM, fontSize: 10, fontVariantNumeric: 'tabular-nums', marginTop: 2 }}>
-                        {formatDistance(eta.distanceMi, eta.distanceMeters)}
+                      <div style={{ color: INK_DIM, fontSize: 11, fontVariantNumeric: 'tabular-nums', marginTop: 2 }}>
+                        {eta.etaMin} min · {formatDistance(eta.distanceMi, eta.distanceMeters)}
                       </div>
                     </>
                   )}
@@ -566,6 +562,17 @@ function formatTime(hhmm) {
   const [hStr, mStr] = String(hhmm).split(':')
   const h = Number(hStr); const m = Number(mStr)
   if (!Number.isFinite(h) || !Number.isFinite(m)) return ''
+  const suffix = h >= 12 ? 'PM' : 'AM'
+  const h12 = ((h + 11) % 12) + 1
+  return `${h12}:${String(m).padStart(2, '0')} ${suffix}`
+}
+
+// Wall-clock time from an epoch ms. Used to render arrival times like
+// "5:30 PM" alongside the per-stop ETA countdown.
+function formatClock(epochMs) {
+  if (!Number.isFinite(epochMs)) return ''
+  const d = new Date(epochMs)
+  const h = d.getHours(); const m = d.getMinutes()
   const suffix = h >= 12 ? 'PM' : 'AM'
   const h12 = ((h + 11) % 12) + 1
   return `${h12}:${String(m).padStart(2, '0')} ${suffix}`
