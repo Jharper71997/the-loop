@@ -24,6 +24,7 @@ const PUBLIC_PREFIXES = [
   '/leaderboard',
   '/bartender-signup',
   '/track',
+  '/widget',
   '/api/shuttle/current',
   '/api/ticket-tailor-webhook',
   '/api/stripe-webhook',
