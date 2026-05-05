@@ -223,7 +223,8 @@ export default function DriverClient({ groupId = null, loopName = null, eventDat
         setError(null)
       } else {
         const body = await res.json().catch(() => ({}))
-        setError(body.reason || `Ping rejected (${res.status})`)
+        const reason = body.reason || `Ping rejected (${res.status})`
+        setError(body.detail ? `${reason}: ${body.detail}` : reason)
       }
     } catch (err) {
       setError(`Ping failed: ${err?.message || 'network'}`)

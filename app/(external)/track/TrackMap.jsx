@@ -150,7 +150,7 @@ export default function TrackMap({ stops = [], fallbackCenter }) {
         }}
       />
 
-      <StatusRow shuttle={shuttle} lastSeenAt={lastSeenAt} now={now} />
+      <StatusRow shuttle={shuttle} lastSeenAt={lastSeenAt} now={now} stops={stops} />
 
       {stops.length > 0 && (
         <section
@@ -230,55 +230,173 @@ export default function TrackMap({ stops = [], fallbackCenter }) {
   )
 }
 
-function StatusRow({ shuttle, lastSeenAt, now }) {
+function StatusRow({ shuttle, lastSeenAt, now, stops = [] }) {
   const live = !!shuttle?.is_active
   const ageMin = lastSeenAt ? Math.floor((now - new Date(lastSeenAt).getTime()) / 60000) : null
 
+  // Google-Maps-style "next destination" card: pick the stop the shuttle is
+  // headed toward and show ETA + distance based on the shuttle's current
+  // position + speed.
+  const dest = live ? pickNextDestination(shuttle, stops) : null
+  const eta = dest ? computeEta(shuttle, dest) : null
+
   return (
-    <div
-      style={{
-        display: 'flex',
-        alignItems: 'center',
-        gap: 10,
-        padding: '10px 14px',
-        background: live ? 'rgba(212,163,51,0.08)' : SURFACE,
-        border: `1px solid ${live ? 'rgba(212,163,51,0.35)' : LINE}`,
-        borderRadius: 12,
-      }}
-    >
-      <span
-        aria-hidden
+    <div style={{ display: 'grid', gap: 8 }}>
+      <div
         style={{
-          width: 10, height: 10, borderRadius: '50%',
-          background: live ? GOLD : '#3a3a44',
-          boxShadow: live ? `0 0 12px ${GOLD}` : 'none',
-          flex: '0 0 auto',
+          display: 'flex',
+          alignItems: 'center',
+          gap: 10,
+          padding: '10px 14px',
+          background: live ? 'rgba(212,163,51,0.08)' : SURFACE,
+          border: `1px solid ${live ? 'rgba(212,163,51,0.35)' : LINE}`,
+          borderRadius: 12,
         }}
-      />
-      <div style={{ flex: 1, minWidth: 0 }}>
-        <div style={{ color: live ? GOLD_HI : INK, fontSize: 13, fontWeight: 700 }}>
-          {live ? 'Shuttle live' : 'Shuttle off duty'}
-        </div>
-        <div style={{ color: INK_DIM, fontSize: 12 }}>
-          {live
-            ? `Updated ${ageMin != null && ageMin > 0 ? `${ageMin} min ago` : 'just now'}`
-            : (lastSeenAt
-                ? `Last ping ${ageMin != null ? `${ageMin} min ago` : 'recently'}`
-                : 'Pings appear here once the driver goes live.')}
-        </div>
-      </div>
-      {live && shuttle?.speed_mph != null && (
-        <div style={{ textAlign: 'right' }}>
-          <div style={{ color: INK_DIM, fontSize: 10, letterSpacing: '0.18em', textTransform: 'uppercase', fontWeight: 700 }}>
-            Speed
+      >
+        <span
+          aria-hidden
+          style={{
+            width: 10, height: 10, borderRadius: '50%',
+            background: live ? GOLD : '#3a3a44',
+            boxShadow: live ? `0 0 12px ${GOLD}` : 'none',
+            flex: '0 0 auto',
+          }}
+        />
+        <div style={{ flex: 1, minWidth: 0 }}>
+          <div style={{ color: live ? GOLD_HI : INK, fontSize: 13, fontWeight: 700 }}>
+            {live ? 'Shuttle live' : 'Shuttle off duty'}
           </div>
-          <div style={{ color: INK, fontSize: 14, fontWeight: 800, fontVariantNumeric: 'tabular-nums' }}>
-            {Math.round(shuttle.speed_mph)} mph
+          <div style={{ color: INK_DIM, fontSize: 12 }}>
+            {live
+              ? `Updated ${ageMin != null && ageMin > 0 ? `${ageMin} min ago` : 'just now'}`
+              : (lastSeenAt
+                  ? `Last ping ${ageMin != null ? `${ageMin} min ago` : 'recently'}`
+                  : 'Pings appear here once the driver goes live.')}
+          </div>
+        </div>
+        {live && shuttle?.speed_mph != null && (
+          <div style={{ textAlign: 'right' }}>
+            <div style={{ color: INK_DIM, fontSize: 10, letterSpacing: '0.18em', textTransform: 'uppercase', fontWeight: 700 }}>
+              Speed
+            </div>
+            <div style={{ color: INK, fontSize: 14, fontWeight: 800, fontVariantNumeric: 'tabular-nums' }}>
+              {Math.round(shuttle.speed_mph)} mph
+            </div>
+          </div>
+        )}
+      </div>
+
+      {dest && eta && (
+        <div
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: 12,
+            padding: '12px 14px',
+            background: 'linear-gradient(180deg, rgba(212,163,51,0.14), rgba(212,163,51,0.05))',
+            border: `1px solid rgba(212,163,51,0.45)`,
+            borderRadius: 12,
+          }}
+        >
+          <span
+            aria-hidden
+            style={{
+              width: 32, height: 32, borderRadius: '50%',
+              background: 'rgba(212,163,51,0.18)',
+              border: `1px solid ${GOLD}`,
+              color: GOLD_HI,
+              display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
+              fontSize: 16, fontWeight: 800,
+              flex: '0 0 auto',
+            }}
+          >
+            →
+          </span>
+          <div style={{ flex: 1, minWidth: 0 }}>
+            <div style={{ color: GOLD, fontSize: 10, letterSpacing: '0.22em', textTransform: 'uppercase', fontWeight: 700 }}>
+              {eta.status === 'arrived' ? 'At stop' : 'Next stop'}
+            </div>
+            <div style={{ color: INK, fontSize: 16, fontWeight: 800, marginTop: 2, lineHeight: 1.15 }}>
+              {dest.name}
+            </div>
+          </div>
+          <div style={{ textAlign: 'right', flex: '0 0 auto' }}>
+            {eta.status === 'arrived' ? (
+              <div style={{ color: GOLD_HI, fontSize: 13, fontWeight: 800 }}>Arrived</div>
+            ) : eta.status === 'stopped' ? (
+              <>
+                <div style={{ color: INK_DIM, fontSize: 10, letterSpacing: '0.18em', textTransform: 'uppercase', fontWeight: 700 }}>Distance</div>
+                <div style={{ color: INK, fontSize: 14, fontWeight: 800, fontVariantNumeric: 'tabular-nums' }}>
+                  {eta.distanceMi.toFixed(1)} mi
+                </div>
+              </>
+            ) : (
+              <>
+                <div style={{ color: INK_DIM, fontSize: 10, letterSpacing: '0.18em', textTransform: 'uppercase', fontWeight: 700 }}>ETA</div>
+                <div style={{ color: INK, fontSize: 16, fontWeight: 800, fontVariantNumeric: 'tabular-nums' }}>
+                  {eta.etaMin} min
+                </div>
+                <div style={{ color: INK_DIM, fontSize: 11, fontVariantNumeric: 'tabular-nums', marginTop: 1 }}>
+                  {eta.distanceMi.toFixed(1)} mi
+                </div>
+              </>
+            )}
           </div>
         </div>
       )}
     </div>
   )
+}
+
+// Pick the stop the shuttle is heading toward. Heuristic: nearest stop with
+// real coords; if shuttle is within 60m of that stop (considered "at" it),
+// jump to the next stop in schedule order so the card always shows the
+// upcoming destination, not the one we just arrived at.
+function pickNextDestination(shuttle, stops) {
+  if (!shuttle || !Array.isArray(stops) || stops.length === 0) return null
+  const placed = stops.filter(s => Number.isFinite(s.lat) && Number.isFinite(s.lng))
+  if (!placed.length) return null
+
+  let nearest = null
+  let nearestMeters = Infinity
+  for (const s of placed) {
+    const m = haversineMeters(shuttle.lat, shuttle.lng, s.lat, s.lng)
+    if (m < nearestMeters) { nearest = s; nearestMeters = m }
+  }
+  if (!nearest) return null
+
+  if (nearestMeters < 60) {
+    // Shuttle is at this stop. Return the next-by-index placed stop instead,
+    // unless this is already the last one.
+    const after = placed.find(s => s.index > nearest.index)
+    return after || nearest
+  }
+  return nearest
+}
+
+function computeEta(shuttle, dest) {
+  const meters = haversineMeters(shuttle.lat, shuttle.lng, dest.lat, dest.lng)
+  const distanceMi = meters / 1609.344
+  const speed = Number(shuttle.speed_mph)
+  const moving = Number.isFinite(speed) && speed > 5
+
+  if (meters < 60) return { status: 'arrived', distanceMi, etaMin: 0 }
+  if (!moving) return { status: 'stopped', distanceMi, etaMin: null }
+
+  const etaMin = Math.max(1, Math.round((distanceMi / speed) * 60))
+  return { status: 'enroute', distanceMi, etaMin }
+}
+
+// Haversine distance in meters between two lat/lng pairs.
+function haversineMeters(lat1, lng1, lat2, lng2) {
+  if (lat1 == null || lng1 == null || lat2 == null || lng2 == null) return Infinity
+  const R = 6371000
+  const toRad = d => d * Math.PI / 180
+  const dLat = toRad(lat2 - lat1)
+  const dLng = toRad(lng2 - lng1)
+  const a = Math.sin(dLat / 2) ** 2
+    + Math.cos(toRad(lat1)) * Math.cos(toRad(lat2)) * Math.sin(dLng / 2) ** 2
+  return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a))
 }
 
 function stopPinHtml(n) {
