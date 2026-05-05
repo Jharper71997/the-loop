@@ -323,21 +323,19 @@ function StatusRow({ shuttle, lastSeenAt, now, stops = [] }) {
           <div style={{ textAlign: 'right', flex: '0 0 auto' }}>
             {eta.status === 'arrived' ? (
               <div style={{ color: GOLD_HI, fontSize: 13, fontWeight: 800 }}>Arrived</div>
-            ) : eta.status === 'stopped' ? (
-              <>
-                <div style={{ color: INK_DIM, fontSize: 10, letterSpacing: '0.18em', textTransform: 'uppercase', fontWeight: 700 }}>Distance</div>
-                <div style={{ color: INK, fontSize: 14, fontWeight: 800, fontVariantNumeric: 'tabular-nums' }}>
-                  {eta.distanceMi.toFixed(1)} mi
-                </div>
-              </>
             ) : (
               <>
-                <div style={{ color: INK_DIM, fontSize: 10, letterSpacing: '0.18em', textTransform: 'uppercase', fontWeight: 700 }}>ETA</div>
-                <div style={{ color: INK, fontSize: 16, fontWeight: 800, fontVariantNumeric: 'tabular-nums' }}>
-                  {eta.etaMin} min
-                </div>
-                <div style={{ color: INK_DIM, fontSize: 11, fontVariantNumeric: 'tabular-nums', marginTop: 1 }}>
-                  {eta.distanceMi.toFixed(1)} mi
+                {eta.status === 'enroute' && (
+                  <>
+                    <div style={{ color: INK_DIM, fontSize: 10, letterSpacing: '0.18em', textTransform: 'uppercase', fontWeight: 700 }}>ETA</div>
+                    <div style={{ color: INK, fontSize: 16, fontWeight: 800, fontVariantNumeric: 'tabular-nums' }}>
+                      {eta.etaMin} min
+                    </div>
+                  </>
+                )}
+                <div style={{ color: INK_DIM, fontSize: 10, letterSpacing: '0.18em', textTransform: 'uppercase', fontWeight: 700, marginTop: eta.status === 'enroute' ? 4 : 0 }}>Distance</div>
+                <div style={{ color: INK, fontSize: eta.status === 'enroute' ? 13 : 16, fontWeight: 800, fontVariantNumeric: 'tabular-nums' }}>
+                  {formatDistance(eta.distanceMi, eta.distanceMeters)}
                 </div>
               </>
             )}
@@ -380,11 +378,16 @@ function computeEta(shuttle, dest) {
   const speed = Number(shuttle.speed_mph)
   const moving = Number.isFinite(speed) && speed > 5
 
-  if (meters < 60) return { status: 'arrived', distanceMi, etaMin: 0 }
-  if (!moving) return { status: 'stopped', distanceMi, etaMin: null }
+  if (meters < 60) return { status: 'arrived', distanceMi, distanceMeters: meters, etaMin: 0 }
+  if (!moving) return { status: 'stopped', distanceMi, distanceMeters: meters, etaMin: null }
 
   const etaMin = Math.max(1, Math.round((distanceMi / speed) * 60))
-  return { status: 'enroute', distanceMi, etaMin }
+  return { status: 'enroute', distanceMi, distanceMeters: meters, etaMin }
+}
+
+function formatDistance(distanceMi, meters) {
+  if (distanceMi < 0.1) return `${Math.round(meters * 3.28084)} ft`
+  return `${distanceMi.toFixed(1)} mi`
 }
 
 // Haversine distance in meters between two lat/lng pairs.
@@ -418,7 +421,7 @@ function shuttleIconHtml() {
       background: radial-gradient(circle at 35% 30%, rgba(240,194,74,0.95), rgba(212,163,51,0.85));
       border:2px solid #0a0a0b;
       box-shadow:0 0 0 4px rgba(212,163,51,0.35), 0 8px 22px rgba(0,0,0,0.5);
-      background-image: url('/brand/badge-gold.png');
+      background-image: url('/brand/badge-black.png');
       background-size: contain;
       background-position: center;
       background-repeat: no-repeat;

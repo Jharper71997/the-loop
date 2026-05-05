@@ -311,6 +311,8 @@ export default function DriverClient({ groupId = null, loopName = null, eventDat
             </div>
           )}
 
+          {position && stops.length > 0 && <NextStopCard position={position} stops={stops} />}
+
           {error && (
             <div style={{
               color: RED, fontSize: 12, padding: '8px 12px',
@@ -392,7 +394,7 @@ function driverIconHtml() {
       background: radial-gradient(circle at 35% 30%, rgba(240,194,74,0.95), rgba(212,163,51,0.85));
       border:2px solid #0a0a0b;
       box-shadow:0 0 0 4px rgba(212,163,51,0.35), 0 8px 22px rgba(0,0,0,0.5);
-      background-image: url('/brand/badge-gold.png');
+      background-image: url('/brand/badge-black.png');
       background-size: contain; background-position: center; background-repeat: no-repeat;
       animation: jbl-driver-pulse 1.8s ease-in-out infinite;
     "></div>
@@ -472,4 +474,93 @@ function haversine(lat1, lng1, lat2, lng2) {
   const a = Math.sin(dLat / 2) ** 2
     + Math.cos(toRad(lat1)) * Math.cos(toRad(lat2)) * Math.sin(dLng / 2) ** 2
   return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a))
+}
+
+// Same destination logic as TrackMap: nearest placed stop, but if we're
+// within 60m we're "at" it so jump to the next-by-index stop instead.
+function pickNextDestination(position, stops) {
+  const placed = stops.filter(s => Number.isFinite(s.lat) && Number.isFinite(s.lng))
+  if (!placed.length) return null
+  let nearest = null
+  let nearestMeters = Infinity
+  for (const s of placed) {
+    const m = haversine(position.lat, position.lng, s.lat, s.lng)
+    if (m < nearestMeters) { nearest = s; nearestMeters = m }
+  }
+  if (!nearest) return null
+  if (nearestMeters < 60) {
+    const after = placed.find(s => s.index > nearest.index)
+    return after || nearest
+  }
+  return nearest
+}
+
+function NextStopCard({ position, stops }) {
+  const dest = pickNextDestination(position, stops)
+  if (!dest) return null
+
+  const meters = haversine(position.lat, position.lng, dest.lat, dest.lng)
+  const distanceMi = meters / 1609.344
+  const speed = Number(position.speed)
+  const moving = Number.isFinite(speed) && speed > 5
+  const arrived = meters < 60
+  const etaMin = arrived || !moving ? null : Math.max(1, Math.round((distanceMi / speed) * 60))
+
+  return (
+    <div
+      style={{
+        display: 'flex',
+        alignItems: 'center',
+        gap: 12,
+        padding: '12px 14px',
+        background: 'linear-gradient(180deg, rgba(212,163,51,0.14), rgba(212,163,51,0.05))',
+        border: `1px solid rgba(212,163,51,0.45)`,
+        borderRadius: 12,
+        marginBottom: 14,
+      }}
+    >
+      <span
+        aria-hidden
+        style={{
+          width: 32, height: 32, borderRadius: '50%',
+          background: 'rgba(212,163,51,0.18)',
+          border: `1px solid ${GOLD}`,
+          color: GOLD_HI,
+          display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
+          fontSize: 16, fontWeight: 800,
+          flex: '0 0 auto',
+        }}
+      >
+        →
+      </span>
+      <div style={{ flex: 1, minWidth: 0 }}>
+        <div style={{ color: GOLD, fontSize: 10, letterSpacing: '0.22em', textTransform: 'uppercase', fontWeight: 700 }}>
+          {arrived ? 'At stop' : 'Next stop'}
+        </div>
+        <div style={{ color: INK, fontSize: 16, fontWeight: 800, marginTop: 2, lineHeight: 1.15 }}>
+          {dest.name}
+        </div>
+      </div>
+      <div style={{ textAlign: 'right', flex: '0 0 auto' }}>
+        {arrived ? (
+          <div style={{ color: GOLD_HI, fontSize: 13, fontWeight: 800 }}>Arrived</div>
+        ) : (
+          <>
+            {etaMin != null && (
+              <>
+                <div style={{ color: INK_DIM, fontSize: 10, letterSpacing: '0.18em', textTransform: 'uppercase', fontWeight: 700 }}>ETA</div>
+                <div style={{ color: INK, fontSize: 16, fontWeight: 800, fontVariantNumeric: 'tabular-nums' }}>
+                  {etaMin} min
+                </div>
+              </>
+            )}
+            <div style={{ color: INK_DIM, fontSize: 10, letterSpacing: '0.18em', textTransform: 'uppercase', fontWeight: 700, marginTop: etaMin != null ? 4 : 0 }}>Distance</div>
+            <div style={{ color: INK, fontSize: etaMin != null ? 13 : 16, fontWeight: 800, fontVariantNumeric: 'tabular-nums' }}>
+              {distanceMi < 0.1 ? `${Math.round(meters * 3.28084)} ft` : `${distanceMi.toFixed(1)} mi`}
+            </div>
+          </>
+        )}
+      </div>
+    </div>
+  )
 }
