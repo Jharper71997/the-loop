@@ -133,17 +133,31 @@ async function loadActiveLoop() {
 
   const today = new Date().toISOString().slice(0, 10)
 
-  const { data: groupRows } = await sb
-    .from('groups')
-    .select('id, name, event_date, pickup_time, schedule')
+  // Mirror the public events feed: only show on-sale events to riders, then
+  // pull the schedule off the linked group. This keeps the Track map in
+  // sync with what the home/events pages call "the upcoming loop".
+  const { data: eventRow } = await sb
+    .from('events')
+    .select('id, group_id, name, event_date, pickup_time, status')
+    .eq('status', 'on_sale')
     .gte('event_date', today)
     .order('event_date', { ascending: true })
     .limit(1)
+    .maybeSingle()
 
-  const group = groupRows?.[0]
-  if (!group) return { stops: [], loopLabel: null, subtitle: null }
+  if (!eventRow) return { stops: [], loopLabel: null, subtitle: null }
 
-  const schedule = Array.isArray(group.schedule) ? group.schedule : []
+  let group = null
+  if (eventRow.group_id) {
+    const { data: groupRow } = await sb
+      .from('groups')
+      .select('id, name, schedule')
+      .eq('id', eventRow.group_id)
+      .maybeSingle()
+    group = groupRow
+  }
+
+  const schedule = Array.isArray(group?.schedule) ? group.schedule : []
   const stops = schedule.map((s, i) => {
     const bar = getBarByName(s?.name)
     return {
@@ -157,8 +171,8 @@ async function loadActiveLoop() {
 
   return {
     stops,
-    loopLabel: group.name || 'Jville Brew Loop',
-    subtitle: formatSubtitle(group.event_date, group.pickup_time),
+    loopLabel: eventRow.name || group?.name || 'Jville Brew Loop',
+    subtitle: formatSubtitle(eventRow.event_date, eventRow.pickup_time),
   }
 }
 
