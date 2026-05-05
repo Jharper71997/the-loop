@@ -71,7 +71,7 @@ export default async function BarDetail({ params }) {
             }}
           >
             <a
-              href="/bars"
+              href="/track"
               style={{
                 color: GOLD,
                 fontSize: 13,
@@ -81,7 +81,7 @@ export default async function BarDetail({ params }) {
                 marginBottom: 16,
               }}
             >
-              &larr; All partner bars
+              &larr; Back to Track
             </a>
             {bar.neighborhood && bar.neighborhood !== 'TBD' && (
               <div

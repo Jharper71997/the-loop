@@ -1,10 +1,11 @@
+import Image from 'next/image'
 import { supabaseAdmin } from '@/lib/supabaseAdmin'
-import { getBarByName } from '@/lib/bars'
+import { BARS, getBarByName } from '@/lib/bars'
 import TrackMap from './TrackMap'
 
 export const metadata = {
   title: 'Track the Loop',
-  description: 'Live shuttle position for the Jville Brew Loop. Tap to see where the bus is and what bar is next.',
+  description: 'Live shuttle position for the Jville Brew Loop. See where the bus is, what bar is next, and meet every partner on the route.',
   alternates: { canonical: '/track' },
 }
 export const dynamic = 'force-dynamic'
@@ -12,13 +13,15 @@ export const dynamic = 'force-dynamic'
 const GOLD = '#d4a333'
 const INK = '#f5f5f7'
 const INK_DIM = '#b8b8bf'
+const SURFACE = '#15151a'
+const LINE = 'rgba(255,255,255,0.08)'
 
 export default async function TrackPage() {
   const data = await loadActiveLoop()
 
   return (
     <main style={{ padding: '12px 12px 28px' }}>
-      <div style={{ maxWidth: 720, margin: '0 auto', display: 'grid', gap: 12 }}>
+      <div style={{ maxWidth: 720, margin: '0 auto', display: 'grid', gap: 14 }}>
         <header style={{ padding: '4px 4px 0' }}>
           <div style={{ color: GOLD, fontSize: 11, letterSpacing: '0.22em', textTransform: 'uppercase', fontWeight: 700 }}>
             Live track
@@ -32,8 +35,93 @@ export default async function TrackPage() {
         </header>
 
         <TrackMap stops={data.stops} fallbackCenter={JACKSONVILLE_NC} />
+
+        <PartnerBars />
       </div>
     </main>
+  )
+}
+
+function PartnerBars() {
+  return (
+    <section
+      style={{
+        background: SURFACE,
+        border: `1px solid ${LINE}`,
+        borderRadius: 14,
+        overflow: 'hidden',
+      }}
+    >
+      <div style={{ padding: '12px 14px', borderBottom: `1px solid ${LINE}`, display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', gap: 10 }}>
+        <div>
+          <div style={{ color: GOLD, fontSize: 11, letterSpacing: '0.22em', textTransform: 'uppercase', fontWeight: 700 }}>
+            On the route
+          </div>
+          <div style={{ color: INK, fontSize: 14, fontWeight: 600, marginTop: 2 }}>
+            All {BARS.length} partner bars
+          </div>
+        </div>
+        <span style={{ color: INK_DIM, fontSize: 11, letterSpacing: '0.08em', textTransform: 'uppercase' }}>
+          Route rotates
+        </span>
+      </div>
+
+      <div
+        style={{
+          display: 'grid',
+          gap: 1,
+          gridTemplateColumns: 'repeat(2, 1fr)',
+          background: LINE,
+        }}
+      >
+        {BARS.map(bar => <BarCell key={bar.slug} bar={bar} />)}
+      </div>
+    </section>
+  )
+}
+
+function BarCell({ bar }) {
+  return (
+    <a
+      href={`/bars/${bar.slug}`}
+      style={{
+        display: 'block',
+        textDecoration: 'none',
+        color: 'inherit',
+        background: SURFACE,
+      }}
+    >
+      <div style={{ position: 'relative', aspectRatio: '4/3', overflow: 'hidden' }}>
+        {bar.heroImage ? (
+          <div aria-hidden style={{ position: 'absolute', inset: 0, background: `linear-gradient(180deg, rgba(10,10,11,0) 40%, rgba(10,10,11,0.85)), url(${bar.heroImage}) center/cover` }} />
+        ) : (
+          <div
+            aria-hidden
+            style={{
+              position: 'absolute', inset: 0,
+              background: 'radial-gradient(120% 80% at 50% 30%, rgba(212,163,51,0.18), transparent 70%), #0f0f12',
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+            }}
+          >
+            <Image src="/brand/badge-gold.png" alt="" width={56} height={56} style={{ opacity: 0.4 }} />
+          </div>
+        )}
+        <div
+          style={{
+            position: 'absolute',
+            left: 10, right: 10, bottom: 8,
+            color: INK,
+            fontSize: 13,
+            fontWeight: 700,
+            letterSpacing: '-0.01em',
+            lineHeight: 1.2,
+            textShadow: '0 2px 8px rgba(0,0,0,0.6)',
+          }}
+        >
+          {bar.name}
+        </div>
+      </div>
+    </a>
   )
 }
 

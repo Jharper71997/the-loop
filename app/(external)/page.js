@@ -138,7 +138,7 @@ function QuickChips() {
   return (
     <div style={{ display: 'flex', gap: 8, overflowX: 'auto', paddingBottom: 2, WebkitOverflowScrolling: 'touch' }}>
       <Chip href="/my-tickets" label="My tickets" accent />
-      <Chip href="/bars" label="Partner bars" />
+      <Chip href="/track" label="Track the loop" />
       <Chip href="/about" label="How it works" />
     </div>
   )

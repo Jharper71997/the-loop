@@ -8,14 +8,12 @@ const GOLD = '#d4a333'
 const GOLD_HI = '#f0c24a'
 const INK_DIM = '#7c7c84'
 
-const BASE_TABS = [
+const TABS = [
   { href: '/', label: 'Home', kind: 'home', match: p => p === '/' },
   { href: '/events', label: 'Book', kind: 'book', match: p => p.startsWith('/events') || p.startsWith('/book') },
+  { href: '/track', label: 'Track', kind: 'track', match: p => p.startsWith('/track') || p.startsWith('/bars') },
   { href: '/my-tickets', label: 'Tickets', kind: 'tickets', match: p => p.startsWith('/my-tickets') || p.startsWith('/tickets') },
-  { href: '/bars', label: 'Bars', kind: 'bars', match: p => p.startsWith('/bars') },
 ]
-
-const TRACK_TAB = { href: '/track', label: 'Track', kind: 'track', match: p => p.startsWith('/track') }
 
 const HIDDEN_ON = [
   /^\/tickets\/[^/]+/,
@@ -44,10 +42,6 @@ export default function TabBar() {
 
   if (HIDDEN_ON.some(re => re.test(pathname))) return null
 
-  const tabs = shuttleLive
-    ? [BASE_TABS[0], BASE_TABS[1], TRACK_TAB, BASE_TABS[2], BASE_TABS[3]]
-    : BASE_TABS
-
   return (
     <nav
       aria-label="Brew Loop"
@@ -67,14 +61,15 @@ export default function TabBar() {
       <div
         style={{
           display: 'grid',
-          gridTemplateColumns: `repeat(${tabs.length}, 1fr)`,
+          gridTemplateColumns: `repeat(${TABS.length}, 1fr)`,
           padding: '6px 8px 8px',
           maxWidth: 560,
           margin: '0 auto',
         }}
       >
-        {tabs.map(t => {
+        {TABS.map(t => {
           const active = t.match(pathname)
+          const showLiveDot = t.kind === 'track' && shuttleLive
           return (
             <a
               key={t.href}
@@ -91,7 +86,26 @@ export default function TabBar() {
                 position: 'relative',
               }}
             >
-              <TabIcon kind={t.kind} active={active} />
+              <span style={{ position: 'relative', display: 'inline-flex' }}>
+                <TabIcon kind={t.kind} active={active} />
+                {showLiveDot && (
+                  <span
+                    aria-hidden
+                    style={{
+                      position: 'absolute',
+                      top: -2,
+                      right: -4,
+                      width: 9,
+                      height: 9,
+                      borderRadius: '50%',
+                      background: GOLD,
+                      border: '2px solid #0a0a0b',
+                      boxShadow: `0 0 0 0 ${GOLD}`,
+                      animation: 'jbl-tab-pulse 1.6s ease-out infinite',
+                    }}
+                  />
+                )}
+              </span>
               <span
                 style={{
                   fontSize: 10,
@@ -101,7 +115,7 @@ export default function TabBar() {
                   color: active ? GOLD_HI : INK_DIM,
                 }}
               >
-                {t.label}
+                {showLiveDot ? 'Live' : t.label}
               </span>
               {active && (
                 <span
@@ -121,6 +135,13 @@ export default function TabBar() {
           )
         })}
       </div>
+      <style>{`
+        @keyframes jbl-tab-pulse {
+          0%   { box-shadow: 0 0 0 0 rgba(212,163,51,0.55); }
+          70%  { box-shadow: 0 0 0 7px rgba(212,163,51,0); }
+          100% { box-shadow: 0 0 0 0 rgba(212,163,51,0); }
+        }
+      `}</style>
     </nav>
   )
 }
@@ -128,9 +149,8 @@ export default function TabBar() {
 function TabIcon({ kind, active }) {
   if (kind === 'home') return <HomeIcon active={active} />
   if (kind === 'book') return <TicketPlusIcon active={active} />
-  if (kind === 'tickets') return <TicketIcon active={active} />
-  if (kind === 'bars') return <MapIcon active={active} />
   if (kind === 'track') return <TrackIcon active={active} />
+  if (kind === 'tickets') return <TicketIcon active={active} />
   return null
 }
 
@@ -164,16 +184,6 @@ function TicketPlusIcon({ active }) {
       <path d="M2 9V7a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v2a2 2 0 0 0 0 4v2a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2v-2a2 2 0 0 0 0-4z" />
       <path d="M12 9v6" />
       <path d="M9 12h6" />
-    </svg>
-  )
-}
-
-function MapIcon({ active }) {
-  return (
-    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={active ? 2.4 : 1.8} strokeLinecap="round" strokeLinejoin="round">
-      <path d="M9 5L3 7v14l6-2 6 2 6-2V5l-6 2-6-2z" />
-      <path d="M9 5v14" />
-      <path d="M15 7v14" />
     </svg>
   )
 }
