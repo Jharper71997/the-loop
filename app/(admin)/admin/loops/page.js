@@ -9,7 +9,7 @@ const BORDER = '#2a2a31'
 const INK = '#e8e8ea'
 const INK_DIM = '#9c9ca3'
 
-export default async function LeadershipLoopsListPage() {
+export default async function ManageLoopsListPage() {
   const supabase = supabaseAdmin()
   const today = operationalDateInTZ()
 
@@ -48,13 +48,13 @@ export default async function LeadershipLoopsListPage() {
     }}>
       <header style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 12, marginBottom: 14 }}>
         <div>
-          <h1 style={{ fontSize: 26, fontWeight: 700, margin: 0, letterSpacing: '-0.01em' }}>Loops</h1>
+          <h1 style={{ fontSize: 26, fontWeight: 700, margin: 0, letterSpacing: '-0.01em' }}>Manage Loops</h1>
           <p style={{ color: INK_DIM, fontSize: 13, margin: '4px 0 0' }}>
             Edit upcoming events, ticket types, and pricing.
           </p>
         </div>
         <a
-          href="/leadership/loops/new"
+          href="/admin/loops/new"
           style={{
             background: ACCENT,
             color: '#0a0a0b',
@@ -92,7 +92,7 @@ export default async function LeadershipLoopsListPage() {
           return (
             <a
               key={g.id}
-              href={`/leadership/loops/${g.id}`}
+              href={`/admin/loops/${g.id}`}
               style={{
                 display: 'flex',
                 alignItems: 'center',

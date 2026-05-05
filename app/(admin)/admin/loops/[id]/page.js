@@ -1,12 +1,12 @@
 import { notFound } from 'next/navigation'
 import { supabaseAdmin } from '@/lib/supabaseAdmin'
-import EventShell from '@/app/(admin)/admin/groups/[id]/EventShell'
-import WaiversPanel from '@/app/(admin)/admin/groups/[id]/WaiversPanel'
-import SmsBroadcast from '@/app/(admin)/_components/SmsBroadcast'
+import EventShell from '../../groups/[id]/EventShell'
+import WaiversPanel from '../../groups/[id]/WaiversPanel'
+import SmsBroadcast from '../../../_components/SmsBroadcast'
 
 export const dynamic = 'force-dynamic'
 
-export default async function LeadershipManageLoopPage({ params }) {
+export default async function ManageLoopDetailPage({ params }) {
   const { id } = await params
   const supabase = supabaseAdmin()
 
@@ -95,7 +95,7 @@ export default async function LeadershipManageLoopPage({ params }) {
         orderItems={orderItems}
         waiverSigs={waiverSigs}
         canEdit={true}
-        basePath="/leadership/loops"
+        basePath="/admin/loops"
       />
 
       {(members || []).length > 0 && (

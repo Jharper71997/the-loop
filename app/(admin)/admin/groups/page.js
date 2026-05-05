@@ -213,7 +213,7 @@ export default function Groups() {
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: '4px', gap: 10, flexWrap: 'wrap' }}>
         <h1 style={{ margin: 0 }}>Loops</h1>
         {isLeader && (
-          <a href="/leadership/loops/new" style={{
+          <a href="/admin/loops/new" style={{
             background: '#d4a333', color: '#0a0a0b', padding: '10px 16px', borderRadius: 8,
             fontWeight: 700, fontSize: 13, textDecoration: 'none',
             minHeight: 44, display: 'inline-flex', alignItems: 'center',
@@ -315,7 +315,7 @@ export default function Groups() {
                 </a>
                 {isLeader && (
                   <a
-                    href={`/leadership/loops/${group.id}#tickets`}
+                    href={`/admin/loops/${group.id}#tickets`}
                     onClick={e => e.stopPropagation()}
                     style={{
                       color: '#c8c8cc', fontSize: '12px', textDecoration: 'none',
@@ -329,7 +329,7 @@ export default function Groups() {
                 )}
                 {isLeader && (
                   <a
-                    href={`/leadership/loops/${group.id}#edit`}
+                    href={`/admin/loops/${group.id}#edit`}
                     onClick={e => e.stopPropagation()}
                     style={{
                       color: '#d4a333', fontSize: '12px', textDecoration: 'none',
