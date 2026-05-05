@@ -29,6 +29,30 @@ function slugify(name) {
     .slice(0, 60)
 }
 
+// Free-tier geocoder. No key needed; we hit it once per bar add. Returns
+// { lat, lng } or null on miss. Failure is non-fatal: bar still gets saved
+// and an admin can add coords later.
+async function geocodeAddress(address) {
+  if (!address) return null
+  try {
+    const url = `https://nominatim.openstreetmap.org/search?format=json&limit=1&q=${encodeURIComponent(address)}`
+    const res = await fetch(url, {
+      headers: { 'User-Agent': 'JvilleBrewLoop/1.0 (jacob@jvillebrewloop.com)' },
+      cache: 'no-store',
+    })
+    if (!res.ok) return null
+    const arr = await res.json()
+    const hit = Array.isArray(arr) ? arr[0] : null
+    if (!hit) return null
+    const lat = parseFloat(hit.lat)
+    const lng = parseFloat(hit.lon)
+    if (!Number.isFinite(lat) || !Number.isFinite(lng)) return null
+    return { lat, lng }
+  } catch {
+    return null
+  }
+}
+
 async function createBar(formData) {
   'use server'
   const name = (formData.get('name') || '').toString().trim()
@@ -48,6 +72,26 @@ async function createBar(formData) {
   const contact_phone = (formData.get('contact_phone') || '').toString().trim() || null
   const contact_email = (formData.get('contact_email') || '').toString().trim() || null
   const notes = (formData.get('notes') || '').toString().trim() || null
+  const address = (formData.get('address') || '').toString().trim() || null
+  const blurb = (formData.get('blurb') || '').toString().trim() || null
+  const latRaw = (formData.get('lat') || '').toString().trim()
+  const lngRaw = (formData.get('lng') || '').toString().trim()
+
+  let lat = latRaw ? parseFloat(latRaw) : null
+  let lng = lngRaw ? parseFloat(lngRaw) : null
+  if (!Number.isFinite(lat)) lat = null
+  if (!Number.isFinite(lng)) lng = null
+
+  // Auto-geocode if address provided but lat/lng aren't. Lets admin just
+  // type the address and skip the lat/lng dance — the live track map will
+  // pin the bar without a code change.
+  if (address && (lat == null || lng == null)) {
+    const geo = await geocodeAddress(address)
+    if (geo) {
+      if (lat == null) lat = geo.lat
+      if (lng == null) lng = geo.lng
+    }
+  }
 
   const supabase = supabaseAdmin()
   const { error } = await supabase.from('bars').insert({
@@ -61,6 +105,10 @@ async function createBar(formData) {
     contact_email,
     started_at: status === 'active' ? new Date().toISOString().slice(0, 10) : null,
     notes,
+    address,
+    blurb,
+    lat,
+    lng,
   })
   if (error) {
     if (error.code === '23505') {
@@ -138,7 +186,29 @@ export default async function NewBarPage({ searchParams }) {
         <Field label="Contact name" name="contact_name" />
         <Field label="Contact phone" name="contact_phone" />
         <Field label="Contact email" name="contact_email" type="email" />
-        <Textarea label="Notes" name="notes" placeholder="(optional)" />
+        <Field
+          label="Address"
+          name="address"
+          placeholder="123 Main St, Jacksonville, NC 28540"
+          hint="If filled, we'll auto-geocode lat/lng so the bar pins on the live track map automatically."
+        />
+        <Field
+          label="Latitude (optional)"
+          name="lat"
+          placeholder="34.7639"
+          hint="Skip this if you filled address — we'll look it up. Override here only if the auto-geocode is off."
+        />
+        <Field
+          label="Longitude (optional)"
+          name="lng"
+          placeholder="-77.4185"
+        />
+        <Textarea
+          label="Public blurb"
+          name="blurb"
+          placeholder="One-line description shown on /bars and the track map (optional)"
+        />
+        <Textarea label="Internal notes" name="notes" placeholder="(optional)" />
         <SubmitButton>Add Bar</SubmitButton>
       </form>
     </FormShell>

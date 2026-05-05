@@ -153,61 +153,7 @@ export default function TrackMap({ stops = [], eventDate = null, fallbackCenter 
       <StatusRow shuttle={shuttle} lastSeenAt={lastSeenAt} now={now} stops={stops} eventDate={eventDate} />
 
       {stops.length > 0 && (
-        <section
-          style={{
-            background: SURFACE,
-            border: `1px solid ${LINE}`,
-            borderRadius: 14,
-            overflow: 'hidden',
-          }}
-        >
-          <div style={{ padding: '10px 14px', borderBottom: `1px solid ${LINE}` }}>
-            <div style={{ color: GOLD, fontSize: 11, letterSpacing: '0.22em', textTransform: 'uppercase', fontWeight: 700 }}>
-              Tonight&rsquo;s stops
-            </div>
-          </div>
-          <ol style={{ listStyle: 'none', padding: 0, margin: 0 }}>
-            {stops.map(s => (
-              <li
-                key={s.index}
-                style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: 12,
-                  padding: '12px 14px',
-                  borderTop: s.index === 0 ? 'none' : `1px solid ${LINE}`,
-                }}
-              >
-                <span
-                  style={{
-                    width: 26, height: 26, borderRadius: '50%',
-                    background: 'rgba(212,163,51,0.12)',
-                    border: `1px solid rgba(212,163,51,0.4)`,
-                    color: GOLD_HI,
-                    fontSize: 12, fontWeight: 800,
-                    display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
-                    flex: '0 0 auto',
-                  }}
-                >
-                  {s.index + 1}
-                </span>
-                <div style={{ minWidth: 0, flex: 1 }}>
-                  <div style={{ color: INK, fontSize: 14, fontWeight: 600, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                    {s.name}
-                  </div>
-                  {s.startTime && (
-                    <div style={{ color: INK_DIM, fontSize: 12 }}>{formatTime(s.startTime)}</div>
-                  )}
-                </div>
-                {s.lat == null && (
-                  <span style={{ color: INK_DIM, fontSize: 10, letterSpacing: '0.12em', textTransform: 'uppercase' }}>
-                    No pin
-                  </span>
-                )}
-              </li>
-            ))}
-          </ol>
-        </section>
+        <StopList stops={stops} shuttle={shuttle} eventDate={eventDate} now={now} />
       )}
 
       <style>{`
@@ -348,6 +294,155 @@ function StatusRow({ shuttle, lastSeenAt, now, stops = [], eventDate = null }) {
       )}
     </div>
   )
+}
+
+// Layover between stops for dropoff/pickup. Used in multi-stop ETA so the
+// rider knows how long until the bus reaches stops 2, 3, etc. — not just
+// the immediate next stop.
+const STOP_LAYOVER_MIN = 10
+
+// Renders the full schedule with a per-stop ETA when the shuttle is live.
+// Each stop's ETA = drive time from current shuttle position to the immediate
+// next stop, plus STOP_LAYOVER_MIN per intermediate stop, plus drive time
+// chained between subsequent stops.
+function StopList({ stops, shuttle, eventDate, now }) {
+  const live = !!shuttle?.is_active
+  const nextStop = live ? pickNextStopByOrder(stops, new Date(now), eventDate) : null
+
+  // Build a per-stop ETA only for stops at or after `nextStop` in route order.
+  // Stops before `nextStop` are treated as already passed.
+  const etas = computeMultiStopEtas(stops, shuttle, nextStop)
+
+  return (
+    <section
+      style={{
+        background: SURFACE,
+        border: `1px solid ${LINE}`,
+        borderRadius: 14,
+        overflow: 'hidden',
+      }}
+    >
+      <div style={{ padding: '10px 14px', borderBottom: `1px solid ${LINE}` }}>
+        <div style={{ color: GOLD, fontSize: 11, letterSpacing: '0.22em', textTransform: 'uppercase', fontWeight: 700 }}>
+          Tonight&rsquo;s stops
+        </div>
+      </div>
+      <ol style={{ listStyle: 'none', padding: 0, margin: 0 }}>
+        {stops.map(s => {
+          const eta = etas.get(s.index)
+          const isPast = nextStop && s.index < nextStop.index
+          return (
+            <li
+              key={s.index}
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: 12,
+                padding: '12px 14px',
+                borderTop: s.index === 0 ? 'none' : `1px solid ${LINE}`,
+                opacity: isPast ? 0.45 : 1,
+              }}
+            >
+              <span
+                style={{
+                  width: 26, height: 26, borderRadius: '50%',
+                  background: isPast ? 'rgba(255,255,255,0.04)' : 'rgba(212,163,51,0.12)',
+                  border: `1px solid ${isPast ? LINE : 'rgba(212,163,51,0.4)'}`,
+                  color: isPast ? INK_DIM : GOLD_HI,
+                  fontSize: 12, fontWeight: 800,
+                  display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
+                  flex: '0 0 auto',
+                }}
+              >
+                {s.index + 1}
+              </span>
+              <div style={{ minWidth: 0, flex: 1 }}>
+                <div style={{ color: INK, fontSize: 14, fontWeight: 600, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                  {s.name}
+                </div>
+                {s.startTime && (
+                  <div style={{ color: INK_DIM, fontSize: 12 }}>{formatTime(s.startTime)}</div>
+                )}
+              </div>
+              {s.lat == null ? (
+                <span style={{ color: INK_DIM, fontSize: 10, letterSpacing: '0.12em', textTransform: 'uppercase' }}>
+                  No pin
+                </span>
+              ) : eta ? (
+                <div style={{ textAlign: 'right', flex: '0 0 auto' }}>
+                  {eta.status === 'arrived' ? (
+                    <div style={{ color: GOLD_HI, fontSize: 12, fontWeight: 800 }}>At stop</div>
+                  ) : (
+                    <>
+                      <div style={{ color: INK_DIM, fontSize: 9, letterSpacing: '0.18em', textTransform: 'uppercase', fontWeight: 700 }}>
+                        ETA
+                      </div>
+                      <div style={{ color: INK, fontSize: 14, fontWeight: 800, fontVariantNumeric: 'tabular-nums' }}>
+                        {eta.etaMin} min
+                      </div>
+                      <div style={{ color: INK_DIM, fontSize: 10, fontVariantNumeric: 'tabular-nums', marginTop: 2 }}>
+                        {formatDistance(eta.distanceMi, eta.distanceMeters)}
+                      </div>
+                    </>
+                  )}
+                </div>
+              ) : null}
+            </li>
+          )
+        })}
+      </ol>
+    </section>
+  )
+}
+
+// Returns Map<stopIndex, { etaMin, distanceMi, distanceMeters, status }>
+// for stops at or after the immediate-next stop. Past stops are omitted so
+// the UI can dim them. ETA chain:
+//   stop_next: drive(shuttle → next)
+//   stop_k:    drive(shuttle → next) + Σ (layover + drive(prev → curr))
+// Drive time uses actual shuttle speed when moving > 5 mph, else 25 mph.
+function computeMultiStopEtas(stops, shuttle, nextStop) {
+  const out = new Map()
+  if (!shuttle || !nextStop) return out
+
+  const placed = stops.filter(s => Number.isFinite(s.lat) && Number.isFinite(s.lng))
+  const remaining = placed.filter(s => s.index >= nextStop.index)
+  if (!remaining.length) return out
+
+  const actualSpeed = Number(shuttle.speed_mph)
+  const moving = Number.isFinite(actualSpeed) && actualSpeed > 5
+  const driveMph = moving ? actualSpeed : ASSUMED_DRIVE_MPH
+
+  let cumMin = 0
+  let prevLat = shuttle.lat
+  let prevLng = shuttle.lng
+
+  for (let i = 0; i < remaining.length; i++) {
+    const s = remaining[i]
+    const meters = haversineMeters(prevLat, prevLng, s.lat, s.lng)
+    const distanceMi = meters / 1609.344
+    const driveMin = (distanceMi / driveMph) * 60
+
+    if (i === 0 && meters < 60) {
+      out.set(s.index, { status: 'arrived', etaMin: 0, distanceMi, distanceMeters: meters })
+    } else {
+      // Add layover for every intermediate stop reached before this one.
+      const layovers = i * STOP_LAYOVER_MIN
+      cumMin += driveMin
+      const etaMin = Math.max(1, Math.round(cumMin + layovers))
+      out.set(s.index, {
+        status: i === 0 && moving ? 'enroute' : 'estimated',
+        etaMin,
+        distanceMi,
+        distanceMeters: meters,
+      })
+    }
+
+    prevLat = s.lat
+    prevLng = s.lng
+  }
+
+  return out
 }
 
 // Pick the next stop in schedule order. Riders/drivers expect the card to

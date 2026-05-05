@@ -1,7 +1,7 @@
 import DriverClient from './DriverClient'
 import { getUpcomingLoops } from '@/lib/upcomingLoops'
 import { supabaseAdmin } from '@/lib/supabaseAdmin'
-import { getBarByName } from '@/lib/bars'
+import { lookupBarsByNames } from '@/lib/barsServer'
 
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
@@ -14,8 +14,8 @@ export default async function DriverPage() {
   } catch {}
 
   // Pull the schedule for the next loop so the map can show route stops.
-  // Same lookup pattern as /track — schedule lives on groups.schedule and
-  // stop coords come from lib/bars.js via getBarByName.
+  // Stop coords come from the merged static + DB lookup so leadership-added
+  // bars get pinned without a code change.
   let stops = []
   if (nextLoop?.groupId) {
     try {
@@ -26,8 +26,9 @@ export default async function DriverPage() {
         .eq('id', nextLoop.groupId)
         .maybeSingle()
       const schedule = Array.isArray(g?.schedule) ? g.schedule : []
+      const barLookup = await lookupBarsByNames(sb, schedule.map(s => s?.name).filter(Boolean))
       stops = schedule.map((s, i) => {
-        const bar = getBarByName(s?.name)
+        const bar = s?.name ? barLookup.get(s.name) : null
         return {
           index: i,
           name: s?.name || `Stop ${i + 1}`,

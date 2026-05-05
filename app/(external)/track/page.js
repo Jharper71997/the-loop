@@ -1,6 +1,7 @@
 import Image from 'next/image'
 import { supabaseAdmin } from '@/lib/supabaseAdmin'
-import { BARS, getBarByName } from '@/lib/bars'
+import { BARS } from '@/lib/bars'
+import { lookupBarsByNames } from '@/lib/barsServer'
 import TrackMap from './TrackMap'
 
 export const metadata = {
@@ -158,8 +159,9 @@ async function loadActiveLoop() {
   }
 
   const schedule = Array.isArray(group?.schedule) ? group.schedule : []
+  const barLookup = await lookupBarsByNames(sb, schedule.map(s => s?.name).filter(Boolean))
   const stops = schedule.map((s, i) => {
-    const bar = getBarByName(s?.name)
+    const bar = s?.name ? barLookup.get(s.name) : null
     return {
       index: i,
       name: s?.name || `Stop ${i + 1}`,

@@ -39,6 +39,7 @@ export default function BookingForm({ eventId, eventName, ticketTypes, waiver })
   ])
   const [buyerTypedName, setBuyerTypedName] = useState('')
   const [waiverOpen, setWaiverOpen] = useState(false)
+  const [bartenderOpen, setBartenderOpen] = useState(false)
   const [submitting, setSubmitting] = useState(false)
   const [error, setError] = useState(null)
 
@@ -189,14 +190,11 @@ export default function BookingForm({ eventId, eventName, ticketTypes, waiver })
           <Field label="Phone" value={buyer.phone} type="tel" onChange={v => setBuyer(b => ({ ...b, phone: v }))} />
           <Field label="Email" value={buyer.email} type="email" onChange={v => setBuyer(b => ({ ...b, email: v }))} />
         </Row>
-        <label style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 13, color: '#bbb' }}>
-          <input
-            type="checkbox"
-            checked={buyer.sms_consent}
-            onChange={e => setBuyer(b => ({ ...b, sms_consent: e.target.checked }))}
-          />
-          Text me my pickup details and the live tracking link.
-        </label>
+        <CheckRow
+          checked={buyer.sms_consent}
+          onChange={v => setBuyer(b => ({ ...b, sms_consent: v }))}
+          label="Text me my pickup details and the live tracking link."
+        />
       </Section>
 
       <Section title={`Riders (${riders.length})`}>
@@ -232,33 +230,25 @@ export default function BookingForm({ eventId, eventName, ticketTypes, waiver })
                 </select>
 
                 {idx === 0 ? (
-                  <label style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 13, color: '#bbb' }}>
-                    <input
-                      type="checkbox"
-                      checked={r.same_as_buyer}
-                      onChange={e => updateRider(idx, {
-                        same_as_buyer: e.target.checked,
-                        claim_link: false,
-                      })}
-                    />
-                    This rider is me
-                  </label>
+                  <CheckRow
+                    checked={r.same_as_buyer}
+                    onChange={v => updateRider(idx, { same_as_buyer: v, claim_link: false })}
+                    label="This rider is me"
+                  />
                 ) : null}
 
                 {idx > 0 && (
-                  <label style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 13, color: r.claim_link ? '#d4a333' : '#bbb' }}>
-                    <input
-                      type="checkbox"
-                      checked={!!r.claim_link}
-                      onChange={e => updateRider(idx, {
-                        claim_link: e.target.checked,
-                        ...(e.target.checked
-                          ? { same_as_buyer: false, signed_self: false, signed_by_buyer: false, typed_name: '' }
-                          : { signed_by_buyer: true }),
-                      })}
-                    />
-                    I’ll send this person a link to sign their own waiver
-                  </label>
+                  <CheckRow
+                    checked={!!r.claim_link}
+                    onChange={v => updateRider(idx, {
+                      claim_link: v,
+                      ...(v
+                        ? { same_as_buyer: false, signed_self: false, signed_by_buyer: false, typed_name: '' }
+                        : { signed_by_buyer: true }),
+                    })}
+                    label="I'll send this person a link to sign their own waiver"
+                    accentText={!!r.claim_link}
+                  />
                 )}
 
                 {r.claim_link ? (
@@ -287,34 +277,28 @@ export default function BookingForm({ eventId, eventName, ticketTypes, waiver })
                       </>
                     )}
 
-                    <div style={{ display: 'grid', gap: 6, padding: 10, background: '#15151a', borderRadius: 8, marginTop: 4 }}>
-                      <strong style={{ fontSize: 12, color: ACCENT, letterSpacing: '0.05em', textTransform: 'uppercase' }}>
+                    <div style={{ display: 'grid', gap: 8, padding: 12, background: '#15151a', borderRadius: 8, marginTop: 4 }}>
+                      <strong style={{ fontSize: 11, color: ACCENT, letterSpacing: '0.08em', textTransform: 'uppercase' }}>
                         Waiver for this rider
                       </strong>
-                      <label style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 13 }}>
-                        <input
-                          type="radio"
-                          name={`sig-${idx}`}
-                          checked={r.signed_self}
-                          onChange={() => updateRider(idx, { signed_self: true, signed_by_buyer: false })}
-                        />
-                        This rider signs themselves
-                      </label>
+                      <RadioRow
+                        name={`sig-${idx}`}
+                        checked={r.signed_self}
+                        onChange={() => updateRider(idx, { signed_self: true, signed_by_buyer: false })}
+                        label="This rider signs themselves"
+                      />
                       {idx > 0 && (
-                        <label style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 13 }}>
-                          <input
-                            type="radio"
-                            name={`sig-${idx}`}
-                            checked={r.signed_by_buyer}
-                            onChange={() => updateRider(idx, { signed_self: false, signed_by_buyer: true })}
-                          />
-                          I’m signing on their behalf
-                        </label>
+                        <RadioRow
+                          name={`sig-${idx}`}
+                          checked={r.signed_by_buyer}
+                          onChange={() => updateRider(idx, { signed_self: false, signed_by_buyer: true })}
+                          label="I'm signing on their behalf"
+                        />
                       )}
 
                       {r.signed_self && (
                         <input
-                          placeholder="Type rider’s full legal name"
+                          placeholder="Type rider's full legal name"
                           value={r.typed_name}
                           onChange={e => updateRider(idx, { typed_name: e.target.value })}
                           style={input}
@@ -343,7 +327,7 @@ export default function BookingForm({ eventId, eventName, ticketTypes, waiver })
           onClick={() => setWaiverOpen(o => !o)}
           style={{ ...btnGhost, width: '100%', textAlign: 'left' }}
         >
-          {waiverOpen ? 'Hide' : 'Read'} waiver{waiver?.version ? ` (v${waiver.version})` : ''}
+          {waiverOpen ? 'Hide waiver' : 'Read waiver'}
         </button>
 
         {waiverOpen && waiver && (
@@ -384,20 +368,41 @@ export default function BookingForm({ eventId, eventName, ticketTypes, waiver })
         )}
       </Section>
 
-      <Section title="Bartender code (optional)">
-        <p style={{ fontSize: 12, color: '#9c9ca3', margin: 0 }}>
-          Did a bartender send you? Type their code to give them credit.
-        </p>
-        <input
-          value={bartenderCode}
-          onChange={e => setBartenderCode(e.target.value)}
-          placeholder="e.g. BRITTANY"
-          autoCapitalize="characters"
-          autoCorrect="off"
-          spellCheck={false}
-          style={{ ...input, textTransform: 'uppercase', letterSpacing: '0.05em' }}
-        />
-      </Section>
+      <div style={{ textAlign: 'center', padding: '4px 0' }}>
+        {!bartenderOpen ? (
+          <button
+            type="button"
+            onClick={() => setBartenderOpen(true)}
+            style={{
+              background: 'transparent',
+              border: 0,
+              color: '#9c9ca3',
+              fontSize: 12,
+              cursor: 'pointer',
+              textDecoration: 'underline',
+              padding: 4,
+            }}
+          >
+            Have a bartender code?
+          </button>
+        ) : (
+          <div style={{ display: 'grid', gap: 6, maxWidth: 280, margin: '0 auto' }}>
+            <input
+              value={bartenderCode}
+              onChange={e => setBartenderCode(e.target.value)}
+              placeholder="Bartender code"
+              autoCapitalize="characters"
+              autoCorrect="off"
+              spellCheck={false}
+              autoFocus
+              style={{ ...input, textTransform: 'uppercase', letterSpacing: '0.05em', fontSize: 13, padding: '8px 10px' }}
+            />
+            <div style={{ fontSize: 11, color: '#777', textAlign: 'center' }}>
+              Gives the bartender credit for sending you.
+            </div>
+          </div>
+        )}
+      </div>
 
       {error && (
         <div style={{ padding: 10, background: '#3a1a1a', border: '1px solid #f87171', borderRadius: 8, color: '#f87171', fontSize: 13 }}>
@@ -406,34 +411,41 @@ export default function BookingForm({ eventId, eventName, ticketTypes, waiver })
       )}
 
       <div style={{
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'space-between',
-        padding: 14,
+        padding: 16,
         background: SURFACE,
         border: `1px solid ${BORDER}`,
         borderRadius: 12,
+        display: 'grid',
+        gap: 12,
       }}>
-        <div>
-          <div style={{ fontSize: 12, color: '#9c9ca3', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Total</div>
-          <div style={{ fontSize: 22, fontWeight: 700, color: ACCENT }}>${(totalCents / 100).toFixed(2)}</div>
+        <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between' }}>
+          <span style={{ fontSize: 12, color: '#9c9ca3', textTransform: 'uppercase', letterSpacing: '0.08em' }}>Total</span>
+          <span style={{ fontSize: 26, fontWeight: 700, color: ACCENT, letterSpacing: '-0.01em' }}>
+            ${(totalCents / 100).toFixed(2)}
+          </span>
         </div>
         <button
           type="submit"
           disabled={!formValid || submitting}
           style={{
-            background: formValid && !submitting ? ACCENT : '#5a4720',
-            color: '#0a0a0b',
+            background: formValid && !submitting ? ACCENT : '#3a2f15',
+            color: formValid && !submitting ? '#0a0a0b' : '#7a6a3a',
             border: 0,
-            padding: '12px 20px',
+            padding: '14px 20px',
             borderRadius: 10,
             fontWeight: 700,
-            fontSize: 15,
+            fontSize: 16,
+            letterSpacing: '0.02em',
             cursor: formValid && !submitting ? 'pointer' : 'not-allowed',
+            width: '100%',
+            transition: 'background 120ms ease',
           }}
         >
           {submitting ? 'Loading…' : `Pay $${(totalCents / 100).toFixed(2)}`}
         </button>
+        <div style={{ fontSize: 11, color: '#777', textAlign: 'center' }}>
+          Secure checkout powered by Stripe
+        </div>
       </div>
     </form>
   )
@@ -462,6 +474,67 @@ function Field({ label, value, onChange, type = 'text' }) {
     <label style={{ display: 'grid', gap: 4, fontSize: 12, color: '#9c9ca3' }}>
       {label}
       <input type={type} value={value} onChange={e => onChange(e.target.value)} style={input} />
+    </label>
+  )
+}
+
+function CheckRow({ checked, onChange, label, accentText = false }) {
+  return (
+    <label style={{
+      display: 'flex',
+      alignItems: 'center',
+      gap: 10,
+      padding: '8px 4px',
+      fontSize: 14,
+      color: accentText ? ACCENT : '#ddd',
+      cursor: 'pointer',
+      lineHeight: 1.35,
+    }}>
+      <input
+        type="checkbox"
+        checked={checked}
+        onChange={e => onChange(e.target.checked)}
+        style={{
+          accentColor: ACCENT,
+          width: 18,
+          height: 18,
+          flexShrink: 0,
+          cursor: 'pointer',
+          margin: 0,
+        }}
+      />
+      <span>{label}</span>
+    </label>
+  )
+}
+
+function RadioRow({ name, checked, onChange, label }) {
+  return (
+    <label style={{
+      display: 'flex',
+      alignItems: 'center',
+      gap: 10,
+      padding: '6px 4px',
+      fontSize: 14,
+      color: '#ddd',
+      cursor: 'pointer',
+      lineHeight: 1.35,
+    }}>
+      <input
+        type="radio"
+        name={name}
+        checked={checked}
+        onChange={onChange}
+        style={{
+          accentColor: ACCENT,
+          width: 18,
+          height: 18,
+          flexShrink: 0,
+          cursor: 'pointer',
+          margin: 0,
+        }}
+      />
+      <span>{label}</span>
     </label>
   )
 }
