@@ -61,7 +61,7 @@ export default function DoorListEvents() {
 
         <div style={{ display: 'flex', gap: 8 }}>
           <Link
-            href="/security"
+            href="/admin/security"
             style={{
               padding: '8px 14px',
               borderRadius: 8,
@@ -103,7 +103,7 @@ export default function DoorListEvents() {
         {events && events.map(ev => (
           <Link
             key={ev.id}
-            href={`/security/door-list/${ev.id}`}
+            href={`/admin/security/door-list/${ev.id}`}
             style={{
               display: 'block',
               padding: '16px 18px',

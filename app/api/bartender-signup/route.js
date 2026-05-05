@@ -6,6 +6,8 @@ import {
   pickFreeShareCode,
   pickFreeSlug,
   slugifyName,
+  lastInitial,
+  formatDisplayName,
   referralUrlFor,
   renderBartenderQr,
   buildBartenderPayload,
@@ -24,7 +26,7 @@ export const dynamic = 'force-dynamic'
 const SCHEMA_MISSING_CODES = new Set(['42P01', '42703'])
 
 // POST /api/bartender-signup
-// Body: { first_name, bar_slug, code, email, phone }
+// Body: { first_name, last_name, bar_slug, code, email, phone }
 // Returns: { slug, display_name, bar, bar_slug, referral_url, qr_image_url,
 //            leaderboard_url, share_code }
 export async function POST(req) {
@@ -32,12 +34,14 @@ export async function POST(req) {
   try { body = await req.json() } catch { return bad('invalid json') }
 
   const firstName = String(body?.first_name || '').trim()
+  const lastName = String(body?.last_name || '').trim()
   const barSlug = String(body?.bar_slug || '').trim()
   const code = String(body?.code || '').trim()
   const email = normalizeEmail(body?.email)
   const phone = normalizePhone(body?.phone)
 
   if (!firstName) return bad('first_name required')
+  if (!lastName) return bad('last_name required')
   if (!barSlug) return bad('bar_slug required')
   if (!email && !phone) return bad('email or phone required')
 
@@ -49,8 +53,15 @@ export async function POST(req) {
   const bar = BARS.find(b => b.slug === barSlug)
   if (!bar) return bad('unknown bar')
 
-  const firstSlug = slugifyName(firstName)
-  if (!firstSlug) return bad('first_name has no usable letters')
+  const initial = lastInitial(lastName)
+  if (!initial) return bad('last_name has no usable letters')
+
+  // "brittany-s" — first name + last initial joined by a dash.
+  const nameSlug = slugifyName(`${firstName} ${initial}`)
+  if (!nameSlug) return bad('first_name has no usable letters')
+
+  // "Brittany S." — what the leaderboard / success card shows.
+  const displayName = formatDisplayName(firstName, lastName)
 
   const supabase = supabaseAdmin()
 
@@ -80,12 +91,14 @@ export async function POST(req) {
     // form's bar+name disambiguate it.
   }
 
-  // Bar+name lookup (legacy idempotent path).
+  // Bar+name lookup (legacy idempotent path). Match on the composite
+  // "Brittany S." display_name. Returning bartenders from before last initials
+  // were collected match via the contact-first lookup above instead.
   const { data: existing, error: lookupErr } = await supabase
     .from('bartenders')
     .select('slug, display_name, bar, qr_image_url, active, share_code, email, phone')
     .eq('bar', bar.name)
-    .ilike('display_name', firstName)
+    .ilike('display_name', displayName)
     .maybeSingle()
 
   if (lookupErr && SCHEMA_MISSING_CODES.has(lookupErr.code)) {
@@ -106,17 +119,17 @@ export async function POST(req) {
   }
 
   // Fresh signup.
-  const baseSlug = `${bar.slug}-${firstSlug}`
+  const baseSlug = `${bar.slug}-${nameSlug}`
   const slug = await pickFreeSlug(supabase, baseSlug)
   if (!slug) return Response.json({ error: 'could not find a free slug' }, { status: 500 })
 
   const referralUrl = referralUrlFor(slug)
   const qrDataUrl = await renderBartenderQr(referralUrl)
-  const shareCode = await pickFreeShareCode(supabase, shareCodeBase(firstName))
+  const shareCode = await pickFreeShareCode(supabase, shareCodeBase(`${firstName}${initial}`))
 
   const row = {
     slug,
-    display_name: firstName,
+    display_name: displayName,
     bar: bar.name,
     qr_image_url: qrDataUrl,
     active: true,
@@ -134,7 +147,7 @@ export async function POST(req) {
       kind: 'finalize_failed',
       subject: 'Bartender signup insert failed',
       body: insertErr.message,
-      context: { display_name: firstName, bar: bar.name },
+      context: { display_name: displayName, bar: bar.name },
     })
     return Response.json({ error: 'Could not complete signup. Please try again.' }, { status: 500 })
   }
@@ -143,7 +156,7 @@ export async function POST(req) {
   // bartender's share_code in TT's "promo credit or voucher code" field at
   // checkout. Failing here doesn't block signup — the URL referral path
   // still works.
-  ensureBartenderVoucher(supabase, { slug, shareCode, displayName: firstName }).catch(err => {
+  ensureBartenderVoucher(supabase, { slug, shareCode, displayName }).catch(err => {
     console.error('[bartender-signup] TT voucher create failed', err)
   })
 

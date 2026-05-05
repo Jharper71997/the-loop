@@ -1,6 +1,7 @@
 'use client'
 
 import { useEffect, useRef, useState } from 'react'
+import 'leaflet/dist/leaflet.css'
 
 const GOLD = '#d4a333'
 const GOLD_HI = '#f0c24a'
@@ -17,7 +18,10 @@ const RED = '#e07a7a'
 const MIN_POST_INTERVAL_MS = 8000
 const MIN_DELTA_METERS = 5
 
-export default function DriverClient({ groupId = null, loopName = null, eventDate = null, pickupTime = null }) {
+// Fallback center if we have no position and no stops (Jacksonville NC).
+const JACKSONVILLE_NC = { lat: 34.7541, lng: -77.4302 }
+
+export default function DriverClient({ groupId = null, loopName = null, eventDate = null, pickupTime = null, stops = [] }) {
   const [running, setRunning] = useState(false)
   const [position, setPosition] = useState(null)
   const [error, setError] = useState(null)
@@ -29,11 +33,105 @@ export default function DriverClient({ groupId = null, loopName = null, eventDat
   const lastPostRef = useRef({ at: 0, lat: null, lng: null })
   const wakeLockRef = useRef(null)
 
+  // Leaflet map state. Booted once on mount; the driver marker + center
+  // updates each time `position` changes.
+  const mapContainerRef = useRef(null)
+  const mapStateRef = useRef({ map: null, L: null, driverMarker: null, didFollow: false })
+  const [mapReady, setMapReady] = useState(false)
+
   useEffect(() => {
     // Re-render every second so "x seconds ago" stays fresh.
     const t = setInterval(() => setTickHack(n => n + 1), 1000)
     return () => clearInterval(t)
   }, [])
+
+  // Boot the Leaflet map once. Same tile + style choices as /track so the
+  // driver and rider views feel like the same map.
+  useEffect(() => {
+    let cancelled = false
+    let map
+
+    ;(async () => {
+      const L = (await import('leaflet')).default
+      if (cancelled || !mapContainerRef.current) return
+
+      const fitTargets = stops
+        .filter(s => Number.isFinite(s.lat) && Number.isFinite(s.lng))
+        .map(s => [s.lat, s.lng])
+
+      map = L.map(mapContainerRef.current, {
+        zoomControl: true,
+        attributionControl: false,
+        scrollWheelZoom: true,
+      }).setView(
+        fitTargets[0] || [JACKSONVILLE_NC.lat, JACKSONVILLE_NC.lng],
+        13,
+      )
+
+      L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        maxZoom: 19,
+      }).addTo(map)
+
+      L.control.attribution({ prefix: false })
+        .addAttribution('&copy; OpenStreetMap')
+        .addTo(map)
+
+      // Numbered gold pins for tonight's stops, same look as /track.
+      stops
+        .filter(s => Number.isFinite(s.lat) && Number.isFinite(s.lng))
+        .forEach(s => {
+          const icon = L.divIcon({
+            className: 'jbl-stop-pin',
+            html: stopPinHtml(s.index + 1),
+            iconSize: [28, 28],
+            iconAnchor: [14, 14],
+          })
+          L.marker([s.lat, s.lng], { icon })
+            .bindPopup(`<strong>${escapeHtml(s.name)}</strong>${s.startTime ? `<br/>${escapeHtml(formatPickup(s.startTime))}` : ''}`)
+            .addTo(map)
+        })
+
+      if (fitTargets.length > 1) {
+        map.fitBounds(fitTargets, { padding: [40, 40] })
+      }
+
+      mapStateRef.current = { map, L, driverMarker: null, didFollow: false }
+      setMapReady(true)
+    })()
+
+    return () => {
+      cancelled = true
+      if (map) map.remove()
+      mapStateRef.current = { map: null, L: null, driverMarker: null, didFollow: false }
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
+
+  // Sync driver marker with the live position. First fix recenters the map;
+  // subsequent updates just move the marker so the driver can pan around
+  // without us yanking the view back every couple seconds.
+  useEffect(() => {
+    const { map, L } = mapStateRef.current
+    if (!map || !L || !mapReady || !position) return
+
+    const latlng = [position.lat, position.lng]
+    if (!mapStateRef.current.driverMarker) {
+      const icon = L.divIcon({
+        className: 'jbl-driver-icon',
+        html: driverIconHtml(),
+        iconSize: [44, 44],
+        iconAnchor: [22, 22],
+      })
+      mapStateRef.current.driverMarker = L.marker(latlng, { icon, zIndexOffset: 1000 }).addTo(map)
+    } else {
+      mapStateRef.current.driverMarker.setLatLng(latlng)
+    }
+
+    if (!mapStateRef.current.didFollow) {
+      map.setView(latlng, Math.max(map.getZoom(), 15), { animate: true })
+      mapStateRef.current.didFollow = true
+    }
+  }, [position, mapReady])
 
   useEffect(() => {
     return () => stop()
@@ -236,12 +334,80 @@ export default function DriverClient({ groupId = null, loopName = null, eventDat
           )}
         </div>
 
+        {/* Live map — driver's own marker + tonight's stop pins. Same Leaflet
+            base as the public /track view so the two feel like one map. */}
+        <div
+          ref={mapContainerRef}
+          style={{
+            width: '100%',
+            aspectRatio: '4/3',
+            maxHeight: '55dvh',
+            minHeight: 280,
+            borderRadius: 16,
+            overflow: 'hidden',
+            background: '#0d0d10',
+            border: `1px solid ${LINE}`,
+          }}
+        />
+
         <p style={{ color: INK_DIM, fontSize: 12, textAlign: 'center', margin: 0 }}>
           Keep this screen on while driving. Position is shared with the dispatch view.
         </p>
       </div>
+
+      <style>{`
+        .jbl-stop-pin > div { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; }
+        .leaflet-container { background: #0d0d10; }
+        .leaflet-popup-content-wrapper {
+          background: #15151a; color: #f5f5f7;
+          border: 1px solid rgba(255,255,255,0.08); border-radius: 10px;
+        }
+        .leaflet-popup-tip { background: #15151a; }
+        .leaflet-control-attribution {
+          background: rgba(10,10,11,0.6) !important; color: #9c9ca3 !important;
+        }
+        .leaflet-control-attribution a { color: ${GOLD} !important; }
+      `}</style>
     </div>
   )
+}
+
+function stopPinHtml(n) {
+  return `
+    <div style="
+      width:28px;height:28px;border-radius:50%;
+      background:#15151a;border:2px solid ${GOLD};
+      color:${GOLD_HI};font-size:12px;font-weight:800;
+      display:flex;align-items:center;justify-content:center;
+      box-shadow:0 4px 14px rgba(0,0,0,0.55);
+    ">${n}</div>
+  `
+}
+
+function driverIconHtml() {
+  return `
+    <div style="
+      width:44px;height:44px;border-radius:50%;
+      background: radial-gradient(circle at 35% 30%, rgba(240,194,74,0.95), rgba(212,163,51,0.85));
+      border:2px solid #0a0a0b;
+      box-shadow:0 0 0 4px rgba(212,163,51,0.35), 0 8px 22px rgba(0,0,0,0.5);
+      background-image: url('/brand/badge-gold.png');
+      background-size: contain; background-position: center; background-repeat: no-repeat;
+      animation: jbl-driver-pulse 1.8s ease-in-out infinite;
+    "></div>
+    <style>
+      @keyframes jbl-driver-pulse {
+        0%,100% { box-shadow: 0 0 0 4px rgba(212,163,51,0.35), 0 8px 22px rgba(0,0,0,0.5); }
+        50%     { box-shadow: 0 0 0 10px rgba(212,163,51,0.05), 0 8px 22px rgba(0,0,0,0.5); }
+      }
+    </style>
+  `
+}
+
+function escapeHtml(s) {
+  return String(s).replace(/[&<>"']/g, c => ({
+    '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;',
+  })[c])
 }
 
 function Stat({ label, value }) {

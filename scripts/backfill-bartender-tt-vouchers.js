@@ -1,6 +1,5 @@
-// Backfill TT vouchers for bartenders who signed up before the voucher hook
-// was wired in (i.e. every existing row at deploy time). Idempotent — skips
-// any row that already has tt_voucher_id and re-runnable safely.
+// One-shot backfill: create a 0%-off Ticket Tailor discount code for each
+// bartender that doesn't have one yet. Idempotent and re-runnable.
 //
 // Usage:
 //   set -a && source /c/Users/jacob/.env && set +a
@@ -8,9 +7,8 @@
 //
 // Required env:
 //   NEXT_PUBLIC_SUPABASE_URL
-//   SUPABASE_SERVICE_ROLE_KEY
+//   SUPABASE_SERVICE_KEY  (or SUPABASE_SERVICE_ROLE_KEY)
 //   TICKET_TAILOR_API_KEY
-//   TICKET_TAILOR_BARTENDER_VOUCHER_GROUP_ID
 
 const { createClient } = require('@supabase/supabase-js')
 
@@ -22,15 +20,11 @@ function authHeader() {
   return 'Basic ' + Buffer.from(`${apiKey}:`).toString('base64')
 }
 
-async function createVoucherCode({ groupId, code }) {
+async function ttPost(path, params) {
   const auth = authHeader()
   if (!auth) return { ok: false, reason: 'no_api_key' }
 
-  const params = new URLSearchParams()
-  params.set('voucher_group_id', groupId)
-  params.set('code', code)
-
-  const res = await fetch(`${TT_BASE}/voucher_codes`, {
+  const res = await fetch(`${TT_BASE}${path}`, {
     method: 'POST',
     headers: {
       Authorization: auth,
@@ -47,7 +41,46 @@ async function createVoucherCode({ groupId, code }) {
   if (!res.ok) {
     return { ok: false, status: res.status, body: payload || text }
   }
-  return { ok: true, voucherId: payload?.id || null }
+  return { ok: true, payload }
+}
+
+async function fetchAllTicketTypeIds() {
+  const auth = authHeader()
+  if (!auth) return []
+  const ids = []
+  let cursor = null
+  for (let page = 0; page < 20; page++) {
+    const url = new URL(`${TT_BASE}/event_series`)
+    url.searchParams.set('limit', '100')
+    if (cursor) url.searchParams.set('starting_after', cursor)
+    const res = await fetch(url.toString(), {
+      headers: { Authorization: auth, Accept: 'application/json' },
+    })
+    if (!res.ok) break
+    const payload = await res.json().catch(() => null)
+    const data = payload?.data || []
+    if (!data.length) break
+    for (const es of data) {
+      for (const tt of es?.default_ticket_types || []) {
+        if (tt?.id) ids.push(tt.id)
+      }
+    }
+    if (data.length < 100) break
+    cursor = data[data.length - 1].id
+  }
+  return ids
+}
+
+async function createDiscount({ code, displayName, ticketTypeIds }) {
+  const params = new URLSearchParams()
+  params.set('name', `Bartender: ${displayName || code}`)
+  params.set('code', code)
+  params.set('type', 'fixed_amount')
+  params.set('price', '1')
+  for (const tid of ticketTypeIds || []) {
+    params.append('ticket_types[]', tid)
+  }
+  return ttPost('/discounts', params)
 }
 
 function sleep(ms) {
@@ -56,15 +89,10 @@ function sleep(ms) {
 
 async function main() {
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
-  const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY
-  const groupId = process.env.TICKET_TAILOR_BARTENDER_VOUCHER_GROUP_ID
+  const serviceKey = process.env.SUPABASE_SERVICE_KEY || process.env.SUPABASE_SERVICE_ROLE_KEY
 
   if (!supabaseUrl || !serviceKey) {
-    console.error('Missing NEXT_PUBLIC_SUPABASE_URL or SUPABASE_SERVICE_ROLE_KEY')
-    process.exit(1)
-  }
-  if (!groupId) {
-    console.error('Missing TICKET_TAILOR_BARTENDER_VOUCHER_GROUP_ID — set up a 0%-off voucher group in TT first and put its id here')
+    console.error('Missing NEXT_PUBLIC_SUPABASE_URL or SUPABASE_SERVICE_KEY')
     process.exit(1)
   }
   if (!process.env.TICKET_TAILOR_API_KEY) {
@@ -89,24 +117,32 @@ async function main() {
     process.exit(1)
   }
 
-  console.log(`Found ${rows.length} bartenders without a TT voucher.`)
+  console.log(`Found ${rows.length} bartenders without a TT discount code.`)
+
+  const ticketTypeIds = await fetchAllTicketTypeIds()
+  if (!ticketTypeIds.length) {
+    console.error('No ticket_types found in TT — discount codes would be valid for nothing. Aborting.')
+    process.exit(1)
+  }
+  console.log(`Scoping discounts to ${ticketTypeIds.length} ticket types.`)
 
   let created = 0
   let failed = 0
 
   for (const row of rows) {
     process.stdout.write(`[${row.slug}] code=${row.share_code} ... `)
-    const result = await createVoucherCode({ groupId, code: row.share_code })
+    const result = await createDiscount({ code: row.share_code, displayName: row.display_name, ticketTypeIds })
     if (result.ok) {
+      const discountId = result.payload?.id || null
       const { error: updErr } = await supabase
         .from('bartenders')
-        .update({ tt_voucher_id: result.voucherId })
+        .update({ tt_voucher_id: discountId })
         .eq('slug', row.slug)
       if (updErr) {
-        console.log(`OK (id=${result.voucherId}) but Supabase update failed: ${updErr.message}`)
+        console.log(`OK (id=${discountId}) but Supabase update failed: ${updErr.message}`)
         failed++
       } else {
-        console.log(`OK (id=${result.voucherId})`)
+        console.log(`OK (id=${discountId})`)
         created++
       }
     } else {

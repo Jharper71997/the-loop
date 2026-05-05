@@ -68,8 +68,30 @@ export async function POST(req) {
 
   const supabase = supabaseAdmin()
 
-  let groupId = null
-  if (body.event.create_group !== false) {
+  // group_id may be passed in to attach the event to an existing Loop (e.g.
+  // when admin opens a Loop with no paired event yet and saves from the Edit
+  // tab). Without this, that flow silently created orphan events with
+  // group_id: null that never showed up on the Loop again.
+  let groupId = body.event.group_id || null
+
+  // Refuse to insert a second event for a Loop that already has one. Without
+  // this guard, double-clicks or stale page state would silently produce
+  // duplicate event rows. Client should switch to PUT against the returned id.
+  if (groupId) {
+    const { data: existing } = await supabase
+      .from('events')
+      .select('id')
+      .eq('group_id', groupId)
+      .maybeSingle()
+    if (existing?.id) {
+      return Response.json(
+        { error: 'group_already_has_event', event_id: existing.id },
+        { status: 409 }
+      )
+    }
+  }
+
+  if (!groupId && body.event.create_group !== false) {
     const { data: group, error: groupErr } = await supabase
       .from('groups')
       .insert({

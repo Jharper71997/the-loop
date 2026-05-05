@@ -70,11 +70,11 @@ export default function LeaderboardAdminClient({ bars = [] }) {
     }
   }
 
-  async function createBartender({ first_name, bar_slug }) {
+  async function createBartender({ first_name, last_name, bar_slug }) {
     const res = await fetch('/api/admin/bartenders', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ first_name, bar_slug }),
+      body: JSON.stringify({ first_name, last_name, bar_slug }),
     })
     const data = await res.json().catch(() => ({}))
     if (!res.ok) throw new Error(data?.error || `create failed (${res.status})`)
@@ -216,16 +216,17 @@ export default function LeaderboardAdminClient({ bars = [] }) {
 
 function AddRow({ bars, onCancel, onSave }) {
   const [firstName, setFirstName] = useState('')
+  const [lastName, setLastName] = useState('')
   const [barSlug, setBarSlug] = useState(bars[0]?.slug || '')
   const [busy, setBusy] = useState(false)
   const [err, setErr] = useState(null)
 
   async function submit() {
-    if (!firstName.trim() || !barSlug) return
+    if (!firstName.trim() || !lastName.trim() || !barSlug) return
     setBusy(true)
     setErr(null)
     try {
-      await onSave({ first_name: firstName.trim(), bar_slug: barSlug })
+      await onSave({ first_name: firstName.trim(), last_name: lastName.trim(), bar_slug: barSlug })
     } catch (e) {
       setErr(e.message)
     } finally {
@@ -242,6 +243,12 @@ function AddRow({ bars, onCancel, onSave }) {
           placeholder="First name"
           value={firstName}
           onChange={e => setFirstName(e.target.value)}
+          style={inputStyle}
+        />
+        <input
+          placeholder="Last name"
+          value={lastName}
+          onChange={e => setLastName(e.target.value)}
           style={inputStyle}
         />
         <select value={barSlug} onChange={e => setBarSlug(e.target.value)} style={selectStyle}>

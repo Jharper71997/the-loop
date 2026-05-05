@@ -1,25 +1,33 @@
 'use client'
 
-import { useMemo } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import SmsBroadcast from '../_components/SmsBroadcast'
 import PickedUpToggle from '../_components/PickedUpToggle'
 import SmsButton from '../_components/SmsButton'
 import TtBackfillButton from '../_components/TtBackfillButton'
 import { formatStopTime } from '@/lib/schedule'
+import { supabase } from '@/lib/supabase'
+import { isLeadership } from '@/lib/roles'
 
 const ACCENT = '#d4a333'
 const SURFACE = '#15151a'
 const BORDER = '#2a2a31'
 
 export default function TonightClient({ state, today, group, currentIdx, ordersToday, orderStopBreakdown = {}, ticketsByContact = {}, totalTickets = 0, upcomingGroups = [] }) {
+  const [email, setEmail] = useState(null)
+  const isLeader = isLeadership(email)
+  useEffect(() => {
+    supabase.auth.getUser().then(({ data }) => setEmail(data?.user?.email || null))
+  }, [])
+
   return (
     <main style={{ maxWidth: 1100, margin: '0 auto', padding: '20px 16px', minHeight: '100vh', color: '#fff' }}>
-      <Header today={today} group={group} state={state} />
+      <Header today={today} group={group} state={state} isLeader={isLeader} />
       {group?.id && (
-        <EventQuickPanel group={group} totalTickets={totalTickets} />
+        <EventQuickPanel group={group} totalTickets={totalTickets} isLeader={isLeader} />
       )}
 
-      {state === 'none' && <NoLoopState today={today} />}
+      {state === 'none' && <NoLoopState today={today} isLeader={isLeader} />}
       {state === 'upcoming' && <UpcomingLoopState group={group} ticketsByContact={ticketsByContact} totalTickets={totalTickets} />}
       {state === 'pre_pickup' && <PrePickupState group={group} ticketsByContact={ticketsByContact} totalTickets={totalTickets} />}
       {state === 'in_progress' && <InProgressState group={group} currentIdx={currentIdx} ticketsByContact={ticketsByContact} totalTickets={totalTickets} />}
@@ -74,7 +82,7 @@ export default function TonightClient({ state, today, group, currentIdx, ordersT
   )
 }
 
-function EventQuickPanel({ group, totalTickets }) {
+function EventQuickPanel({ group, totalTickets, isLeader = false }) {
   return (
     <section style={{
       display: 'flex',
@@ -109,21 +117,23 @@ function EventQuickPanel({ group, totalTickets }) {
       >
         Summary
       </a>
-      <a
-        href={`/admin/groups/${group.id}#edit`}
-        style={{
-          padding: '10px 14px', borderRadius: 8, border: `1px solid ${ACCENT}`,
-          color: ACCENT, fontSize: 12, fontWeight: 700, textDecoration: 'none',
-          minHeight: 36, display: 'inline-flex', alignItems: 'center',
-        }}
-      >
-        Open settings
-      </a>
+      {isLeader && (
+        <a
+          href={`/leadership/loops/${group.id}#edit`}
+          style={{
+            padding: '10px 14px', borderRadius: 8, border: `1px solid ${ACCENT}`,
+            color: ACCENT, fontSize: 12, fontWeight: 700, textDecoration: 'none',
+            minHeight: 36, display: 'inline-flex', alignItems: 'center',
+          }}
+        >
+          Open settings
+        </a>
+      )}
     </section>
   )
 }
 
-function Header({ today, group, state }) {
+function Header({ today, group, state, isLeader = false }) {
   const isLive = state === 'pre_pickup' || state === 'in_progress'
   const eyebrow = isLive ? 'Live · Today' : 'Schedule'
   return (
@@ -151,16 +161,18 @@ function Header({ today, group, state }) {
         <h1 style={{ fontSize: 'clamp(22px, 6vw, 28px)', color: ACCENT, margin: '4px 0 0' }}>Schedule</h1>
         <span style={{ color: '#9c9ca3', fontSize: 13 }}>{formatToday(today)}</span>
       </div>
-      <a href="/admin/groups/new" style={{
-        background: ACCENT, color: '#0a0a0b',
-        padding: '10px 16px', borderRadius: 8, fontWeight: 700, fontSize: 13, textDecoration: 'none',
-        minHeight: 44, display: 'inline-flex', alignItems: 'center',
-      }}>+ New Loop</a>
+      {isLeader && (
+        <a href="/leadership/loops/new" style={{
+          background: ACCENT, color: '#0a0a0b',
+          padding: '10px 16px', borderRadius: 8, fontWeight: 700, fontSize: 13, textDecoration: 'none',
+          minHeight: 44, display: 'inline-flex', alignItems: 'center',
+        }}>+ New Loop</a>
+      )}
     </div>
   )
 }
 
-function NoLoopState() {
+function NoLoopState({ isLeader = false }) {
   return (
     <section style={{
       background: SURFACE, border: `1px solid ${BORDER}`, borderRadius: 12, padding: 24, textAlign: 'center',
@@ -169,10 +181,12 @@ function NoLoopState() {
       <p style={{ color: '#bbb', fontSize: 14, margin: '0 0 16px' }}>
         When you create a Loop on the Loops tab, this page will show its manifest, stops, and a one-tap broadcast.
       </p>
-      <a href="/admin/groups/new" style={{
-        display: 'inline-block', background: ACCENT, color: '#0a0a0b',
-        padding: '10px 18px', borderRadius: 10, fontWeight: 700, fontSize: 14, textDecoration: 'none',
-      }}>+ Create your first Loop</a>
+      {isLeader && (
+        <a href="/leadership/loops/new" style={{
+          display: 'inline-block', background: ACCENT, color: '#0a0a0b',
+          padding: '10px 18px', borderRadius: 10, fontWeight: 700, fontSize: 14, textDecoration: 'none',
+        }}>+ Create your first Loop</a>
+      )}
     </section>
   )
 }

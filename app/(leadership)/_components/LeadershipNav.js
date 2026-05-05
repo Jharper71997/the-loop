@@ -8,6 +8,7 @@ import { supabase } from '@/lib/supabase'
 
 const LINKS = [
   { href: '/leadership',          label: 'Scoreboard' },
+  { href: '/leadership/loops',    label: 'Loops' },
   { href: '/leadership/income',   label: 'Income' },
   { href: '/leadership/expenses', label: 'Expenses' },
   { href: '/leadership/cash',     label: 'Cash' },

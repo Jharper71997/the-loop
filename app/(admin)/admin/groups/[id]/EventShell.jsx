@@ -14,23 +14,27 @@ const BORDER = '#2a2a31'
 const INK = '#f5f5f7'
 const INK_DIM = '#9c9ca3'
 
-const VIEWS = [
+const ALL_VIEWS = [
   { id: 'summary', label: 'Event summary', section: 'Overview' },
   { id: 'roster', label: 'Roster', section: 'Overview' },
   { id: 'edit', label: 'Edit event and tickets', section: 'Settings' },
   { id: 'tickets', label: 'Tickets and items', section: 'Settings' },
 ]
-const VIEW_IDS = new Set(VIEWS.map(v => v.id))
 
 export default function EventShell({
   group,
   event,
+  extraEvents = [],
   ticketTypes,
   members,
   orders,
   orderItems,
   waiverSigs,
+  canEdit = false,
+  basePath = '/admin/groups',
 }) {
+  const VIEWS = canEdit ? ALL_VIEWS : ALL_VIEWS.filter(v => v.section !== 'Settings')
+  const VIEW_IDS = new Set(VIEWS.map(v => v.id))
   const [view, setView] = useState('summary')
   const [drawerOpen, setDrawerOpen] = useState(false)
 
@@ -43,7 +47,8 @@ export default function EventShell({
     syncFromHash()
     window.addEventListener('hashchange', syncFromHash)
     return () => window.removeEventListener('hashchange', syncFromHash)
-  }, [])
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [canEdit])
 
   function go(id) {
     setView(id)
@@ -86,10 +91,13 @@ export default function EventShell({
         group={group}
         event={event}
         view={view}
+        views={VIEWS}
         onSelect={go}
         onCopyLink={copyLink}
         drawerOpen={drawerOpen}
         onCloseDrawer={() => setDrawerOpen(false)}
+        canEdit={canEdit}
+        basePath={basePath}
       />
 
       <main style={{ flex: 1, minWidth: 0, padding: '20px 16px 60px', maxWidth: '100%' }}>
@@ -114,6 +122,10 @@ export default function EventShell({
           ☰ {VIEWS.find(v => v.id === view)?.label || 'Menu'}
         </button>
 
+        {canEdit && extraEvents.length > 0 && (
+          <DuplicateEventsBanner current={event} extras={extraEvents} />
+        )}
+
         {view === 'summary' && (
           <SummaryView
             group={group}
@@ -133,12 +145,13 @@ export default function EventShell({
             ticketTypes={ticketTypes}
           />
         )}
-        {view === 'edit' && <EditView group={group} event={event} />}
-        {view === 'tickets' && (
+        {canEdit && view === 'edit' && <EditView group={group} event={event} />}
+        {canEdit && view === 'tickets' && (
           <TicketsView
             event={event}
             ticketTypes={ticketTypes}
             stops={Array.isArray(group.schedule) ? group.schedule : []}
+            onJumpToEdit={() => go('edit')}
           />
         )}
       </main>
@@ -157,7 +170,7 @@ export default function EventShell({
   )
 }
 
-function Sidebar({ group, event, view, onSelect, onCopyLink, drawerOpen, onCloseDrawer }) {
+function Sidebar({ group, event, view, views, onSelect, onCopyLink, drawerOpen, onCloseDrawer, canEdit, basePath }) {
   async function deleteEvent() {
     if (!event?.id) return
     const expected = group.name || event.name || ''
@@ -185,10 +198,10 @@ function Sidebar({ group, event, view, onSelect, onCopyLink, drawerOpen, onClose
       alert(json.error || `Delete failed (${res.status})`)
       return
     }
-    window.location.href = '/admin/groups'
+    window.location.href = basePath
   }
 
-  const sections = ['Overview', 'Settings']
+  const sections = canEdit ? ['Overview', 'Settings'] : ['Overview']
   const isLive = group.event_date && (() => {
     try { return new Date(`${group.event_date}T00:00:00`).toDateString() === new Date().toDateString() } catch { return false }
   })()
@@ -233,7 +246,7 @@ function Sidebar({ group, event, view, onSelect, onCopyLink, drawerOpen, onClose
       </button>
 
       <div>
-        <a href="/admin/groups" style={{ color: ACCENT, fontSize: 12, textDecoration: 'none', letterSpacing: '0.06em' }}>
+        <a href={basePath} style={{ color: ACCENT, fontSize: 12, textDecoration: 'none', letterSpacing: '0.06em' }}>
           ← All Loops
         </a>
         <div style={{ marginTop: 10 }}>
@@ -270,7 +283,7 @@ function Sidebar({ group, event, view, onSelect, onCopyLink, drawerOpen, onClose
             {s}
           </div>
           <div style={{ display: 'grid', gap: 2 }}>
-            {VIEWS.filter(v => v.section === s).map(v => {
+            {views.filter(v => v.section === s).map(v => {
               const active = v.id === view
               return (
                 <button
@@ -325,19 +338,21 @@ function Sidebar({ group, event, view, onSelect, onCopyLink, drawerOpen, onClose
           <button type="button" onClick={onCopyLink} style={actionBtn}>
             Copy booking link
           </button>
-          <button
-            type="button"
-            onClick={deleteEvent}
-            style={{
-              ...actionBtn,
-              color: '#e07a7a',
-              borderTop: `1px solid ${BORDER}`,
-              marginTop: 6,
-              paddingTop: 12,
-            }}
-          >
-            Delete event…
-          </button>
+          {canEdit && (
+            <button
+              type="button"
+              onClick={deleteEvent}
+              style={{
+                ...actionBtn,
+                color: '#e07a7a',
+                borderTop: `1px solid ${BORDER}`,
+                marginTop: 6,
+                paddingTop: 12,
+              }}
+            >
+              Delete event…
+            </button>
+          )}
         </div>
       </div>
 
@@ -347,6 +362,71 @@ function Sidebar({ group, event, view, onSelect, onCopyLink, drawerOpen, onClose
         }
       `}</style>
     </aside>
+  )
+}
+
+function DuplicateEventsBanner({ current, extras }) {
+  return (
+    <div style={{
+      background: 'rgba(248,113,113,0.08)',
+      border: '1px solid rgba(248,113,113,0.45)',
+      borderRadius: 12,
+      padding: 14,
+      marginBottom: 14,
+      display: 'grid',
+      gap: 8,
+    }}>
+      <div style={{ color: '#f87171', fontSize: 13, fontWeight: 700 }}>
+        ⚠ This Loop has {extras.length + 1} events linked to it
+      </div>
+      <div style={{ color: INK_DIM, fontSize: 12, lineHeight: 1.45 }}>
+        You're editing the newest one ({current?.name || '(unnamed)'} ·{' '}
+        <strong style={{ color: INK }}>{current?.status || 'unknown'}</strong>).
+        The others are listed below — open them on the public page to confirm
+        which one has your real data, then delete the wrong ones from the Edit
+        tab's "Delete event…" action.
+      </div>
+      <div style={{ display: 'grid', gap: 4 }}>
+        {extras.map(e => (
+          <div key={e.id} style={{
+            display: 'flex',
+            justifyContent: 'space-between',
+            alignItems: 'center',
+            gap: 8,
+            padding: '8px 10px',
+            background: '#0e0e12',
+            border: `1px solid ${BORDER}`,
+            borderRadius: 8,
+            fontSize: 12,
+            flexWrap: 'wrap',
+          }}>
+            <div style={{ color: INK }}>
+              <strong>{e.name || '(unnamed)'}</strong>
+              <span style={{ color: INK_DIM, marginLeft: 8 }}>
+                · {e.status} · created {new Date(e.created_at).toLocaleString()}
+              </span>
+            </div>
+            <a
+              href={`/book/${e.id}`}
+              target="_blank"
+              rel="noreferrer"
+              style={{
+                color: ACCENT,
+                fontSize: 12,
+                fontWeight: 700,
+                textDecoration: 'none',
+                padding: '4px 10px',
+                border: `1px solid ${BORDER}`,
+                borderRadius: 6,
+                whiteSpace: 'nowrap',
+              }}
+            >
+              Open /book/{e.id.slice(0, 8)}…
+            </a>
+          </div>
+        ))}
+      </div>
+    </div>
   )
 }
 

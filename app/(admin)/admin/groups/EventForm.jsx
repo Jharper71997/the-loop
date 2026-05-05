@@ -14,7 +14,7 @@ const DEFAULT_TICKET_TYPES = [
   { name: 'Stop 5: Hideaway',     stop_index: 4, price_cents: 2500 },
 ]
 
-export default function EventForm({ mode = 'create', initialEvent = null, initialTicketTypes = [], onSavedRedirect }) {
+export default function EventForm({ mode = 'create', initialEvent = null, initialTicketTypes = [], onSavedRedirect, groupBasePath = '/admin/groups' }) {
   const [event, setEvent] = useState(initialEvent || {
     name: '',
     event_date: '',
@@ -89,7 +89,7 @@ export default function EventForm({ mode = 'create', initialEvent = null, initia
         return
       }
       const groupId = json.group_id || initialEvent?.group_id
-      window.location.href = onSavedRedirect || (groupId ? `/admin/groups/${groupId}` : '/admin/groups')
+      window.location.href = onSavedRedirect || (groupId ? `${groupBasePath}/${groupId}` : groupBasePath)
     } catch (err) {
       setError(err.message)
       setSubmitting(false)

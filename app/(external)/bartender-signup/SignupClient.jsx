@@ -11,6 +11,7 @@ const BG_PANEL = 'linear-gradient(180deg, rgba(255,255,255,0.03), rgba(255,255,2
 export default function SignupClient({ bars }) {
   const [code, setCode] = useState('')
   const [firstName, setFirstName] = useState('')
+  const [lastName, setLastName] = useState('')
   const [email, setEmail] = useState('')
   const [phone, setPhone] = useState('')
   const [barSlug, setBarSlug] = useState(bars[0]?.slug || '')
@@ -33,6 +34,7 @@ export default function SignupClient({ bars }) {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           first_name: firstName,
+          last_name: lastName,
           bar_slug: barSlug,
           code,
           email: email.trim(),
@@ -97,6 +99,17 @@ export default function SignupClient({ bars }) {
           />
         </Field>
 
+        <Field label="Last name">
+          <input
+            type="text"
+            value={lastName}
+            onChange={e => setLastName(e.target.value)}
+            required
+            autoComplete="family-name"
+            style={inputStyle}
+          />
+        </Field>
+
         <Field label="Your bar">
           <select
             value={barSlug}
@@ -151,7 +164,7 @@ export default function SignupClient({ bars }) {
 
         <button
           type="submit"
-          disabled={submitting || !firstName.trim() || !barSlug || (!email.trim() && !phone.trim())}
+          disabled={submitting || !firstName.trim() || !lastName.trim() || !barSlug || (!email.trim() && !phone.trim())}
           style={{
             background: GOLD,
             color: '#0a0a0b',

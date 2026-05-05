@@ -2,6 +2,8 @@ import { supabaseAdmin } from '@/lib/supabaseAdmin'
 import { BARS } from '@/lib/bars'
 import {
   slugifyName,
+  lastInitial,
+  formatDisplayName,
   referralUrlFor,
   renderBartenderQr,
   pickFreeSlug,
@@ -34,7 +36,7 @@ export async function GET() {
 }
 
 // POST /api/admin/bartenders
-// Body: { first_name, bar_slug }
+// Body: { first_name, last_name, bar_slug }
 // Creates a new bartender row directly (admin onboarding without the public
 // signup form). Mirrors the slug + QR generation logic from the signup route.
 export async function POST(req) {
@@ -42,20 +44,27 @@ export async function POST(req) {
   try { body = await req.json() } catch { return bad('invalid json') }
 
   const firstName = String(body?.first_name || '').trim()
+  const lastName = String(body?.last_name || '').trim()
   const barSlug = String(body?.bar_slug || '').trim()
   const email = normalizeEmail(body?.email)
   const phone = normalizePhone(body?.phone)
   if (!firstName) return bad('first_name required')
+  if (!lastName) return bad('last_name required')
   if (!barSlug) return bad('bar_slug required')
 
   const bar = BARS.find(b => b.slug === barSlug)
   if (!bar) return bad('unknown bar')
 
-  const firstSlug = slugifyName(firstName)
-  if (!firstSlug) return bad('first_name has no usable letters')
+  const initial = lastInitial(lastName)
+  if (!initial) return bad('last_name has no usable letters')
+
+  const nameSlug = slugifyName(`${firstName} ${initial}`)
+  if (!nameSlug) return bad('first_name has no usable letters')
+
+  const displayName = formatDisplayName(firstName, lastName)
 
   const supabase = supabaseAdmin()
-  const baseSlug = `${bar.slug}-${firstSlug}`
+  const baseSlug = `${bar.slug}-${nameSlug}`
 
   // Idempotency: if a row already exists for this exact (bar, display_name),
   // surface a 409 rather than silently creating a duplicate.
@@ -63,7 +72,7 @@ export async function POST(req) {
     .from('bartenders')
     .select('slug')
     .eq('bar', bar.name)
-    .ilike('display_name', firstName)
+    .ilike('display_name', displayName)
     .maybeSingle()
   if (existing) {
     return Response.json({ error: 'A bartender with that name already exists at this bar.' }, { status: 409 })
@@ -73,11 +82,11 @@ export async function POST(req) {
   if (!slug) return Response.json({ error: 'could not find a free slug' }, { status: 500 })
 
   const qrImageUrl = await renderBartenderQr(referralUrlFor(slug))
-  const shareCode = await pickFreeShareCode(supabase, shareCodeBase(firstName))
+  const shareCode = await pickFreeShareCode(supabase, shareCodeBase(`${firstName}${initial}`))
 
   const row = {
     slug,
-    display_name: firstName,
+    display_name: displayName,
     bar: bar.name,
     qr_image_url: qrImageUrl,
     active: true,
@@ -96,7 +105,7 @@ export async function POST(req) {
     return Response.json({ error: error.message }, { status: 500 })
   }
 
-  ensureBartenderVoucher(supabase, { slug, shareCode, displayName: firstName }).catch(err => {
+  ensureBartenderVoucher(supabase, { slug, shareCode, displayName }).catch(err => {
     console.error('[admin/bartenders] TT voucher create failed', err)
   })
 

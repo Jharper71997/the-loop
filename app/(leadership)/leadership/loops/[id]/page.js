@@ -1,12 +1,12 @@
 import { notFound } from 'next/navigation'
 import { supabaseAdmin } from '@/lib/supabaseAdmin'
-import EventShell from './EventShell'
-import WaiversPanel from './WaiversPanel'
-import SmsBroadcast from '../../../_components/SmsBroadcast'
+import EventShell from '@/app/(admin)/admin/groups/[id]/EventShell'
+import WaiversPanel from '@/app/(admin)/admin/groups/[id]/WaiversPanel'
+import SmsBroadcast from '@/app/(admin)/_components/SmsBroadcast'
 
 export const dynamic = 'force-dynamic'
 
-export default async function ManageLoopPage({ params }) {
+export default async function LeadershipManageLoopPage({ params }) {
   const { id } = await params
   const supabase = supabaseAdmin()
 
@@ -17,10 +17,6 @@ export default async function ManageLoopPage({ params }) {
     .maybeSingle()
   if (!group) notFound()
 
-  // Defensive: a Loop should have at most one event, but the table has no
-  // unique constraint on group_id, so messy data (from earlier orphan-repair
-  // attempts or duplicate POSTs) can leave more than one. Take the newest by
-  // created_at and surface a count so the UI can warn the admin.
   const { data: groupEvents } = await supabase
     .from('events')
     .select('id, name, event_date, pickup_time, description, capacity, status, group_id, cover_image_url, created_at')
@@ -51,10 +47,6 @@ export default async function ManageLoopPage({ params }) {
         .select('id, name, price_cents, stop_index, capacity, active, sort_order')
         .eq('event_id', event.id)
         .order('sort_order', { ascending: true }),
-      // Per-ticket-type counts AND the Roster tab both feed off this. Pull
-      // every order_item (including voided so the roster can show audit
-      // trail). Joined with the contact for waiver status + the order for
-      // status/payment_intent.
       supabase
         .from('order_items')
         .select(`
@@ -102,6 +94,8 @@ export default async function ManageLoopPage({ params }) {
         orders={orders}
         orderItems={orderItems}
         waiverSigs={waiverSigs}
+        canEdit={true}
+        basePath="/leadership/loops"
       />
 
       {(members || []).length > 0 && (

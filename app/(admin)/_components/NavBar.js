@@ -3,12 +3,14 @@
 import { usePathname, useRouter } from 'next/navigation'
 import { useEffect, useRef, useState } from 'react'
 import { supabase } from '@/lib/supabase'
-import { isLeadership } from '@/lib/roles'
+import { isLeadership, isSecurity, isDriver } from '@/lib/roles'
 
 const LINKS = [
   { href: '/admin', label: 'Schedule' },
   { href: '/admin/groups', label: 'Loops' },
   { href: '/admin/contacts', label: 'Contacts' },
+  { href: '/admin/security', label: 'Security', security: true },
+  { href: '/driver', label: 'Driver', driver: true },
   { href: '/admin/leaderboard', label: 'Leaderboard', leadership: true },
   { href: '/admin/notifications', label: 'Alerts', leadership: true },
 ]
@@ -18,6 +20,8 @@ export default function NavBar() {
   const router = useRouter()
   const [email, setEmail] = useState(null)
   const isLeader = isLeadership(email)
+  const isSec = isSecurity(email)
+  const isDrv = isDriver(email)
   const [search, setSearch] = useState('')
   const [results, setResults] = useState([])
   const [open, setOpen] = useState(false)
@@ -97,7 +101,7 @@ export default function NavBar() {
 
         {/* Tabs — visible inline on desktop, on mobile they move to their own row below */}
         <div className="admin-nav-tabs-desktop" style={{ display: 'flex', gap: 6, alignItems: 'center', overflowX: 'auto' }}>
-          <Tabs pathname={pathname} isLeader={isLeader} />
+          <Tabs pathname={pathname} isLeader={isLeader} isSec={isSec} isDrv={isDrv} />
         </div>
 
         <div ref={boxRef} className="admin-nav-right" style={{ marginLeft: 'auto', position: 'relative', display: 'flex', alignItems: 'center', gap: 10 }}>
@@ -215,7 +219,7 @@ export default function NavBar() {
         scrollbarWidth: 'none',
         WebkitOverflowScrolling: 'touch',
       }}>
-        <Tabs pathname={pathname} mobile isLeader={isLeader} />
+        <Tabs pathname={pathname} mobile isLeader={isLeader} isSec={isSec} isDrv={isDrv} />
       </div>
 
       <style>{`
@@ -232,10 +236,14 @@ export default function NavBar() {
   )
 }
 
-function Tabs({ pathname, mobile = false, isLeader = false }) {
+function Tabs({ pathname, mobile = false, isLeader = false, isSec = false, isDrv = false }) {
   return (
     <>
-      {LINKS.filter(l => isLeader || !l.leadership).map(l => {
+      {LINKS
+        .filter(l => isLeader || !l.leadership)
+        .filter(l => isSec || !l.security)
+        .filter(l => isDrv || !l.driver)
+        .map(l => {
         const active = l.href === '/admin'
           ? pathname === '/admin'
           : pathname === l.href || pathname.startsWith(l.href + '/')

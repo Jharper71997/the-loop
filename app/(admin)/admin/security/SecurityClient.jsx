@@ -2,7 +2,7 @@
 
 import { useState } from 'react'
 import Link from 'next/link'
-import Scanner from '../_components/Scanner'
+import Scanner from '@/app/_components/Scanner'
 
 const GOLD = '#d4a333'
 const GOLD_HI = '#f0c24a'
@@ -73,7 +73,7 @@ export default function SecurityClient() {
         </header>
 
         <Link
-          href="/security/door-list"
+          href="/admin/security/door-list"
           style={{
             padding: '12px 14px',
             borderRadius: 10,

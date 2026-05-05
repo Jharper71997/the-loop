@@ -16,7 +16,7 @@ export default async function BookingSuccess({ searchParams }) {
 
   // Look up the order to find the contact + waiver status.
   // If nothing returns (webhook hasn't landed yet, or direct hit on this page),
-  // fall back to the generic "check your SMS for the waiver link" copy.
+  // fall back to the generic "check your email for the waiver link" copy.
   let contactId = null
   let waiverSigned = false
   let firstName = null
@@ -60,7 +60,7 @@ export default async function BookingSuccess({ searchParams }) {
               You&apos;re on the Loop{firstName ? `, ${firstName}` : ''}.
             </h1>
             <p style={{ marginTop: 14, fontSize: 17 }}>
-              A confirmation text is on its way with your pickup time and the live tracker link.
+              Your ticket is on its way to your inbox. Check your email for the QR code, or open My Tickets anytime.
             </p>
           </div>
 
@@ -110,7 +110,7 @@ export default async function BookingSuccess({ searchParams }) {
               </a>
               {!contactId && (
                 <p style={{ color: INK_MUTED, fontSize: 12, marginTop: 12, margin: '12px 0 0', textAlign: 'center' }}>
-                  Can&apos;t find your waiver link? Check your confirmation text &mdash; we send it there too.
+                  Can&apos;t find your waiver link? Check your confirmation email &mdash; we send it there too.
                 </p>
               )}
             </div>

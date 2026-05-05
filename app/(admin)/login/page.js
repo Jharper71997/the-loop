@@ -1,6 +1,7 @@
 'use client'
 
 import { Suspense, useState } from 'react'
+import Link from 'next/link'
 import { useSearchParams } from 'next/navigation'
 import { supabase } from '@/lib/supabase'
 
@@ -48,6 +49,10 @@ function LoginInner() {
         <button className="btn-primary" type="submit" disabled={submitting}>
           {submitting ? 'Signing in…' : 'Sign in'}
         </button>
+        <p style={{ fontSize: 13, color: '#9c9ca3', marginTop: 16, textAlign: 'center' }}>
+          New here?{' '}
+          <Link href="/signup" style={{ color: '#d4a333' }}>Create an account</Link>
+        </p>
       </form>
     </main>
   )

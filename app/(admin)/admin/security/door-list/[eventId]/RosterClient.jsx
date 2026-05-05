@@ -122,8 +122,8 @@ export default function RosterClient({ eventId }) {
         </header>
 
         <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-          <Link href="/security/door-list" style={ghostBtn}>← All events</Link>
-          <Link href="/security" style={ghostBtn}>Camera scanner</Link>
+          <Link href="/admin/security/door-list" style={ghostBtn}>← All events</Link>
+          <Link href="/admin/security" style={ghostBtn}>Camera scanner</Link>
           <button type="button" onClick={load} style={ghostBtn}>Refresh</button>
         </div>
 

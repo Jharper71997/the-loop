@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState } from 'react'
 import { supabase } from '@/lib/supabase'
+import { isLeadership } from '@/lib/roles'
 import { personalize } from '@/lib/personalize'
 import {
   buildDefaultSchedule,
@@ -32,12 +33,15 @@ export default function Groups() {
   const [expanded, setExpanded] = useState(null)
   const [openStop, setOpenStop] = useState(null)
   const [pickerMember, setPickerMember] = useState(null)
+  const [email, setEmail] = useState(null)
+  const isLeader = isLeadership(email)
 
   useEffect(() => {
     // Auto bulk-sync was overwriting custom schedule edits when there were
     // duplicate groups in the DB — disabled. Per-event sync still runs when
     // a ticket type is added/edited from /api/events PUT.
     fetchGroups()
+    supabase.auth.getUser().then(({ data }) => setEmail(data?.user?.email || null))
     const t = setInterval(() => setNow(nowInTZ()), 60000)
     return () => clearInterval(t)
   }, [])
@@ -208,11 +212,13 @@ export default function Groups() {
     <main>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: '4px', gap: 10, flexWrap: 'wrap' }}>
         <h1 style={{ margin: 0 }}>Loops</h1>
-        <a href="/admin/groups/new" style={{
-          background: '#d4a333', color: '#0a0a0b', padding: '10px 16px', borderRadius: 8,
-          fontWeight: 700, fontSize: 13, textDecoration: 'none',
-          minHeight: 44, display: 'inline-flex', alignItems: 'center',
-        }}>+ New Loop</a>
+        {isLeader && (
+          <a href="/leadership/loops/new" style={{
+            background: '#d4a333', color: '#0a0a0b', padding: '10px 16px', borderRadius: 8,
+            fontWeight: 700, fontSize: 13, textDecoration: 'none',
+            minHeight: 44, display: 'inline-flex', alignItems: 'center',
+          }}>+ New Loop</a>
+        )}
       </div>
       <p className="muted" style={{ marginBottom: '14px' }}>
         Upcoming pickups by night · {now}
@@ -307,30 +313,34 @@ export default function Groups() {
                 >
                   Summary
                 </a>
-                <a
-                  href={`/admin/groups/${group.id}#tickets`}
-                  onClick={e => e.stopPropagation()}
-                  style={{
-                    color: '#c8c8cc', fontSize: '12px', textDecoration: 'none',
-                    padding: '6px 10px', border: '1px solid #2a2a31', borderRadius: '6px',
-                    minHeight: 32, display: 'inline-flex', alignItems: 'center',
-                    fontWeight: 600,
-                  }}
-                >
-                  Tickets
-                </a>
-                <a
-                  href={`/admin/groups/${group.id}#edit`}
-                  onClick={e => e.stopPropagation()}
-                  style={{
-                    color: '#d4a333', fontSize: '12px', textDecoration: 'none',
-                    padding: '6px 10px', border: '1px solid #d4a333', borderRadius: '6px',
-                    minHeight: 32, display: 'inline-flex', alignItems: 'center',
-                    fontWeight: 600,
-                  }}
-                >
-                  Settings
-                </a>
+                {isLeader && (
+                  <a
+                    href={`/leadership/loops/${group.id}#tickets`}
+                    onClick={e => e.stopPropagation()}
+                    style={{
+                      color: '#c8c8cc', fontSize: '12px', textDecoration: 'none',
+                      padding: '6px 10px', border: '1px solid #2a2a31', borderRadius: '6px',
+                      minHeight: 32, display: 'inline-flex', alignItems: 'center',
+                      fontWeight: 600,
+                    }}
+                  >
+                    Tickets
+                  </a>
+                )}
+                {isLeader && (
+                  <a
+                    href={`/leadership/loops/${group.id}#edit`}
+                    onClick={e => e.stopPropagation()}
+                    style={{
+                      color: '#d4a333', fontSize: '12px', textDecoration: 'none',
+                      padding: '6px 10px', border: '1px solid #d4a333', borderRadius: '6px',
+                      minHeight: 32, display: 'inline-flex', alignItems: 'center',
+                      fontWeight: 600,
+                    }}
+                  >
+                    Settings
+                  </a>
+                )}
                 {hasGap ? (
                   // Tickets sold > named contacts on roster — usually TT orders
                   // shipped without buyer details. Surface both numbers + a

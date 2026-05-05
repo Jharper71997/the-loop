@@ -35,41 +35,45 @@ export default function EditView({ group, event }) {
     setSaving(true)
     setError(null)
     try {
-      let res
-      if (event?.id) {
-        res = await fetch(`/api/events?event_id=${event.id}`, {
+      const eventPatch = {
+        name: draft.name,
+        event_date: draft.event_date,
+        pickup_time: draft.pickup_time || null,
+        description: draft.description || null,
+        cover_image_url: draft.cover_image_url || null,
+        capacity: draft.capacity ? Number(draft.capacity) : null,
+        status: draft.status,
+      }
+
+      async function putAgainst(eventId) {
+        return fetch(`/api/events?event_id=${eventId}`, {
           method: 'PUT',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            event: {
-              name: draft.name,
-              event_date: draft.event_date,
-              pickup_time: draft.pickup_time || null,
-              description: draft.description || null,
-              cover_image_url: draft.cover_image_url || null,
-              capacity: draft.capacity ? Number(draft.capacity) : null,
-              status: draft.status,
-            },
-          }),
+          body: JSON.stringify({ event: eventPatch }),
         })
+      }
+
+      let res
+      if (event?.id) {
+        res = await putAgainst(event.id)
       } else {
         res = await fetch('/api/events', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
-            event: {
-              name: draft.name,
-              event_date: draft.event_date,
-              pickup_time: draft.pickup_time || null,
-              description: draft.description || null,
-              cover_image_url: draft.cover_image_url || null,
-              capacity: draft.capacity ? Number(draft.capacity) : null,
-              status: draft.status,
-              create_group: false,
-            },
+            event: { ...eventPatch, create_group: false, group_id: group?.id || null },
             ticket_types: [],
           }),
         })
+        // If a stale page state caused us to POST when an event already
+        // exists for this Loop, the API returns 409 with the existing id.
+        // Quietly retry as PUT so the admin's save still goes through.
+        if (res.status === 409) {
+          const json = await res.json().catch(() => ({}))
+          if (json.error === 'group_already_has_event' && json.event_id) {
+            res = await putAgainst(json.event_id)
+          }
+        }
       }
       const json = await res.json().catch(() => ({}))
       if (!res.ok || json.error) {
