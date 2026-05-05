@@ -331,16 +331,14 @@ function StatusRow({ shuttle, lastSeenAt, now, stops = [], eventDate = null }) {
               <div style={{ color: GOLD_HI, fontSize: 13, fontWeight: 800 }}>Arrived</div>
             ) : (
               <>
-                {eta.status === 'enroute' && (
-                  <>
-                    <div style={{ color: INK_DIM, fontSize: 10, letterSpacing: '0.18em', textTransform: 'uppercase', fontWeight: 700 }}>ETA</div>
-                    <div style={{ color: INK, fontSize: 16, fontWeight: 800, fontVariantNumeric: 'tabular-nums' }}>
-                      {eta.etaMin} min
-                    </div>
-                  </>
-                )}
-                <div style={{ color: INK_DIM, fontSize: 10, letterSpacing: '0.18em', textTransform: 'uppercase', fontWeight: 700, marginTop: eta.status === 'enroute' ? 4 : 0 }}>Distance</div>
-                <div style={{ color: INK, fontSize: eta.status === 'enroute' ? 13 : 16, fontWeight: 800, fontVariantNumeric: 'tabular-nums' }}>
+                <div style={{ color: INK_DIM, fontSize: 10, letterSpacing: '0.18em', textTransform: 'uppercase', fontWeight: 700 }}>
+                  {eta.status === 'estimated' ? 'ETA · est' : 'ETA'}
+                </div>
+                <div style={{ color: INK, fontSize: 16, fontWeight: 800, fontVariantNumeric: 'tabular-nums' }}>
+                  {eta.etaMin} min
+                </div>
+                <div style={{ color: INK_DIM, fontSize: 10, letterSpacing: '0.18em', textTransform: 'uppercase', fontWeight: 700, marginTop: 4 }}>Distance</div>
+                <div style={{ color: INK, fontSize: 13, fontWeight: 800, fontVariantNumeric: 'tabular-nums' }}>
                   {formatDistance(eta.distanceMi, eta.distanceMeters)}
                 </div>
               </>
@@ -393,17 +391,22 @@ function todayLocalISO(d) {
   return `${y}-${m}-${day}`
 }
 
+// City-driving fallback when the Geolocation API doesn't report speed (which
+// is common when the shuttle is parked at a stop or the device is stationary
+// during testing). Lets the card always show a useful "X min to next stop"
+// instead of going blank.
+const ASSUMED_DRIVE_MPH = 25
+
 function computeEta(shuttle, dest) {
   const meters = haversineMeters(shuttle.lat, shuttle.lng, dest.lat, dest.lng)
   const distanceMi = meters / 1609.344
-  const speed = Number(shuttle.speed_mph)
-  const moving = Number.isFinite(speed) && speed > 5
-
   if (meters < 60) return { status: 'arrived', distanceMi, distanceMeters: meters, etaMin: 0 }
-  if (!moving) return { status: 'stopped', distanceMi, distanceMeters: meters, etaMin: null }
 
-  const etaMin = Math.max(1, Math.round((distanceMi / speed) * 60))
-  return { status: 'enroute', distanceMi, distanceMeters: meters, etaMin }
+  const actualSpeed = Number(shuttle.speed_mph)
+  const moving = Number.isFinite(actualSpeed) && actualSpeed > 5
+  const speedForEta = moving ? actualSpeed : ASSUMED_DRIVE_MPH
+  const etaMin = Math.max(1, Math.round((distanceMi / speedForEta) * 60))
+  return { status: moving ? 'enroute' : 'estimated', distanceMi, distanceMeters: meters, etaMin }
 }
 
 function formatDistance(distanceMi, meters) {

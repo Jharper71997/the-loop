@@ -513,10 +513,15 @@ function NextStopCard({ position, stops, eventDate }) {
 
   const meters = haversine(position.lat, position.lng, dest.lat, dest.lng)
   const distanceMi = meters / 1609.344
-  const speed = Number(position.speed)
-  const moving = Number.isFinite(speed) && speed > 5
   const arrived = meters < 60
-  const etaMin = arrived || !moving ? null : Math.max(1, Math.round((distanceMi / speed) * 60))
+  const actualSpeed = Number(position.speed)
+  const moving = Number.isFinite(actualSpeed) && actualSpeed > 5
+  // Fall back to a 25 mph city-driving assumption when the device isn't
+  // reporting speed (parked at a stop, or stationary during testing) so the
+  // card always shows a useful "X min away" instead of going blank.
+  const speedForEta = moving ? actualSpeed : 25
+  const etaMin = arrived ? null : Math.max(1, Math.round((distanceMi / speedForEta) * 60))
+  const etaIsEstimate = !arrived && !moving
 
   return (
     <div
@@ -563,16 +568,14 @@ function NextStopCard({ position, stops, eventDate }) {
           <div style={{ color: GOLD_HI, fontSize: 13, fontWeight: 800 }}>Arrived</div>
         ) : (
           <>
-            {etaMin != null && (
-              <>
-                <div style={{ color: INK_DIM, fontSize: 10, letterSpacing: '0.18em', textTransform: 'uppercase', fontWeight: 700 }}>ETA</div>
-                <div style={{ color: INK, fontSize: 16, fontWeight: 800, fontVariantNumeric: 'tabular-nums' }}>
-                  {etaMin} min
-                </div>
-              </>
-            )}
-            <div style={{ color: INK_DIM, fontSize: 10, letterSpacing: '0.18em', textTransform: 'uppercase', fontWeight: 700, marginTop: etaMin != null ? 4 : 0 }}>Distance</div>
-            <div style={{ color: INK, fontSize: etaMin != null ? 13 : 16, fontWeight: 800, fontVariantNumeric: 'tabular-nums' }}>
+            <div style={{ color: INK_DIM, fontSize: 10, letterSpacing: '0.18em', textTransform: 'uppercase', fontWeight: 700 }}>
+              {etaIsEstimate ? 'ETA · est' : 'ETA'}
+            </div>
+            <div style={{ color: INK, fontSize: 16, fontWeight: 800, fontVariantNumeric: 'tabular-nums' }}>
+              {etaMin} min
+            </div>
+            <div style={{ color: INK_DIM, fontSize: 10, letterSpacing: '0.18em', textTransform: 'uppercase', fontWeight: 700, marginTop: 4 }}>Distance</div>
+            <div style={{ color: INK, fontSize: 13, fontWeight: 800, fontVariantNumeric: 'tabular-nums' }}>
               {distanceMi < 0.1 ? `${Math.round(meters * 3.28084)} ft` : `${distanceMi.toFixed(1)} mi`}
             </div>
           </>
