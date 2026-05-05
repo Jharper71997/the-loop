@@ -266,11 +266,8 @@ function StatusRow({ shuttle, lastSeenAt, now, stops = [], eventDate = null }) {
             <div style={{ color: INK, fontSize: 16, fontWeight: 800, marginTop: 2, lineHeight: 1.15 }}>
               {dest.name}
             </div>
-            {dest.startTime && (
-              <div style={{ color: INK_DIM, fontSize: 12, marginTop: 2 }}>
-                Scheduled {formatTime(dest.startTime)}
-              </div>
-            )}
+            {/* Hero card: live arrival on the right replaces the scheduled
+                time, so we omit "Scheduled X" while the loop is rolling. */}
           </div>
           <div style={{ textAlign: 'right', flex: '0 0 auto' }}>
             {eta.status === 'arrived' ? (
@@ -359,8 +356,11 @@ function StopList({ stops, shuttle, eventDate, now }) {
                 <div style={{ color: INK, fontSize: 14, fontWeight: 600, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                   {s.name}
                 </div>
-                {s.startTime && (
-                  <div style={{ color: INK_DIM, fontSize: 12 }}>{formatTime(s.startTime)}</div>
+                {/* Scheduled (sold) time only shown when there's no live ETA
+                    yet — once the loop starts and ETAs project, the live
+                    arrival on the right replaces the sold time. */}
+                {s.startTime && !eta && (
+                  <div style={{ color: INK_DIM, fontSize: 12 }}>Sold {formatTime(s.startTime)}</div>
                 )}
               </div>
               {s.lat == null ? (

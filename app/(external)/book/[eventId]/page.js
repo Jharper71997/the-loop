@@ -42,7 +42,7 @@ export default async function EventBookingPage({ params }) {
   try {
     const r = await supabase
       .from('events')
-      .select('id, name, event_date, pickup_time, description, status, cover_image_url')
+      .select('id, name, event_date, pickup_time, description, status, cover_image_url, group_id')
       .eq('id', eventId)
       .maybeSingle()
     event = r.data
@@ -53,6 +53,23 @@ export default async function EventBookingPage({ params }) {
   if (eventErr) console.error('[book/eventId] event lookup error', eventErr)
   if (!event || event.status !== 'on_sale') notFound()
 
+  // Pull the linked group's schedule so each ticket type can display the
+  // bar's actual pickup time at checkout (e.g. "Shirley V's — 7:45 PM — $20").
+  // stop_index on the ticket type indexes into schedule[i].start_time.
+  let schedule = []
+  if (event.group_id) {
+    try {
+      const r = await supabase
+        .from('groups')
+        .select('schedule')
+        .eq('id', event.group_id)
+        .maybeSingle()
+      schedule = Array.isArray(r.data?.schedule) ? r.data.schedule : []
+    } catch (err) {
+      console.error('[book/eventId] schedule lookup threw', err)
+    }
+  }
+
   let ticketTypes = []
   try {
     const r = await supabase
@@ -62,7 +79,10 @@ export default async function EventBookingPage({ params }) {
       .eq('active', true)
       .order('sort_order', { ascending: true })
     if (r.error) console.error('[book/eventId] ticket_types error', r.error)
-    ticketTypes = r.data || []
+    ticketTypes = (r.data || []).map(t => {
+      const stop = Number.isFinite(t.stop_index) ? schedule[t.stop_index] : null
+      return { ...t, pickup_time: stop?.start_time || null }
+    })
   } catch (err) {
     console.error('[book/eventId] ticket_types threw', err)
   }

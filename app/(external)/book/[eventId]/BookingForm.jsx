@@ -224,10 +224,19 @@ export default function BookingForm({ eventId, eventName, ticketTypes, waiver })
                 >
                   {ticketTypes.map(t => (
                     <option key={t.id} value={t.id}>
-                      {t.name} — ${(t.price_cents / 100).toFixed(2)}
+                      {ticketLabel(t)}
                     </option>
                   ))}
                 </select>
+                {(() => {
+                  const t = ticketTypes.find(x => x.id === r.ticket_type_id)
+                  if (!t?.pickup_time) return null
+                  return (
+                    <div style={{ fontSize: 12, color: '#9c9ca3', marginTop: -2 }}>
+                      Pickup at <strong style={{ color: ACCENT, fontWeight: 700 }}>{formatPickupTime(t.pickup_time)}</strong>
+                    </div>
+                  )
+                })()}
 
                 {idx === 0 ? (
                   <CheckRow
@@ -449,6 +458,22 @@ export default function BookingForm({ eventId, eventName, ticketTypes, waiver })
       </div>
     </form>
   )
+}
+
+function ticketLabel(t) {
+  const time = formatPickupTime(t.pickup_time)
+  const price = `$${(t.price_cents / 100).toFixed(2)}`
+  if (time) return `${t.name} — ${time} — ${price}`
+  return `${t.name} — ${price}`
+}
+
+function formatPickupTime(hhmm) {
+  if (!hhmm) return ''
+  const [h, m] = String(hhmm).split(':').map(Number)
+  if (!Number.isFinite(h) || !Number.isFinite(m)) return ''
+  const suffix = h >= 12 ? 'PM' : 'AM'
+  const h12 = ((h + 11) % 12) + 1
+  return `${h12}:${String(m).padStart(2, '0')} ${suffix}`
 }
 
 function mintToken() {
