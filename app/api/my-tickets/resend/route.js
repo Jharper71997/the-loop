@@ -72,10 +72,8 @@ export async function POST(req) {
 
   let result
   try {
-    // Self-serve resend — user explicitly tapped "resend my ticket" so the
-    // global skipSms default (true, set 2026-05-02 to silence auto-texts)
-    // doesn't apply here. Force=true bypasses the dedup cooldown window.
-    result = await finalizeBooking(sb, orderId, { force: true, skipSms: false })
+    // Self-serve resend. Force=true bypasses the dedup cooldown window.
+    result = await finalizeBooking(sb, orderId, { force: true })
   } catch (err) {
     return Response.json({ error: err?.message || 'resend_failed' }, { status: 500 })
   }
