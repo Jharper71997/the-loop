@@ -53,6 +53,7 @@ const AUTOMATIONS = [
     rows: [
       { name: 'Cleanup pending orders',    channel: 'Job',   trigger: 'Daily 9:00 UTC',                       status: 'ON',     where: '/api/cron/cleanup-pending' },
       { name: 'Alert on failures digest',  channel: 'Email', trigger: 'Daily 9:00 UTC',                       status: 'ON',     where: '/api/cron/alert-on-failures → jacob@jvillebrewloop.com' },
+      { name: '1-hour pickup reminder',    channel: 'Both',  trigger: 'Every 10 min, 55-70 min before stop', status: 'ON',     where: '/api/cron/ticket-reminder → SMS + email per rider' },
     ],
   },
   {
