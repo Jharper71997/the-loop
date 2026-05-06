@@ -16,6 +16,7 @@ const TOP_LINKS = [
   { href: '/leadership/leaderboard', label: 'Leaderboard' },
   { href: '/leadership/loops',       label: 'Loops' },
   { href: '/leadership/alerts',      label: 'Alerts' },
+  { href: '/leadership/automations', label: 'Automations' },
 ]
 
 const INCOME_SUB_LINKS = [
