@@ -383,7 +383,7 @@ export default function DriverClient({
           )}
         </div>
 
-        {routeLog.length > 0 && (
+        {routeLog.length > 0 ? (
           <RouteLogList
             rows={routeLog}
             arrivalSlotId={arrivalSlot?.id || null}
@@ -391,7 +391,22 @@ export default function DriverClient({
             onToggle={(id) => setExpandedStopId(prev => prev === id ? null : id)}
             onSave={saveStop}
           />
-        )}
+        ) : eventId ? (
+          <div style={{
+            padding: '14px 16px',
+            borderRadius: 14,
+            background: SURFACE,
+            border: `1px dashed ${LINE}`,
+            color: INK_DIM,
+            fontSize: 13,
+            lineHeight: 1.45,
+          }}>
+            <div style={{ color: GOLD, fontSize: 11, letterSpacing: '0.22em', textTransform: 'uppercase', fontWeight: 700, marginBottom: 6 }}>
+              Route log not generated
+            </div>
+            Tonight&apos;s 25 stops haven&apos;t been seeded yet. Have leadership open this Loop under <strong style={{ color: INK }}>/leadership/loops</strong> and tap <strong style={{ color: INK }}>Generate route log</strong>.
+          </div>
+        ) : null}
 
         {/* Live map — driver's own marker + tonight's stop pins. Same Leaflet
             base as the public /track view so the two feel like one map. */}
@@ -582,72 +597,139 @@ function pickArrivalSlot(routeLog, position, stops, eventDate) {
 }
 
 function RouteLogList({ rows, arrivalSlotId, expandedStopId, onToggle, onSave }) {
+  const cycles = [...new Set(rows.map(r => r.cycle_index))].sort((a, b) => a - b)
+  const focusCycle = pickFocusCycle(rows, arrivalSlotId)
+  // The chip the driver tapped manually, scoped to the focusCycle it was tapped
+  // against. When the live focusCycle changes (driver arrives at a new bar),
+  // the override no longer matches and we automatically snap back to live —
+  // without needing an effect to mutate state.
+  const [override, setOverride] = useState(null)
+  const activeCycle = (override && override.forFocus === focusCycle) ? override.cycle : focusCycle
+
+  const cycleRows = rows.filter(r => r.cycle_index === activeCycle)
+  const totalLogged = rows.filter(r => r.actual_arrival_at).length
+  const cycleLogged = cycleRows.filter(r => r.actual_arrival_at).length
+
   return (
     <div
       style={{
-        padding: '16px 14px 8px',
+        padding: '14px 12px 10px',
         borderRadius: 18,
         background: SURFACE,
         border: `1.5px solid ${LINE}`,
       }}
     >
-      <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', marginBottom: 10 }}>
+      <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', marginBottom: 10, padding: '0 4px' }}>
         <div style={{ color: GOLD, fontSize: 11, letterSpacing: '0.22em', textTransform: 'uppercase', fontWeight: 700 }}>
           Tonight&apos;s stops
         </div>
-        <div style={{ color: INK_DIM, fontSize: 11 }}>
-          {rows.filter(r => r.actual_arrival_at).length} / {rows.length} logged
+        <div style={{ color: INK_DIM, fontSize: 12, fontVariantNumeric: 'tabular-nums' }}>
+          {totalLogged} / {rows.length}
         </div>
       </div>
 
-      <div style={{ display: 'grid', gap: 6 }}>
-        {rows.map((r, i) => {
-          const prevCycle = rows[i - 1]?.cycle_index
-          const isCycleBreak = prevCycle != null && prevCycle !== r.cycle_index
+      <div style={{
+        display: 'flex',
+        gap: 6,
+        marginBottom: 12,
+        overflowX: 'auto',
+        paddingBottom: 4,
+        WebkitOverflowScrolling: 'touch',
+      }}>
+        {cycles.map(c => {
+          const inCycle = rows.filter(r => r.cycle_index === c)
+          const done = inCycle.every(r => r.actual_arrival_at)
+          const live = c === focusCycle
+          const active = c === activeCycle
+          return (
+            <button
+              key={c}
+              type="button"
+              onClick={() => setOverride({ cycle: c, forFocus: focusCycle })}
+              style={{
+                flex: '0 0 auto',
+                padding: '10px 14px',
+                borderRadius: 10,
+                background: active ? GOLD : (done ? 'rgba(111,191,127,0.10)' : 'rgba(255,255,255,0.04)'),
+                color: active ? '#0a0a0b' : (done ? GREEN : INK),
+                border: `1px solid ${active ? GOLD : (live ? 'rgba(212,163,51,0.45)' : LINE)}`,
+                fontSize: 13,
+                fontWeight: 700,
+                cursor: 'pointer',
+                whiteSpace: 'nowrap',
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: 6,
+              }}
+            >
+              <span>Cycle {c}</span>
+              {live && !active && (
+                <span style={{
+                  width: 6, height: 6, borderRadius: '50%',
+                  background: GOLD, boxShadow: '0 0 8px rgba(212,163,51,0.7)',
+                }} />
+              )}
+              {done && (
+                <span style={{ fontSize: 11, opacity: 0.85 }}>✓</span>
+              )}
+            </button>
+          )
+        })}
+      </div>
+
+      <div style={{ color: INK_DIM, fontSize: 11, padding: '0 4px 8px', fontVariantNumeric: 'tabular-nums' }}>
+        Cycle {activeCycle} · {cycleLogged} / {cycleRows.length} logged
+      </div>
+
+      <div style={{ display: 'grid', gap: 8 }}>
+        {cycleRows.map(r => {
           const expanded = expandedStopId === r.id
           const status = statusFor(r, arrivalSlotId)
           return (
             <div key={r.id}>
-              {isCycleBreak && (
-                <div style={{ color: INK_DIM, fontSize: 10, letterSpacing: '0.18em', textTransform: 'uppercase', fontWeight: 700, padding: '6px 4px 2px' }}>
-                  Cycle {r.cycle_index}
-                </div>
-              )}
               <button
                 type="button"
                 onClick={() => onToggle(r.id)}
                 style={{
                   width: '100%',
                   textAlign: 'left',
-                  padding: '10px 12px',
-                  borderRadius: 10,
-                  background: expanded ? 'rgba(212,163,51,0.10)' : 'rgba(255,255,255,0.03)',
-                  border: `1px solid ${expanded ? 'rgba(212,163,51,0.45)' : LINE}`,
+                  padding: '14px 14px',
+                  borderRadius: 12,
+                  background: expanded
+                    ? 'rgba(212,163,51,0.10)'
+                    : status === 'logged' ? 'rgba(111,191,127,0.06)' : 'rgba(255,255,255,0.04)',
+                  border: `1px solid ${
+                    expanded ? 'rgba(212,163,51,0.45)'
+                    : status === 'current' ? 'rgba(212,163,51,0.45)'
+                    : status === 'logged' ? 'rgba(111,191,127,0.25)'
+                    : LINE
+                  }`,
                   color: INK,
                   cursor: 'pointer',
                   display: 'flex',
                   alignItems: 'center',
-                  gap: 10,
+                  gap: 12,
+                  minHeight: 64,
                 }}
               >
                 <span style={{
-                  width: 26, height: 26, borderRadius: '50%',
-                  background: 'rgba(255,255,255,0.05)',
-                  border: `1px solid ${LINE}`,
-                  color: INK_DIM,
+                  width: 36, height: 36, borderRadius: '50%',
+                  background: status === 'logged' ? 'rgba(111,191,127,0.18)' : 'rgba(255,255,255,0.06)',
+                  border: `1px solid ${status === 'logged' ? 'rgba(111,191,127,0.4)' : LINE}`,
+                  color: status === 'logged' ? GREEN : INK_DIM,
                   display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
-                  fontSize: 11, fontWeight: 800, fontFamily: 'ui-monospace, SFMono-Regular, Menlo, monospace',
+                  fontSize: 14, fontWeight: 800, fontFamily: 'ui-monospace, SFMono-Regular, Menlo, monospace',
                   flex: '0 0 auto',
                 }}>
                   {r.stop_index}
                 </span>
                 <div style={{ flex: 1, minWidth: 0 }}>
-                  <div style={{ color: INK, fontSize: 14, fontWeight: 700, lineHeight: 1.2, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                  <div style={{ color: INK, fontSize: 17, fontWeight: 800, lineHeight: 1.15, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                     {r.bar_name}
                   </div>
-                  <div style={{ color: INK_DIM, fontSize: 12, marginTop: 2 }}>
-                    Sched {formatLocalTime(r.scheduled_at)}
-                    {r.actual_arrival_at && ` · Logged ${formatLocalTime(r.actual_arrival_at)}`}
+                  <div style={{ color: INK_DIM, fontSize: 13, marginTop: 3 }}>
+                    {formatLocalTime(r.scheduled_at)}
+                    {r.actual_arrival_at && ` · logged ${formatLocalTime(r.actual_arrival_at)}`}
                   </div>
                 </div>
                 <StatusPill status={status} />
@@ -661,6 +743,22 @@ function RouteLogList({ rows, arrivalSlotId, expandedStopId, onToggle, onSave })
       </div>
     </div>
   )
+}
+
+// Cycle the chip selector should default to. Priority:
+//   1) cycle of the currently-arrived slot (so as you pull up to a bar, that
+//      cycle is the one in front of you)
+//   2) cycle of the next unlogged stop (next up tonight)
+//   3) cycle 1 as a last resort
+function pickFocusCycle(rows, arrivalSlotId) {
+  if (!Array.isArray(rows) || !rows.length) return 1
+  if (arrivalSlotId) {
+    const hit = rows.find(r => r.id === arrivalSlotId)
+    if (hit) return hit.cycle_index
+  }
+  const nextUp = rows.find(r => !r.actual_arrival_at)
+  if (nextUp) return nextUp.cycle_index
+  return rows[0]?.cycle_index ?? 1
 }
 
 function statusFor(row, arrivalSlotId) {
