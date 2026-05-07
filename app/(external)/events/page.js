@@ -235,6 +235,8 @@ function LoopCard({ loop }) {
       <div style={{ padding: '20px 22px 22px', display: 'flex', flexDirection: 'column', flex: 1 }}>
         <h3 style={{ color: INK, fontSize: 19, fontWeight: 600, marginBottom: 8 }}>{loop.name}</h3>
 
+        <RouteStripe stops={loop.stops} />
+
         <div
           style={{
             marginTop: 'auto',
@@ -270,6 +272,126 @@ function LoopCard({ loop }) {
         </div>
       </div>
     </Wrapper>
+  )
+}
+
+function RouteStripe({ stops }) {
+  if (!Array.isArray(stops) || !stops.length) return null
+  const lastIdx = stops.length - 1
+  return (
+    <div style={{ margin: '4px 0 16px' }}>
+      <div
+        style={{
+          display: 'flex',
+          justifyContent: 'space-between',
+          alignItems: 'baseline',
+          marginBottom: 10,
+        }}
+      >
+        <span
+          style={{
+            color: GOLD,
+            fontSize: 11,
+            letterSpacing: '0.18em',
+            textTransform: 'uppercase',
+            fontWeight: 700,
+          }}
+        >
+          Tonight&rsquo;s route
+        </span>
+        <span
+          style={{
+            color: INK_DIM,
+            fontSize: 10,
+            letterSpacing: '0.18em',
+            textTransform: 'uppercase',
+            fontWeight: 700,
+          }}
+        >
+          {stops.length} {stops.length === 1 ? 'stop' : 'stops'}
+        </span>
+      </div>
+      <div
+        style={{
+          display: 'flex',
+          flexWrap: 'wrap',
+          alignItems: 'flex-start',
+          gap: '8px 6px',
+        }}
+      >
+        {stops.map((s, i) => {
+          const isFirst = i === 0
+          const isLast = i === lastIdx
+          const showTime = s.startTime && (isFirst || isLast)
+          return (
+            <div
+              key={`${i}-${s.slug || s.name}`}
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: 6,
+                flex: '0 1 auto',
+                minWidth: 0,
+              }}
+            >
+              <span
+                aria-hidden
+                style={{
+                  width: 8,
+                  height: 8,
+                  borderRadius: '50%',
+                  background: isFirst ? GOLD : 'transparent',
+                  border: `1.5px solid ${GOLD}`,
+                  flexShrink: 0,
+                }}
+              />
+              <div style={{ display: 'flex', flexDirection: 'column', minWidth: 0 }}>
+                <span
+                  style={{
+                    color: INK,
+                    fontSize: 11,
+                    fontWeight: 600,
+                    letterSpacing: '0.04em',
+                    textTransform: 'uppercase',
+                    whiteSpace: 'nowrap',
+                    overflow: 'hidden',
+                    textOverflow: 'ellipsis',
+                    maxWidth: 110,
+                  }}
+                >
+                  {s.name}
+                </span>
+                {showTime && (
+                  <span
+                    style={{
+                      color: INK_DIM,
+                      fontSize: 10,
+                      fontFamily: 'ui-monospace, monospace',
+                      letterSpacing: '0.04em',
+                      marginTop: 1,
+                    }}
+                  >
+                    {formatTime(s.startTime)}
+                  </span>
+                )}
+              </div>
+              {!isLast && (
+                <span
+                  aria-hidden
+                  style={{
+                    width: 14,
+                    height: 1,
+                    background: 'rgba(212,163,51,0.35)',
+                    flexShrink: 0,
+                    marginLeft: 2,
+                  }}
+                />
+              )}
+            </div>
+          )
+        })}
+      </div>
+    </div>
   )
 }
 
