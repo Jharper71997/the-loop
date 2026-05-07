@@ -356,11 +356,11 @@ function StopList({ stops, shuttle, eventDate, now }) {
                 <div style={{ color: INK, fontSize: 14, fontWeight: 600, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                   {s.name}
                 </div>
-                {/* Scheduled (sold) time only shown when there's no live ETA
+                {/* Scheduled pickup time only shown when there's no live ETA
                     yet — once the loop starts and ETAs project, the live
-                    arrival on the right replaces the sold time. */}
+                    arrival on the right replaces it. */}
                 {s.startTime && !eta && (
-                  <div style={{ color: INK_DIM, fontSize: 12 }}>Sold {formatTime(s.startTime)}</div>
+                  <div style={{ color: INK_DIM, fontSize: 12 }}>Pickup {formatTime(s.startTime)}</div>
                 )}
               </div>
               {s.lat == null ? (
