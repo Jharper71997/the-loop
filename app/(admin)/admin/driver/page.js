@@ -17,6 +17,7 @@ export default async function DriverPage() {
   // Stop coords come from the merged static + DB lookup so leadership-added
   // bars get pinned without a code change.
   let stops = []
+  let routeLog = []
   if (nextLoop?.groupId) {
     try {
       const sb = supabaseAdmin()
@@ -37,16 +38,27 @@ export default async function DriverPage() {
           lng: bar?.lng ?? null,
         }
       })
+
+      if (nextLoop?.id) {
+        const { data: logRows } = await sb
+          .from('route_stop_logs')
+          .select('*')
+          .eq('event_id', nextLoop.id)
+          .order('stop_index', { ascending: true })
+        routeLog = logRows || []
+      }
     } catch {}
   }
 
   return (
     <DriverClient
       groupId={nextLoop?.groupId || null}
+      eventId={nextLoop?.id || null}
       loopName={nextLoop?.name || null}
       eventDate={nextLoop?.eventDate || null}
       pickupTime={nextLoop?.pickupTime || null}
       stops={stops}
+      initialRouteLog={routeLog}
     />
   )
 }

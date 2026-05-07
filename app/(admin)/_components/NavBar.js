@@ -10,7 +10,7 @@ const LINKS = [
   { href: '/admin/groups', label: 'Loops' },
   { href: '/admin/contacts', label: 'Contacts' },
   { href: '/admin/security', label: 'Security', security: true },
-  { href: '/driver', label: 'Driver', driver: true },
+  { href: '/admin/driver', label: 'Driver', driver: true },
 ]
 
 export default function NavBar() {

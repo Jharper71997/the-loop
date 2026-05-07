@@ -58,18 +58,33 @@ export default async function DriversPage() {
           }}>
             Drivers
           </h1>
-          <a href="/leadership/drivers/new" style={{
-            background: '#d4a333',
-            color: '#0a0a0b',
-            fontFamily: FONT_BODY,
-            fontSize: 13,
-            fontWeight: 600,
-            padding: '8px 14px',
-            borderRadius: 6,
-            textDecoration: 'none',
-          }}>
-            + Add driver
-          </a>
+          <div style={{ display: 'flex', gap: 8 }}>
+            <a href="/leadership/drivers/route-log" style={{
+              background: 'transparent',
+              color: '#e8e8ea',
+              fontFamily: FONT_BODY,
+              fontSize: 13,
+              fontWeight: 600,
+              padding: '8px 14px',
+              borderRadius: 6,
+              textDecoration: 'none',
+              border: '1px solid #2a2a31',
+            }}>
+              Route log →
+            </a>
+            <a href="/leadership/drivers/new" style={{
+              background: '#d4a333',
+              color: '#0a0a0b',
+              fontFamily: FONT_BODY,
+              fontSize: 13,
+              fontWeight: 600,
+              padding: '8px 14px',
+              borderRadius: 6,
+              textDecoration: 'none',
+            }}>
+              + Add driver
+            </a>
+          </div>
         </div>
 
         {(drivers || []).length === 0 ? (

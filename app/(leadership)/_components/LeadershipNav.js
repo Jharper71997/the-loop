@@ -9,12 +9,14 @@ import { supabase } from '@/lib/supabase'
 // Income is a tab group — when on any of the finance routes the top "Income"
 // pill stays active and a secondary sub-row reveals the children.
 const INCOME_GROUP = ['/leadership/income', '/leadership/expenses', '/leadership/cash', '/leadership/sponsors', '/leadership/bars']
+const DRIVERS_GROUP = ['/leadership/drivers']
 
 const TOP_LINKS = [
   { href: '/leadership',             label: 'Scoreboard' },
   { href: '/leadership/income',      label: 'Income', groupPaths: INCOME_GROUP },
   { href: '/leadership/leaderboard', label: 'Leaderboard' },
   { href: '/leadership/loops',       label: 'Loops' },
+  { href: '/leadership/drivers',     label: 'Drivers', groupPaths: DRIVERS_GROUP },
   { href: '/leadership/alerts',      label: 'Alerts' },
   { href: '/leadership/automations', label: 'Automations' },
 ]
@@ -25,6 +27,16 @@ const INCOME_SUB_LINKS = [
   { href: '/leadership/cash',     label: 'Cash' },
   { href: '/leadership/sponsors', label: 'Sponsors' },
   { href: '/leadership/bars',     label: 'Bars' },
+]
+
+const DRIVERS_SUB_LINKS = [
+  { href: '/leadership/drivers',           label: 'Roster' },
+  { href: '/leadership/drivers/route-log', label: 'Route log' },
+]
+
+const SUBNAV_GROUPS = [
+  { paths: INCOME_GROUP,  links: INCOME_SUB_LINKS },
+  { paths: DRIVERS_GROUP, links: DRIVERS_SUB_LINKS },
 ]
 
 function isActive(pathname, link) {
@@ -39,10 +51,20 @@ function inIncomeGroup(pathname) {
   return INCOME_GROUP.some(p => pathname === p || pathname.startsWith(p + '/'))
 }
 
+function activeSubnavLinks(pathname) {
+  for (const g of SUBNAV_GROUPS) {
+    if (g.paths.some(p => pathname === p || pathname.startsWith(p + '/'))) {
+      return g.links
+    }
+  }
+  return null
+}
+
 export default function LeadershipNav() {
   const pathname = usePathname()
   const [email, setEmail] = useState(null)
-  const showSubNav = inIncomeGroup(pathname)
+  const subLinks = activeSubnavLinks(pathname)
+  const showSubNav = subLinks != null
 
   useEffect(() => {
     supabase.auth.getUser().then(({ data }) => setEmail(data?.user?.email || null))
@@ -152,7 +174,7 @@ export default function LeadershipNav() {
             borderTop: '1px solid #1a1a20',
             paddingTop: 8,
           }}>
-            <SubTabs pathname={pathname} />
+            <SubTabs pathname={pathname} links={subLinks} />
           </div>
           <div className="leadership-subnav-mobile" style={{
             display: 'none',
@@ -163,7 +185,7 @@ export default function LeadershipNav() {
             WebkitOverflowScrolling: 'touch',
             borderTop: '1px solid #1a1a20',
           }}>
-            <SubTabs pathname={pathname} mobile />
+            <SubTabs pathname={pathname} links={subLinks} mobile />
           </div>
         </>
       )}
@@ -219,14 +241,16 @@ function Tabs({ pathname, links, mobile = false }) {
   )
 }
 
-function SubTabs({ pathname, mobile = false }) {
+function SubTabs({ pathname, links, mobile = false }) {
+  if (!Array.isArray(links) || !links.length) return null
+  // Roots ("/leadership/income", "/leadership/drivers") match exactly so they
+  // don't stay active when a sibling sub-page is open.
+  const rootHrefs = new Set(['/leadership/income', '/leadership/drivers'])
   return (
     <>
-      {INCOME_SUB_LINKS.map(l => {
-        // Overview matches /leadership/income exactly so it doesn't stay active
-        // while you're on /leadership/expenses etc.
-        const active = l.href === '/leadership/income'
-          ? pathname === '/leadership/income'
+      {links.map(l => {
+        const active = rootHrefs.has(l.href)
+          ? pathname === l.href
           : pathname === l.href || pathname.startsWith(l.href + '/')
         return (
           <a

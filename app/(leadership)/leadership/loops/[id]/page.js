@@ -1,10 +1,19 @@
 import { notFound } from 'next/navigation'
+import { revalidatePath } from 'next/cache'
 import { supabaseAdmin } from '@/lib/supabaseAdmin'
 import EventShell from '@/app/(admin)/admin/groups/[id]/EventShell'
 import WaiversPanel from '@/app/(admin)/admin/groups/[id]/WaiversPanel'
 import SmsBroadcast from '@/app/(admin)/_components/SmsBroadcast'
+import { generateStopsForEvent } from '@/lib/routeStopLogs'
 
 export const dynamic = 'force-dynamic'
+
+async function generateRouteStopsAction(eventId, groupId) {
+  'use server'
+  if (!eventId) return
+  await generateStopsForEvent(supabaseAdmin(), eventId)
+  revalidatePath(`/leadership/loops/${groupId}`)
+}
 
 export default async function ManageLoopDetailPage({ params }) {
   const { id } = await params
@@ -35,6 +44,7 @@ export default async function ManageLoopDetailPage({ params }) {
   let orders = []
   let ticketTypes = []
   let orderItems = []
+  let routeLogStats = { total: 0, logged: 0 }
   if (event?.id) {
     const [oRes, ttRes, oiRes] = await Promise.all([
       supabase
@@ -61,6 +71,17 @@ export default async function ManageLoopDetailPage({ params }) {
     orders = oRes.data || []
     ticketTypes = ttRes.data || []
     orderItems = oiRes.data || []
+
+    const { data: rsl } = await supabase
+      .from('route_stop_logs')
+      .select('actual_arrival_at')
+      .eq('event_id', event.id)
+    if (Array.isArray(rsl)) {
+      routeLogStats = {
+        total: rsl.length,
+        logged: rsl.filter(r => r.actual_arrival_at).length,
+      }
+    }
   }
 
   const memberIds = (members || []).map(m => m.contacts?.id).filter(Boolean)
@@ -98,6 +119,18 @@ export default async function ManageLoopDetailPage({ params }) {
         basePath="/leadership/loops"
       />
 
+      {event?.id && (
+        <div style={{ maxWidth: 1100, margin: '0 auto', padding: '0 16px 14px' }}>
+          <RouteLogPanel
+            eventId={event.id}
+            groupId={group.id}
+            stats={routeLogStats}
+            scheduleHasStops={Array.isArray(group.schedule) && group.schedule.length > 0}
+            action={generateRouteStopsAction.bind(null, event.id, group.id)}
+          />
+        </div>
+      )}
+
       {(members || []).length > 0 && (
         <div style={{ maxWidth: 1100, margin: '0 auto', padding: '0 16px 40px', display: 'grid', gap: 14 }}>
           <WaiversPanel groupId={group.id} members={flatMembers} />
@@ -114,6 +147,71 @@ export default async function ManageLoopDetailPage({ params }) {
           />
         </div>
       )}
+    </div>
+  )
+}
+
+function RouteLogPanel({ eventId, groupId, stats, scheduleHasStops, action }) {
+  const has = stats.total > 0
+  return (
+    <div style={{
+      background: '#121216',
+      border: '1px solid #2a2a31',
+      borderRadius: 8,
+      padding: '16px 18px',
+      display: 'flex',
+      alignItems: 'center',
+      flexWrap: 'wrap',
+      gap: 14,
+    }}>
+      <div style={{ flex: '1 1 220px' }}>
+        <div style={{ color: '#9c9ca3', fontSize: 11, fontWeight: 600, letterSpacing: '0.04em', textTransform: 'uppercase' }}>
+          Route log
+        </div>
+        <div style={{ color: '#e8e8ea', fontSize: 15, fontWeight: 600, marginTop: 4 }}>
+          {has ? `${stats.logged} / ${stats.total} stops logged` : 'Not generated'}
+        </div>
+        <div style={{ color: '#6f6f76', fontSize: 12, marginTop: 4 }}>
+          {scheduleHasStops
+            ? 'Generates 25 slots (5 bars × 5 cycles) from the schedule. Re-running keeps driver-filled rows.'
+            : 'Add a schedule to this Loop first, then generate.'}
+        </div>
+      </div>
+      <form action={action} style={{ display: 'flex', gap: 8 }}>
+        <button
+          type="submit"
+          disabled={!scheduleHasStops}
+          style={{
+            background: scheduleHasStops ? '#d4a333' : '#2a2a31',
+            color: scheduleHasStops ? '#0a0a0b' : '#6f6f76',
+            fontSize: 13,
+            fontWeight: 600,
+            padding: '8px 14px',
+            borderRadius: 6,
+            border: 'none',
+            cursor: scheduleHasStops ? 'pointer' : 'not-allowed',
+          }}
+        >
+          {has ? 'Regenerate' : 'Generate route log'}
+        </button>
+        {has && (
+          <a
+            href={`/leadership/drivers/route-log/${eventId}`}
+            style={{
+              background: 'transparent',
+              color: '#e8e8ea',
+              fontSize: 13,
+              fontWeight: 600,
+              padding: '8px 14px',
+              borderRadius: 6,
+              border: '1px solid #2a2a31',
+              textDecoration: 'none',
+            }}
+          >
+            View →
+          </a>
+        )}
+      </form>
     </div>
   )
 }

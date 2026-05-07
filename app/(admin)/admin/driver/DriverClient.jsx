@@ -21,13 +21,24 @@ const MIN_DELTA_METERS = 5
 // Fallback center if we have no position and no stops (Jacksonville NC).
 const JACKSONVILLE_NC = { lat: 34.7541, lng: -77.4302 }
 
-export default function DriverClient({ groupId = null, loopName = null, eventDate = null, pickupTime = null, stops = [] }) {
+export default function DriverClient({
+  groupId = null,
+  eventId = null,
+  loopName = null,
+  eventDate = null,
+  pickupTime = null,
+  stops = [],
+  initialRouteLog = [],
+}) {
   const [running, setRunning] = useState(false)
   const [position, setPosition] = useState(null)
   const [error, setError] = useState(null)
   const [pingCount, setPingCount] = useState(0)
   const [lastPingAt, setLastPingAt] = useState(null)
   const [tickHack, setTickHack] = useState(0)
+  const [routeLog, setRouteLog] = useState(initialRouteLog || [])
+  const [expandedStopId, setExpandedStopId] = useState(null)
+  const autoExpandedRef = useRef(new Set())
 
   const watchIdRef = useRef(null)
   const lastPostRef = useRef({ at: 0, lat: null, lng: null })
@@ -137,6 +148,41 @@ export default function DriverClient({ groupId = null, loopName = null, eventDat
     return () => stop()
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
+
+  // Auto-expand the next-unlogged matching slot when the driver arrives at a
+  // bar. Once auto-expanded the slot id is added to autoExpandedRef so we
+  // don't re-pop the form if the driver collapses it manually mid-stop.
+  const arrivalSlot = pickArrivalSlot(routeLog, position, stops, eventDate)
+  const arrivalSlotId = arrivalSlot?.id || null
+  useEffect(() => {
+    if (!arrivalSlotId) return
+    if (autoExpandedRef.current.has(arrivalSlotId)) return
+    autoExpandedRef.current.add(arrivalSlotId)
+    setExpandedStopId(arrivalSlotId)
+  }, [arrivalSlotId])
+
+  async function refetchRouteLog() {
+    if (!eventId) return
+    try {
+      const res = await fetch(`/api/driver/route-log?event_id=${eventId}`, { cache: 'no-store' })
+      if (!res.ok) return
+      const body = await res.json()
+      if (body?.ok && Array.isArray(body.stops)) setRouteLog(body.stops)
+    } catch {}
+  }
+
+  async function saveStop(stopId, payload) {
+    const res = await fetch('/api/driver/log-stop', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ stop_id: stopId, ...payload }),
+    })
+    if (!res.ok) {
+      const body = await res.json().catch(() => ({}))
+      throw new Error(body?.detail || body?.reason || `Save failed (${res.status})`)
+    }
+    await refetchRouteLog()
+  }
 
   async function start() {
     setError(null)
@@ -337,6 +383,16 @@ export default function DriverClient({ groupId = null, loopName = null, eventDat
           )}
         </div>
 
+        {routeLog.length > 0 && (
+          <RouteLogList
+            rows={routeLog}
+            arrivalSlotId={arrivalSlot?.id || null}
+            expandedStopId={expandedStopId}
+            onToggle={(id) => setExpandedStopId(prev => prev === id ? null : id)}
+            onSave={saveStop}
+          />
+        )}
+
         {/* Live map — driver's own marker + tonight's stop pins. Same Leaflet
             base as the public /track view so the two feel like one map. */}
         <div
@@ -505,6 +561,299 @@ function todayLocalISO(d) {
   const m = String(d.getMonth() + 1).padStart(2, '0')
   const day = String(d.getDate()).padStart(2, '0')
   return `${y}-${m}-${day}`
+}
+
+// Pick the route_stop_logs row to auto-expand when the driver "arrives" (within
+// 60m of a placed stop). Match by bar name / slug to the next unlogged row in
+// scheduled order — drivers visit the same bar 5 times across the night, so we
+// always advance to the earliest scheduled row that's still empty.
+function pickArrivalSlot(routeLog, position, stops, eventDate) {
+  if (!Array.isArray(routeLog) || !routeLog.length || !position || !Array.isArray(stops)) return null
+  const dest = pickNextStopByOrder(stops, new Date(), eventDate)
+  if (!dest) return null
+  const meters = haversine(position.lat, position.lng, dest.lat, dest.lng)
+  if (!Number.isFinite(meters) || meters >= 60) return null
+
+  const target = (dest.name || '').trim().toLowerCase()
+  return routeLog
+    .filter(r => !r.actual_arrival_at)
+    .filter(r => String(r.bar_name || '').trim().toLowerCase() === target)
+    .sort((a, b) => new Date(a.scheduled_at) - new Date(b.scheduled_at))[0] || null
+}
+
+function RouteLogList({ rows, arrivalSlotId, expandedStopId, onToggle, onSave }) {
+  return (
+    <div
+      style={{
+        padding: '16px 14px 8px',
+        borderRadius: 18,
+        background: SURFACE,
+        border: `1.5px solid ${LINE}`,
+      }}
+    >
+      <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', marginBottom: 10 }}>
+        <div style={{ color: GOLD, fontSize: 11, letterSpacing: '0.22em', textTransform: 'uppercase', fontWeight: 700 }}>
+          Tonight&apos;s stops
+        </div>
+        <div style={{ color: INK_DIM, fontSize: 11 }}>
+          {rows.filter(r => r.actual_arrival_at).length} / {rows.length} logged
+        </div>
+      </div>
+
+      <div style={{ display: 'grid', gap: 6 }}>
+        {rows.map((r, i) => {
+          const prevCycle = rows[i - 1]?.cycle_index
+          const isCycleBreak = prevCycle != null && prevCycle !== r.cycle_index
+          const expanded = expandedStopId === r.id
+          const status = statusFor(r, arrivalSlotId)
+          return (
+            <div key={r.id}>
+              {isCycleBreak && (
+                <div style={{ color: INK_DIM, fontSize: 10, letterSpacing: '0.18em', textTransform: 'uppercase', fontWeight: 700, padding: '6px 4px 2px' }}>
+                  Cycle {r.cycle_index}
+                </div>
+              )}
+              <button
+                type="button"
+                onClick={() => onToggle(r.id)}
+                style={{
+                  width: '100%',
+                  textAlign: 'left',
+                  padding: '10px 12px',
+                  borderRadius: 10,
+                  background: expanded ? 'rgba(212,163,51,0.10)' : 'rgba(255,255,255,0.03)',
+                  border: `1px solid ${expanded ? 'rgba(212,163,51,0.45)' : LINE}`,
+                  color: INK,
+                  cursor: 'pointer',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: 10,
+                }}
+              >
+                <span style={{
+                  width: 26, height: 26, borderRadius: '50%',
+                  background: 'rgba(255,255,255,0.05)',
+                  border: `1px solid ${LINE}`,
+                  color: INK_DIM,
+                  display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
+                  fontSize: 11, fontWeight: 800, fontFamily: 'ui-monospace, SFMono-Regular, Menlo, monospace',
+                  flex: '0 0 auto',
+                }}>
+                  {r.stop_index}
+                </span>
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <div style={{ color: INK, fontSize: 14, fontWeight: 700, lineHeight: 1.2, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                    {r.bar_name}
+                  </div>
+                  <div style={{ color: INK_DIM, fontSize: 12, marginTop: 2 }}>
+                    Sched {formatLocalTime(r.scheduled_at)}
+                    {r.actual_arrival_at && ` · Logged ${formatLocalTime(r.actual_arrival_at)}`}
+                  </div>
+                </div>
+                <StatusPill status={status} />
+              </button>
+              {expanded && (
+                <StopLogForm row={r} onSave={onSave} onClose={() => onToggle(r.id)} />
+              )}
+            </div>
+          )
+        })}
+      </div>
+    </div>
+  )
+}
+
+function statusFor(row, arrivalSlotId) {
+  if (row.actual_arrival_at) return 'logged'
+  if (row.id === arrivalSlotId) return 'current'
+  if (row.scheduled_at && new Date(row.scheduled_at) < new Date()) return 'missed'
+  return 'upcoming'
+}
+
+function StatusPill({ status }) {
+  const map = {
+    logged:   { bg: 'rgba(111,191,127,0.16)', fg: GREEN, label: 'logged' },
+    current:  { bg: 'rgba(212,163,51,0.20)',  fg: GOLD_HI, label: 'current' },
+    missed:   { bg: 'rgba(224,122,122,0.12)', fg: RED, label: 'missed' },
+    upcoming: { bg: 'rgba(255,255,255,0.04)', fg: INK_DIM, label: 'upcoming' },
+  }
+  const s = map[status] || map.upcoming
+  return (
+    <span style={{
+      background: s.bg,
+      color: s.fg,
+      fontSize: 10,
+      letterSpacing: '0.10em',
+      textTransform: 'uppercase',
+      fontWeight: 700,
+      padding: '4px 8px',
+      borderRadius: 4,
+      flex: '0 0 auto',
+    }}>{s.label}</span>
+  )
+}
+
+function StopLogForm({ row, onSave, onClose }) {
+  const [actual, setActual] = useState(() => isoToLocalInput(row.actual_arrival_at) || nowLocalInput())
+  const [on, setOn] = useState(row.riders_on ?? '')
+  const [off, setOff] = useState(row.riders_off ?? '')
+  const [remaining, setRemaining] = useState(row.riders_remaining ?? '')
+  const [notes, setNotes] = useState(row.notes ?? '')
+  const [saving, setSaving] = useState(false)
+  const [err, setErr] = useState(null)
+
+  async function submit(e) {
+    e.preventDefault()
+    setErr(null)
+    setSaving(true)
+    try {
+      await onSave(row.id, {
+        actual_arrival_at: localInputToIso(actual),
+        riders_on: on === '' ? null : Number(on),
+        riders_off: off === '' ? null : Number(off),
+        riders_remaining: remaining === '' ? null : Number(remaining),
+        notes: notes || null,
+      })
+      onClose()
+    } catch (e) {
+      setErr(e?.message || 'Save failed')
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  return (
+    <form onSubmit={submit} style={{
+      marginTop: 6,
+      padding: '12px 14px',
+      borderRadius: 10,
+      background: 'rgba(212,163,51,0.05)',
+      border: `1px dashed rgba(212,163,51,0.35)`,
+      display: 'grid',
+      gap: 10,
+    }}>
+      <FormLabel label="Actual arrival">
+        <input
+          type="datetime-local"
+          value={actual}
+          onChange={e => setActual(e.target.value)}
+          style={inputStyle}
+        />
+      </FormLabel>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 8 }}>
+        <FormLabel label="On">
+          <input type="number" min="0" inputMode="numeric" value={on} onChange={e => setOn(e.target.value)} style={inputStyle} />
+        </FormLabel>
+        <FormLabel label="Off">
+          <input type="number" min="0" inputMode="numeric" value={off} onChange={e => setOff(e.target.value)} style={inputStyle} />
+        </FormLabel>
+        <FormLabel label="Remaining">
+          <input type="number" min="0" inputMode="numeric" value={remaining} onChange={e => setRemaining(e.target.value)} style={inputStyle} />
+        </FormLabel>
+      </div>
+      <FormLabel label="Notes">
+        <textarea
+          rows={2}
+          value={notes}
+          onChange={e => setNotes(e.target.value)}
+          style={{ ...inputStyle, resize: 'vertical', fontFamily: 'inherit' }}
+        />
+      </FormLabel>
+      {err && (
+        <div style={{ color: RED, fontSize: 12 }}>{err}</div>
+      )}
+      <div style={{ display: 'flex', gap: 8 }}>
+        <button type="button" onClick={onClose} style={secondaryBtn}>Cancel</button>
+        <button type="submit" disabled={saving} style={{ ...primaryBtnInline, opacity: saving ? 0.6 : 1 }}>
+          {saving ? 'Saving…' : 'Save stop'}
+        </button>
+      </div>
+    </form>
+  )
+}
+
+function FormLabel({ label, children }) {
+  return (
+    <label style={{ display: 'block' }}>
+      <div style={{ color: INK_DIM, fontSize: 10, letterSpacing: '0.18em', textTransform: 'uppercase', fontWeight: 700, marginBottom: 4 }}>
+        {label}
+      </div>
+      {children}
+    </label>
+  )
+}
+
+const inputStyle = {
+  width: '100%',
+  boxSizing: 'border-box',
+  padding: '8px 10px',
+  borderRadius: 8,
+  background: '#0d0d10',
+  color: INK,
+  border: `1px solid ${LINE}`,
+  fontSize: 14,
+  outline: 'none',
+}
+const primaryBtnInline = {
+  flex: 1,
+  padding: '10px 14px',
+  borderRadius: 10,
+  background: `linear-gradient(180deg, ${GOLD_HI}, ${GOLD})`,
+  color: '#0a0a0b',
+  border: 0,
+  fontWeight: 800,
+  fontSize: 14,
+  cursor: 'pointer',
+}
+const secondaryBtn = {
+  padding: '10px 14px',
+  borderRadius: 10,
+  background: 'transparent',
+  color: INK,
+  border: `1px solid ${LINE}`,
+  fontWeight: 600,
+  fontSize: 14,
+  cursor: 'pointer',
+}
+
+function formatLocalTime(iso) {
+  if (!iso) return '—'
+  try {
+    return new Date(iso).toLocaleTimeString('en-US', {
+      timeZone: 'America/Indiana/Indianapolis',
+      hour: 'numeric',
+      minute: '2-digit',
+    })
+  } catch {
+    return iso
+  }
+}
+
+// datetime-local inputs use the browser's local TZ. Convert to/from ISO so
+// the saved value reflects the same wall-clock the driver typed.
+function nowLocalInput() {
+  const d = new Date()
+  return localInputFromDate(d)
+}
+function localInputFromDate(d) {
+  const pad = n => String(n).padStart(2, '0')
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`
+}
+function isoToLocalInput(iso) {
+  if (!iso) return null
+  try {
+    const d = new Date(iso)
+    if (Number.isNaN(d.getTime())) return null
+    return localInputFromDate(d)
+  } catch { return null }
+}
+function localInputToIso(s) {
+  if (!s) return null
+  try {
+    const d = new Date(s)
+    if (Number.isNaN(d.getTime())) return null
+    return d.toISOString()
+  } catch { return null }
 }
 
 function NextStopCard({ position, stops, eventDate }) {

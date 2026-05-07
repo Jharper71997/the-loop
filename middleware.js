@@ -53,6 +53,8 @@ const LEADERSHIP_RELOCATIONS = {
   '/admin/loops': '/leadership/loops',
   '/admin/notifications': '/leadership/alerts',
   '/security': '/admin/security',
+  // Driver page moved inside the admin shell — keep old bookmarks working.
+  '/driver': '/admin/driver',
 }
 
 // Soft-removed routes — files may still exist on disk but middleware blocks
