@@ -792,7 +792,12 @@ function StatusPill({ status }) {
 }
 
 function StopLogForm({ row, onSave, onClose }) {
-  const [actual, setActual] = useState(() => isoToLocalInput(row.actual_arrival_at) || nowLocalInput())
+  const initial = row.actual_arrival_at
+    ? splitIsoToLocal(row.actual_arrival_at)
+    : nowHourMinute()
+  const [hour, setHour] = useState(initial.hour)
+  const [minute, setMinute] = useState(initial.minute)
+  const [usingNow, setUsingNow] = useState(!row.actual_arrival_at)
   const [on, setOn] = useState(row.riders_on ?? '')
   const [off, setOff] = useState(row.riders_off ?? '')
   const [remaining, setRemaining] = useState(row.riders_remaining ?? '')
@@ -805,8 +810,11 @@ function StopLogForm({ row, onSave, onClose }) {
     setErr(null)
     setSaving(true)
     try {
+      const arrivalIso = usingNow
+        ? new Date().toISOString()
+        : combineLocalHourMinuteToIso(hour, minute)
       await onSave(row.id, {
-        actual_arrival_at: localInputToIso(actual),
+        actual_arrival_at: arrivalIso,
         riders_on: on === '' ? null : Number(on),
         riders_off: off === '' ? null : Number(off),
         riders_remaining: remaining === '' ? null : Number(remaining),
@@ -830,14 +838,71 @@ function StopLogForm({ row, onSave, onClose }) {
       display: 'grid',
       gap: 10,
     }}>
-      <FormLabel label="Actual arrival">
-        <input
-          type="datetime-local"
-          value={actual}
-          onChange={e => setActual(e.target.value)}
-          style={inputStyle}
-        />
-      </FormLabel>
+      <div>
+        <div style={{ color: INK_DIM, fontSize: 10, letterSpacing: '0.18em', textTransform: 'uppercase', fontWeight: 700, marginBottom: 6 }}>
+          Actual arrival
+        </div>
+        <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
+          <button
+            type="button"
+            onClick={() => setUsingNow(true)}
+            style={{
+              padding: '10px 14px',
+              borderRadius: 10,
+              background: usingNow ? GOLD : 'rgba(255,255,255,0.04)',
+              color: usingNow ? '#0a0a0b' : INK,
+              border: `1px solid ${usingNow ? GOLD : LINE}`,
+              fontWeight: 700,
+              fontSize: 14,
+              cursor: 'pointer',
+            }}
+          >
+            Now
+          </button>
+          <button
+            type="button"
+            onClick={() => setUsingNow(false)}
+            style={{
+              padding: '10px 14px',
+              borderRadius: 10,
+              background: !usingNow ? GOLD : 'rgba(255,255,255,0.04)',
+              color: !usingNow ? '#0a0a0b' : INK,
+              border: `1px solid ${!usingNow ? GOLD : LINE}`,
+              fontWeight: 700,
+              fontSize: 14,
+              cursor: 'pointer',
+            }}
+          >
+            Specific time
+          </button>
+          {!usingNow && (
+            <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
+              <input
+                type="number"
+                min="0"
+                max="23"
+                inputMode="numeric"
+                value={hour}
+                onChange={e => setHour(e.target.value)}
+                placeholder="HH"
+                style={{ ...inputStyle, width: 64, textAlign: 'center', fontSize: 16, padding: '10px 8px' }}
+              />
+              <span style={{ color: INK_DIM, fontSize: 16, fontWeight: 700 }}>:</span>
+              <input
+                type="number"
+                min="0"
+                max="59"
+                inputMode="numeric"
+                value={minute}
+                onChange={e => setMinute(e.target.value)}
+                placeholder="MM"
+                style={{ ...inputStyle, width: 64, textAlign: 'center', fontSize: 16, padding: '10px 8px' }}
+              />
+              <span style={{ color: INK_DIM, fontSize: 12 }}>(24h)</span>
+            </div>
+          )}
+        </div>
+      </div>
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 8 }}>
         <FormLabel label="On">
           <input type="number" min="0" inputMode="numeric" value={on} onChange={e => setOn(e.target.value)} style={inputStyle} />
@@ -927,31 +992,35 @@ function formatLocalTime(iso) {
   }
 }
 
-// datetime-local inputs use the browser's local TZ. Convert to/from ISO so
-// the saved value reflects the same wall-clock the driver typed.
-function nowLocalInput() {
+// Hour/minute helpers. Driver enters a wall-clock HH:MM, we combine it with
+// today's local date and convert to ISO. If the typed time is far in the
+// future (> 6h ahead, e.g. 1 AM at 8 PM), we assume they meant tomorrow's
+// early-morning hours — so cycle 5 stops past midnight Just Work.
+function nowHourMinute() {
   const d = new Date()
-  return localInputFromDate(d)
+  return { hour: String(d.getHours()), minute: String(d.getMinutes()).padStart(2, '0') }
 }
-function localInputFromDate(d) {
-  const pad = n => String(n).padStart(2, '0')
-  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`
-}
-function isoToLocalInput(iso) {
-  if (!iso) return null
+function splitIsoToLocal(iso) {
   try {
     const d = new Date(iso)
-    if (Number.isNaN(d.getTime())) return null
-    return localInputFromDate(d)
-  } catch { return null }
+    if (Number.isNaN(d.getTime())) return nowHourMinute()
+    return { hour: String(d.getHours()), minute: String(d.getMinutes()).padStart(2, '0') }
+  } catch { return nowHourMinute() }
 }
-function localInputToIso(s) {
-  if (!s) return null
-  try {
-    const d = new Date(s)
-    if (Number.isNaN(d.getTime())) return null
-    return d.toISOString()
-  } catch { return null }
+function combineLocalHourMinuteToIso(hour, minute) {
+  const h = Number(hour)
+  const m = Number(minute)
+  if (!Number.isFinite(h) || !Number.isFinite(m)) return new Date().toISOString()
+  const now = new Date()
+  const result = new Date(now.getFullYear(), now.getMonth(), now.getDate(), h, m, 0, 0)
+  // If the typed time is > 6h ahead of now, the driver probably means the next
+  // day (logging a 12:30 AM stop while the device clock still says ~7 PM).
+  if (result.getTime() - now.getTime() > 6 * 60 * 60 * 1000) {
+    result.setDate(result.getDate() - 1)
+  }
+  // Inverse: if the typed time is > 6h BEHIND now, they probably meant tomorrow.
+  // (logging a 12:30 AM stop at 12:31 AM is fine — only flip when really far back)
+  return result.toISOString()
 }
 
 function NextStopCard({ position, stops, eventDate }) {
