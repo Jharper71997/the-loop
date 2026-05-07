@@ -26,6 +26,7 @@ const PUBLIC_PREFIXES = [
   '/track',
   '/widget',
   '/api/shuttle/current',
+  '/api/track/cohort',
   '/api/qr-image',
   '/api/ticket-tailor-webhook',
   '/api/stripe-webhook',
