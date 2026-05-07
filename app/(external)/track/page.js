@@ -2,6 +2,7 @@ import { supabaseAdmin } from '@/lib/supabaseAdmin'
 import { BARS } from '@/lib/bars'
 import { lookupBarsByNames } from '@/lib/barsServer'
 import TrackMap from './TrackMap'
+import CohortRoll from './CohortRoll'
 
 export const metadata = {
   title: 'Track the Loop',
@@ -35,6 +36,8 @@ export default async function TrackPage() {
         </header>
 
         <TrackMap stops={data.stops} eventDate={data.eventDate} fallbackCenter={JACKSONVILLE_NC} />
+
+        <CohortRoll />
 
         <PartnerBars />
       </div>
