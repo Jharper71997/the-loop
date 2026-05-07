@@ -7,10 +7,6 @@
     {
       "path": "/api/cron/alert-on-failures",
       "schedule": "0 9 * * *"
-    },
-    {
-      "path": "/api/cron/ticket-reminder",
-      "schedule": "*/10 * * * *"
     }
   ]
 }
