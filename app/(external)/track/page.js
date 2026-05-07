@@ -1,4 +1,3 @@
-import Image from 'next/image'
 import { supabaseAdmin } from '@/lib/supabaseAdmin'
 import { BARS } from '@/lib/bars'
 import { lookupBarsByNames } from '@/lib/barsServer'
@@ -104,7 +103,8 @@ function BarCell({ bar }) {
               display: 'flex', alignItems: 'center', justifyContent: 'center',
             }}
           >
-            <Image src="/brand/badge-gold.png" alt="" width={56} height={56} style={{ opacity: 0.4 }} />
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img src="/brand/badge-gold.png" alt="" width={56} height={56} style={{ opacity: 0.4, display: 'block' }} />
           </div>
         )}
         <div

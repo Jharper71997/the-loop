@@ -1,5 +1,4 @@
 import MyTicketsClient from './MyTicketsClient'
-import Image from 'next/image'
 
 export const metadata = {
   title: 'My Tickets',
@@ -16,13 +15,26 @@ export default function MyTicketsPage() {
     <main style={{ padding: '16px 16px 24px' }}>
       <div style={{ maxWidth: 520, margin: '0 auto', display: 'grid', gap: 14 }}>
         <header style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-          <Image
-            src="/brand/badge-gold.png"
-            alt=""
-            width={44}
-            height={44}
-            style={{ opacity: 0.9, flex: '0 0 auto' }}
-          />
+          <span
+            aria-hidden
+            style={{
+              flex: '0 0 auto',
+              display: 'inline-flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              width: 44,
+              height: 44,
+              borderRadius: '50%',
+              border: `1.5px solid ${GOLD}`,
+              color: GOLD,
+              fontSize: 14,
+              fontWeight: 800,
+              letterSpacing: '0.04em',
+              background: 'radial-gradient(60% 60% at 50% 40%, rgba(212,163,51,0.18), transparent 70%)',
+            }}
+          >
+            JBL
+          </span>
           <div style={{ minWidth: 0 }}>
             <div
               style={{

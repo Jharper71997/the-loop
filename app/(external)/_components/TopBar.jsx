@@ -1,9 +1,9 @@
 'use client'
 
 import { useEffect, useState } from 'react'
-import Image from 'next/image'
 import Link from 'next/link'
 
+const GOLD = '#d4a333'
 const INK = '#f5f5f7'
 const LINE = 'rgba(255,255,255,0.08)'
 
@@ -48,14 +48,25 @@ export default function TopBar() {
           aria-label="Jville Brew Loop home"
           style={{ display: 'inline-flex', alignItems: 'center', gap: 10, textDecoration: 'none' }}
         >
-          <Image
-            src="/brand/badge-gold.png"
-            alt="Jville Brew Loop"
-            width={1024}
-            height={1024}
-            priority
-            style={{ height: 32, width: 32, display: 'block' }}
-          />
+          <span
+            aria-hidden
+            style={{
+              display: 'inline-flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              width: 32,
+              height: 32,
+              borderRadius: '50%',
+              border: `1.5px solid ${GOLD}`,
+              color: GOLD,
+              fontSize: 13,
+              fontWeight: 800,
+              letterSpacing: '0.04em',
+              background: 'radial-gradient(60% 60% at 50% 40%, rgba(212,163,51,0.18), transparent 70%)',
+            }}
+          >
+            JBL
+          </span>
           <span style={{
             color: INK,
             fontSize: 15,

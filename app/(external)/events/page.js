@@ -1,5 +1,4 @@
 import { getUpcomingLoops } from '@/lib/upcomingLoops'
-import Image from 'next/image'
 
 export const metadata = {
   title: 'Upcoming Loops',
@@ -145,97 +144,78 @@ function LoopCard({ loop }) {
     >
       <div
         style={{
-          aspectRatio: '16/9',
           position: 'relative',
           overflow: 'hidden',
+          padding: '18px 18px 14px',
+          minHeight: 180,
+          background: loop.coverImageUrl
+            ? `linear-gradient(180deg, rgba(10,10,11,0.45) 0%, rgba(10,10,11,0.85) 100%), url(${loop.coverImageUrl}) center/cover`
+            : 'radial-gradient(140% 90% at 50% 0%, rgba(212,163,51,0.22), transparent 65%), linear-gradient(180deg, #15140f 0%, #0a0a0b 100%)',
         }}
       >
-        {loop.coverImageUrl ? (
-          <div
-            aria-hidden
-            style={{
-              position: 'absolute',
-              inset: 0,
-              background: `url(${loop.coverImageUrl}) center/cover`,
-            }}
-          />
-        ) : (
-          <div
-            aria-hidden
-            style={{
-              position: 'absolute',
-              inset: 0,
-              background: 'radial-gradient(120% 80% at 50% 30%, rgba(212,163,51,0.22), transparent 70%), #0f0f12',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-            }}
-          >
-            <Image src="/brand/badge-gold.png" alt="" width={120} height={120} style={{ opacity: 0.45 }} />
-          </div>
-        )}
-        <span
-          style={{
-            position: 'absolute',
-            top: 12,
-            left: 12,
-            fontSize: 11,
-            letterSpacing: '0.15em',
-            textTransform: 'uppercase',
-            color: GOLD,
-            fontWeight: 700,
-            background: 'rgba(10,10,11,0.75)',
-            padding: '6px 12px',
-            borderRadius: 999,
-            backdropFilter: 'blur(6px)',
-          }}
-        >
-          {formatDate(loop.eventDate)}
-        </span>
-        {!isBookable && (
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 8 }}>
           <span
             style={{
-              position: 'absolute',
-              top: 12,
-              right: 12,
-              fontSize: 10,
-              letterSpacing: '0.2em',
+              fontSize: 11,
+              letterSpacing: '0.22em',
               textTransform: 'uppercase',
-              color: GOLD_HI,
+              color: GOLD,
               fontWeight: 700,
-              background: 'rgba(212,163,51,0.14)',
-              border: '1px solid rgba(212,163,51,0.35)',
-              padding: '4px 10px',
-              borderRadius: 999,
-            }}
-          >
-            Coming soon
-          </span>
-        )}
-        {loop.pickupTime && (
-          <span
-            style={{
-              position: 'absolute',
-              bottom: 12,
-              left: 12,
-              fontSize: 12,
-              fontWeight: 600,
-              color: INK,
               background: 'rgba(10,10,11,0.75)',
               padding: '6px 12px',
               borderRadius: 999,
-              backdropFilter: 'blur(6px)',
+              border: '1px solid rgba(212,163,51,0.35)',
             }}
           >
-            First pickup {formatTime(loop.pickupTime)}
+            {formatDate(loop.eventDate)}
           </span>
+          {!isBookable && (
+            <span
+              style={{
+                fontSize: 10,
+                letterSpacing: '0.2em',
+                textTransform: 'uppercase',
+                color: GOLD_HI,
+                fontWeight: 700,
+                background: 'rgba(212,163,51,0.14)',
+                border: '1px solid rgba(212,163,51,0.35)',
+                padding: '4px 10px',
+                borderRadius: 999,
+              }}
+            >
+              Coming soon
+            </span>
+          )}
+        </div>
+
+        <div style={{ marginTop: 16 }}>
+          <BarChips stops={loop.stops} />
+        </div>
+
+        {loop.pickupTime && (
+          <div
+            style={{
+              marginTop: 14,
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: 6,
+              fontSize: 12,
+              fontWeight: 600,
+              color: INK,
+              background: 'rgba(10,10,11,0.6)',
+              padding: '6px 12px',
+              borderRadius: 999,
+              border: '1px solid rgba(255,255,255,0.08)',
+            }}
+          >
+            <span aria-hidden style={{ width: 6, height: 6, borderRadius: '50%', background: GOLD }} />
+            First pickup {formatTime(loop.pickupTime)}
+          </div>
         )}
       </div>
 
-      <div style={{ padding: '20px 22px 22px', display: 'flex', flexDirection: 'column', flex: 1 }}>
-        <h3 style={{ color: INK, fontSize: 19, fontWeight: 600, marginBottom: 8 }}>{loop.name}</h3>
-
-        <RouteStripe stops={loop.stops} />
+      <div style={{ padding: '18px 22px 22px', display: 'flex', flexDirection: 'column', flex: 1 }}>
+        <h3 style={{ color: INK, fontSize: 19, fontWeight: 600, marginBottom: 12 }}>{loop.name}</h3>
 
         <div
           style={{
@@ -275,121 +255,94 @@ function LoopCard({ loop }) {
   )
 }
 
-function RouteStripe({ stops }) {
-  if (!Array.isArray(stops) || !stops.length) return null
-  const lastIdx = stops.length - 1
-  return (
-    <div style={{ margin: '4px 0 16px' }}>
+function BarChips({ stops }) {
+  const hasStops = Array.isArray(stops) && stops.length > 0
+  if (!hasStops) {
+    return (
       <div
         style={{
           display: 'flex',
-          justifyContent: 'space-between',
-          alignItems: 'baseline',
-          marginBottom: 10,
+          alignItems: 'center',
+          gap: 10,
+          padding: '14px 0 4px',
         }}
       >
         <span
+          aria-hidden
           style={{
+            display: 'inline-flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            width: 36,
+            height: 36,
+            borderRadius: '50%',
+            border: `1.5px solid ${GOLD}`,
             color: GOLD,
-            fontSize: 11,
-            letterSpacing: '0.18em',
-            textTransform: 'uppercase',
+            fontSize: 18,
             fontWeight: 700,
           }}
         >
-          Tonight&rsquo;s route
+          ◐
         </span>
-        <span
-          style={{
-            color: INK_DIM,
-            fontSize: 10,
-            letterSpacing: '0.18em',
-            textTransform: 'uppercase',
-            fontWeight: 700,
-          }}
-        >
-          {stops.length} {stops.length === 1 ? 'stop' : 'stops'}
-        </span>
+        <div style={{ display: 'flex', flexDirection: 'column' }}>
+          <span style={{ color: INK, fontSize: 14, fontWeight: 600 }}>Route drops Friday afternoon</span>
+          <span style={{ color: INK_DIM, fontSize: 12 }}>4 stops, hand-picked weekly</span>
+        </div>
       </div>
+    )
+  }
+
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+      <span
+        style={{
+          color: GOLD,
+          fontSize: 10,
+          letterSpacing: '0.22em',
+          textTransform: 'uppercase',
+          fontWeight: 700,
+        }}
+      >
+        Tonight&rsquo;s bars
+      </span>
       <div
         style={{
           display: 'flex',
           flexWrap: 'wrap',
-          alignItems: 'flex-start',
-          gap: '8px 6px',
+          gap: 6,
         }}
       >
-        {stops.map((s, i) => {
-          const isFirst = i === 0
-          const isLast = i === lastIdx
-          const showTime = s.startTime && (isFirst || isLast)
-          return (
-            <div
-              key={`${i}-${s.slug || s.name}`}
+        {stops.map((s, i) => (
+          <span
+            key={`chip-${i}-${s.slug || s.name}`}
+            style={{
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: 6,
+              fontSize: 12,
+              fontWeight: 600,
+              color: INK,
+              background: 'rgba(10,10,11,0.6)',
+              border: '1px solid rgba(212,163,51,0.35)',
+              padding: '5px 10px',
+              borderRadius: 999,
+              whiteSpace: 'nowrap',
+            }}
+          >
+            <span
+              aria-hidden
               style={{
-                display: 'flex',
-                alignItems: 'center',
-                gap: 6,
-                flex: '0 1 auto',
-                minWidth: 0,
+                color: GOLD,
+                fontSize: 10,
+                fontWeight: 700,
+                fontFamily: 'ui-monospace, monospace',
               }}
             >
-              <span
-                aria-hidden
-                style={{
-                  width: 8,
-                  height: 8,
-                  borderRadius: '50%',
-                  background: isFirst ? GOLD : 'transparent',
-                  border: `1.5px solid ${GOLD}`,
-                  flexShrink: 0,
-                }}
-              />
-              <div style={{ display: 'flex', flexDirection: 'column', minWidth: 0 }}>
-                <span
-                  style={{
-                    color: INK,
-                    fontSize: 11,
-                    fontWeight: 600,
-                    letterSpacing: '0.04em',
-                    textTransform: 'uppercase',
-                    whiteSpace: 'nowrap',
-                    overflow: 'hidden',
-                    textOverflow: 'ellipsis',
-                    maxWidth: 110,
-                  }}
-                >
-                  {s.name}
-                </span>
-                {showTime && (
-                  <span
-                    style={{
-                      color: INK_DIM,
-                      fontSize: 10,
-                      fontFamily: 'ui-monospace, monospace',
-                      letterSpacing: '0.04em',
-                      marginTop: 1,
-                    }}
-                  >
-                    {formatTime(s.startTime)}
-                  </span>
-                )}
-              </div>
-              {!isLast && (
-                <span
-                  aria-hidden
-                  style={{
-                    width: 14,
-                    height: 1,
-                    background: 'rgba(212,163,51,0.35)',
-                    flexShrink: 0,
-                    marginLeft: 2,
-                  }}
-                />
-              )}
-            </div>
-          )
-        })}
+              {String(i + 1).padStart(2, '0')}
+            </span>
+            {s.name}
+          </span>
+        ))}
       </div>
     </div>
   )

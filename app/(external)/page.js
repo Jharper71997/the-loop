@@ -1,5 +1,4 @@
 import { getUpcomingLoops } from '@/lib/upcomingLoops'
-import Image from 'next/image'
 
 export const metadata = {
   title: { absolute: 'Brew Loop' },
@@ -44,13 +43,25 @@ function NextLoopCard({ loop }) {
   if (!loop) {
     return (
       <section style={{ ...cardBase, padding: '28px 22px', display: 'grid', justifyItems: 'center', textAlign: 'center', gap: 12 }}>
-        <Image
-          src="/brand/badge-gold.png"
-          alt=""
-          width={80}
-          height={80}
-          style={{ opacity: 0.55 }}
-        />
+        <span
+          aria-hidden
+          style={{
+            display: 'inline-flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            width: 64,
+            height: 64,
+            borderRadius: '50%',
+            border: `2px solid ${GOLD}`,
+            color: GOLD,
+            fontSize: 20,
+            fontWeight: 800,
+            letterSpacing: '0.04em',
+            background: 'radial-gradient(60% 60% at 50% 40%, rgba(212,163,51,0.18), transparent 70%)',
+          }}
+        >
+          JBL
+        </span>
         <div style={{ color: GOLD, fontSize: 11, letterSpacing: '0.22em', textTransform: 'uppercase', fontWeight: 700 }}>
           No loops scheduled
         </div>
@@ -93,7 +104,8 @@ function NextLoopCard({ loop }) {
           pointerEvents: 'none',
         }}
       >
-        <Image src="/brand/badge-gold.png" alt="" fill style={{ objectFit: 'contain' }} />
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img src="/brand/badge-gold.png" alt="" style={{ width: '100%', height: '100%', objectFit: 'contain' }} />
       </div>
 
       <div style={{ position: 'relative', padding: '18px 18px 20px', display: 'grid', gap: 14 }}>

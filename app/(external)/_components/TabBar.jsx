@@ -2,7 +2,6 @@
 
 import { usePathname } from 'next/navigation'
 import { useEffect, useState } from 'react'
-import Image from 'next/image'
 
 const GOLD = '#d4a333'
 const GOLD_HI = '#f0c24a'
@@ -157,8 +156,24 @@ function TabIcon({ kind, active }) {
 function HomeIcon({ active }) {
   if (active) {
     return (
-      <span style={{ width: 26, height: 26, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', filter: `drop-shadow(0 0 8px ${GOLD})` }}>
-        <Image src="/brand/badge-gold.png" alt="" width={26} height={26} style={{ display: 'block' }} />
+      <span
+        aria-hidden
+        style={{
+          width: 26,
+          height: 26,
+          display: 'inline-flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          borderRadius: '50%',
+          border: `1.5px solid ${GOLD}`,
+          color: GOLD,
+          fontSize: 9,
+          fontWeight: 800,
+          letterSpacing: '0.02em',
+          filter: `drop-shadow(0 0 8px ${GOLD})`,
+        }}
+      >
+        JBL
       </span>
     )
   }

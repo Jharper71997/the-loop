@@ -1,5 +1,3 @@
-import Image from 'next/image'
-
 export const metadata = {
   title: 'About',
   description: 'Why we built the Jville Brew Loop, how a night runs, and how to partner with us.',
@@ -24,13 +22,26 @@ export default function AboutPage() {
   return (
     <main>
         <section style={{ padding: '20px 20px 16px', maxWidth: 760, margin: '0 auto', textAlign: 'center' }}>
-          <Image
-            src="/brand/badge-gold.png"
-            alt=""
-            width={72}
-            height={72}
-            style={{ opacity: 0.85, marginBottom: 8 }}
-          />
+          <span
+            aria-hidden
+            style={{
+              display: 'inline-flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              width: 72,
+              height: 72,
+              borderRadius: '50%',
+              border: `2px solid ${GOLD}`,
+              color: GOLD,
+              fontSize: 22,
+              fontWeight: 800,
+              letterSpacing: '0.04em',
+              marginBottom: 8,
+              background: 'radial-gradient(60% 60% at 50% 40%, rgba(212,163,51,0.18), transparent 70%)',
+            }}
+          >
+            JBL
+          </span>
           <div
             style={{
               color: GOLD,
