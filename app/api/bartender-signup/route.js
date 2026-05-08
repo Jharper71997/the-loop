@@ -42,7 +42,6 @@ export async function POST(req) {
 
   if (!firstName) return bad('first_name required')
   if (!lastName) return bad('last_name required')
-  if (!barSlug) return bad('bar_slug required')
   if (!email && !phone) return bad('email or phone required')
 
   const expectedCode = (process.env.BARTENDER_SIGNUP_CODE || '').trim()
@@ -50,8 +49,9 @@ export async function POST(req) {
     return Response.json({ error: 'invalid invite code' }, { status: 403 })
   }
 
-  const bar = BARS.find(b => b.slug === barSlug)
-  if (!bar) return bad('unknown bar')
+  // bar is optional — sellers who aren't with a partner bar omit it.
+  const bar = barSlug ? BARS.find(b => b.slug === barSlug) : null
+  if (barSlug && !bar) return bad('unknown bar')
 
   const initial = lastInitial(lastName)
   if (!initial) return bad('last_name has no usable letters')
@@ -94,12 +94,16 @@ export async function POST(req) {
   // Bar+name lookup (legacy idempotent path). Match on the composite
   // "Brittany S." display_name. Returning bartenders from before last initials
   // were collected match via the contact-first lookup above instead.
-  const { data: existing, error: lookupErr } = await supabase
+  // For no-bar signups, fall back to a name-only match on rows that also have
+  // no bar so two unaffiliated sellers with the same display name still
+  // disambiguate via the contact-first path above.
+  const lookupQuery = supabase
     .from('bartenders')
     .select('slug, display_name, bar, qr_image_url, active, share_code, email, phone')
-    .eq('bar', bar.name)
     .ilike('display_name', displayName)
-    .maybeSingle()
+  const { data: existing, error: lookupErr } = await (
+    bar ? lookupQuery.eq('bar', bar.name) : lookupQuery.is('bar', null)
+  ).maybeSingle()
 
   if (lookupErr && SCHEMA_MISSING_CODES.has(lookupErr.code)) {
     return await schemaMissing(supabase)
@@ -119,7 +123,7 @@ export async function POST(req) {
   }
 
   // Fresh signup.
-  const baseSlug = `${bar.slug}-${nameSlug}`
+  const baseSlug = bar ? `${bar.slug}-${nameSlug}` : nameSlug
   const slug = await pickFreeSlug(supabase, baseSlug)
   if (!slug) return Response.json({ error: 'could not find a free slug' }, { status: 500 })
 
@@ -130,7 +134,7 @@ export async function POST(req) {
   const row = {
     slug,
     display_name: displayName,
-    bar: bar.name,
+    bar: bar ? bar.name : null,
     qr_image_url: qrDataUrl,
     active: true,
     share_code: shareCode,
@@ -147,7 +151,7 @@ export async function POST(req) {
       kind: 'finalize_failed',
       subject: 'Bartender signup insert failed',
       body: insertErr.message,
-      context: { display_name: displayName, bar: bar.name },
+      context: { display_name: displayName, bar: bar ? bar.name : null },
     })
     return Response.json({ error: 'Could not complete signup. Please try again.' }, { status: 500 })
   }

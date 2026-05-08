@@ -45,7 +45,7 @@ export default function BartenderSuccessCard({ result, mode = 'signup' }) {
           {eyebrow}
         </div>
         <h1 style={{ color: INK, fontSize: 26, margin: '0 0 8px' }}>
-          {result.display_name} — {result.bar}
+          {result.bar ? `${result.display_name} — ${result.bar}` : result.display_name}
         </h1>
         <p style={{ color: INK_DIM, fontSize: 14, margin: 0 }}>
           Two ways to get credit: the QR, or your personal code.

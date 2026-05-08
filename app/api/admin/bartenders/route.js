@@ -50,10 +50,10 @@ export async function POST(req) {
   const phone = normalizePhone(body?.phone)
   if (!firstName) return bad('first_name required')
   if (!lastName) return bad('last_name required')
-  if (!barSlug) return bad('bar_slug required')
 
-  const bar = BARS.find(b => b.slug === barSlug)
-  if (!bar) return bad('unknown bar')
+  // bar is optional — sellers who aren't with a partner bar omit it.
+  const bar = barSlug ? BARS.find(b => b.slug === barSlug) : null
+  if (barSlug && !bar) return bad('unknown bar')
 
   const initial = lastInitial(lastName)
   if (!initial) return bad('last_name has no usable letters')
@@ -64,18 +64,24 @@ export async function POST(req) {
   const displayName = formatDisplayName(firstName, lastName)
 
   const supabase = supabaseAdmin()
-  const baseSlug = `${bar.slug}-${nameSlug}`
+  const baseSlug = bar ? `${bar.slug}-${nameSlug}` : nameSlug
 
   // Idempotency: if a row already exists for this exact (bar, display_name),
-  // surface a 409 rather than silently creating a duplicate.
-  const { data: existing } = await supabase
+  // surface a 409 rather than silently creating a duplicate. For no-bar
+  // sellers, match against other no-bar rows.
+  const dupQuery = supabase
     .from('bartenders')
     .select('slug')
-    .eq('bar', bar.name)
     .ilike('display_name', displayName)
-    .maybeSingle()
+  const { data: existing } = await (
+    bar ? dupQuery.eq('bar', bar.name) : dupQuery.is('bar', null)
+  ).maybeSingle()
   if (existing) {
-    return Response.json({ error: 'A bartender with that name already exists at this bar.' }, { status: 409 })
+    return Response.json({
+      error: bar
+        ? 'A seller with that name already exists at this bar.'
+        : 'A seller with that name (no bar) already exists.',
+    }, { status: 409 })
   }
 
   const slug = await pickFreeSlug(supabase, baseSlug)
@@ -87,7 +93,7 @@ export async function POST(req) {
   const row = {
     slug,
     display_name: displayName,
-    bar: bar.name,
+    bar: bar ? bar.name : null,
     qr_image_url: qrImageUrl,
     active: true,
     share_code: shareCode,
@@ -132,10 +138,15 @@ export async function PATCH(req) {
     updates.display_name = next
   }
 
-  if ('bar_slug' in body && body.bar_slug) {
-    const bar = BARS.find(b => b.slug === body.bar_slug)
-    if (!bar) return bad('unknown bar')
-    updates.bar = bar.name
+  if ('bar_slug' in body) {
+    if (body.bar_slug) {
+      const bar = BARS.find(b => b.slug === body.bar_slug)
+      if (!bar) return bad('unknown bar')
+      updates.bar = bar.name
+    } else {
+      // empty / null clears affiliation (seller is not with a bar)
+      updates.bar = null
+    }
   }
 
   if ('active' in body) {

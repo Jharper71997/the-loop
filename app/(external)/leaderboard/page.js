@@ -2,8 +2,8 @@ import { notFound } from 'next/navigation'
 import LeaderboardClient from './LeaderboardClient'
 
 export const metadata = {
-  title: 'Bartender Leaderboard',
-  description: 'Brew Loop bartender contest standings.',
+  title: 'Brew Loop Sales Leaderboard',
+  description: 'Brew Loop sales contest standings.',
   robots: { index: false, follow: false },
 }
 

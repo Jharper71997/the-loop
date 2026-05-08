@@ -48,7 +48,7 @@ export default function LookupClient() {
           color: GOLD, fontSize: 11, letterSpacing: '0.2em',
           textTransform: 'uppercase', fontWeight: 700, marginBottom: 12,
         }}>
-          Bartender Contest
+          Brew Loop Sales Contest
         </div>
         <h1 style={{ color: INK, fontSize: 28, margin: '0 0 12px' }}>
           Find my QR.

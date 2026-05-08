@@ -112,7 +112,7 @@ export default function LeaderboardAdminClient({ bars = [] }) {
           )}
         </div>
         {standings.length === 0 ? (
-          <div className="muted">No bartenders signed up yet. Share the signup link below.</div>
+          <div className="muted">No sellers signed up yet. Share the signup link below.</div>
         ) : (
           <div style={{ display: 'grid', gap: 6 }}>
             <HeaderRow cells={['#', 'Name', 'Bar', 'Slug', 'Tickets', 'Status']} />
@@ -120,7 +120,7 @@ export default function LeaderboardAdminClient({ bars = [] }) {
               <div key={row.slug} className="row" style={rowStyle}>
                 <span className="mono" style={{ color: '#d4a333' }}>{idx + 1}</span>
                 <span>{row.name}</span>
-                <span className="muted">{row.bar}</span>
+                <span className="muted">{row.bar || '—'}</span>
                 <span className="mono tiny" style={{ color: '#9c9ca3' }}>{row.slug}</span>
                 <span className="mono" style={{ color: row.qualifies ? '#d4a333' : '#e8e8ea' }}>{row.tickets}</span>
                 <span className="tiny mono" style={{ color: row.qualifies ? '#34d399' : '#9c9ca3' }}>
@@ -135,7 +135,7 @@ export default function LeaderboardAdminClient({ bars = [] }) {
       <div className="card" style={{ marginTop: 14 }}>
         <div className="hud-heading">Share links</div>
         <div style={{ display: 'grid', gap: 10 }}>
-          <CopyableLine label="Signup (text this to bartenders)" path={signupUrl} addCode />
+          <CopyableLine label="Signup (text this to anyone selling)" path={signupUrl} addCode />
           <CopyableLine label="Public leaderboard" path={leaderboardUrl} addToken />
         </div>
         <div className="tiny muted" style={{ marginTop: 10 }}>
@@ -146,7 +146,7 @@ export default function LeaderboardAdminClient({ bars = [] }) {
       <div className="card" style={{ marginTop: 14 }}>
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 8 }}>
           <div className="hud-heading">Roster · {roster.filter(b => b.active).length} active / {roster.length} total</div>
-          <button onClick={() => setAdding(true)} style={btnPrimary}>+ Add bartender</button>
+          <button onClick={() => setAdding(true)} style={btnPrimary}>+ Add seller</button>
         </div>
 
         {adding && (
@@ -173,7 +173,7 @@ export default function LeaderboardAdminClient({ bars = [] }) {
             ) : (
               <div key={b.slug} className="row" style={{ ...rowStyle, gridTemplateColumns: 'repeat(7, minmax(0, 1fr))' }}>
                 <span style={{ opacity: b.active ? 1 : 0.5 }}>{b.display_name}</span>
-                <span className="muted">{b.bar}</span>
+                <span className="muted">{b.bar || '—'}</span>
                 <span className="mono tiny" style={{ color: '#9c9ca3' }}>{b.slug}</span>
                 <span className="tiny muted">{formatDate(b.created_at)}</span>
                 <span>
@@ -217,12 +217,12 @@ export default function LeaderboardAdminClient({ bars = [] }) {
 function AddRow({ bars, onCancel, onSave }) {
   const [firstName, setFirstName] = useState('')
   const [lastName, setLastName] = useState('')
-  const [barSlug, setBarSlug] = useState(bars[0]?.slug || '')
+  const [barSlug, setBarSlug] = useState('')
   const [busy, setBusy] = useState(false)
   const [err, setErr] = useState(null)
 
   async function submit() {
-    if (!firstName.trim() || !lastName.trim() || !barSlug) return
+    if (!firstName.trim() || !lastName.trim()) return
     setBusy(true)
     setErr(null)
     try {
@@ -236,7 +236,7 @@ function AddRow({ bars, onCancel, onSave }) {
 
   return (
     <div style={{ display: 'grid', gap: 8, padding: '10px 4px', borderBottom: '1px solid rgba(255,255,255,0.05)', marginTop: 6 }}>
-      <div className="tiny muted" style={{ textTransform: 'uppercase', letterSpacing: '0.14em' }}>New bartender</div>
+      <div className="tiny muted" style={{ textTransform: 'uppercase', letterSpacing: '0.14em' }}>New seller</div>
       <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', alignItems: 'center' }}>
         <input
           autoFocus
@@ -252,6 +252,7 @@ function AddRow({ bars, onCancel, onSave }) {
           style={inputStyle}
         />
         <select value={barSlug} onChange={e => setBarSlug(e.target.value)} style={selectStyle}>
+          <option value="">No bar</option>
           {bars.map(b => <option key={b.slug} value={b.slug}>{b.name}</option>)}
         </select>
         <button onClick={submit} disabled={busy} style={btnPrimary}>{busy ? 'Saving…' : 'Save'}</button>
@@ -266,14 +267,14 @@ function EditRow({ bartender, bars, onCancel, onSave, busy }) {
   const [name, setName] = useState(bartender.display_name)
   const [barSlug, setBarSlug] = useState(() => {
     const match = bars.find(b => b.name === bartender.bar)
-    return match?.slug || bars[0]?.slug || ''
+    return match?.slug || ''
   })
 
   function submit() {
     const payload = {}
     if (name.trim() && name.trim() !== bartender.display_name) payload.display_name = name.trim()
-    const currentSlug = bars.find(b => b.name === bartender.bar)?.slug
-    if (barSlug && barSlug !== currentSlug) payload.bar_slug = barSlug
+    const currentSlug = bars.find(b => b.name === bartender.bar)?.slug || ''
+    if (barSlug !== currentSlug) payload.bar_slug = barSlug
     if (Object.keys(payload).length === 0) {
       onCancel()
       return
@@ -289,6 +290,7 @@ function EditRow({ bartender, bars, onCancel, onSave, busy }) {
       <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', alignItems: 'center' }}>
         <input value={name} onChange={e => setName(e.target.value)} style={inputStyle} />
         <select value={barSlug} onChange={e => setBarSlug(e.target.value)} style={selectStyle}>
+          <option value="">No bar</option>
           {bars.map(b => <option key={b.slug} value={b.slug}>{b.name}</option>)}
         </select>
         <button onClick={submit} disabled={busy} style={btnPrimary}>{busy ? 'Saving…' : 'Save'}</button>

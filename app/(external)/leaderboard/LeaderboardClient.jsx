@@ -60,7 +60,7 @@ export default function LeaderboardClient() {
           color: GOLD, fontSize: 11, letterSpacing: '0.2em',
           textTransform: 'uppercase', fontWeight: 700, marginBottom: 10,
         }}>
-          Bartender Contest · {data.month}
+          Brew Loop Sales Contest · {data.month}
         </div>
         <h1 style={{ color: INK, fontSize: 26, margin: '0 0 6px' }}>
           Leaderboard
@@ -88,7 +88,7 @@ export default function LeaderboardClient() {
       }}>
         {standings.length === 0 ? (
           <div style={{ color: INK_DIM, padding: 32, textAlign: 'center', fontSize: 14 }}>
-            No bartenders signed up yet.
+            No sellers signed up yet.
           </div>
         ) : (
           standings.map((row, idx) => (
@@ -98,7 +98,7 @@ export default function LeaderboardClient() {
       </div>
 
       <div style={{ color: INK_DIM, fontSize: 11, textAlign: 'center', marginTop: 16 }}>
-        10 sales minimum to qualify · resets the 1st of each month
+        Open to anyone · 10 sales minimum to qualify · resets the 1st of each month
       </div>
     </main>
   )
@@ -160,9 +160,11 @@ function Row({ row, rank }) {
         <div style={{ color: INK, fontSize: 15, fontWeight: 600 }}>
           {row.name}
         </div>
-        <div style={{ color: INK_DIM, fontSize: 12 }}>
-          {row.bar}
-        </div>
+        {row.bar && (
+          <div style={{ color: INK_DIM, fontSize: 12 }}>
+            {row.bar}
+          </div>
+        )}
       </div>
       <div style={{ textAlign: 'right' }}>
         <div style={{

@@ -14,7 +14,7 @@ export default function SignupClient({ bars }) {
   const [lastName, setLastName] = useState('')
   const [email, setEmail] = useState('')
   const [phone, setPhone] = useState('')
-  const [barSlug, setBarSlug] = useState(bars[0]?.slug || '')
+  const [barSlug, setBarSlug] = useState('')
   const [submitting, setSubmitting] = useState(false)
   const [error, setError] = useState(null)
   const [result, setResult] = useState(null)
@@ -65,13 +65,13 @@ export default function SignupClient({ bars }) {
           color: GOLD, fontSize: 11, letterSpacing: '0.2em',
           textTransform: 'uppercase', fontWeight: 700, marginBottom: 12,
         }}>
-          Bartender Contest
+          Brew Loop Sales Contest
         </div>
         <h1 style={{ color: INK, fontSize: 28, margin: '0 0 12px' }}>
           Get your sales QR.
         </h1>
         <p style={{ color: INK_DIM, fontSize: 15, lineHeight: 1.55, margin: 0 }}>
-          Top seller this month wins <strong style={{ color: GOLD }}>$250</strong>.
+          Anyone can sell. Top seller this month wins <strong style={{ color: GOLD }}>$250</strong>.
           Runner-up gets <strong style={{ color: GOLD }}>$50</strong>. Sell at least 10 to qualify.
         </p>
       </div>
@@ -110,13 +110,13 @@ export default function SignupClient({ bars }) {
           />
         </Field>
 
-        <Field label="Your bar">
+        <Field label="Bar (optional)">
           <select
             value={barSlug}
             onChange={e => setBarSlug(e.target.value)}
-            required
             style={inputStyle}
           >
+            <option value="">I&apos;m not with a bar</option>
             {bars.map(b => (
               <option key={b.slug} value={b.slug}>{b.name}</option>
             ))}
@@ -164,7 +164,7 @@ export default function SignupClient({ bars }) {
 
         <button
           type="submit"
-          disabled={submitting || !firstName.trim() || !lastName.trim() || !barSlug || (!email.trim() && !phone.trim())}
+          disabled={submitting || !firstName.trim() || !lastName.trim() || (!email.trim() && !phone.trim())}
           style={{
             background: GOLD,
             color: '#0a0a0b',
