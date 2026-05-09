@@ -21,6 +21,12 @@ const MIN_DELTA_METERS = 5
 // Fallback center if we have no position and no stops (Jacksonville NC).
 const JACKSONVILLE_NC = { lat: 34.7541, lng: -77.4302 }
 
+// localStorage key used to survive iOS reloads mid-shift. Scoped to event so
+// a stale flag from a previous Loop can't auto-start the wrong night.
+function runningFlagKey(eventId) {
+  return `brewloop:driver:running:${eventId}`
+}
+
 export default function DriverClient({
   groupId = null,
   eventId = null,
@@ -144,10 +150,37 @@ export default function DriverClient({
     }
   }, [position, mapReady])
 
+  // Cleanup on unmount: release the geolocation watch + wake lock so we don't
+  // leak listeners, but DO NOT post the "off duty" ping. iOS aggressively
+  // discards backgrounded webviews; if we ended the route on every unmount,
+  // the driver would silently lose live tracking the moment they switched
+  // apps. The off-duty ping fires only from the explicit "End route" button.
   useEffect(() => {
-    return () => stop()
+    return () => {
+      if (watchIdRef.current != null) {
+        try { navigator.geolocation.clearWatch(watchIdRef.current) } catch {}
+        watchIdRef.current = null
+      }
+      if (wakeLockRef.current) {
+        try { wakeLockRef.current.release() } catch {}
+        wakeLockRef.current = null
+      }
+    }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
+
+  // Auto-resume after an iOS-induced reload: if we previously hit Start route
+  // for this same event, the running flag is set in localStorage. Re-arm the
+  // geolocation watch so the dispatch view doesn't go dark mid-shift.
+  useEffect(() => {
+    if (!eventId || running) return
+    if (typeof window === 'undefined') return
+    try {
+      const flag = window.localStorage.getItem(runningFlagKey(eventId))
+      if (flag === '1') start()
+    } catch {}
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [eventId])
 
   // Auto-expand the next-unlogged matching slot when the driver arrives at a
   // bar. Once auto-expanded the slot id is added to autoExpandedRef so we
@@ -204,6 +237,9 @@ export default function DriverClient({
     })
     watchIdRef.current = id
     setRunning(true)
+    if (eventId && typeof window !== 'undefined') {
+      try { window.localStorage.setItem(runningFlagKey(eventId), '1') } catch {}
+    }
   }
 
   async function stop() {
@@ -235,6 +271,9 @@ export default function DriverClient({
     }
 
     setRunning(false)
+    if (eventId && typeof window !== 'undefined') {
+      try { window.localStorage.removeItem(runningFlagKey(eventId)) } catch {}
+    }
   }
 
   async function onPosition(pos) {
@@ -402,9 +441,9 @@ export default function DriverClient({
             lineHeight: 1.45,
           }}>
             <div style={{ color: GOLD, fontSize: 11, letterSpacing: '0.22em', textTransform: 'uppercase', fontWeight: 700, marginBottom: 6 }}>
-              Route log not generated
+              Seeding tonight&apos;s stops
             </div>
-            Tonight&apos;s 25 stops haven&apos;t been seeded yet. Have leadership open this Loop under <strong style={{ color: INK }}>/leadership/loops</strong> and tap <strong style={{ color: INK }}>Generate route log</strong>.
+            Tonight&apos;s route is being prepared. Pull to refresh in a moment, or tap <strong style={{ color: INK }}>Start route</strong> above &mdash; you can keep driving while the per-stop log catches up.
           </div>
         ) : null}
 

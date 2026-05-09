@@ -435,8 +435,12 @@ export default function Contacts() {
               headers: { 'Content-Type': 'application/json' },
               body: JSON.stringify({ to: selected.phone, message }),
             })
-            const data = await res.json()
-            if (data.success) { alert('Text sent!'); setMessage('') } else { alert('Error: ' + data.error) }
+            const data = await res.json().catch(() => ({}))
+            if (res.ok && data.success) {
+              alert('Text sent!'); setMessage('')
+            } else {
+              alert(`Error: ${data.error || `http_${res.status}`}${data.detail ? ` — ${data.detail}` : ''}`)
+            }
           }}>Send Text</button>
         </div>
       </main>

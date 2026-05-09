@@ -40,12 +40,25 @@ export default function SmsBroadcast({ recipients = [], stops = null, title = 'T
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ to: r.phone, message: personalize(message, r) }),
-        }).then(r => r.json()).catch(e => ({ success: false, error: e.message }))
+        })
+          .then(async res => {
+            const json = await res.json().catch(() => ({}))
+            if (!res.ok || !json.success) {
+              return { success: false, error: json.error || `http_${res.status}`, detail: json.detail }
+            }
+            return { success: true }
+          })
+          .catch(e => ({ success: false, error: 'network', detail: e.message }))
       )
     )
     const failed = results.filter(r => !r.success).length
     setSending(false)
-    setResult({ sent: targets.length - failed, failed })
+    const firstFailure = results.find(r => !r.success)
+    setResult({
+      sent: targets.length - failed,
+      failed,
+      reason: firstFailure ? (firstFailure.detail || firstFailure.error) : null,
+    })
     if (failed === 0) setMessage('')
   }
 
@@ -101,6 +114,7 @@ export default function SmsBroadcast({ recipients = [], stops = null, title = 'T
             {result ? (
               <span style={{ color: result.failed === 0 ? '#10b981' : '#facc15', fontSize: 13 }}>
                 Sent {result.sent}{result.failed > 0 ? ` · ${result.failed} failed` : ''}
+                {result.failed > 0 && result.reason ? ` · ${result.reason}` : ''}
               </span>
             ) : <span />}
             <button

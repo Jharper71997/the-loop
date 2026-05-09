@@ -36,11 +36,13 @@ export default function SmsButton({ contact, label = 'Text' }) {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ to: contact.phone, message: personalize(message, contact) }),
       })
-      const json = await res.json()
-      setResult(json.success ? 'sent' : (json.error || 'failed'))
-      if (json.success) {
+      const json = await res.json().catch(() => ({}))
+      if (res.ok && json.success) {
+        setResult('sent')
         setMessage('')
         setTimeout(() => { setOpen(false); setResult(null) }, 1200)
+      } else {
+        setResult(json.detail || json.error || `http_${res.status}`)
       }
     } catch (err) {
       setResult(err.message)

@@ -138,13 +138,27 @@ export default function Groups() {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ to: m.contacts.phone, message: personalize(template, m.contacts) }),
-        }).then(r => r.json()).catch(e => ({ success: false, error: e.message }))
+        })
+          .then(async res => {
+            const json = await res.json().catch(() => ({}))
+            if (!res.ok || !json.success) {
+              return { success: false, error: json.error || `http_${res.status}`, detail: json.detail }
+            }
+            return { success: true }
+          })
+          .catch(e => ({ success: false, error: 'network', detail: e.message }))
       )
     )
     setSending(s => ({ ...s, [key]: false }))
     const failed = results.filter(r => !r.success).length
-    alert(failed === 0 ? `Sent to ${withPhones.length}!` : `Sent ${withPhones.length - failed} of ${withPhones.length}. ${failed} failed.`)
-    if (failed === 0) setStopMessage(m => ({ ...m, [key]: '' }))
+    if (failed === 0) {
+      alert(`Sent to ${withPhones.length}!`)
+      setStopMessage(m => ({ ...m, [key]: '' }))
+    } else {
+      const first = results.find(r => !r.success)
+      const reason = first ? (first.detail || first.error) : 'unknown'
+      alert(`Sent ${withPhones.length - failed} of ${withPhones.length}. ${failed} failed (${reason}).`)
+    }
   }
 
   const filtered = useMemo(() => {

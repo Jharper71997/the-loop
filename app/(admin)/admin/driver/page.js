@@ -2,6 +2,7 @@ import DriverClient from './DriverClient'
 import { getUpcomingLoops } from '@/lib/upcomingLoops'
 import { supabaseAdmin } from '@/lib/supabaseAdmin'
 import { lookupBarsByNames } from '@/lib/barsServer'
+import { generateStopsForEvent } from '@/lib/routeStopLogs'
 
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
@@ -40,12 +41,24 @@ export default async function DriverPage() {
       })
 
       if (nextLoop?.id) {
-        const { data: logRows } = await sb
-          .from('route_stop_logs')
-          .select('*')
-          .eq('event_id', nextLoop.id)
-          .order('stop_index', { ascending: true })
-        routeLog = logRows || []
+        const fetchLogRows = async () => {
+          const { data } = await sb
+            .from('route_stop_logs')
+            .select('*')
+            .eq('event_id', nextLoop.id)
+            .order('stop_index', { ascending: true })
+          return data || []
+        }
+        routeLog = await fetchLogRows()
+
+        // Self-heal: if the event has a non-empty cycle-1 schedule but no
+        // route_stop_logs rows yet, seed them now so the driver never sees
+        // the "Have leadership generate the route log" banner mid-shift.
+        // generateStopsForEvent is idempotent and locks driver-filled rows.
+        if (!routeLog.length && schedule.length) {
+          await generateStopsForEvent(sb, nextLoop.id).catch(() => {})
+          routeLog = await fetchLogRows()
+        }
       }
     } catch {}
   }
