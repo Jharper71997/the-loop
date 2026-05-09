@@ -15,6 +15,7 @@ export default function TrackMap({ stops = [], eventDate = null, fallbackCenter 
   const stateRef = useRef({ map: null, L: null, shuttleMarker: null, stopMarkers: [] })
   const [shuttle, setShuttle] = useState(null)
   const [lastSeenAt, setLastSeenAt] = useState(null)
+  const [nextStopHint, setNextStopHint] = useState(null) // { bar_name, cycle_index, bar_position }
   const [mapReady, setMapReady] = useState(false)
   const [now, setNow] = useState(() => Date.now())
 
@@ -96,6 +97,7 @@ export default function TrackMap({ stops = [], eventDate = null, fallbackCenter 
         const json = await res.json()
         if (cancelled) return
         setShuttle(json?.shuttle || null)
+        setNextStopHint(json?.next_stop || null)
         if (json?.last_seen_at) setLastSeenAt(json.last_seen_at)
         else if (json?.shuttle?.recorded_at) setLastSeenAt(json.shuttle.recorded_at)
       } catch {}
@@ -150,10 +152,10 @@ export default function TrackMap({ stops = [], eventDate = null, fallbackCenter 
         }}
       />
 
-      <StatusRow shuttle={shuttle} lastSeenAt={lastSeenAt} now={now} stops={stops} eventDate={eventDate} />
+      <StatusRow shuttle={shuttle} lastSeenAt={lastSeenAt} now={now} stops={stops} eventDate={eventDate} nextStopHint={nextStopHint} />
 
       {stops.length > 0 && (
-        <StopList stops={stops} shuttle={shuttle} eventDate={eventDate} now={now} />
+        <StopList stops={stops} shuttle={shuttle} eventDate={eventDate} now={now} nextStopHint={nextStopHint} />
       )}
 
       <style>{`
@@ -176,15 +178,16 @@ export default function TrackMap({ stops = [], eventDate = null, fallbackCenter 
   )
 }
 
-function StatusRow({ shuttle, lastSeenAt, now, stops = [], eventDate = null }) {
+function StatusRow({ shuttle, lastSeenAt, now, stops = [], eventDate = null, nextStopHint = null }) {
   const live = !!shuttle?.is_active
   const ageMin = lastSeenAt ? Math.floor((now - new Date(lastSeenAt).getTime()) / 60000) : null
 
-  // Schedule-order destination: target stop 1 first, then 2, then 3, etc.
-  // "Next stop" advances based on the schedule's start_time vs current clock,
-  // so the card always points at the upcoming stop in route order — not just
-  // the geographically nearest one.
-  const dest = live ? pickNextStopByOrder(stops, new Date(now), eventDate) : null
+  // Prefer the driver's per-stop log progression: as the driver checks off a
+  // bar, route_stop_logs advances and /api/shuttle/current hands us the next
+  // un-arrived bar by name. This is the only source that knows about cycles
+  // 2-5; the schedule on `stops` only carries cycle-1 times.
+  // Falls back to schedule-order picking when the route log isn't seeded.
+  const dest = live ? (resolveStopByName(stops, nextStopHint?.bar_name) || pickNextStopByOrder(stops, new Date(now), eventDate)) : null
   const eta = dest ? computeEta(shuttle, dest) : null
 
   return (
@@ -261,7 +264,11 @@ function StatusRow({ shuttle, lastSeenAt, now, stops = [], eventDate = null }) {
           </span>
           <div style={{ flex: 1, minWidth: 0 }}>
             <div style={{ color: GOLD, fontSize: 10, letterSpacing: '0.22em', textTransform: 'uppercase', fontWeight: 700 }}>
-              {eta.status === 'arrived' ? 'At stop' : `Next stop · #${dest.index + 1}`}
+              {eta.status === 'arrived'
+                ? 'At stop'
+                : nextStopHint?.cycle_index
+                  ? `Next stop · cycle ${nextStopHint.cycle_index} · #${nextStopHint.bar_position || dest.index + 1}`
+                  : `Next stop · #${dest.index + 1}`}
             </div>
             <div style={{ color: INK, fontSize: 16, fontWeight: 800, marginTop: 2, lineHeight: 1.15 }}>
               {dest.name}
@@ -301,9 +308,11 @@ const STOP_LAYOVER_MIN = 10
 // Each stop's ETA = drive time from current shuttle position to the immediate
 // next stop, plus STOP_LAYOVER_MIN per intermediate stop, plus drive time
 // chained between subsequent stops.
-function StopList({ stops, shuttle, eventDate, now }) {
+function StopList({ stops, shuttle, eventDate, now, nextStopHint = null }) {
   const live = !!shuttle?.is_active
-  const nextStop = live ? pickNextStopByOrder(stops, new Date(now), eventDate) : null
+  const nextStop = live
+    ? (resolveStopByName(stops, nextStopHint?.bar_name) || pickNextStopByOrder(stops, new Date(now), eventDate))
+    : null
 
   // Build a per-stop ETA only for stops at or after `nextStop` in route order.
   // Stops before `nextStop` are treated as already passed.
@@ -439,6 +448,17 @@ function computeMultiStopEtas(stops, shuttle, nextStop) {
   }
 
   return out
+}
+
+// Match the driver's "next un-logged bar" hint (by bar name) back to a
+// `stops[]` entry so we can reuse its lat/lng/index. Case-insensitive trim
+// match — bar names come from groups.schedule and route_stop_logs, both
+// fed by the same schedule data, so they should align exactly.
+function resolveStopByName(stops, barName) {
+  if (!barName || !Array.isArray(stops)) return null
+  const target = String(barName).trim().toLowerCase()
+  const placed = stops.filter(s => Number.isFinite(s.lat) && Number.isFinite(s.lng))
+  return placed.find(s => String(s.name || '').trim().toLowerCase() === target) || null
 }
 
 // Pick the next stop in schedule order. Riders/drivers expect the card to
