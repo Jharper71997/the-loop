@@ -1,4 +1,4 @@
-import { notFound } from 'next/navigation'
+import { notFound, redirect } from 'next/navigation'
 import { revalidatePath } from 'next/cache'
 import { supabaseAdmin } from '@/lib/supabaseAdmin'
 import EventShell from '@/app/(admin)/admin/groups/[id]/EventShell'
@@ -11,12 +11,25 @@ export const dynamic = 'force-dynamic'
 async function generateRouteStopsAction(eventId, groupId) {
   'use server'
   if (!eventId) return
-  await generateStopsForEvent(supabaseAdmin(), eventId)
+  let result
+  try {
+    result = await generateStopsForEvent(supabaseAdmin(), eventId)
+  } catch (err) {
+    revalidatePath(`/leadership/loops/${groupId}`)
+    redirect(`/leadership/loops/${groupId}?gen_error=${encodeURIComponent(err?.message || 'unknown')}`)
+  }
   revalidatePath(`/leadership/loops/${groupId}`)
+  if (result?.error) {
+    redirect(`/leadership/loops/${groupId}?gen_error=${encodeURIComponent(result.error)}`)
+  }
+  redirect(`/leadership/loops/${groupId}?gen_ok=${result?.generated || 0}`)
 }
 
-export default async function ManageLoopDetailPage({ params }) {
+export default async function ManageLoopDetailPage({ params, searchParams }) {
   const { id } = await params
+  const sp = (await searchParams) || {}
+  const genError = sp.gen_error || null
+  const genOk = sp.gen_ok || null
   const supabase = supabaseAdmin()
 
   const { data: group } = await supabase
@@ -120,7 +133,31 @@ export default async function ManageLoopDetailPage({ params }) {
       />
 
       {event?.id && (
-        <div style={{ maxWidth: 1100, margin: '0 auto', padding: '0 16px 14px' }}>
+        <div style={{ maxWidth: 1100, margin: '0 auto', padding: '0 16px 14px', display: 'grid', gap: 10 }}>
+          {genError && (
+            <div style={{
+              background: 'rgba(196,74,58,0.15)',
+              border: '1px solid rgba(196,74,58,0.4)',
+              color: '#f4b8ad',
+              padding: '8px 12px',
+              borderRadius: 6,
+              fontSize: 13,
+            }}>
+              Generate failed: {genError}
+            </div>
+          )}
+          {genOk && !genError && (
+            <div style={{
+              background: 'rgba(111,191,127,0.12)',
+              border: '1px solid rgba(111,191,127,0.4)',
+              color: '#9be0a8',
+              padding: '8px 12px',
+              borderRadius: 6,
+              fontSize: 13,
+            }}>
+              Generated {genOk} stop row{genOk === '1' ? '' : 's'}.
+            </div>
+          )}
           <RouteLogPanel
             eventId={event.id}
             groupId={group.id}
