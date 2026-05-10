@@ -52,20 +52,37 @@ export default async function DriverPage() {
         routeLog = await fetchLogRows()
 
         // Self-heal: regenerate route_stop_logs whenever the cycle-1 schedule
-        // doesn't match the seeded rows. Triggers in three cases:
+        // doesn't match the seeded rows. Triggers when:
         //   1. Empty log + non-empty schedule (initial seed).
-        //   2. Schedule was edited after an initial seed (e.g. leadership
-        //      added the other 4 bars after a one-bar seed) AND no driver
-        //      arrivals are recorded yet — safe to overwrite.
-        //   3. Same as 2 but the bars-per-cycle count changed.
-        // generateStopsForEvent is idempotent and skips driver-filled rows,
-        // so it's safe to call but we gate to avoid pointless writes.
+        //   2. Bars-per-cycle count changed (leadership added/removed bars).
+        //   3. A bar in the schedule was swapped or renamed — same count,
+        //      different name at a given position. This is the common live-
+        //      run case: leadership tweaks the lineup after the initial seed.
+        // generateStopsForEvent is idempotent and preserves rows the driver
+        // has already filled (actual_arrival_at not null), so it's safe to
+        // call even after the night has started.
         const seededBarsPerCycle = routeLog.length
           ? Math.max(...routeLog.map(r => Number(r.bar_position) || 0))
           : 0
-        const anyLogged = routeLog.some(r => r.actual_arrival_at)
-        const needsReseed =
-          schedule.length > 0 && !anyLogged && seededBarsPerCycle !== schedule.length
+        const cycle1Logged = routeLog.filter(r => r.cycle_index === 1)
+        // Build "what cycle 1 should look like right now" and diff against
+        // what's actually seeded. Any mismatched (position, name) on a row
+        // the driver hasn't filled means we're stale.
+        const expectedNames = schedule
+          .map((s, i) => ({ pos: i + 1, name: (s?.name || '').trim() }))
+          .filter(s => s.name)
+        const seededByPos = new Map(
+          cycle1Logged.map(r => [Number(r.bar_position) || 0, r])
+        )
+        const namesDiverged = expectedNames.some(({ pos, name }) => {
+          const row = seededByPos.get(pos)
+          if (!row) return true
+          // If the driver already logged this slot, leave it alone.
+          if (row.actual_arrival_at) return false
+          return String(row.bar_name || '').trim() !== name
+        })
+        const countChanged = schedule.length > 0 && seededBarsPerCycle !== schedule.length
+        const needsReseed = schedule.length > 0 && (countChanged || namesDiverged)
         if (needsReseed) {
           await generateStopsForEvent(sb, nextLoop.id).catch(() => {})
           // After a reseed the row set may have grown (or shrunk); also drop
