@@ -205,6 +205,38 @@ export async function PUT(req) {
     }
   }
 
+  // Per-stop pickup times. Body shape: schedule: [{ start_time }] indexed by
+  // stop. Names stay derived from ticket types (above) so renaming flows in
+  // one direction only — admins rename by editing the ticket type.
+  if (Array.isArray(body.schedule)) {
+    const { data: ev } = await supabase
+      .from('events')
+      .select('group_id')
+      .eq('id', eventId)
+      .maybeSingle()
+    if (ev?.group_id) {
+      const { data: g } = await supabase
+        .from('groups')
+        .select('schedule')
+        .eq('id', ev.group_id)
+        .maybeSingle()
+      const existing = Array.isArray(g?.schedule) ? g.schedule : []
+      const merged = existing.map((entry, i) => {
+        const patch = body.schedule[i]
+        if (!patch || typeof patch !== 'object') return entry
+        return {
+          ...entry,
+          start_time: 'start_time' in patch ? (patch.start_time || '') : entry.start_time,
+        }
+      })
+      const { error: schedErr } = await supabase
+        .from('groups')
+        .update({ schedule: merged })
+        .eq('id', ev.group_id)
+      if (schedErr) return Response.json({ error: `schedule_update: ${schedErr.message}` }, { status: 500 })
+    }
+  }
+
   return Response.json({ ok: true })
 }
 

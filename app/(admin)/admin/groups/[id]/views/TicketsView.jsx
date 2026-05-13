@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useRef, useState } from 'react'
 import { useRouter } from 'next/navigation'
 
 const ACCENT = '#d4a333'
@@ -32,6 +32,14 @@ export default function TicketsView({ event, ticketTypes, stops, onJumpToEdit })
           + Add ticket type
         </button>
       </div>
+
+      {event?.id && stops.length > 0 && (
+        <PickupTimesCard
+          eventId={event.id}
+          stops={stops}
+          onSaved={() => router.refresh()}
+        />
+      )}
 
       {sorted.length === 0 ? (
         <div style={{
@@ -85,7 +93,10 @@ function Header({ title }) {
 }
 
 function TicketRow({ tt, stops, onEdit }) {
-  const stopName = tt.stop_index != null && stops[tt.stop_index]?.name
+  const stop = tt.stop_index != null ? stops[tt.stop_index] : null
+  const stopName = stop?.name
+  const pickupLabel = formatTimeLabel(stop?.start_time)
+  const needsTime = stop && !pickupLabel
   const isActive = tt.active !== false
   return (
     <button
@@ -111,11 +122,13 @@ function TicketRow({ tt, stops, onEdit }) {
           <strong style={{ fontSize: 15 }}>{tt.name}</strong>
           {!isActive && <Pill color="#9c9ca3" bg="rgba(255,255,255,0.04)" label="Off sale" />}
           {isActive && <Pill color="#6fbf7f" bg="rgba(111,191,127,0.12)" label="On sale" />}
+          {needsTime && <Pill color="#ffb074" bg="rgba(255,140,80,0.12)" label="No pickup time" />}
         </div>
         <div style={{ fontSize: 12, color: INK_DIM, marginTop: 4, display: 'flex', gap: 14, flexWrap: 'wrap' }}>
           <span>${(tt.price_cents / 100).toFixed(2)}</span>
           {tt.capacity != null && <span>{tt.capacity} seats</span>}
           {stopName && <span>Stop {tt.stop_index + 1} · {stopName}</span>}
+          {pickupLabel && <span style={{ color: ACCENT }}>Pickup {pickupLabel}</span>}
         </div>
       </div>
       <span style={{ color: ACCENT, fontSize: 13, fontWeight: 700, whiteSpace: 'nowrap' }}>
@@ -123,6 +136,192 @@ function TicketRow({ tt, stops, onEdit }) {
       </span>
     </button>
   )
+}
+
+function PickupTimesCard({ eventId, stops, onSaved }) {
+  const [draft, setDraft] = useState(() => stops.map(s => s?.start_time || ''))
+  const [saving, setSaving] = useState(false)
+  const [error, setError] = useState(null)
+  const [savedAt, setSavedAt] = useState(null)
+
+  const dirty = draft.some((t, i) => (t || '') !== (stops[i]?.start_time || ''))
+
+  function patch(idx, value) {
+    setDraft(prev => prev.map((t, i) => (i === idx ? value : t)))
+    setSavedAt(null)
+  }
+
+  async function onSave() {
+    setSaving(true)
+    setError(null)
+    try {
+      const res = await fetch(`/api/events?event_id=${eventId}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          schedule: draft.map(start_time => ({ start_time: start_time || '' })),
+        }),
+      })
+      const json = await res.json().catch(() => ({}))
+      if (!res.ok || json.error) {
+        setError(json.error || `Failed (${res.status})`)
+        return
+      }
+      setSavedAt(Date.now())
+      onSaved?.()
+    } catch (err) {
+      setError(err.message || 'Network error')
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  return (
+    <section style={{
+      background: SURFACE,
+      border: `1px solid ${BORDER}`,
+      borderRadius: 12,
+      padding: 18,
+      display: 'grid',
+      gap: 14,
+    }}>
+      <div>
+        <h2 style={{
+          fontSize: 11,
+          color: ACCENT,
+          margin: 0,
+          letterSpacing: '0.22em',
+          textTransform: 'uppercase',
+          fontWeight: 700,
+        }}>
+          Pickup times per stop
+        </h2>
+        <div style={{ color: INK_DIM, fontSize: 12, marginTop: 6, lineHeight: 1.4 }}>
+          These show on the booking page next to each ticket. Add a name by editing the ticket type for that stop.
+        </div>
+      </div>
+
+      <div style={{ display: 'grid', gap: 8 }}>
+        {stops.map((s, i) => (
+          <div key={i} style={{
+            display: 'grid',
+            gridTemplateColumns: '1fr 160px',
+            gap: 10,
+            alignItems: 'center',
+            padding: '10px 12px',
+            background: '#0e0e12',
+            border: `1px solid ${BORDER}`,
+            borderRadius: 10,
+          }}>
+            <div style={{ minWidth: 0 }}>
+              <div style={{ fontSize: 11, color: INK_DIM, letterSpacing: '0.06em', fontWeight: 600 }}>
+                Stop {i + 1}
+              </div>
+              <div style={{ fontSize: 14, color: INK, fontWeight: 600, marginTop: 2, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                {s?.name || `Stop ${i + 1}`}
+              </div>
+            </div>
+            <TimePicker
+              value={draft[i]}
+              onChange={v => patch(i, v)}
+            />
+          </div>
+        ))}
+      </div>
+
+      {error && (
+        <div style={{
+          padding: 10,
+          background: 'rgba(255,80,80,0.08)',
+          border: '1px solid rgba(255,80,80,0.32)',
+          borderRadius: 8,
+          color: '#ff8b8b',
+          fontSize: 13,
+        }}>
+          {error}
+        </div>
+      )}
+
+      <div style={{ display: 'flex', alignItems: 'center', gap: 14, flexWrap: 'wrap' }}>
+        <button
+          type="button"
+          onClick={onSave}
+          disabled={saving || !dirty}
+          style={{
+            ...primaryBtn,
+            opacity: saving || !dirty ? 0.55 : 1,
+            cursor: saving ? 'wait' : (!dirty ? 'default' : 'pointer'),
+          }}
+        >
+          {saving ? 'Saving…' : 'Save pickup times'}
+        </button>
+        {savedAt && !saving && (
+          <span style={{ color: '#6fbf7f', fontSize: 12, fontWeight: 600 }}>✓ Saved</span>
+        )}
+      </div>
+    </section>
+  )
+}
+
+function TimePicker({ value, onChange }) {
+  const ref = useRef(null)
+  const display = formatTimeLabel(value)
+  function open() {
+    const el = ref.current
+    if (!el) return
+    if (typeof el.showPicker === 'function') {
+      try { el.showPicker(); return } catch {}
+    }
+    el.focus()
+    el.click()
+  }
+  return (
+    <div style={{ position: 'relative' }}>
+      <button
+        type="button"
+        onClick={open}
+        style={{
+          ...inputStyle,
+          textAlign: 'left',
+          cursor: 'pointer',
+          color: display ? INK : '#6f6f76',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          gap: 8,
+          padding: '10px 12px',
+        }}
+      >
+        <span>{display || 'Set time'}</span>
+        <span aria-hidden style={{ color: ACCENT, fontSize: 14 }}>⏱</span>
+      </button>
+      <input
+        ref={ref}
+        type="time"
+        value={value || ''}
+        onChange={e => onChange(e.target.value)}
+        style={{
+          position: 'absolute',
+          width: 0,
+          height: 0,
+          opacity: 0,
+          pointerEvents: 'none',
+        }}
+        tabIndex={-1}
+        aria-hidden
+      />
+    </div>
+  )
+}
+
+function formatTimeLabel(hhmm) {
+  if (!hhmm) return ''
+  const [hStr, mStr] = String(hhmm).split(':')
+  const h = Number(hStr); const m = Number(mStr)
+  if (!Number.isFinite(h) || !Number.isFinite(m)) return ''
+  const suffix = h >= 12 ? 'PM' : 'AM'
+  const h12 = ((h + 11) % 12) + 1
+  return `${h12}:${String(m).padStart(2, '0')} ${suffix}`
 }
 
 function Pill({ color, bg, label }) {
