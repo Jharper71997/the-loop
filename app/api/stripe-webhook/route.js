@@ -4,6 +4,7 @@ import { recordSignature } from '@/lib/waiver'
 import { finalizeBooking } from '@/lib/booking'
 import { sendSms } from '@/lib/sms'
 import { recordAlert } from '@/lib/alerts'
+import { syncTtForEvent } from '@/lib/ticketTailorSync'
 
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
@@ -228,6 +229,18 @@ async function handleCheckoutCompleted(supabase, session) {
         context: { order_id: order.id, event_id: order.event_id },
       })
     }
+
+    // Push remaining seats back to Ticket Tailor so TT's own checkout reflects
+    // the shared 13-per-stop ceiling. Native-only hook (TT webhook handles its
+    // own ingestion path). Best-effort — never let a TT failure block a paid
+    // Loop sale from settling.
+    if (order.event_id) {
+      try {
+        await syncTtForEvent(supabase, order.event_id)
+      } catch (err) {
+        console.error('[stripe-webhook] tt sync threw', err)
+      }
+    }
   }
 }
 
@@ -272,6 +285,14 @@ async function handleRefund(supabase, obj) {
 
     // Refund-confirmation SMS removed 2026-05-02 — all automatic texts off
     // per product decision. Stripe still emails the buyer the refund receipt.
+
+    // Refunded seats are no longer status='paid', so the capacity count drops
+    // — push the freed inventory back to TT.
+    try {
+      await syncTtForEvent(supabase, order.event_id)
+    } catch (err) {
+      console.error('[stripe-webhook refund] tt sync threw', err)
+    }
   }
 }
 

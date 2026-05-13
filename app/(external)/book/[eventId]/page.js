@@ -87,6 +87,46 @@ export default async function EventBookingPage({ params }) {
     console.error('[book/eventId] ticket_types threw', err)
   }
 
+  // Compute remaining seats per ticket type, counting BOTH native Loop sales
+  // and Ticket Tailor-mirrored sales at the same (event_id, stop_index). Mirrors
+  // the server-side capacity check in api/checkout/route.js so what the rider
+  // sees on the page matches what the API would let them buy.
+  const pendingCutoff = new Date(Date.now() - 15 * 60 * 1000).toISOString()
+  ticketTypes = await Promise.all(
+    ticketTypes.map(async t => {
+      if (t.capacity == null) return { ...t, remaining: null }
+      try {
+        const baseSelect = 'id, orders!inner(id, event_id, status, created_at)'
+        let paidQuery = supabase
+          .from('order_items')
+          .select(baseSelect, { count: 'exact', head: true })
+          .eq('orders.event_id', eventId)
+          .is('voided_at', null)
+          .eq('orders.status', 'paid')
+        let pendingQuery = supabase
+          .from('order_items')
+          .select(baseSelect, { count: 'exact', head: true })
+          .eq('orders.event_id', eventId)
+          .is('voided_at', null)
+          .eq('orders.status', 'pending')
+          .gte('orders.created_at', pendingCutoff)
+        if (t.stop_index != null) {
+          paidQuery = paidQuery.eq('stop_index', t.stop_index)
+          pendingQuery = pendingQuery.eq('stop_index', t.stop_index)
+        } else {
+          paidQuery = paidQuery.eq('ticket_type_id', t.id)
+          pendingQuery = pendingQuery.eq('ticket_type_id', t.id)
+        }
+        const [{ count: paidCount }, { count: pendingCount }] = await Promise.all([paidQuery, pendingQuery])
+        const taken = (paidCount || 0) + (pendingCount || 0)
+        return { ...t, remaining: Math.max(0, t.capacity - taken) }
+      } catch (err) {
+        console.error('[book/eventId] remaining count failed', t.id, err)
+        return { ...t, remaining: null }
+      }
+    }),
+  )
+
   let waiver = null
   try {
     waiver = await getCurrentWaiverVersion(supabase)

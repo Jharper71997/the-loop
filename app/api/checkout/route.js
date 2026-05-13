@@ -100,16 +100,25 @@ export async function POST(req) {
     }
   }
 
-  // Per-ticket-type capacity check. Counts already-paid orders + recent
-  // pendings (< 15 min, abandoned Stripe sessions older than that don't
-  // realistically pay) against the configured ticket_types.capacity. Tickets
-  // with capacity = null are unlimited. VOIDED items are excluded — voiding
-  // is meant to free a seat back up.
-  const requestedByType = new Map()
-  for (const r of riders) {
-    requestedByType.set(r.ticket_type_id, (requestedByType.get(r.ticket_type_id) || 0) + 1)
-  }
+  // Per-stop capacity check. The shuttle has a physical cap (13) per pickup,
+  // and that cap is shared across BOTH native Loop orders and Ticket Tailor
+  // orders that have been mirrored into order_items via lib/ticketTailor.js.
+  // TT-mirrored rows have a null ticket_type_id, so counting by ticket_type
+  // alone misses them and oversells. Count by (event_id, stop_index) instead,
+  // which captures both channels. Falls back to ticket_type_id for ticket
+  // types that have no stop_index set yet (legacy / non-stop tickets).
+  // VOIDED items are excluded — voiding is meant to free a seat back up.
   const pendingCutoff = new Date(Date.now() - 15 * 60 * 1000).toISOString()
+
+  const requestedByStop = new Map()
+  const stopMeta = new Map()
+  for (const r of riders) {
+    const tt = ttById.get(r.ticket_type_id)
+    if (!tt) continue
+    const key = tt.stop_index != null ? `stop:${tt.stop_index}` : `tt:${tt.id}`
+    requestedByStop.set(key, (requestedByStop.get(key) || 0) + 1)
+    if (!stopMeta.has(key)) stopMeta.set(key, tt)
+  }
 
   // Self-heal: clear pending orders for this event older than the cutoff so
   // their items stop holding seats. Cascade deletes order_items.
@@ -120,29 +129,39 @@ export async function POST(req) {
     .eq('status', 'pending')
     .lt('created_at', pendingCutoff)
 
-  for (const [ttId, requested] of requestedByType.entries()) {
-    const tt = ttById.get(ttId)
-    if (tt.capacity == null) continue
-
-    const { count: paidCount } = await supabase
+  async function countTakenForStop(tt) {
+    let paidQuery = supabase
       .from('order_items')
-      .select('id, orders!inner(id, status)', { count: 'exact', head: true })
-      .eq('ticket_type_id', ttId)
+      .select('id, orders!inner(id, event_id, status)', { count: 'exact', head: true })
+      .eq('orders.event_id', event.id)
       .is('voided_at', null)
       .eq('orders.status', 'paid')
-    const { count: pendingCount } = await supabase
+    let pendingQuery = supabase
       .from('order_items')
-      .select('id, orders!inner(id, status, created_at)', { count: 'exact', head: true })
-      .eq('ticket_type_id', ttId)
+      .select('id, orders!inner(id, event_id, status, created_at)', { count: 'exact', head: true })
+      .eq('orders.event_id', event.id)
       .is('voided_at', null)
       .eq('orders.status', 'pending')
       .gte('orders.created_at', pendingCutoff)
+    if (tt.stop_index != null) {
+      paidQuery = paidQuery.eq('stop_index', tt.stop_index)
+      pendingQuery = pendingQuery.eq('stop_index', tt.stop_index)
+    } else {
+      paidQuery = paidQuery.eq('ticket_type_id', tt.id)
+      pendingQuery = pendingQuery.eq('ticket_type_id', tt.id)
+    }
+    const [{ count: paidCount }, { count: pendingCount }] = await Promise.all([paidQuery, pendingQuery])
+    return (paidCount || 0) + (pendingCount || 0)
+  }
 
-    const taken = (paidCount || 0) + (pendingCount || 0)
+  for (const [key, requested] of requestedByStop.entries()) {
+    const tt = stopMeta.get(key)
+    if (tt.capacity == null) continue
+    const taken = await countTakenForStop(tt)
     if (taken + requested > tt.capacity) {
       return Response.json({
         error: 'sold_out',
-        ticket_type_id: ttId,
+        ticket_type_id: tt.id,
         ticket_type_name: tt.name,
         remaining: Math.max(0, tt.capacity - taken),
         requested,
@@ -325,32 +344,20 @@ export async function POST(req) {
 
   // Belt-and-suspenders capacity recheck. The pre-insert check is racy across
   // simultaneous buyers (two reads see the same "remaining"). If the race lost
-  // and we just oversold a ticket type, undo this order before handing off to
-  // Stripe so the buyer sees sold_out instead of paying for a seat we can't
-  // honor.
-  for (const [ttId, requested] of requestedByType.entries()) {
-    const tt = ttById.get(ttId)
+  // and we just oversold a stop, undo this order before handing off to Stripe
+  // so the buyer sees sold_out instead of paying for a seat we can't honor.
+  // Same stop_index-based counting as the pre-insert check so TT-mirrored
+  // items are included.
+  for (const [key, requested] of requestedByStop.entries()) {
+    const tt = stopMeta.get(key)
     if (tt.capacity == null) continue
-    const { count: paidCount } = await supabase
-      .from('order_items')
-      .select('id, orders!inner(id, status)', { count: 'exact', head: true })
-      .eq('ticket_type_id', ttId)
-      .is('voided_at', null)
-      .eq('orders.status', 'paid')
-    const { count: pendingCount } = await supabase
-      .from('order_items')
-      .select('id, orders!inner(id, status, created_at)', { count: 'exact', head: true })
-      .eq('ticket_type_id', ttId)
-      .is('voided_at', null)
-      .eq('orders.status', 'pending')
-      .gte('orders.created_at', pendingCutoff)
-    const taken = (paidCount || 0) + (pendingCount || 0)
+    const taken = await countTakenForStop(tt)
     if (taken > tt.capacity) {
       // Undo: cascade-deletes order_items, frees the slot back up.
       await supabase.from('orders').delete().eq('id', order.id)
       return Response.json({
         error: 'sold_out',
-        ticket_type_id: ttId,
+        ticket_type_id: tt.id,
         ticket_type_name: tt.name,
         remaining: 0,
         requested,

@@ -7,7 +7,10 @@ const SURFACE = '#15151a'
 const BORDER = '#2a2a31'
 
 export default function BookingForm({ eventId, eventName, ticketTypes, waiver }) {
-  const defaultTtId = ticketTypes[0]?.id || ''
+  // Default to the first ticket type that still has seats. If everything is
+  // sold out we fall back to the first one anyway so the form renders — the
+  // submit button will be disabled by the oversell check below.
+  const defaultTtId = (ticketTypes.find(t => (t.remaining ?? Infinity) > 0) || ticketTypes[0])?.id || ''
 
   const [attribution, setAttribution] = useState(null)
   const [bartenderCode, setBartenderCode] = useState('')
@@ -73,11 +76,36 @@ export default function BookingForm({ eventId, eventName, ticketTypes, waiver })
     setRiders(prev => prev.filter((_, i) => i !== idx))
   }
 
+  // Per-ticket-type request count → use to disable Pay when the rider has
+  // chosen more of one ticket type than there are seats remaining (server
+  // also enforces this, but blocking client-side prevents a wasted submit).
+  const requestedByTt = useMemo(() => {
+    const m = new Map()
+    for (const r of riders) {
+      if (!r.ticket_type_id) continue
+      m.set(r.ticket_type_id, (m.get(r.ticket_type_id) || 0) + 1)
+    }
+    return m
+  }, [riders])
+
+  const oversellError = useMemo(() => {
+    for (const [ttId, want] of requestedByTt.entries()) {
+      const t = ticketTypes.find(x => x.id === ttId)
+      if (!t || t.remaining == null) continue
+      if (want > t.remaining) {
+        if (t.remaining === 0) return `${t.name} is sold out — please pick a different pickup.`
+        return `Only ${t.remaining} seat${t.remaining === 1 ? '' : 's'} left at ${t.name}. Remove a rider or change their pickup.`
+      }
+    }
+    return null
+  }, [requestedByTt, ticketTypes])
+
   const buyerOwesSig = riders.some(r => r.signed_by_buyer)
   const formValid = useMemo(() => {
     if (!buyer.first_name || !buyer.last_name) return false
     if (!buyer.phone && !buyer.email) return false
     if (!ticketTypes.length) return false
+    if (oversellError) return false
     for (const r of riders) {
       if (!r.ticket_type_id) return false
       // claim_link riders skip name + contact + waiver — that's the whole point
@@ -88,7 +116,7 @@ export default function BookingForm({ eventId, eventName, ticketTypes, waiver })
     }
     if (buyerOwesSig && !buyerTypedName.trim()) return false
     return true
-  }, [buyer, riders, ticketTypes, buyerOwesSig, buyerTypedName])
+  }, [buyer, riders, ticketTypes, buyerOwesSig, buyerTypedName, oversellError])
 
   async function onSubmit(e) {
     e.preventDefault()
@@ -223,17 +251,22 @@ export default function BookingForm({ eventId, eventName, ticketTypes, waiver })
                   style={input}
                 >
                   {ticketTypes.map(t => (
-                    <option key={t.id} value={t.id}>
+                    <option key={t.id} value={t.id} disabled={t.remaining === 0}>
                       {ticketLabel(t)}
                     </option>
                   ))}
                 </select>
                 {(() => {
                   const t = ticketTypes.find(x => x.id === r.ticket_type_id)
-                  if (!t?.pickup_time) return null
+                  if (!t) return null
                   return (
-                    <div style={{ fontSize: 12, color: '#9c9ca3', marginTop: -2 }}>
-                      Pickup at <strong style={{ color: ACCENT, fontWeight: 700 }}>{formatPickupTime(t.pickup_time)}</strong>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: 12, color: '#9c9ca3', marginTop: -2, gap: 8 }}>
+                      <span>
+                        {t.pickup_time ? (
+                          <>Pickup at <strong style={{ color: ACCENT, fontWeight: 700 }}>{formatPickupTime(t.pickup_time)}</strong></>
+                        ) : null}
+                      </span>
+                      <RemainingBadge remaining={t.remaining} />
                     </div>
                   )
                 })()}
@@ -413,9 +446,9 @@ export default function BookingForm({ eventId, eventName, ticketTypes, waiver })
         )}
       </div>
 
-      {error && (
+      {(error || oversellError) && (
         <div style={{ padding: 10, background: '#3a1a1a', border: '1px solid #f87171', borderRadius: 8, color: '#f87171', fontSize: 13 }}>
-          {error}
+          {error || oversellError}
         </div>
       )}
 
@@ -463,8 +496,43 @@ export default function BookingForm({ eventId, eventName, ticketTypes, waiver })
 function ticketLabel(t) {
   const time = formatPickupTime(t.pickup_time)
   const price = `$${(t.price_cents / 100).toFixed(2)}`
-  if (time) return `${t.name} — ${time} — ${price}`
-  return `${t.name} — ${price}`
+  const head = time ? `${t.name} — ${time} — ${price}` : `${t.name} — ${price}`
+  if (t.remaining === 0) return `${head} — Sold out`
+  if (Number.isFinite(t.remaining)) return `${head} — ${t.remaining} left`
+  return head
+}
+
+function RemainingBadge({ remaining }) {
+  if (remaining == null) return null
+  if (remaining === 0) {
+    return (
+      <span style={{
+        fontSize: 11,
+        fontWeight: 700,
+        textTransform: 'uppercase',
+        letterSpacing: '0.06em',
+        color: '#f87171',
+        background: 'rgba(248,113,113,0.12)',
+        border: '1px solid rgba(248,113,113,0.5)',
+        padding: '2px 6px',
+        borderRadius: 4,
+      }}>Sold out</span>
+    )
+  }
+  const tight = remaining <= 3
+  return (
+    <span style={{
+      fontSize: 11,
+      fontWeight: 700,
+      textTransform: 'uppercase',
+      letterSpacing: '0.06em',
+      color: tight ? '#f87171' : ACCENT,
+      background: tight ? 'rgba(248,113,113,0.08)' : 'rgba(212,163,51,0.08)',
+      border: `1px solid ${tight ? 'rgba(248,113,113,0.4)' : 'rgba(212,163,51,0.35)'}`,
+      padding: '2px 6px',
+      borderRadius: 4,
+    }}>{remaining} left</span>
+  )
 }
 
 function formatPickupTime(hhmm) {

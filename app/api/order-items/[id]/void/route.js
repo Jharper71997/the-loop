@@ -3,6 +3,7 @@ import { denyIfNotLeadership } from '@/lib/routeAuth'
 import { refundOrder } from '@/lib/stripe'
 import { recordAlert } from '@/lib/alerts'
 import { sendSms } from '@/lib/sms'
+import { syncTtForEvent } from '@/lib/ticketTailorSync'
 
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
@@ -116,11 +117,23 @@ export async function POST(req, ctx) {
   // Apology SMS removed 2026-05-02 — all automatic texts off per product
   // decision. Stripe still emails the buyer the refund receipt.
 
+  // Push the freed seat back to Ticket Tailor so TT's available count goes
+  // back up. Best-effort — void itself already succeeded.
+  let ttSync = null
+  if (item.order?.event_id) {
+    try {
+      ttSync = await syncTtForEvent(sb, item.order.event_id)
+    } catch (err) {
+      console.error('[void] tt sync threw', err)
+    }
+  }
+
   return Response.json({
     ok: true,
     voided_id: id,
     order_voided: orderVoided,
     refund: refundResult,
+    tt_sync: ttSync,
   })
 }
 
