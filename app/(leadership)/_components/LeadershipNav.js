@@ -17,6 +17,7 @@ const TOP_LINKS = [
   { href: '/leadership/leaderboard', label: 'Leaderboard' },
   { href: '/leadership/loops',       label: 'Loops' },
   { href: '/leadership/drivers',     label: 'Drivers', groupPaths: DRIVERS_GROUP },
+  { href: '/leadership/attribution', label: 'Attribution' },
   { href: '/leadership/alerts',      label: 'Alerts' },
   { href: '/leadership/automations', label: 'Automations' },
 ]
