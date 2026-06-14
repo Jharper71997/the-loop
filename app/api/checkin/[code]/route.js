@@ -43,13 +43,38 @@ export async function POST(req, ctx) {
 
   const admin = supabaseAdmin()
 
+  // Two scanner paths converge here:
+  //   1. Native Loop QRs encode `${appUrl}/r/<code>` — `code` matches a row
+  //      in qr_codes (kind='checkin') that points to an order_item.
+  //   2. Ticket Tailor QRs encode a short barcode like "ww64NQx" — that
+  //      maps directly to order_items.tt_barcode (populated by the TT
+  //      webhook mirror).
+  // Try the Loop path first, then fall through to TT lookup.
+
+  let itemId = null
+  let viaChannel = 'security_scan'
+
   const { data: qr } = await admin
     .from('qr_codes')
     .select('id, kind, order_item_id')
     .eq('code', code)
     .maybeSingle()
 
-  if (!qr || qr.kind !== 'checkin' || !qr.order_item_id) {
+  if (qr?.kind === 'checkin' && qr.order_item_id) {
+    itemId = qr.order_item_id
+  } else {
+    const { data: ttRow } = await admin
+      .from('order_items')
+      .select('id')
+      .eq('tt_barcode', code)
+      .maybeSingle()
+    if (ttRow?.id) {
+      itemId = ttRow.id
+      viaChannel = 'security_scan_tt'
+    }
+  }
+
+  if (!itemId) {
     return Response.json({ ok: false, reason: 'unknown_code' }, { status: 404 })
   }
 
@@ -65,7 +90,7 @@ export async function POST(req, ctx) {
       voided_at,
       order:orders ( id, status, event:events ( id, name, event_date ) )
     `)
-    .eq('id', qr.order_item_id)
+    .eq('id', itemId)
     .maybeSingle()
 
   if (!item) {
@@ -129,7 +154,7 @@ export async function POST(req, ctx) {
     .from('order_items')
     .update({
       checked_in_at: checkedAt,
-      checked_in_via: 'security_scan',
+      checked_in_via: viaChannel,
     })
     .eq('id', item.id)
     .is('checked_in_at', null)

@@ -1,9 +1,11 @@
+import Link from 'next/link'
 import { redirect } from 'next/navigation'
 import { revalidatePath } from 'next/cache'
 import { supabaseAdmin } from '@/lib/supabaseAdmin'
-import { formatCents } from '@/lib/leadershipScoreboard'
+import { serverNow } from '@/lib/serverNow'
 import StripeSyncButton from '../../_components/StripeSyncButton'
-import MarkPaidButton from '../../_components/MarkPaidButton'
+import OutstandingBanner from '../../_components/OutstandingBanner'
+import PaymentRosterTable from '../../_components/PaymentRosterTable'
 
 async function markBarPaid(barSlug) {
   'use server'
@@ -47,6 +49,11 @@ const STATUS_COLORS = {
   inactive:  { bg: 'rgba(196,74,58,0.12)',   fg: '#c44a3a' },
 }
 
+const METHOD_LABELS = { stripe: 'Stripe', check: 'Check', cash: 'Cash', venmo: 'Venmo', cashapp: 'Cash App', other: 'Other' }
+function methodBadge(method) {
+  return METHOD_LABELS[method] || (method || '').replace(/^\w/, c => c.toUpperCase())
+}
+
 function currentMonthBounds(d = new Date()) {
   const start = new Date(d.getFullYear(), d.getMonth(), 1)
   const end = new Date(d.getFullYear(), d.getMonth() + 1, 1)
@@ -70,7 +77,7 @@ export default async function BarsPage() {
   // All payments (last 12 months for the "last paid" column)
   const { data: payments } = await supabase
     .from('bar_payments')
-    .select('bar_slug, paid_at, paid_for_period, amount_cents')
+    .select('bar_slug, paid_at, paid_for_period, amount_cents, method')
     .order('paid_at', { ascending: false })
     .limit(500)
 
@@ -78,7 +85,7 @@ export default async function BarsPage() {
   const paidThisMonth = new Map()  // bar_slug → cents paid this month
   const paidMethodThisMonth = new Map()
   const stripeActive = new Set()
-  const stripeCutoff = Date.now() - 45 * 24 * 60 * 60 * 1000
+  const stripeCutoff = (await serverNow()) - 45 * 24 * 60 * 60 * 1000
 
   for (const p of (payments || [])) {
     if (!lastPaidBy.has(p.bar_slug)) lastPaidBy.set(p.bar_slug, p)
@@ -95,11 +102,6 @@ export default async function BarsPage() {
         paidMethodThisMonth.set(p.bar_slug, p.method)
       }
     }
-  }
-
-  function methodBadge(method) {
-    const labels = { stripe: 'Stripe', check: 'Check', cash: 'Cash', venmo: 'Venmo', cashapp: 'Cash App', other: 'Other' }
-    return labels[method] || (method || '').replace(/^\w/, c => c.toUpperCase())
   }
 
   // Outstanding totals (active bars only)
@@ -119,63 +121,49 @@ export default async function BarsPage() {
     }
   }
 
-  return (
-    <main style={{
-      minHeight: '100vh',
-      background: '#0a0a0b',
-      color: '#e8e8ea',
-      padding: '24px 16px 48px',
-      fontFamily: "'JetBrains Mono', ui-monospace, monospace",
-    }}>
-      <div style={{ maxWidth: 1100, margin: '0 auto' }}>
-        <a href="/leadership/income" style={{
-          color: '#9c9ca3',
-          fontSize: 11,
-          letterSpacing: '0.18em',
-          textTransform: 'uppercase',
-          textDecoration: 'none',
-          display: 'inline-block',
-          marginBottom: 18,
-        }}>
-          ← Income
-        </a>
+  // Normalized rows for the shared roster table.
+  const rows = (bars || []).map(b => {
+    const sc = STATUS_COLORS[b.status] || STATUS_COLORS.prospect
+    const monthlyCents = b.monthly_fee_cents || 0
+    const paid = paidThisMonth.get(b.slug) || 0
+    const isActive = b.status === 'active'
+    const owed = isActive && monthlyCents ? Math.max(0, monthlyCents - paid) : 0
+    const paidMethod = paidMethodThisMonth.has(b.slug) ? methodBadge(paidMethodThisMonth.get(b.slug)) : null
+    return {
+      key: b.slug,
+      name: b.name,
+      href: `/leadership/bars/${b.slug}`,
+      newPaymentHref: `/leadership/bars/${b.slug}/payments/new`,
+      subtitle: b.contact_name || null,
+      status: b.status,
+      statusBg: sc.bg,
+      statusFg: sc.fg,
+      monthlyCents,
+      paidThisMonth: paid,
+      owed,
+      isActive,
+      lastPayment: lastPaidBy.get(b.slug) || null,
+      paidMethodLabel: paidMethod,
+      stripeSub: stripeActive.has(b.slug),
+      markPaidAction: !paidMethod && isActive && monthlyCents > 0 ? markBarPaid.bind(null, b.slug) : null,
+    }
+  })
 
-        <div style={{
-          display: 'flex',
-          alignItems: 'baseline',
-          justifyContent: 'space-between',
-          gap: 12,
-          flexWrap: 'wrap',
-          marginBottom: 18,
-        }}>
-          <h1 style={{
-            color: '#e8e8ea',
-            fontFamily: '-apple-system, "Segoe UI", Roboto, sans-serif',
-            fontSize: 24,
-            fontWeight: 700,
-            letterSpacing: '-0.01em',
-            margin: 0,
-          }}>
-            Bars
-          </h1>
+  return (
+    <main style={mainStyle}>
+      <div style={{ maxWidth: 1100, margin: '0 auto' }}>
+        <Link href="/leadership/income" style={backLink}>← Income</Link>
+
+        <div style={headerRow}>
+          <h1 style={h1Style}>Bars</h1>
           <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
             <StripeSyncButton />
-            <a href="/leadership/bars/new" style={{
-              background: '#d4a333',
-              color: '#0a0a0b',
-              fontFamily: '-apple-system, "Segoe UI", Roboto, sans-serif',
-              fontSize: 13,
-              fontWeight: 600,
-              padding: '8px 14px',
-              borderRadius: 6,
-              textDecoration: 'none',
-            }}>
-              + Add bar
-            </a>
+            <Link href="/leadership/bars/new" style={addBtn}>+ Add bar</Link>
           </div>
         </div>
 
         <OutstandingBanner
+          entityLabel="Bars"
           period={new Date().toLocaleString('en-US', { month: 'long', year: 'numeric' })}
           expected={totalExpected}
           paid={totalPaid}
@@ -183,191 +171,39 @@ export default async function BarsPage() {
           countOwed={countOwed}
         />
 
-        <div style={{
-          background: 'linear-gradient(180deg, #121216, #0d0d10)',
-          border: '1px solid #2a2a31',
-          borderRadius: 8,
-          overflow: 'hidden',
-        }}>
-          <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13 }}>
-            <thead>
-              <tr style={{ borderBottom: '1px solid #2a2a31', background: '#0d0d10' }}>
-                <th style={th}>Bar</th>
-                <th style={th}>Status</th>
-                <th style={{ ...th, textAlign: 'right' }}>Monthly</th>
-                <th style={th}>This Month</th>
-                <th style={th}>Last Payment</th>
-                <th style={th}></th>
-              </tr>
-            </thead>
-            <tbody>
-              {(bars || []).map(b => {
-                const lastP = lastPaidBy.get(b.slug)
-                const sc = STATUS_COLORS[b.status] || STATUS_COLORS.prospect
-                const paid = paidThisMonth.get(b.slug) || 0
-                const owed = b.status === 'active' && b.monthly_fee_cents
-                  ? Math.max(0, b.monthly_fee_cents - paid)
-                  : 0
-                return (
-                  <tr key={b.slug} style={{ borderBottom: '1px solid #2a2a31' }}>
-                    <td style={td}>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
-                        <a href={`/leadership/bars/${b.slug}`} style={{ fontWeight: 600, color: '#e8e8ea', textDecoration: 'none' }}>{b.name}</a>
-                        {paidMethodThisMonth.has(b.slug) && (
-                          <span title={`Paid this month via ${methodBadge(paidMethodThisMonth.get(b.slug))}`} style={{
-                            background: 'rgba(63,178,127,0.15)',
-                            color: '#3fb27f',
-                            border: '1px solid rgba(63,178,127,0.35)',
-                            fontSize: 10,
-                            fontWeight: 600,
-                            padding: '1px 6px',
-                            borderRadius: 4,
-                          }}>✓ {methodBadge(paidMethodThisMonth.get(b.slug))}</span>
-                        )}
-                        {!paidMethodThisMonth.has(b.slug) && stripeActive.has(b.slug) && (
-                          <span title="Active Stripe subscription · auto-charges on anniversary" style={{
-                            background: 'rgba(99,91,255,0.15)',
-                            color: '#8b85ff',
-                            border: '1px solid rgba(99,91,255,0.35)',
-                            fontSize: 10,
-                            fontWeight: 600,
-                            padding: '1px 6px',
-                            borderRadius: 4,
-                          }}>Stripe sub</span>
-                        )}
-                      </div>
-                      {b.contact_name && <div style={{ fontSize: 11, color: '#9c9ca3', marginTop: 2 }}>{b.contact_name}</div>}
-                    </td>
-                    <td style={td}>
-                      <span style={{
-                        background: sc.bg,
-                        color: sc.fg,
-                        fontSize: 10,
-                        letterSpacing: '0.18em',
-                        textTransform: 'uppercase',
-                        padding: '3px 8px',
-                        borderRadius: 4,
-                      }}>{b.status}</span>
-                    </td>
-                    <td style={{ ...td, textAlign: 'right', fontFamily: '"JetBrains Mono", ui-monospace, monospace' }}>
-                      {b.monthly_fee_cents > 0 ? formatCents(b.monthly_fee_cents) : '—'}
-                    </td>
-                    <td style={td}>
-                      <ThisMonthCell paid={paid} owed={owed} status={b.status} fee={b.monthly_fee_cents} />
-                    </td>
-                    <td style={{ ...td, color: '#9c9ca3' }}>
-                      {lastP ? (
-                        <>
-                          {formatCents(lastP.amount_cents)} · {new Date(lastP.paid_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
-                        </>
-                      ) : '—'}
-                    </td>
-                    <td style={{ ...td, textAlign: 'right' }}>
-                      <div style={{ display: 'inline-flex', gap: 6, alignItems: 'center' }}>
-                        {!paidMethodThisMonth.has(b.slug) && b.status === 'active' && b.monthly_fee_cents > 0 && (
-                          <MarkPaidButton action={markBarPaid.bind(null, b.slug)} />
-                        )}
-                        <a href={`/leadership/bars/${b.slug}/payments/new`} style={{
-                          color: '#d4a333',
-                          fontSize: 11,
-                          fontWeight: 600,
-                          textDecoration: 'none',
-                        }}>+ Payment</a>
-                      </div>
-                    </td>
-                  </tr>
-                )
-              })}
-            </tbody>
-          </table>
-        </div>
+        <PaymentRosterTable
+          entityLabel="Bar"
+          rows={rows}
+          empty={<div style={{ color: '#9c9ca3', fontSize: 13, padding: '20px 0' }}>No bars yet.</div>}
+        />
       </div>
     </main>
   )
 }
 
-function OutstandingBanner({ period, expected, paid, owed, countOwed }) {
-  if (expected === 0) return null
-  const pct = expected > 0 ? Math.round((paid / expected) * 100) : 0
-  const color = owed === 0 ? '#3fb27f' : '#d4a333'
-  return (
-    <div style={{
-      background: 'linear-gradient(180deg, #121216, #0d0d10)',
-      border: `1px solid ${owed === 0 ? 'rgba(63,178,127,0.4)' : 'rgba(212,163,51,0.4)'}`,
-      borderRadius: 8,
-      padding: '14px 18px',
-      marginBottom: 18,
-      display: 'flex',
-      flexWrap: 'wrap',
-      gap: 24,
-      alignItems: 'baseline',
-    }}>
-      <div>
-        <div style={{ fontSize: 10, color: '#9c9ca3', letterSpacing: '0.18em', textTransform: 'uppercase', marginBottom: 2 }}>
-          {period} · Bars Outstanding
-        </div>
-        <div style={{ fontFamily: '"JetBrains Mono", ui-monospace, monospace', fontSize: 22, fontWeight: 800, color }}>
-          {formatCents(owed)}
-        </div>
-      </div>
-      <div>
-        <div style={{ fontSize: 10, color: '#9c9ca3', letterSpacing: '0.18em', textTransform: 'uppercase', marginBottom: 2 }}>
-          Paid / Expected
-        </div>
-        <div style={{ fontFamily: '"JetBrains Mono", ui-monospace, monospace', fontSize: 16, fontWeight: 700 }}>
-          {formatCents(paid)} / {formatCents(expected)} <span style={{ color: '#9c9ca3', fontWeight: 400 }}>({pct}%)</span>
-        </div>
-      </div>
-      {countOwed > 0 && (
-        <div>
-          <div style={{ fontSize: 10, color: '#9c9ca3', letterSpacing: '0.18em', textTransform: 'uppercase', marginBottom: 2 }}>
-            Bars Behind
-          </div>
-          <div style={{ fontFamily: '"JetBrains Mono", ui-monospace, monospace', fontSize: 16, fontWeight: 700, color: '#d4a333' }}>
-            {countOwed}
-          </div>
-        </div>
-      )}
-    </div>
-  )
-}
-
-function ThisMonthCell({ paid, owed, status, fee }) {
-  if (status !== 'active' || !fee) {
-    return <span style={{ color: '#6f6f76', fontSize: 11 }}>—</span>
-  }
-  if (owed === 0 && paid > 0) {
-    return (
-      <span style={{ color: '#3fb27f', fontSize: 11, letterSpacing: '0.04em' }}>
-        ✓ Paid {formatCents(paid)}
-      </span>
-    )
-  }
-  if (owed > 0 && paid > 0) {
-    return (
-      <span style={{ color: '#d4a333', fontSize: 11, letterSpacing: '0.04em' }}>
-        Partial · {formatCents(paid)} of {formatCents(fee)}
-      </span>
-    )
-  }
-  return (
-    <span style={{ color: '#c44a3a', fontSize: 11, letterSpacing: '0.04em' }}>
-      Owes {formatCents(owed)}
-    </span>
-  )
-}
-
-const th = {
-  textAlign: 'left',
-  padding: '10px 12px',
-  color: '#9c9ca3',
-  fontSize: 10,
-  fontWeight: 600,
-  letterSpacing: '0.18em',
-  textTransform: 'uppercase',
-}
-const td = {
-  padding: '12px',
+const mainStyle = {
+  minHeight: '100vh',
+  background: '#0a0a0b',
   color: '#e8e8ea',
-  verticalAlign: 'top',
+  padding: '24px 16px calc(48px + env(safe-area-inset-bottom))',
+  paddingLeft: 'max(16px, env(safe-area-inset-left))',
+  paddingRight: 'max(16px, env(safe-area-inset-right))',
+  fontFamily: "'JetBrains Mono', ui-monospace, monospace",
+}
+const backLink = {
+  color: '#9c9ca3', fontSize: 11, letterSpacing: '0.18em', textTransform: 'uppercase',
+  textDecoration: 'none', display: 'inline-block', marginBottom: 18,
+}
+const headerRow = {
+  display: 'flex', alignItems: 'baseline', justifyContent: 'space-between',
+  gap: 12, flexWrap: 'wrap', marginBottom: 18,
+}
+const h1Style = {
+  color: '#e8e8ea', fontFamily: '-apple-system, "Segoe UI", Roboto, sans-serif',
+  fontSize: 24, fontWeight: 700, letterSpacing: '-0.01em', margin: 0,
+}
+const addBtn = {
+  background: '#d4a333', color: '#0a0a0b',
+  fontFamily: '-apple-system, "Segoe UI", Roboto, sans-serif',
+  fontSize: 13, fontWeight: 600, padding: '8px 14px', borderRadius: 6, textDecoration: 'none',
 }

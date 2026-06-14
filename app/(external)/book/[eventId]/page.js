@@ -127,6 +127,21 @@ export default async function EventBookingPage({ params }) {
     }),
   )
 
+  // Active add-ons offered at checkout (global ones + any scoped to this event).
+  let addons = []
+  try {
+    const r = await supabase
+      .from('addons')
+      .select('id, name, description, price_cents, kind, sort_order')
+      .eq('active', true)
+      .or(`event_id.is.null,event_id.eq.${eventId}`)
+      .order('sort_order', { ascending: true })
+    if (r.error) console.error('[book/eventId] addons error', r.error)
+    addons = r.data || []
+  } catch (err) {
+    console.error('[book/eventId] addons threw', err)
+  }
+
   let waiver = null
   try {
     waiver = await getCurrentWaiverVersion(supabase)
@@ -179,6 +194,7 @@ export default async function EventBookingPage({ params }) {
           eventId={event.id}
           eventName={event.name}
           ticketTypes={ticketTypes || []}
+          addons={addons}
           waiver={waiver}
         />
       </div>

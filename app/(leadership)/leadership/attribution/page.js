@@ -1,5 +1,10 @@
+import Link from 'next/link'
 import { supabaseAdmin } from '@/lib/supabaseAdmin'
 import { formatCents } from '@/lib/leadershipScoreboard'
+import DataTable from '../../_components/DataTable'
+import StatCard from '../../_components/StatCard'
+import StatusBadge from '../../_components/StatusBadge'
+import ShowMore from '../../_components/ShowMore'
 
 export const dynamic = 'force-dynamic'
 
@@ -102,25 +107,73 @@ export default async function AttributionPage({ searchParams }) {
     buyersByCode.get(code).push(o)
   }
 
-  let totalScans = 0, totalBuyers = 0, totalGross = 0
   const rows = (codes || []).map(c => {
     const scans = scanCount.get(c.id) || 0
     const buyers = (buyersByCode.get(c.code) || []).length
     const gross = grossByCode.get(c.code) || 0
-    totalScans += scans
-    totalBuyers += buyers
-    totalGross += gross
     return { ...c, scans, buyers, gross }
   }).sort((a, b) => b.scans - a.scans || b.buyers - a.buyers)
 
+  const totalScans = rows.reduce((s, r) => s + r.scans, 0)
+  const totalBuyers = rows.reduce((s, r) => s + r.buyers, 0)
+  const totalGross = rows.reduce((s, r) => s + r.gross, 0)
+
   const conv = totalScans > 0 ? Math.round((totalBuyers / totalScans) * 100) : 0
+
+  const flyerColumns = [
+    {
+      key: 'flyer', header: 'Flyer', primary: true,
+      render: r => (
+        <div>
+          <div style={{ fontWeight: 600 }}>{r.label || r.code}</div>
+          <div style={{ fontSize: 10, color: '#9c9ca3', marginTop: 2 }}>{r.code}</div>
+        </div>
+      ),
+    },
+    {
+      key: 'kind', header: 'Kind',
+      render: r => r.kind === 'bar'
+        ? <StatusBadge label="bar" tone="gold" />
+        : <StatusBadge label="sponsor" tone="purple" />,
+    },
+    { key: 'scans', header: 'Scans', align: 'right', mono: true, render: r => r.scans },
+    { key: 'buyers', header: 'Buyers', align: 'right', mono: true, render: r => <span style={{ color: r.buyers > 0 ? '#3fb27f' : '#6f6f76' }}>{r.buyers}</span> },
+    { key: 'conv', header: 'Conv', align: 'right', mono: true, render: r => <span style={{ color: '#9c9ca3' }}>{r.scans > 0 ? `${Math.round((r.buyers / r.scans) * 100)}%` : '—'}</span> },
+    { key: 'gross', header: 'Gross', align: 'right', mono: true, render: r => (r.gross > 0 ? formatCents(r.gross) : '—') },
+  ]
+
+  const buyerRows = [...ordersForRollup].sort((a, b) => new Date(b.paid_at) - new Date(a.paid_at))
+  const buyerColumns = [
+    {
+      key: 'when', header: 'When', primary: true,
+      render: o => new Date(o.paid_at).toLocaleString('en-US', { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' }),
+    },
+    { key: 'buyer', header: 'Buyer', render: o => o.buyer_name || '—' },
+    { key: 'email', header: 'Email', hideOnMobile: true, render: o => <span style={{ color: '#9c9ca3' }}>{o.buyer_email || '—'}</span> },
+    {
+      key: 'from', header: 'From',
+      render: o => {
+        const code = o.metadata?.qr_code
+        const qc = codesByCode.get(code)
+        return (
+          <div>
+            <div style={{ fontSize: 12 }}>{qc?.label || code}</div>
+            <div style={{ fontSize: 10, color: '#9c9ca3' }}>{code}</div>
+          </div>
+        )
+      },
+    },
+    { key: 'paid', header: 'Paid', align: 'right', mono: true, render: o => formatCents(o.total_cents || 0) },
+  ]
 
   return (
     <main style={{
       minHeight: '100vh',
       background: '#0a0a0b',
       color: '#e8e8ea',
-      padding: '24px 16px 48px',
+      padding: '24px 16px calc(48px + env(safe-area-inset-bottom))',
+      paddingLeft: 'max(16px, env(safe-area-inset-left))',
+      paddingRight: 'max(16px, env(safe-area-inset-right))',
       fontFamily: "'JetBrains Mono', ui-monospace, monospace",
     }}>
       <div style={{ maxWidth: 1100, margin: '0 auto' }}>
@@ -139,143 +192,49 @@ export default async function AttributionPage({ searchParams }) {
         </div>
 
         <div style={{
-          display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))',
+          display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))',
           gap: 12, marginBottom: 18,
         }}>
-          <Stat label="Total scans" value={totalScans.toLocaleString()} />
-          <Stat label="Buyers" value={totalBuyers.toLocaleString()} />
-          <Stat label="Conv %" value={`${conv}%`} />
-          <Stat label="Gross" value={formatCents(totalGross)} />
+          <StatCard label="Total scans" value={totalScans.toLocaleString()} />
+          <StatCard label="Buyers" value={totalBuyers.toLocaleString()} />
+          <StatCard label="Conv %" value={`${conv}%`} />
+          <StatCard label="Gross" value={formatCents(totalGross)} />
         </div>
 
-        <div style={{
-          background: 'linear-gradient(180deg, #121216, #0d0d10)',
-          border: '1px solid #2a2a31', borderRadius: 8, overflow: 'hidden',
-          marginBottom: 24,
-        }}>
-          <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13 }}>
-            <thead>
-              <tr style={{ borderBottom: '1px solid #2a2a31', background: '#0d0d10' }}>
-                <th style={th}>Flyer</th>
-                <th style={th}>Kind</th>
-                <th style={{ ...th, textAlign: 'right' }}>Scans</th>
-                <th style={{ ...th, textAlign: 'right' }}>Buyers</th>
-                <th style={{ ...th, textAlign: 'right' }}>Conv</th>
-                <th style={{ ...th, textAlign: 'right' }}>Gross</th>
-              </tr>
-            </thead>
-            <tbody>
-              {rows.length === 0 ? (
-                <tr><td colSpan={6} style={{ ...td, color: '#9c9ca3', textAlign: 'center' }}>
-                  No bar/sponsor QR codes registered. Run register-qr-codes.sql first.
-                </td></tr>
-              ) : rows.map(r => {
-                const rowConv = r.scans > 0 ? Math.round((r.buyers / r.scans) * 100) : 0
-                return (
-                  <tr key={r.id} style={{ borderBottom: '1px solid #2a2a31' }}>
-                    <td style={td}>
-                      <div style={{ fontWeight: 600 }}>{r.label || r.code}</div>
-                      <div style={{ fontSize: 10, color: '#9c9ca3', marginTop: 2 }}>{r.code}</div>
-                    </td>
-                    <td style={td}>
-                      <span style={{
-                        background: r.kind === 'bar' ? 'rgba(212,163,51,0.15)' : 'rgba(99,91,255,0.15)',
-                        color: r.kind === 'bar' ? '#d4a333' : '#8b85ff',
-                        fontSize: 10, letterSpacing: '0.18em', textTransform: 'uppercase',
-                        padding: '3px 8px', borderRadius: 4,
-                      }}>{r.kind}</span>
-                    </td>
-                    <td style={{ ...td, textAlign: 'right', fontVariantNumeric: 'tabular-nums' }}>{r.scans}</td>
-                    <td style={{ ...td, textAlign: 'right', fontVariantNumeric: 'tabular-nums', color: r.buyers > 0 ? '#3fb27f' : '#6f6f76' }}>{r.buyers}</td>
-                    <td style={{ ...td, textAlign: 'right', fontVariantNumeric: 'tabular-nums', color: '#9c9ca3' }}>{r.scans > 0 ? `${rowConv}%` : '—'}</td>
-                    <td style={{ ...td, textAlign: 'right', fontVariantNumeric: 'tabular-nums' }}>{r.gross > 0 ? formatCents(r.gross) : '—'}</td>
-                  </tr>
-                )
-              })}
-            </tbody>
-          </table>
-        </div>
+        <DataTable
+          columns={flyerColumns}
+          rows={rows}
+          rowKey={r => r.id}
+          empty={<div style={{ color: '#9c9ca3', fontSize: 13, padding: '16px 2px' }}>No bar/sponsor QR codes registered. Run register-qr-codes.sql first.</div>}
+        />
 
         <h2 style={{
           color: '#e8e8ea',
           fontFamily: '-apple-system, "Segoe UI", Roboto, sans-serif',
-          fontSize: 16, fontWeight: 700, margin: '0 0 10px',
+          fontSize: 16, fontWeight: 700, margin: '4px 0 10px',
         }}>
           Buyers this month
         </h2>
 
-        <div style={{
-          background: 'linear-gradient(180deg, #121216, #0d0d10)',
-          border: '1px solid #2a2a31', borderRadius: 8, overflow: 'hidden',
-        }}>
-          <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13 }}>
-            <thead>
-              <tr style={{ borderBottom: '1px solid #2a2a31', background: '#0d0d10' }}>
-                <th style={th}>When</th>
-                <th style={th}>Buyer</th>
-                <th style={th}>Email</th>
-                <th style={th}>From</th>
-                <th style={{ ...th, textAlign: 'right' }}>Paid</th>
-              </tr>
-            </thead>
-            <tbody>
-              {ordersForRollup.length === 0 ? (
-                <tr><td colSpan={5} style={{ ...td, color: '#9c9ca3', textAlign: 'center' }}>
-                  No attributed orders for {bounds.label} yet.
-                </td></tr>
-              ) : (
-                [...ordersForRollup]
-                  .sort((a, b) => new Date(b.paid_at) - new Date(a.paid_at))
-                  .map(o => {
-                    const code = o.metadata?.qr_code
-                    const qc = codesByCode.get(code)
-                    const when = new Date(o.paid_at).toLocaleString('en-US', {
-                      month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit',
-                    })
-                    return (
-                      <tr key={o.id} style={{ borderBottom: '1px solid #2a2a31' }}>
-                        <td style={{ ...td, color: '#9c9ca3', whiteSpace: 'nowrap' }}>{when}</td>
-                        <td style={td}>{o.buyer_name || '—'}</td>
-                        <td style={{ ...td, color: '#9c9ca3' }}>{o.buyer_email || '—'}</td>
-                        <td style={td}>
-                          <div style={{ fontSize: 12 }}>{qc?.label || code}</div>
-                          <div style={{ fontSize: 10, color: '#9c9ca3' }}>{code}</div>
-                        </td>
-                        <td style={{ ...td, textAlign: 'right', fontVariantNumeric: 'tabular-nums' }}>
-                          {formatCents(o.total_cents || 0)}
-                        </td>
-                      </tr>
-                    )
-                  })
-              )}
-            </tbody>
-          </table>
-        </div>
+        <ShowMore label="buyer-by-buyer detail" count={buyerRows.length || undefined}>
+          <DataTable
+            columns={buyerColumns}
+            rows={buyerRows}
+            rowKey={o => o.id}
+            empty={<div style={{ color: '#9c9ca3', fontSize: 13, padding: '16px 2px' }}>No attributed orders for {bounds.label} yet.</div>}
+          />
+        </ShowMore>
       </div>
     </main>
   )
 }
 
-function Stat({ label, value }) {
-  return (
-    <div style={{
-      background: 'linear-gradient(180deg, #121216, #0d0d10)',
-      border: '1px solid #2a2a31', borderRadius: 8, padding: '12px 14px',
-    }}>
-      <div style={{ fontSize: 10, color: '#9c9ca3', letterSpacing: '0.18em', textTransform: 'uppercase', marginBottom: 4 }}>
-        {label}
-      </div>
-      <div style={{ fontSize: 22, fontWeight: 800, fontVariantNumeric: 'tabular-nums' }}>{value}</div>
-    </div>
-  )
-}
-
 function MonthPicker({ label, value, prev, next }) {
   return (
-    <form style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-      <a href={`/leadership/attribution?month=${prev}`} style={navBtn} aria-label="Previous month">‹</a>
-      <span style={{ color: '#e8e8ea', fontSize: 13, fontWeight: 600, minWidth: 130, textAlign: 'center' }}>{label}</span>
-      <a href={`/leadership/attribution?month=${next}`} style={navBtn} aria-label="Next month">›</a>
+    <form style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+      <Link href={`/leadership/attribution?month=${prev}`} style={navBtn} aria-label="Previous month">‹</Link>
+      <span style={{ color: '#e8e8ea', fontSize: 13, fontWeight: 600, minWidth: 110, textAlign: 'center' }}>{label}</span>
+      <Link href={`/leadership/attribution?month=${next}`} style={navBtn} aria-label="Next month">›</Link>
       <input type="month" name="month" defaultValue={value}
         style={{
           background: '#0d0d10', color: '#e8e8ea',
@@ -295,11 +254,4 @@ const navBtn = {
   border: '1px solid #2a2a31', borderRadius: 6,
   padding: '4px 10px', fontSize: 14, textDecoration: 'none',
   fontWeight: 700,
-}
-const th = {
-  textAlign: 'left', padding: '10px 12px', color: '#9c9ca3',
-  fontSize: 10, fontWeight: 600, letterSpacing: '0.18em', textTransform: 'uppercase',
-}
-const td = {
-  padding: '12px', color: '#e8e8ea', verticalAlign: 'top',
 }

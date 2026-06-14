@@ -12,6 +12,7 @@ const LINE = 'rgba(255,255,255,0.08)'
 const LINKS = [
   { href: '/events', label: 'Events' },
   { href: '/bars', label: 'Partner Bars' },
+  { href: '/pass', label: 'Loop Pass' },
   { href: '/about', label: 'About' },
   { href: '/my-tickets', label: 'My tickets' },
 ]

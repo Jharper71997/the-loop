@@ -1,4 +1,5 @@
 import { supabaseAdmin } from '@/lib/supabaseAdmin'
+import { serverNow } from '@/lib/serverNow'
 import { operationalDateInTZ, nowInTZ, currentStopIndex, formatStopTime } from '@/lib/schedule'
 import TonightClient from './TonightClient'
 
@@ -6,38 +7,57 @@ export const dynamic = 'force-dynamic'
 
 export default async function TonightPage() {
   const supabase = supabaseAdmin()
+  const renderedAt = await serverNow()
   const today = operationalDateInTZ()
   const now = nowInTZ()
 
+  // Show every OPEN loop (not yet closed out) regardless of date, so a loop
+  // that ran last night stays here until staff press "Close out loop".
   const { data: groups } = await supabase
     .from('groups')
     .select(`
-      id, name, event_date, pickup_time, schedule, tt_event_id,
+      id, name, event_date, pickup_time, schedule, tt_event_id, closed_out_at,
       group_members (
         id, current_stop_index,
         contacts ( id, first_name, last_name, phone, has_signed_waiver )
       )
     `)
-    .gte('event_date', today)
+    .is('closed_out_at', null)
     .order('event_date', { ascending: true })
-    .limit(4)
+    .limit(12)
 
-  const todayGroup = (groups || []).find(g => g.event_date === today) || null
-  const nextGroup = !todayGroup ? (groups || [])[0] || null : null
+  const openGroups = groups || []
+  const todayGroup = openGroups.find(g => g.event_date === today) || null
+  // A loop that already ran but hasn't been closed out stays the active loop so
+  // staff can finish reporting / messaging / waivers until they close it out.
+  const ranOpenGroup = !todayGroup
+    ? openGroups
+        .filter(g => g.event_date && g.event_date < today)
+        .sort((a, b) => (b.event_date || '').localeCompare(a.event_date || ''))[0] || null
+    : null
+  const nextGroup = (!todayGroup && !ranOpenGroup)
+    ? openGroups
+        .filter(g => !g.event_date || g.event_date > today)
+        .sort((a, b) => (a.event_date || '').localeCompare(b.event_date || ''))[0] || null
+    : null
 
   let state = 'none'
-  let activeGroup = todayGroup || nextGroup
+  let activeGroup = todayGroup || ranOpenGroup || nextGroup
   let currentIdx = -1
 
-  // Everything else on the schedule that isn't the one we're rendering on top.
-  // The Schedule tab now shows what's live AND what's queued so the dispatcher
-  // can scan the week from one screen.
-  const upcomingGroups = (groups || []).filter(g => g.id !== activeGroup?.id).slice(0, 5)
+  // Everything else still open that isn't the one we're rendering on top.
+  const upcomingGroups = openGroups.filter(g => g.id !== activeGroup?.id).slice(0, 5)
 
   if (todayGroup) {
     const schedule = Array.isArray(todayGroup.schedule) ? todayGroup.schedule : []
     currentIdx = currentStopIndex(schedule, now, todayGroup.event_date, today)
     state = currentIdx >= 0 && currentIdx < schedule.length ? 'in_progress' : 'pre_pickup'
+  } else if (ranOpenGroup) {
+    // Already ran, still open: show the full roster + checkoff + broadcast so
+    // staff can wrap up. All stops read as past.
+    const schedule = Array.isArray(ranOpenGroup.schedule) ? ranOpenGroup.schedule : []
+    currentIdx = schedule.length
+    state = 'in_progress'
   } else if (nextGroup) {
     state = 'upcoming'
   }
@@ -117,6 +137,7 @@ export default async function TonightPage() {
   return (
     <TonightClient
       state={state}
+      renderedAt={renderedAt}
       today={today}
       group={activeGroup}
       currentIdx={currentIdx}

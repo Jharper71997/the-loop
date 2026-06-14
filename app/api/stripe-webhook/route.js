@@ -5,6 +5,8 @@ import { finalizeBooking } from '@/lib/booking'
 import { sendSms } from '@/lib/sms'
 import { recordAlert } from '@/lib/alerts'
 import { syncTtForEvent } from '@/lib/ticketTailorSync'
+import { stripe as stripeLib } from '@/lib/stripe'
+import { mapSubStatus } from '@/lib/loopPass'
 
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
@@ -76,6 +78,12 @@ export async function POST(req) {
   try {
     if (event.type === 'checkout.session.completed') {
       await handleCheckoutCompleted(supabase, event.data.object)
+    } else if (
+      event.type === 'customer.subscription.created' ||
+      event.type === 'customer.subscription.updated' ||
+      event.type === 'customer.subscription.deleted'
+    ) {
+      await handleSubscriptionChange(supabase, event.data.object)
     } else if (event.type === 'charge.refunded' || event.type === 'refund.created') {
       await handleRefund(supabase, event.data.object)
     } else {
@@ -97,7 +105,64 @@ export async function POST(req) {
   }
 }
 
+// Loop Pass subscriptions ride the same Checkout webhook but have no order row.
+async function handlePassCheckout(supabase, session) {
+  const subId = session.subscription
+  if (!subId) return
+
+  let sub = null
+  try { sub = await stripeLib().subscriptions.retrieve(subId) } catch (err) {
+    console.error('[stripe-webhook] subscription retrieve failed', err)
+  }
+
+  await upsertPass(supabase, {
+    subId,
+    contactId: session.metadata?.contact_id || sub?.metadata?.contact_id || null,
+    plan: session.metadata?.plan || sub?.metadata?.plan || 'monthly',
+    customerId: session.customer || sub?.customer || null,
+    status: sub ? mapSubStatus(sub.status) : 'active',
+    periodEnd: sub?.current_period_end || null,
+  })
+}
+
+// customer.subscription.created/updated/deleted — keep the local pass mirror in
+// sync (renewals, payment failures, cancellations). Upsert on the subscription
+// id so an event arriving before checkout.session.completed still creates the row.
+async function handleSubscriptionChange(supabase, sub) {
+  if (sub?.metadata?.kind !== 'loop_pass') return
+  await upsertPass(supabase, {
+    subId: sub.id,
+    contactId: sub.metadata?.contact_id || null,
+    plan: sub.metadata?.plan || 'monthly',
+    customerId: typeof sub.customer === 'string' ? sub.customer : null,
+    status: mapSubStatus(sub.status),
+    periodEnd: sub.current_period_end || null,
+  })
+}
+
+async function upsertPass(supabase, { subId, contactId, plan, customerId, status, periodEnd }) {
+  const row = {
+    contact_id: contactId || null,
+    plan: plan === 'season' ? 'season' : 'monthly',
+    status,
+    stripe_subscription_id: subId,
+    stripe_customer_id: customerId || null,
+    current_period_end: periodEnd ? new Date(periodEnd * 1000).toISOString() : null,
+    updated_at: new Date().toISOString(),
+  }
+  const { error } = await supabase
+    .from('loop_passes')
+    .upsert(row, { onConflict: 'stripe_subscription_id' })
+  if (error) console.error('[stripe-webhook] loop_passes upsert failed', error)
+}
+
 async function handleCheckoutCompleted(supabase, session) {
+  // Loop Pass purchases come through Checkout too, but in subscription mode and
+  // with no order_id — route them to the pass handler before the order lookup.
+  if (session.mode === 'subscription' || session.metadata?.kind === 'loop_pass') {
+    return handlePassCheckout(supabase, session)
+  }
+
   const orderId = session.metadata?.order_id
   if (!orderId) {
     // Likely the legacy Stripe Checkout flow with metadata.group_id — preserve it.

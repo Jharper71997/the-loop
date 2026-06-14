@@ -20,7 +20,30 @@
 
 const fs = require('fs')
 const path = require('path')
+
+// Load .env.local from the-loop/ if env vars aren't already set so the user
+// doesn't have to fight PowerShell env syntax to run this.
+loadDotEnvIfMissing(path.resolve(__dirname, '..', '.env.local'))
+
 const { createClient } = require('@supabase/supabase-js')
+
+function loadDotEnvIfMissing(envPath) {
+  if (!fs.existsSync(envPath)) return
+  const txt = fs.readFileSync(envPath, 'utf8')
+  for (const rawLine of txt.split(/\r?\n/)) {
+    const line = rawLine.trim()
+    if (!line || line.startsWith('#')) continue
+    const eq = line.indexOf('=')
+    if (eq < 0) continue
+    const key = line.slice(0, eq).trim()
+    if (!key || process.env[key] != null) continue
+    let val = line.slice(eq + 1).trim()
+    if ((val.startsWith('"') && val.endsWith('"')) || (val.startsWith("'") && val.endsWith("'"))) {
+      val = val.slice(1, -1)
+    }
+    process.env[key] = val
+  }
+}
 
 const PHYSICAL_CAP = 13
 const PENDING_WINDOW_MIN = 15

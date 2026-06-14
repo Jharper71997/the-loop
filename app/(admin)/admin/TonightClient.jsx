@@ -5,6 +5,10 @@ import SmsBroadcast from '../_components/SmsBroadcast'
 import PickedUpToggle from '../_components/PickedUpToggle'
 import SmsButton from '../_components/SmsButton'
 import TtBackfillButton from '../_components/TtBackfillButton'
+import CloseOutButton from '../_components/CloseOutButton'
+import Link from 'next/link'
+import LiveStamp from '@/app/(leadership)/_components/LiveStamp'
+import ShowMore from '@/app/(leadership)/_components/ShowMore'
 import { formatStopTime } from '@/lib/schedule'
 import { supabase } from '@/lib/supabase'
 import { isLeadership } from '@/lib/roles'
@@ -13,7 +17,7 @@ const ACCENT = '#d4a333'
 const SURFACE = '#15151a'
 const BORDER = '#2a2a31'
 
-export default function TonightClient({ state, today, group, currentIdx, ordersToday, orderStopBreakdown = {}, ticketsByContact = {}, totalTickets = 0, upcomingGroups = [] }) {
+export default function TonightClient({ state, renderedAt, today, group, currentIdx, ordersToday, orderStopBreakdown = {}, ticketsByContact = {}, totalTickets = 0, upcomingGroups = [] }) {
   const [email, setEmail] = useState(null)
   const isLeader = isLeadership(email)
   useEffect(() => {
@@ -21,8 +25,15 @@ export default function TonightClient({ state, today, group, currentIdx, ordersT
   }, [])
 
   return (
-    <main style={{ maxWidth: 1100, margin: '0 auto', padding: '20px 16px', minHeight: '100vh', color: '#fff' }}>
+    <main style={{
+      maxWidth: 1100, margin: '0 auto',
+      padding: '20px 16px calc(40px + env(safe-area-inset-bottom))',
+      paddingLeft: 'max(16px, env(safe-area-inset-left))',
+      paddingRight: 'max(16px, env(safe-area-inset-right))',
+      minHeight: '100vh', color: '#fff',
+    }}>
       <Header today={today} group={group} state={state} isLeader={isLeader} />
+      {renderedAt && <LiveStamp renderedAt={renderedAt} style={{ marginTop: 0, marginBottom: 14 }} />}
       {group?.id && (
         <EventQuickPanel group={group} totalTickets={totalTickets} isLeader={isLeader} />
       )}
@@ -34,50 +45,57 @@ export default function TonightClient({ state, today, group, currentIdx, ordersT
 
       <UpNextSection groups={upcomingGroups} />
 
-      {ordersToday.length > 0 && (
-        <section style={{
-          background: SURFACE, border: `1px solid ${BORDER}`, borderRadius: 12, padding: 14, marginTop: 14,
-        }}>
-          <h2 style={sectionHeader}>Orders today ({ordersToday.length})</h2>
-          <div style={{ display: 'grid', gap: 6, marginTop: 8 }}>
-            {ordersToday.map(o => {
-              const ttTagged = o.metadata?.source === 'ticket_tailor'
-              const stops = formatOrderStops(orderStopBreakdown[o.id], o.party_size)
-              return (
-                <div key={o.id} style={{
-                  padding: 8, background: '#0e0e12', borderRadius: 6, fontSize: 12,
-                  display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 8,
-                }}>
-                  <span style={{ display: 'grid', gap: 2, minWidth: 0 }}>
-                    <span>
-                      <strong style={{ color: '#e8e8ea' }}>{o.buyer_name || '(no name)'}</strong>
-                      {o.buyer_phone && (
-                        <span style={{ color: '#9c9ca3', marginLeft: 6 }}>· {o.buyer_phone}</span>
-                      )}
-                      {ttTagged && (
-                        <span style={{
-                          marginLeft: 8,
-                          fontSize: 9,
-                          letterSpacing: '0.18em',
-                          textTransform: 'uppercase',
-                          color: '#9c9ca3',
-                          border: '1px solid #2a2a31',
-                          padding: '1px 6px',
-                          borderRadius: 3,
-                        }}>TT</span>
-                      )}
-                    </span>
-                    <span style={{ color: '#9c9ca3', fontSize: 11 }}>{stops}</span>
-                  </span>
-                  <span style={{ color: ACCENT, fontWeight: 600 }}>${(o.total_cents / 100).toFixed(2)}</span>
-                </div>
-              )
-            })}
-          </div>
-        </section>
-      )}
+      {/* Orders + diagnostics are secondary to dispatching — collapsed by default. */}
+      <div style={{ marginTop: 14 }}>
+        <ShowMore label="Orders & tools" count={ordersToday.length || undefined}>
+          {ordersToday.length > 0 && (
+            <section style={{
+              background: SURFACE, border: `1px solid ${BORDER}`, borderRadius: 12, padding: 14,
+            }}>
+              <h2 style={sectionHeader}>Orders today ({ordersToday.length})</h2>
+              <div style={{ display: 'grid', gap: 6, marginTop: 8 }}>
+                {ordersToday.map(o => {
+                  const ttTagged = o.metadata?.source === 'ticket_tailor'
+                  const stops = formatOrderStops(orderStopBreakdown[o.id], o.party_size)
+                  return (
+                    <div key={o.id} style={{
+                      padding: 8, background: '#0e0e12', borderRadius: 6, fontSize: 12,
+                      display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 8,
+                    }}>
+                      <span style={{ display: 'grid', gap: 2, minWidth: 0 }}>
+                        <span>
+                          <strong style={{ color: '#e8e8ea' }}>{o.buyer_name || '(no name)'}</strong>
+                          {o.buyer_phone && (
+                            <span style={{ color: '#9c9ca3', marginLeft: 6 }}>· {o.buyer_phone}</span>
+                          )}
+                          {ttTagged && (
+                            <span style={{
+                              marginLeft: 8,
+                              fontSize: 9,
+                              letterSpacing: '0.18em',
+                              textTransform: 'uppercase',
+                              color: '#9c9ca3',
+                              border: '1px solid #2a2a31',
+                              padding: '1px 6px',
+                              borderRadius: 3,
+                            }}>TT</span>
+                          )}
+                        </span>
+                        <span style={{ color: '#9c9ca3', fontSize: 11 }}>{stops}</span>
+                      </span>
+                      <span style={{ color: ACCENT, fontWeight: 600 }}>${(o.total_cents / 100).toFixed(2)}</span>
+                    </div>
+                  )
+                })}
+              </div>
+            </section>
+          )}
 
-      <TtBackfillButton />
+          <div style={{ marginTop: ordersToday.length > 0 ? 12 : 0 }}>
+            <TtBackfillButton />
+          </div>
+        </ShowMore>
+      </div>
     </main>
   )
 }
@@ -129,6 +147,7 @@ function EventQuickPanel({ group, totalTickets, isLeader = false }) {
           Open settings
         </a>
       )}
+      <CloseOutButton groupId={group.id} />
     </section>
   )
 }
@@ -162,11 +181,11 @@ function Header({ today, group, state, isLeader = false }) {
         <span style={{ color: '#9c9ca3', fontSize: 13 }}>{formatToday(today)}</span>
       </div>
       {isLeader && (
-        <a href="/leadership/loops/new" style={{
+        <Link href="/leadership/loops/new" style={{
           background: ACCENT, color: '#0a0a0b',
           padding: '10px 16px', borderRadius: 8, fontWeight: 700, fontSize: 13, textDecoration: 'none',
           minHeight: 44, display: 'inline-flex', alignItems: 'center',
-        }}>+ New Loop</a>
+        }}>+ New Loop</Link>
       )}
     </div>
   )
@@ -182,10 +201,10 @@ function NoLoopState({ isLeader = false }) {
         When you create a Loop on the Loops tab, this page will show its manifest, stops, and a one-tap broadcast.
       </p>
       {isLeader && (
-        <a href="/leadership/loops/new" style={{
+        <Link href="/leadership/loops/new" style={{
           display: 'inline-block', background: ACCENT, color: '#0a0a0b',
           padding: '10px 18px', borderRadius: 10, fontWeight: 700, fontSize: 14, textDecoration: 'none',
-        }}>+ Create your first Loop</a>
+        }}>+ Create your first Loop</Link>
       )}
     </section>
   )

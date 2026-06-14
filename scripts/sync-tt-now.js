@@ -10,13 +10,37 @@
 // Env required: NEXT_PUBLIC_SUPABASE_URL, SUPABASE_SERVICE_KEY (or
 // SUPABASE_SERVICE_ROLE_KEY), TICKET_TAILOR_API_KEY.
 
+const fs = require('fs')
 const path = require('path')
+const { pathToFileURL } = require('url')
+
+// Load .env.local from the-loop/ if env vars aren't already set. Saves users
+// from having to dot-source the file in PowerShell.
+loadDotEnvIfMissing(path.resolve(__dirname, '..', '.env.local'))
 
 // Force dry-run unless --apply was passed. Wins over any pre-existing env.
 const APPLY = process.argv.includes('--apply')
 process.env.TT_SYNC_DRYRUN = APPLY ? '0' : '1'
 
 const { createClient } = require('@supabase/supabase-js')
+
+function loadDotEnvIfMissing(envPath) {
+  if (!fs.existsSync(envPath)) return
+  const txt = fs.readFileSync(envPath, 'utf8')
+  for (const rawLine of txt.split(/\r?\n/)) {
+    const line = rawLine.trim()
+    if (!line || line.startsWith('#')) continue
+    const eq = line.indexOf('=')
+    if (eq < 0) continue
+    const key = line.slice(0, eq).trim()
+    if (!key || process.env[key] != null) continue
+    let val = line.slice(eq + 1).trim()
+    if ((val.startsWith('"') && val.endsWith('"')) || (val.startsWith("'") && val.endsWith("'"))) {
+      val = val.slice(1, -1)
+    }
+    process.env[key] = val
+  }
+}
 
 async function main() {
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL
@@ -25,8 +49,10 @@ async function main() {
   if (!process.env.TICKET_TAILOR_API_KEY) throw new Error('Missing TICKET_TAILOR_API_KEY')
 
   // Dynamic import — the sync module is ESM (lib/ticketTailorSync.js uses
-  // `import`), so we can't plain `require` it from this CJS script.
-  const { syncTtForEvent } = await import(path.resolve(__dirname, '../lib/ticketTailorSync.js'))
+  // `import`), so we can't plain `require` it from this CJS script. On
+  // Windows the ESM loader needs a file:// URL, not a "C:\..." path.
+  const syncUrl = pathToFileURL(path.resolve(__dirname, '../lib/ticketTailorSync.js')).href
+  const { syncTtForEvent } = await import(syncUrl)
 
   const sb = createClient(url, key, { auth: { persistSession: false } })
   const today = new Date().toISOString().slice(0, 10)

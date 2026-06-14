@@ -13,6 +13,9 @@ const INK_MUTED = '#8a8a90'
 export default async function BookingSuccess({ searchParams }) {
   const params = await searchParams
   const sessionId = params?.session_id
+  // Loop Pass / fully-covered bookings settle without Stripe, so they land here
+  // with ?order_id= instead of ?session_id=.
+  const orderId = params?.order_id
 
   // Look up the order to find the contact + waiver status.
   // If nothing returns (webhook hasn't landed yet, or direct hit on this page),
@@ -21,13 +24,12 @@ export default async function BookingSuccess({ searchParams }) {
   let waiverSigned = false
   let firstName = null
 
-  if (sessionId) {
+  if (sessionId || orderId) {
     const sb = supabaseAdmin()
-    const { data: order } = await sb
-      .from('orders')
-      .select('contact_id, contacts ( id, first_name )')
-      .eq('stripe_checkout_session_id', sessionId)
-      .maybeSingle()
+    const { data: order } = await (sessionId
+      ? sb.from('orders').select('contact_id, contacts ( id, first_name )').eq('stripe_checkout_session_id', sessionId)
+      : sb.from('orders').select('contact_id, contacts ( id, first_name )').eq('id', orderId)
+    ).maybeSingle()
     if (order?.contact_id) {
       contactId = order.contact_id
       firstName = order.contacts?.first_name || null

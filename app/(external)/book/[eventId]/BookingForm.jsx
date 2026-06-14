@@ -6,7 +6,7 @@ const ACCENT = '#d4a333'
 const SURFACE = '#15151a'
 const BORDER = '#2a2a31'
 
-export default function BookingForm({ eventId, eventName, ticketTypes, waiver }) {
+export default function BookingForm({ eventId, eventName, ticketTypes, addons = [], waiver }) {
   // Default to the first ticket type that still has seats. If everything is
   // sold out we fall back to the first one anyway so the form renders — the
   // submit button will be disabled by the oversell check below.
@@ -14,16 +14,35 @@ export default function BookingForm({ eventId, eventName, ticketTypes, waiver })
 
   const [attribution, setAttribution] = useState(null)
   const [bartenderCode, setBartenderCode] = useState('')
+  // Capture attribution from the URL on landing and STICK it for the session.
+  // Tags ride on the first touch (a QR scan / shared link), but the buyer often
+  // navigates (listing → event → /book) before paying, which used to drop the
+  // tag. Persisting to sessionStorage keeps the credit through that journey.
+  // `qr` and `ref` both map to qr_code so bartender/QR slugs work either way.
   useEffect(() => {
     if (typeof window === 'undefined') return
+    const STORE_KEY = 'bl_attribution'
     const p = new URLSearchParams(window.location.search)
-    const a = {
-      qr_code: p.get('qr') || null,
+    const fresh = {
+      qr_code: p.get('qr') || p.get('ref') || null,
+      // rider-to-rider referral code (from /invite/<code>); separate from the
+      // bartender/QR qr_code so a booking can carry both.
+      referrer_code: p.get('rref') || null,
       utm_source: p.get('utm_source') || null,
       utm_medium: p.get('utm_medium') || null,
       utm_campaign: p.get('utm_campaign') || null,
     }
-    if (a.qr_code || a.utm_source || a.utm_campaign) setAttribution(a)
+    const hasFresh = fresh.qr_code || fresh.referrer_code || fresh.utm_source || fresh.utm_medium || fresh.utm_campaign
+    if (hasFresh) {
+      try { sessionStorage.setItem(STORE_KEY, JSON.stringify(fresh)) } catch {}
+      setAttribution(fresh)
+      return
+    }
+    // No tag on this URL — fall back to whatever was captured earlier this session.
+    try {
+      const saved = sessionStorage.getItem(STORE_KEY)
+      if (saved) setAttribution(JSON.parse(saved))
+    } catch {}
   }, [])
 
   const [buyer, setBuyer] = useState({
@@ -40,6 +59,9 @@ export default function BookingForm({ eventId, eventName, ticketTypes, waiver })
       typed_name: '',
     },
   ])
+  // Add-on quantities, keyed by addon id. Default everything to 0 (opt-in).
+  const [addonQty, setAddonQty] = useState(() =>
+    Object.fromEntries((addons || []).map(a => [a.id, 0])))
   const [buyerTypedName, setBuyerTypedName] = useState('')
   const [waiverOpen, setWaiverOpen] = useState(false)
   const [bartenderOpen, setBartenderOpen] = useState(false)
@@ -51,10 +73,17 @@ export default function BookingForm({ eventId, eventName, ticketTypes, waiver })
   // a failed submit so the next manual click starts a fresh attempt.
   const [clientToken, setClientToken] = useState(() => mintToken())
 
-  const totalCents = useMemo(() => riders.reduce((s, r) => {
+  const ticketCents = useMemo(() => riders.reduce((s, r) => {
     const tt = ticketTypes.find(t => t.id === r.ticket_type_id)
     return s + (tt?.price_cents || 0)
   }, 0), [riders, ticketTypes])
+
+  const addonCents = useMemo(() => (addons || []).reduce(
+    (s, a) => s + (a.price_cents || 0) * (addonQty[a.id] || 0), 0), [addons, addonQty])
+
+  // What the buyer sees. A Loop Pass may cover some seats server-side, so the
+  // amount actually charged can be lower — the server is the source of truth.
+  const totalCents = ticketCents + addonCents
 
   function updateRider(idx, patch) {
     setRiders(prev => prev.map((r, i) => (i === idx ? { ...r, ...patch } : r)))
@@ -74,6 +103,10 @@ export default function BookingForm({ eventId, eventName, ticketTypes, waiver })
 
   function removeRider(idx) {
     setRiders(prev => prev.filter((_, i) => i !== idx))
+  }
+
+  function setAddon(id, qty) {
+    setAddonQty(prev => ({ ...prev, [id]: Math.max(0, Math.min(20, qty)) }))
   }
 
   // Per-ticket-type request count → use to disable Pay when the rider has
@@ -99,6 +132,10 @@ export default function BookingForm({ eventId, eventName, ticketTypes, waiver })
     }
     return null
   }, [requestedByTt, ticketTypes])
+
+  const soldOutTypes = useMemo(
+    () => ticketTypes.filter(t => t.remaining === 0),
+    [ticketTypes])
 
   const buyerOwesSig = riders.some(r => r.signed_by_buyer)
   const formValid = useMemo(() => {
@@ -170,6 +207,9 @@ export default function BookingForm({ eventId, eventName, ticketTypes, waiver })
           event_id: eventId,
           buyer,
           riders: ridersPayload,
+          addons: Object.entries(addonQty)
+            .filter(([, q]) => q > 0)
+            .map(([addon_id, quantity]) => ({ addon_id, quantity })),
           buyer_typed_name: buyerTypedName.trim(),
           attribution: submittedAttribution,
           client_token: clientToken,
@@ -177,7 +217,10 @@ export default function BookingForm({ eventId, eventName, ticketTypes, waiver })
       })
       const json = await res.json()
       if (!res.ok || !json.checkout_url) {
-        let message = json.error || `Checkout failed (${res.status})`
+        // Default to a friendly, generic message. Raw server codes
+        // (checkout_failed, order_insert_failed, etc.) are for diagnosis, not
+        // for the rider — log them to the console instead of showing them.
+        let message = 'Something went wrong starting checkout. Please try again.'
         if (json.error === 'sold_out') {
           const remaining = json.remaining ?? 0
           message = remaining > 0
@@ -185,6 +228,8 @@ export default function BookingForm({ eventId, eventName, ticketTypes, waiver })
             : `Sold out: ${json.ticket_type_name || 'this ticket'} is fully booked.`
         } else if (json.error === 'in_flight_retry') {
           message = 'Hang on — finalizing your previous attempt. Try again in a few seconds.'
+        } else if (json.error) {
+          console.error('[checkout] server error:', json.error, json)
         }
         setError(message)
         setSubmitting(false)
@@ -193,7 +238,10 @@ export default function BookingForm({ eventId, eventName, ticketTypes, waiver })
       }
       window.location.href = json.checkout_url
     } catch (err) {
-      setError(err.message)
+      // Network failure or an empty/non-JSON response body. Never show the raw
+      // JS message ("Unexpected end of JSON input") to a rider.
+      console.error('[checkout] request failed', err)
+      setError('Something went wrong reaching checkout. Please try again.')
       setSubmitting(false)
       setClientToken(mintToken())
     }
@@ -363,6 +411,37 @@ export default function BookingForm({ eventId, eventName, ticketTypes, waiver })
         </button>
       </Section>
 
+      {addons.length > 0 && (
+        <Section title="Add to your night">
+          <div style={{ display: 'grid', gap: 8 }}>
+            {addons.map(a => {
+              const qty = addonQty[a.id] || 0
+              return (
+                <div key={a.id} style={{
+                  display: 'flex', alignItems: 'center', gap: 12,
+                  padding: 12, background: '#0e0e12', border: `1px solid ${BORDER}`, borderRadius: 10,
+                }}>
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <div style={{ fontSize: 14, color: '#eee', fontWeight: 600 }}>
+                      {a.name}{' '}
+                      <span style={{ color: ACCENT, fontWeight: 700 }}>+${(a.price_cents / 100).toFixed(2)}</span>
+                    </div>
+                    {a.description && (
+                      <div style={{ fontSize: 12, color: '#9c9ca3', marginTop: 2 }}>{a.description}</div>
+                    )}
+                  </div>
+                  <Stepper
+                    qty={qty}
+                    onDec={() => setAddon(a.id, qty - 1)}
+                    onInc={() => setAddon(a.id, qty + 1)}
+                  />
+                </div>
+              )
+            })}
+          </div>
+        </Section>
+      )}
+
       <Section title="Liability waiver">
         <button
           type="button"
@@ -446,6 +525,10 @@ export default function BookingForm({ eventId, eventName, ticketTypes, waiver })
         )}
       </div>
 
+      {soldOutTypes.length > 0 && (
+        <WaitlistForm eventId={eventId} soldOutTypes={soldOutTypes} />
+      )}
+
       {(error || oversellError) && (
         <div style={{ padding: 10, background: '#3a1a1a', border: '1px solid #f87171', borderRadius: 8, color: '#f87171', fontSize: 13 }}>
           {error || oversellError}
@@ -498,7 +581,7 @@ function ticketLabel(t) {
   const price = `$${(t.price_cents / 100).toFixed(2)}`
   const head = time ? `${t.name} — ${time} — ${price}` : `${t.name} — ${price}`
   if (t.remaining === 0) return `${head} — Sold out`
-  if (Number.isFinite(t.remaining)) return `${head} — ${t.remaining} left`
+  if (Number.isFinite(t.remaining) && t.remaining <= 5) return `${head} — ${t.remaining} left`
   return head
 }
 
@@ -519,6 +602,7 @@ function RemainingBadge({ remaining }) {
       }}>Sold out</span>
     )
   }
+  if (remaining > 5) return null
   const tight = remaining <= 3
   return (
     <span style={{
@@ -598,6 +682,109 @@ function CheckRow({ checked, onChange, label, accentText = false }) {
       />
       <span>{label}</span>
     </label>
+  )
+}
+
+function WaitlistForm({ eventId, soldOutTypes }) {
+  const [open, setOpen] = useState(false)
+  const [f, setF] = useState({
+    first_name: '', last_name: '', phone: '',
+    party_size: 1, ticket_type_id: soldOutTypes[0]?.id || '',
+  })
+  const [state, setState] = useState('idle') // idle | submitting | done
+  const [err, setErr] = useState(null)
+
+  async function submit(e) {
+    e.preventDefault()
+    if (state === 'submitting') return
+    setState('submitting')
+    setErr(null)
+    const tt = soldOutTypes.find(t => t.id === f.ticket_type_id)
+    try {
+      const res = await fetch('/api/waitlist', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          event_id: eventId,
+          ticket_type_id: f.ticket_type_id || null,
+          stop_index: tt?.stop_index ?? null,
+          first_name: f.first_name,
+          last_name: f.last_name,
+          phone: f.phone,
+          party_size: Number(f.party_size) || 1,
+        }),
+      })
+      const j = await res.json()
+      if (!res.ok) { setErr(typeof j.error === 'string' ? j.error : 'Could not join. Try again.'); setState('idle'); return }
+      setState('done')
+    } catch {
+      setErr('Could not reach the waitlist. Try again.')
+      setState('idle')
+    }
+  }
+
+  if (state === 'done') {
+    return (
+      <div style={{ padding: 14, background: 'rgba(63,178,127,0.08)', border: '1px solid rgba(63,178,127,0.4)', borderRadius: 10, color: '#9fe3bf', fontSize: 14 }}>
+        You&rsquo;re on the waitlist. We&rsquo;ll text you if a seat opens up.
+      </div>
+    )
+  }
+
+  return (
+    <Section title="Sold out where you wanted?">
+      {!open ? (
+        <button type="button" onClick={() => setOpen(true)} style={{ ...btnGhost, width: '100%' }}>
+          Join the waitlist
+        </button>
+      ) : (
+        <div style={{ display: 'grid', gap: 8 }}>
+          <p style={{ fontSize: 12, color: '#9c9ca3', margin: 0 }}>
+            We&rsquo;ll reach out if a seat frees up. No charge until you book.
+          </p>
+          {soldOutTypes.length > 1 && (
+            <select value={f.ticket_type_id} onChange={e => setF(s => ({ ...s, ticket_type_id: e.target.value }))} style={input}>
+              {soldOutTypes.map(t => <option key={t.id} value={t.id}>{t.name}</option>)}
+            </select>
+          )}
+          <Row>
+            <Field label="First name" value={f.first_name} onChange={v => setF(s => ({ ...s, first_name: v }))} />
+            <Field label="Last name" value={f.last_name} onChange={v => setF(s => ({ ...s, last_name: v }))} />
+          </Row>
+          <Row>
+            <Field label="Phone" value={f.phone} type="tel" onChange={v => setF(s => ({ ...s, phone: v }))} />
+            <label style={{ display: 'grid', gap: 4, fontSize: 12, color: '#9c9ca3' }}>
+              Party size
+              <input type="number" min={1} max={20} value={f.party_size} onChange={e => setF(s => ({ ...s, party_size: e.target.value }))} style={input} />
+            </label>
+          </Row>
+          {err && <div style={{ color: '#f87171', fontSize: 12 }}>{err}</div>}
+          <button
+            type="button"
+            onClick={submit}
+            disabled={state === 'submitting' || !f.first_name.trim() || !f.phone.trim()}
+            style={{ ...btnGhost, width: '100%', opacity: (!f.first_name.trim() || !f.phone.trim()) ? 0.5 : 1 }}
+          >
+            {state === 'submitting' ? 'Joining…' : 'Join the waitlist'}
+          </button>
+        </div>
+      )}
+    </Section>
+  )
+}
+
+function Stepper({ qty, onDec, onInc }) {
+  const btn = {
+    width: 32, height: 32, borderRadius: 8, border: `1px solid ${BORDER}`,
+    background: '#15151a', color: ACCENT, fontSize: 18, lineHeight: 1,
+    cursor: 'pointer', flexShrink: 0,
+  }
+  return (
+    <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexShrink: 0 }}>
+      <button type="button" onClick={onDec} disabled={qty === 0} style={{ ...btn, opacity: qty === 0 ? 0.4 : 1, cursor: qty === 0 ? 'not-allowed' : 'pointer' }} aria-label="Remove one">−</button>
+      <span style={{ minWidth: 16, textAlign: 'center', color: '#eee', fontSize: 15, fontWeight: 700 }}>{qty}</span>
+      <button type="button" onClick={onInc} style={btn} aria-label="Add one">+</button>
+    </div>
   )
 }
 

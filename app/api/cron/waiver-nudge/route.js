@@ -2,6 +2,7 @@ import { supabaseAdmin } from '@/lib/supabaseAdmin'
 import { textUnsignedForGroup } from '@/lib/waiver'
 import { todayInTZ } from '@/lib/schedule'
 import { denyIfNotCron } from '@/lib/cronAuth'
+import { isAutomationEnabled, AUTOMATION_KEYS } from '@/lib/automationSettings'
 
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
@@ -16,6 +17,13 @@ export const maxDuration = 60
 export async function GET(req) {
   const denied = denyIfNotCron(req)
   if (denied) return denied
+
+  // Honor the leadership UI toggle. Defaults to FALSE — has to be explicitly
+  // turned on at /leadership/automations before anything fires, even if a
+  // future vercel.json wires the schedule.
+  if (!(await isAutomationEnabled(AUTOMATION_KEYS.WAIVER_NUDGE_CRON))) {
+    return Response.json({ ok: true, skipped: 'disabled_in_leadership_ui' })
+  }
 
   const supabase = supabaseAdmin()
   const today = todayInTZ()

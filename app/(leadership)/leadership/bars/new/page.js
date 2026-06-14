@@ -72,6 +72,8 @@ async function createBar(formData) {
   const contact_phone = (formData.get('contact_phone') || '').toString().trim() || null
   const contact_email = (formData.get('contact_email') || '').toString().trim() || null
   const notes = (formData.get('notes') || '').toString().trim() || null
+  const dueDayRaw = parseInt(formData.get('payment_due_day'), 10)
+  const payment_due_day = Number.isInteger(dueDayRaw) && dueDayRaw >= 1 && dueDayRaw <= 31 ? dueDayRaw : null
   const address = (formData.get('address') || '').toString().trim() || null
   const blurb = (formData.get('blurb') || '').toString().trim() || null
   const latRaw = (formData.get('lat') || '').toString().trim()
@@ -105,6 +107,7 @@ async function createBar(formData) {
     contact_email,
     started_at: status === 'active' ? new Date().toISOString().slice(0, 10) : null,
     notes,
+    payment_due_day,
     address,
     blurb,
     lat,
@@ -168,6 +171,16 @@ export default async function NewBarPage({ searchParams }) {
           min="0"
           placeholder="300"
           hint="What they pay per month. Used for outstanding-this-month tracking."
+        />
+        <Field
+          label="Billing day (1–31)"
+          name="payment_due_day"
+          type="number"
+          min="1"
+          max="31"
+          step="1"
+          placeholder="1"
+          hint="Day of month payment is due. Leave blank for end-of-month."
         />
         <Select
           label="Payment method"

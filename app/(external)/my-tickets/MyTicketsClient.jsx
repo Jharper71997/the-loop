@@ -16,6 +16,7 @@ export default function MyTicketsClient() {
   const [submitting, setSubmitting] = useState(false)
   const [searched, setSearched] = useState(false)
   const [orders, setOrders] = useState([])
+  const [referral, setReferral] = useState(null)
   const [error, setError] = useState(null)
 
   async function onSubmit(e) {
@@ -40,6 +41,7 @@ export default function MyTicketsClient() {
         return
       }
       setOrders(json.orders || [])
+      setReferral(json.referral || null)
       setSearched(true)
     } catch (err) {
       setError(err.message)
@@ -50,6 +52,7 @@ export default function MyTicketsClient() {
   function reset() {
     setSearched(false)
     setOrders([])
+    setReferral(null)
     setError(null)
   }
 
@@ -72,6 +75,8 @@ export default function MyTicketsClient() {
         )}
 
         {orders.map(o => <OrderCard key={o.id} order={o} phone={phone} />)}
+
+        {referral && <ReferralCard referral={referral} />}
 
         <button
           type="button"
@@ -494,6 +499,70 @@ function RiderRow({ rider: r }) {
         </div>
       )}
     </div>
+  )
+}
+
+function ReferralCard({ referral }) {
+  const [msg, setMsg] = useState(null)
+
+  async function onShare() {
+    const text = `Come ride the Brew Loop with me. Book here: ${referral.url}`
+    if (typeof navigator !== 'undefined' && navigator.share) {
+      try {
+        await navigator.share({ title: 'Brew Loop', text, url: referral.url })
+        return
+      } catch {}
+    }
+    if (typeof navigator !== 'undefined' && navigator.clipboard) {
+      try {
+        await navigator.clipboard.writeText(referral.url)
+        setMsg('Link copied. Text it to a friend.')
+        setTimeout(() => setMsg(null), 3000)
+        return
+      } catch {}
+    }
+    setMsg(`Copy this: ${referral.url}`)
+  }
+
+  return (
+    <Card>
+      <div style={{ color: GOLD, fontSize: 11, letterSpacing: '0.18em', textTransform: 'uppercase', fontWeight: 700, marginBottom: 8 }}>
+        Bring a friend
+      </div>
+      <div style={{ color: INK, fontSize: 16, fontWeight: 600, marginBottom: 4 }}>
+        Your invite link
+      </div>
+      <p style={{ color: INK_DIM, fontSize: 13, margin: '0 0 12px' }}>
+        Share it. Every friend who books off your link counts toward your spot on the rider leaderboard.
+      </p>
+
+      <div style={{
+        display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap',
+        padding: '10px 12px', borderRadius: 10,
+        background: 'rgba(212,163,51,0.08)', border: '1px solid rgba(212,163,51,0.32)',
+        marginBottom: 12,
+      }}>
+        <code style={{ color: INK, fontSize: 13, wordBreak: 'break-all', flex: 1, minWidth: 0 }}>
+          {referral.url}
+        </code>
+        <span style={{ color: GOLD_HI, fontWeight: 700, fontSize: 14, whiteSpace: 'nowrap' }}>
+          {referral.confirmed} referred
+        </span>
+      </div>
+
+      <button
+        type="button"
+        onClick={onShare}
+        style={{
+          width: '100%', padding: '12px 16px', borderRadius: 10,
+          background: `linear-gradient(180deg, ${GOLD_HI}, ${GOLD})`,
+          color: '#0a0a0b', border: 0, fontWeight: 700, fontSize: 14, cursor: 'pointer',
+        }}
+      >
+        Share my link
+      </button>
+      {msg && <div style={{ color: GREEN, fontSize: 12, textAlign: 'center', marginTop: 8 }}>{msg}</div>}
+    </Card>
   )
 }
 

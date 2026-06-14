@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from 'react'
 import 'leaflet/dist/leaflet.css'
+import { haversineMeters as haversine } from '@/lib/geo'
 
 const GOLD = '#d4a333'
 const GOLD_HI = '#f0c24a'
@@ -572,18 +573,6 @@ function formatPickup(hhmm) {
   const suffix = h >= 12 ? 'PM' : 'AM'
   const h12 = ((h + 11) % 12) + 1
   return `${h12}:${String(m).padStart(2, '0')} ${suffix}`
-}
-
-// Haversine distance in meters between two lat/lng pairs.
-function haversine(lat1, lng1, lat2, lng2) {
-  if (lat1 == null || lng1 == null || lat2 == null || lng2 == null) return Infinity
-  const R = 6371000
-  const toRad = d => d * Math.PI / 180
-  const dLat = toRad(lat2 - lat1)
-  const dLng = toRad(lng2 - lng1)
-  const a = Math.sin(dLat / 2) ** 2
-    + Math.cos(toRad(lat1)) * Math.cos(toRad(lat2)) * Math.sin(dLng / 2) ** 2
-  return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a))
 }
 
 // Schedule-order destination: target stop 1 first, then 2, then 3, etc.

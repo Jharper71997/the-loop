@@ -4,6 +4,10 @@ import { useEffect, useMemo, useState } from 'react'
 import { supabase } from '@/lib/supabase'
 import SmsButton from '../../_components/SmsButton'
 import BroadcastModal from './_components/BroadcastModal'
+import ContactDetail from './_components/ContactDetail'
+import SelectionBar from './_components/SelectionBar'
+import LoopFilterChips from './_components/LoopFilterChips'
+import { formatEventDate } from './_components/util'
 
 export default function Contacts() {
   const [contacts, setContacts] = useState([])
@@ -12,68 +16,9 @@ export default function Contacts() {
   const [search, setSearch] = useState('')
   const [loopFilter, setLoopFilter] = useState('')
   const [selected, setSelected] = useState(null)
-  const [editing, setEditing] = useState(false)
-  const [editForm, setEditForm] = useState({})
-  const [message, setMessage] = useState('')
-  const [assignedGroup, setAssignedGroup] = useState('')
   const [checkedIds, setCheckedIds] = useState(() => new Set())
   const [broadcastOpen, setBroadcastOpen] = useState(false)
-  const [orders, setOrders] = useState([])
-  const [voidingId, setVoidingId] = useState(null)
   const [datePicked, setDatePicked] = useState('')
-
-  async function loadOrders(contactId) {
-    if (!contactId) { setOrders([]); return }
-    // Server endpoint uses the service-role client to bypass RLS on
-    // orders/order_items; the browser anon client can't read them.
-    try {
-      const res = await fetch(`/api/admin/contact-orders?contact_id=${encodeURIComponent(contactId)}`)
-      const json = await res.json().catch(() => ({}))
-      if (!res.ok) {
-        console.error('[contacts] loadOrders failed', json.error || res.status)
-        setOrders([])
-        return
-      }
-      setOrders(json.orders || [])
-    } catch (err) {
-      console.error('[contacts] loadOrders threw', err)
-      setOrders([])
-    }
-  }
-
-  async function voidOrderItem(item, order) {
-    if (voidingId) return
-    const reason = window.prompt('Optional reason for voiding this ticket:', '')
-    if (reason === null) return
-    const wantRefund = order?.stripe_payment_intent_id
-      ? confirm('Also issue a Stripe refund for this seat? Click Cancel to void without refunding.')
-      : false
-    setVoidingId(item.id)
-    try {
-      const res = await fetch(`/api/order-items/${item.id}/void`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ reason: reason || null, refund: wantRefund }),
-      })
-      const json = await res.json().catch(() => ({}))
-      if (!res.ok) {
-        alert(json.error || `Failed (${res.status})`)
-      } else {
-        await loadOrders(selected?.id)
-        await refresh()
-      }
-    } catch (err) {
-      alert(err.message)
-    } finally {
-      setVoidingId(null)
-    }
-  }
-
-  useEffect(() => {
-    if (selected?.id) loadOrders(selected.id)
-    else setOrders([])
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [selected?.id])
 
   useEffect(() => {
     refresh()
@@ -103,70 +48,6 @@ export default function Contacts() {
     setContacts(c.data || [])
     setGroups(g.data || [])
     setMembers(m.data || [])
-  }
-
-  const [saveStatus, setSaveStatus] = useState(null) // 'saving' | 'ok' | { error }
-
-  async function saveEdit() {
-    setSaveStatus('saving')
-    try {
-      const res = await fetch(`/api/admin/contacts/${encodeURIComponent(selected.id)}`, {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(editForm),
-      })
-      const json = await res.json().catch(() => ({}))
-      if (!res.ok || json.error) {
-        setSaveStatus({ error: json.error || `HTTP ${res.status}` })
-        return
-      }
-      setSelected(json.contact || { ...selected, ...editForm })
-      setEditing(false)
-      setSaveStatus('ok')
-      refresh()
-      setTimeout(() => setSaveStatus(null), 2500)
-    } catch (err) {
-      setSaveStatus({ error: err?.message || 'network error' })
-    }
-  }
-
-  async function deleteContact() {
-    if (!confirm('Delete this contact?')) return
-    try {
-      const res = await fetch(`/api/admin/contacts/${encodeURIComponent(selected.id)}`, {
-        method: 'DELETE',
-      })
-      const json = await res.json().catch(() => ({}))
-      if (!res.ok || json.error) {
-        alert(json.error || `Delete failed (${res.status})`)
-        return
-      }
-      setSelected(null)
-      refresh()
-    } catch (err) {
-      alert(err?.message || 'network error')
-    }
-  }
-
-  async function assignToGroup() {
-    if (!assignedGroup || !selected) return
-    try {
-      const res = await fetch(`/api/admin/contacts/${encodeURIComponent(selected.id)}`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ group_id: assignedGroup }),
-      })
-      const json = await res.json().catch(() => ({}))
-      if (!res.ok || json.error) {
-        alert(json.error || `Assign failed (${res.status})`)
-        return
-      }
-      alert(json.already ? 'Already on this Loop.' : 'Added to Loop!')
-      setAssignedGroup('')
-      refresh()
-    } catch (err) {
-      alert(err?.message || 'network error')
-    }
   }
 
   // Operational date in the Indianapolis TZ — UTC midnight rolls over at 8pm
@@ -206,8 +87,10 @@ export default function Contacts() {
         const rides = (ridesByContact.get(c.id) || [])
           .slice()
           .sort((a, b) => (b.event_date || '').localeCompare(a.event_date || ''))
-        const past = rides.filter(r => r.event_date && r.event_date < today)
-        const upcoming = rides.filter(r => !r.event_date || r.event_date >= today)
+        // Open (not-closed-out) loops stay "current" until staff close them
+        // out, so a Friday rider keeps showing as Booked through the weekend.
+        const past = rides.filter(r => r.closed_out_at)
+        const upcoming = rides.filter(r => !r.closed_out_at)
         return { ...c, rides, past, upcoming }
       })
       .filter(c => !loopFilter || c.rides.some(r => r.id === loopFilter))
@@ -236,214 +119,29 @@ export default function Contacts() {
     [contacts, checkedIds]
   )
   const tonightLoop = useMemo(() => {
-    return loopOptions.find(g => g.event_date === today) || null
+    // The active open loop: today's if present, else the most recent loop that
+    // ran but hasn't been closed out yet.
+    const open = loopOptions.filter(g => !g.closed_out_at)
+    return (
+      open.find(g => g.event_date === today) ||
+      open
+        .filter(g => g.event_date && g.event_date <= today)
+        .sort((a, b) => (b.event_date || '').localeCompare(a.event_date || ''))[0] ||
+      null
+    )
   }, [loopOptions, today])
 
   if (selected) {
     const detail = enriched.find(c => c.id === selected.id) || selected
     return (
-      <main>
-        <button
-          onClick={() => { setSelected(null); setEditing(false) }}
-          style={{ color: '#f0c040', background: 'none', marginBottom: '16px', fontSize: '15px' }}
-        >
-          ← Back
-        </button>
-
-        <div className="card">
-          {editing ? (
-            <>
-              <h3 style={{ marginBottom: '12px' }}>Edit Contact</h3>
-              <input placeholder="First name" value={editForm.first_name || ''} onChange={e => setEditForm({ ...editForm, first_name: e.target.value })} />
-              <input placeholder="Last name" value={editForm.last_name || ''} onChange={e => setEditForm({ ...editForm, last_name: e.target.value })} />
-              <input placeholder="Phone" value={editForm.phone || ''} onChange={e => setEditForm({ ...editForm, phone: e.target.value })} />
-              <input placeholder="Email" value={editForm.email || ''} onChange={e => setEditForm({ ...editForm, email: e.target.value })} />
-              <button className="btn-primary" onClick={saveEdit} disabled={saveStatus === 'saving'}>
-                {saveStatus === 'saving' ? 'Saving…' : 'Save Changes'}
-              </button>
-              {saveStatus && saveStatus !== 'saving' && (
-                <p style={{
-                  marginTop: 8,
-                  fontSize: 12,
-                  color: saveStatus === 'ok' ? '#6fbf7f' : '#e07a7a',
-                }}>
-                  {saveStatus === 'ok' ? '✓ Saved' : `Save failed: ${saveStatus.error}`}
-                </p>
-              )}
-              <button onClick={() => setEditing(false)} style={{ background: 'none', color: '#888', marginTop: '8px', width: '100%' }}>Cancel</button>
-            </>
-          ) : (
-            <>
-              <p className="rider-name">{selected.first_name} {selected.last_name}</p>
-              <p className="rider-phone">📞 {selected.phone}</p>
-              <p className="rider-phone">✉️ {selected.email}</p>
-              <button onClick={() => { setEditing(true); setEditForm(selected) }} style={{ background: 'none', color: '#f0c040', marginTop: '12px', fontSize: '14px' }}>Edit</button>
-              <button onClick={deleteContact} style={{ background: 'none', color: '#ff4444', marginTop: '4px', fontSize: '14px' }}>Delete</button>
-            </>
-          )}
-        </div>
-
-        <div className="card">
-          <h3>Ride History ({detail.past?.length || 0})</h3>
-          {(!detail.past || detail.past.length === 0) ? (
-            <p style={{ color: '#888', fontSize: '13px' }}>No past rides recorded.</p>
-          ) : (
-            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px', marginTop: '6px' }}>
-              {detail.past.map(g => (
-                <span key={g.id} style={rideChipStyle}>
-                  {formatEventDate(g.event_date)}
-                </span>
-              ))}
-            </div>
-          )}
-          {detail.upcoming?.length > 0 && (
-            <>
-              <h3 style={{ marginTop: '14px' }}>Upcoming ({detail.upcoming.length})</h3>
-              <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px', marginTop: '6px' }}>
-                {detail.upcoming.map(g => (
-                  <span key={g.id} style={{ ...rideChipStyle, background: '#1a2a1a', color: '#4aa84a', borderColor: '#2a3f2a' }}>
-                    {formatEventDate(g.event_date) || g.name}
-                  </span>
-                ))}
-              </div>
-            </>
-          )}
-        </div>
-
-        <div className="card">
-          <h3>Assign to Upcoming Loop</h3>
-          {(() => {
-            const upcomingGroups = groups
-              .filter(g => g.event_date && g.event_date >= today)
-              .sort((a, b) => (a.event_date || '').localeCompare(b.event_date || ''))
-            if (upcomingGroups.length === 0) {
-              return <p style={{ color: '#888', fontSize: '13px' }}>No upcoming loops scheduled.</p>
-            }
-            return (
-              <>
-                <select value={assignedGroup} onChange={e => setAssignedGroup(e.target.value)}>
-                  <option value="">Select a loop...</option>
-                  {upcomingGroups.map(g => (
-                    <option key={g.id} value={g.id}>
-                      {formatEventDate(g.event_date)}{g.pickup_time ? ` · ${g.pickup_time}` : ''} — {g.name}
-                    </option>
-                  ))}
-                </select>
-                <button className="btn-green" onClick={assignToGroup}>Assign</button>
-              </>
-            )
-          })()}
-        </div>
-
-        <div className="card">
-          <h3>Tickets purchased ({orders.length})</h3>
-          {orders.length === 0 ? (
-            <p style={{ color: '#888', fontSize: '13px' }}>No orders found.</p>
-          ) : (
-            <div style={{ display: 'grid', gap: 10, marginTop: 8 }}>
-              {orders.map(o => {
-                const liveItems = (o.order_items || []).filter(i => !i.voided_at)
-                const evDate = o.event?.event_date ? formatEventDate(o.event.event_date) : null
-                return (
-                  <div key={o.id} style={{
-                    padding: 12,
-                    background: '#0f0f12',
-                    border: '1px solid #1e1e23',
-                    borderRadius: 10,
-                  }}>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', gap: 8 }}>
-                      <div>
-                        <div style={{ fontSize: 13, fontWeight: 600, color: '#e8e8ea' }}>
-                          {evDate || o.event?.name || 'Loop'}
-                          {o.event?.pickup_time ? ` · ${o.event.pickup_time}` : ''}
-                        </div>
-                        <div style={{ fontSize: 11, color: '#9c9ca3', marginTop: 2 }}>
-                          {liveItems.length} of {o.order_items?.length || 0} active
-                          {o.total_cents != null && ` · $${(o.total_cents / 100).toFixed(2)}`}
-                          {' · '}
-                          <span style={{
-                            color: o.status === 'paid' ? '#6fbf7f'
-                                  : o.status === 'voided' ? '#9c9ca3'
-                                  : o.status === 'refunded' ? '#e07a7a' : '#f0c24a',
-                          }}>{o.status}</span>
-                        </div>
-                      </div>
-                    </div>
-                    <div style={{ marginTop: 8, display: 'grid', gap: 4 }}>
-                      {(o.order_items || []).map(item => {
-                        const isVoided = !!item.voided_at
-                        return (
-                          <div key={item.id} style={{
-                            display: 'flex',
-                            justifyContent: 'space-between',
-                            alignItems: 'center',
-                            padding: '6px 8px',
-                            background: isVoided ? '#1a1a1f' : '#16161a',
-                            borderRadius: 6,
-                            fontSize: 12,
-                          }}>
-                            <span style={{
-                              color: isVoided ? '#666' : '#c8c8cc',
-                              textDecoration: isVoided ? 'line-through' : 'none',
-                            }}>
-                              {item.rider_first_name || 'Guest'} {item.rider_last_name || ''}
-                              {' · '}
-                              ${((item.unit_price_cents || 0) / 100).toFixed(2)}
-                              {isVoided && (
-                                <span style={{ marginLeft: 8, color: '#888', fontStyle: 'italic' }}>
-                                  Voided{item.void_reason ? ` · ${item.void_reason}` : ''}{item.voided_by ? ` · ${item.voided_by}` : ''}
-                                </span>
-                              )}
-                            </span>
-                            {!isVoided && (
-                              <button
-                                type="button"
-                                onClick={() => voidOrderItem(item, o)}
-                                disabled={voidingId === item.id}
-                                style={{
-                                  background: 'transparent',
-                                  color: '#e07a7a',
-                                  border: '1px solid #3a1f1f',
-                                  padding: '3px 8px',
-                                  borderRadius: 6,
-                                  fontSize: 11,
-                                  fontWeight: 600,
-                                  cursor: voidingId === item.id ? 'wait' : 'pointer',
-                                }}
-                              >
-                                {voidingId === item.id ? 'Voiding…' : 'Void'}
-                              </button>
-                            )}
-                          </div>
-                        )
-                      })}
-                    </div>
-                  </div>
-                )
-              })}
-            </div>
-          )}
-        </div>
-
-        <div className="card">
-          <h3>Send SMS</h3>
-          <textarea rows={3} placeholder="Type your message..." value={message} onChange={e => setMessage(e.target.value)} />
-          <button className="btn-primary" onClick={async () => {
-            if (!message || !selected?.phone) return
-            const res = await fetch('/api/send-sms', {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({ to: selected.phone, message }),
-            })
-            const data = await res.json().catch(() => ({}))
-            if (res.ok && data.success) {
-              alert('Text sent!'); setMessage('')
-            } else {
-              alert(`Error: ${data.error || `http_${res.status}`}${data.detail ? ` — ${data.detail}` : ''}`)
-            }
-          }}>Send Text</button>
-        </div>
-      </main>
+      <ContactDetail
+        key={detail.id}
+        contact={detail}
+        groups={groups}
+        today={today}
+        onBack={() => setSelected(null)}
+        onRefresh={refresh}
+      />
     )
   }
 
@@ -469,9 +167,7 @@ export default function Contacts() {
   }
 
   const allVisibleChecked = enriched.length > 0 && enriched.every(c => checkedIds.has(c.id))
-
   const activeLoop = loopOptions.find(g => g.id === loopFilter) || null
-
   const dateMatchedLoop = datePicked ? loopOptions.find(g => g.event_date === datePicked) : null
   const dateMissedLookup = datePicked && !dateMatchedLoop
 
@@ -482,114 +178,53 @@ export default function Contacts() {
     setLoopFilter(match ? match.id : '')
   }
 
+  function selectLoop(id) {
+    setLoopFilter(id)
+    setCheckedIds(new Set())
+  }
+
+  function selectLoopFromDropdown(id) {
+    setLoopFilter(id)
+    setCheckedIds(new Set())
+    setDatePicked('')
+  }
+
+  async function deleteSelected() {
+    if (!confirm(`Delete ${checkedCount} contact${checkedCount === 1 ? '' : 's'}? This removes them from every Loop they're on.`)) return
+    const ids = Array.from(checkedIds)
+    const failures = []
+    for (const id of ids) {
+      try {
+        const res = await fetch(`/api/admin/contacts/${encodeURIComponent(id)}`, { method: 'DELETE' })
+        if (!res.ok) {
+          const j = await res.json().catch(() => ({}))
+          failures.push(`${id.slice(0, 6)}: ${j.error || res.status}`)
+        }
+      } catch (err) {
+        failures.push(`${id.slice(0, 6)}: ${err?.message || 'network error'}`)
+      }
+    }
+    setCheckedIds(new Set())
+    refresh()
+    if (failures.length) alert(`Some deletes failed:\n${failures.join('\n')}`)
+  }
+
   return (
     <main style={{ paddingBottom: checkedCount > 0 ? 96 : undefined }}>
       <h1>Contacts</h1>
 
-      <div style={{
-        display: 'flex',
-        gap: 6,
-        marginBottom: 8,
-        overflowX: 'auto',
-        paddingBottom: 4,
-        scrollbarWidth: 'none',
-      }}>
-        <FilterChip
-          active={!loopFilter}
-          onClick={() => { setLoopFilter(''); setCheckedIds(new Set()) }}
-          label="All contacts"
-        />
-        {tonightLoop && (
-          <FilterChip
-            active={loopFilter === tonightLoop.id}
-            onClick={() => { setLoopFilter(tonightLoop.id); setCheckedIds(new Set()) }}
-            label="Tonight's Loop"
-          />
-        )}
-        {loopOptions.slice(0, 6).map(g => {
-          if (tonightLoop && g.id === tonightLoop.id) return null
-          return (
-            <FilterChip
-              key={g.id}
-              active={loopFilter === g.id}
-              onClick={() => { setLoopFilter(g.id); setCheckedIds(new Set()) }}
-              label={formatEventDate(g.event_date) || g.name || 'Loop'}
-            />
-          )
-        })}
-      </div>
+      <LoopFilterChips
+        loopFilter={loopFilter}
+        loopOptions={loopOptions}
+        tonightLoop={tonightLoop}
+        datePicked={datePicked}
+        activeLoop={activeLoop}
+        dateMissedLookup={dateMissedLookup}
+        onSelectLoop={selectLoop}
+        onSelectDate={handleDatePick}
+        onSelectLoopFromDropdown={selectLoopFromDropdown}
+      />
 
-      <div style={{ display: 'flex', gap: 8, alignItems: 'center', margin: '0 0 8px', flexWrap: 'wrap' }}>
-        <label style={{ fontSize: 12, color: '#9c9ca3', display: 'inline-flex', alignItems: 'center', gap: 6 }}>
-          Pick a date:
-          <input
-            type="date"
-            value={datePicked}
-            onChange={e => handleDatePick(e.target.value)}
-            style={{
-              background: datePicked ? '#2a2316' : '#121215',
-              color: datePicked ? '#f0c040' : '#c8c8cc',
-              border: `1px solid ${datePicked ? '#3a3220' : '#2a2a31'}`,
-              borderRadius: 8,
-              padding: '8px 10px',
-              fontSize: 13,
-              colorScheme: 'dark',
-              margin: 0,
-            }}
-          />
-        </label>
-        {datePicked && (
-          <button
-            onClick={() => handleDatePick('')}
-            style={{
-              background: 'none',
-              color: '#9c9ca3',
-              border: '1px solid #2a2a31',
-              padding: '6px 10px',
-              borderRadius: 6,
-              fontSize: 11,
-              cursor: 'pointer',
-            }}
-          >
-            Clear date
-          </button>
-        )}
-      </div>
-
-      {loopOptions.length > 6 && (
-        <select
-          value={loopFilter}
-          onChange={e => { setLoopFilter(e.target.value); setCheckedIds(new Set()); setDatePicked('') }}
-          style={{
-            width: '100%',
-            background: loopFilter ? '#2a2316' : '#121215',
-            color: loopFilter ? '#f0c040' : '#c8c8cc',
-            border: `1px solid ${loopFilter ? '#3a3220' : '#1e1e23'}`,
-            borderRadius: 8,
-            padding: '10px 12px',
-            fontSize: 14,
-            margin: '0 0 8px',
-          }}
-        >
-          <option value="">— Pick any Loop —</option>
-          {loopOptions.map(g => (
-            <option key={g.id} value={g.id}>
-              {formatEventDate(g.event_date)}{g.pickup_time ? ` · ${g.pickup_time}` : ''}{g.name ? ` — ${g.name}` : ''}
-            </option>
-          ))}
-        </select>
-      )}
-
-      {dateMissedLookup && (
-        <p style={{ color: '#f87171', fontSize: 12, margin: '0 0 8px' }}>
-          No Loop on {formatEventDate(datePicked)}.
-        </p>
-      )}
-      {activeLoop && (
-        <p style={{ color: '#f0c040', fontSize: 12, margin: '0 0 8px' }}>
-          Showing riders from {formatEventDate(activeLoop.event_date) || activeLoop.name}
-        </p>
-      )}
       <input
         placeholder="Search by name, phone, or email..."
         value={search}
@@ -604,15 +239,9 @@ export default function Contacts() {
           <button
             onClick={toggleAllVisible}
             style={{
-              background: 'none',
-              color: '#9c9ca3',
-              border: '1px solid #2a2a31',
-              padding: '4px 10px',
-              borderRadius: 6,
-              fontSize: 11,
-              letterSpacing: '0.08em',
-              textTransform: 'uppercase',
-              cursor: 'pointer',
+              background: 'none', color: '#9c9ca3', border: '1px solid #2a2a31',
+              padding: '4px 10px', borderRadius: 6, fontSize: 11,
+              letterSpacing: '0.08em', textTransform: 'uppercase', cursor: 'pointer',
             }}
           >
             {allVisibleChecked ? 'Clear' : 'Select all visible'}
@@ -642,25 +271,13 @@ export default function Contacts() {
             >
               <label
                 onClick={e => e.stopPropagation()}
-                style={{
-                  display: 'inline-flex',
-                  alignItems: 'center',
-                  cursor: 'pointer',
-                  padding: 4,
-                  margin: -4,
-                }}
+                style={{ display: 'inline-flex', alignItems: 'center', cursor: 'pointer', padding: 4, margin: -4 }}
               >
                 <input
                   type="checkbox"
                   checked={checked}
                   onChange={() => toggleCheck(c.id)}
-                  style={{
-                    width: 18,
-                    height: 18,
-                    accentColor: '#d4a333',
-                    cursor: 'pointer',
-                    margin: 0,
-                  }}
+                  style={{ width: 18, height: 18, accentColor: '#d4a333', cursor: 'pointer', margin: 0 }}
                 />
               </label>
               <div style={{ minWidth: 0, flex: 1 }}>
@@ -692,144 +309,19 @@ export default function Contacts() {
         </p>
       )}
 
-      {checkedCount > 0 && (
-        <div
-          style={{
-            position: 'fixed',
-            left: '50%',
-            bottom: 'max(20px, calc(20px + env(safe-area-inset-bottom)))',
-            transform: 'translateX(-50%)',
-            zIndex: 50,
-            background: 'linear-gradient(180deg, #1a1a22, #121216)',
-            border: '1px solid #2a2a31',
-            boxShadow: '0 20px 50px rgba(0,0,0,0.5), 0 0 0 1px rgba(212,163,51,0.15)',
-            borderRadius: 14,
-            padding: '10px 12px 10px 16px',
-            display: 'flex',
-            alignItems: 'center',
-            gap: 12,
-          }}
-        >
-          <div style={{ color: '#e8e8ea', fontSize: 13 }}>
-            <span style={{ color: '#f0c24a', fontWeight: 700 }}>{checkedCount}</span> selected
-          </div>
-          <button
-            onClick={() => setCheckedIds(new Set())}
-            style={{ background: 'none', color: '#9c9ca3', border: 0, fontSize: 12, cursor: 'pointer', padding: '4px 8px' }}
-          >
-            Clear
-          </button>
-          <button
-            onClick={() => setBroadcastOpen(true)}
-            style={{
-              padding: '10px 18px',
-              borderRadius: 10,
-              border: 0,
-              background: 'linear-gradient(180deg, #f0c24a, #d4a333)',
-              color: '#0a0a0b',
-              fontWeight: 700,
-              fontSize: 13,
-              letterSpacing: '0.05em',
-              textTransform: 'uppercase',
-              cursor: 'pointer',
-            }}
-          >
-            Message {checkedCount}
-          </button>
-          <button
-            onClick={async () => {
-              if (!confirm(`Delete ${checkedCount} contact${checkedCount === 1 ? '' : 's'}? This removes them from every Loop they're on.`)) return
-              const ids = Array.from(checkedIds)
-              const failures = []
-              for (const id of ids) {
-                try {
-                  const res = await fetch(`/api/admin/contacts/${encodeURIComponent(id)}`, { method: 'DELETE' })
-                  if (!res.ok) {
-                    const j = await res.json().catch(() => ({}))
-                    failures.push(`${id.slice(0, 6)}: ${j.error || res.status}`)
-                  }
-                } catch (err) {
-                  failures.push(`${id.slice(0, 6)}: ${err?.message || 'network error'}`)
-                }
-              }
-              setCheckedIds(new Set())
-              refresh()
-              if (failures.length) alert(`Some deletes failed:\n${failures.join('\n')}`)
-            }}
-            style={{
-              padding: '10px 16px',
-              borderRadius: 10,
-              border: '1px solid #3a1f1f',
-              background: 'transparent',
-              color: '#e07a7a',
-              fontWeight: 700,
-              fontSize: 13,
-              letterSpacing: '0.05em',
-              textTransform: 'uppercase',
-              cursor: 'pointer',
-            }}
-          >
-            Delete {checkedCount}
-          </button>
-        </div>
-      )}
+      <SelectionBar
+        count={checkedCount}
+        onClear={() => setCheckedIds(new Set())}
+        onMessage={() => setBroadcastOpen(true)}
+        onDelete={deleteSelected}
+      />
 
       {broadcastOpen && (
         <BroadcastModal
           contacts={broadcastTargets}
-          onClose={() => {
-            setBroadcastOpen(false)
-          }}
+          onClose={() => setBroadcastOpen(false)}
         />
       )}
     </main>
-  )
-}
-
-const rideChipStyle = {
-  background: '#2a2316',
-  color: '#f0c040',
-  border: '1px solid #3a3220',
-  fontSize: '12px',
-  fontWeight: 500,
-  padding: '3px 8px',
-  borderRadius: '10px',
-  whiteSpace: 'nowrap',
-}
-
-function formatEventDate(iso) {
-  if (!iso) return null
-  try {
-    const d = new Date(`${iso}T12:00:00-05:00`)
-    return d.toLocaleDateString('en-US', {
-      month: 'short',
-      day: 'numeric',
-      timeZone: 'America/Indiana/Indianapolis',
-    })
-  } catch {
-    return iso
-  }
-}
-
-function FilterChip({ active, onClick, label }) {
-  return (
-    <button
-      onClick={onClick}
-      style={{
-        flexShrink: 0,
-        padding: '8px 14px',
-        borderRadius: 999,
-        border: `1px solid ${active ? '#d4a333' : '#2a2a31'}`,
-        background: active ? 'linear-gradient(180deg, #f0c24a, #d4a333)' : 'transparent',
-        color: active ? '#0a0a0b' : '#c8c8cc',
-        fontSize: 13,
-        fontWeight: active ? 700 : 500,
-        cursor: 'pointer',
-        whiteSpace: 'nowrap',
-        boxShadow: active ? '0 0 16px rgba(212,163,51,0.35)' : 'none',
-      }}
-    >
-      {label}
-    </button>
   )
 }

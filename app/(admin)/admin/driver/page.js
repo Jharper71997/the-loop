@@ -1,5 +1,5 @@
 import DriverClient from './DriverClient'
-import { getUpcomingLoops } from '@/lib/upcomingLoops'
+import { getActiveAdminLoop } from '@/lib/upcomingLoops'
 import { supabaseAdmin } from '@/lib/supabaseAdmin'
 import { lookupBarsByNames } from '@/lib/barsServer'
 import { generateStopsForEvent } from '@/lib/routeStopLogs'
@@ -10,8 +10,7 @@ export const dynamic = 'force-dynamic'
 export default async function DriverPage() {
   let nextLoop = null
   try {
-    const loops = await getUpcomingLoops({ limit: 1 })
-    nextLoop = loops[0] || null
+    nextLoop = await getActiveAdminLoop()
   } catch {}
 
   // Pull the schedule for the next loop so the map can show route stops.

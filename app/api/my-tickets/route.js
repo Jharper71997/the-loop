@@ -3,6 +3,7 @@ import { supabaseAdmin } from '@/lib/supabaseAdmin'
 import { contactHasSignedCurrent } from '@/lib/waiver'
 import { normalizePhone } from '@/lib/phone'
 import { appUrl } from '@/lib/stripe'
+import { getOrCreateReferralCode } from '@/lib/riderReferral'
 
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
@@ -188,7 +189,33 @@ export async function POST(req) {
     }
   })
 
-  return Response.json({ orders: result })
+  // Rider referral: surface the looked-up rider's personal invite link +
+  // confirmed-referral count so they can share it straight from My Tickets.
+  // Leaderboard-only — no discount is tied to it.
+  let referral = null
+  const { data: selfContact } = await sb
+    .from('contacts')
+    .select('id')
+    .eq('phone', normPhone)
+    .maybeSingle()
+  const primaryContactId = selfContact?.id || (byBuyer && byBuyer[0]?.contact_id) || null
+  if (primaryContactId) {
+    try {
+      const code = await getOrCreateReferralCode(sb, primaryContactId)
+      if (code) {
+        const { count } = await sb
+          .from('orders')
+          .select('id', { count: 'exact', head: true })
+          .eq('referrer_contact_id', primaryContactId)
+          .eq('status', 'paid')
+        referral = { code, url: `${appUrl()}/invite/${code}`, confirmed: count || 0 }
+      }
+    } catch (err) {
+      console.error('[my-tickets] referral lookup failed', err)
+    }
+  }
+
+  return Response.json({ orders: result, referral })
 }
 
 function splitFirst(name) {

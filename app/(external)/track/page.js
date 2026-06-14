@@ -1,6 +1,7 @@
 import { supabaseAdmin } from '@/lib/supabaseAdmin'
 import { BARS } from '@/lib/bars'
 import { lookupBarsByNames } from '@/lib/barsServer'
+import { operationalDateInTZ } from '@/lib/schedule'
 import TrackMap from './TrackMap'
 import CohortRoll from './CohortRoll'
 
@@ -135,7 +136,11 @@ async function loadActiveLoop() {
   let sb
   try { sb = supabaseAdmin() } catch { return { stops: [], loopLabel: null, subtitle: null } }
 
-  const today = new Date().toISOString().slice(0, 10)
+  // Eastern operational date: keeps tonight's loop visible until 9 AM the next
+  // morning. Plain `toISOString().slice(0,10)` is UTC and rolls over mid-shift
+  // (~8 PM EDT), which silently swaps tonight's event for next week's and
+  // breaks the live-track card. Same fix as lib/upcomingLoops.
+  const today = operationalDateInTZ()
 
   // Mirror the public events feed: only show on-sale events to riders, then
   // pull the schedule off the linked group. This keeps the Track map in
