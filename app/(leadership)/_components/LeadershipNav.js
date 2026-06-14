@@ -8,40 +8,50 @@ import { supabase } from '@/lib/supabase'
 // Desktop keeps the tab bar + a contextual sub-row. Mobile collapses
 // everything into a single hamburger menu so nothing scrolls off-screen.
 
-const INCOME_SUB_LINKS = [
-  { href: '/leadership/income',    label: 'Overview' },
-  { href: '/leadership/expenses',  label: 'Expenses' },
-  { href: '/leadership/cash',      label: 'Cash' },
-  { href: '/leadership/sponsors',  label: 'Sponsors' },
-  { href: '/leadership/bars',      label: 'Bars' },
-  { href: '/leadership/ridership', label: 'Ridership' },
-  { href: '/leadership/passes',    label: 'Loop Pass' },
+// Five plain top tabs. Everything lives under one of these; the jargony
+// operational pages (alerts, automations, flyer tracking) sit under a quiet
+// "Settings" link off the main bar.
+const MONEY_LINKS = [
+  { href: '/leadership/income',   label: 'Overview' },
+  { href: '/leadership/expenses', label: 'Expenses' },
+  { href: '/leadership/cash',     label: 'Cash' },
 ]
-
-const DRIVERS_SUB_LINKS = [
-  { href: '/leadership/drivers',           label: 'Roster' },
+const BARS_LINKS = [
+  { href: '/leadership/bars',      label: 'Bars' },
+  { href: '/leadership/sponsors',  label: 'Sponsors' },
+  { href: '/leadership/ridership', label: 'Ridership' },
+]
+const LOOPS_LINKS = [
+  { href: '/leadership/loops',             label: 'Loops' },
+  { href: '/leadership/schedule',          label: 'Schedule' },
+  { href: '/leadership/drivers',           label: 'Drivers' },
   { href: '/leadership/drivers/route-log', label: 'Route log' },
 ]
-
-const INCOME_GROUP = INCOME_SUB_LINKS.map(l => l.href)
-const DRIVERS_GROUP = DRIVERS_SUB_LINKS.map(l => l.href)
-
-const TOP_LINKS = [
-  { href: '/leadership',             label: 'Scoreboard' },
-  { href: '/leadership/income',      label: 'Income', groupPaths: INCOME_GROUP, children: INCOME_SUB_LINKS },
+const GROWTH_LINKS = [
   { href: '/leadership/leaderboard', label: 'Leaderboard' },
   { href: '/leadership/referrals',   label: 'Referrals' },
-  { href: '/leadership/loops',       label: 'Loops' },
-  { href: '/leadership/drivers',     label: 'Drivers', groupPaths: DRIVERS_GROUP, children: DRIVERS_SUB_LINKS },
-  { href: '/leadership/schedule',    label: 'Schedule' },
-  { href: '/leadership/attribution', label: 'Attribution' },
-  { href: '/leadership/alerts',      label: 'Alerts' },
+  { href: '/leadership/passes',      label: 'Loop Pass' },
+]
+const SETTINGS_LINKS = [
   { href: '/leadership/automations', label: 'Automations' },
+  { href: '/leadership/alerts',      label: 'Alerts' },
+  { href: '/leadership/attribution', label: 'Flyer tracking' },
+]
+
+const TOP_LINKS = [
+  { href: '/leadership',             label: 'Home' },
+  { href: '/leadership/income',      label: 'Money',  groupPaths: MONEY_LINKS.map(l => l.href),  children: MONEY_LINKS },
+  { href: '/leadership/bars',        label: 'Bars',   groupPaths: BARS_LINKS.map(l => l.href),   children: BARS_LINKS },
+  { href: '/leadership/loops',       label: 'Loops',  groupPaths: LOOPS_LINKS.map(l => l.href),  children: LOOPS_LINKS },
+  { href: '/leadership/leaderboard', label: 'Growth', groupPaths: GROWTH_LINKS.map(l => l.href), children: GROWTH_LINKS },
 ]
 
 const SUBNAV_GROUPS = [
-  { paths: INCOME_GROUP,  links: INCOME_SUB_LINKS },
-  { paths: DRIVERS_GROUP, links: DRIVERS_SUB_LINKS },
+  { paths: MONEY_LINKS.map(l => l.href),    links: MONEY_LINKS },
+  { paths: BARS_LINKS.map(l => l.href),     links: BARS_LINKS },
+  { paths: LOOPS_LINKS.map(l => l.href),    links: LOOPS_LINKS },
+  { paths: GROWTH_LINKS.map(l => l.href),   links: GROWTH_LINKS },
+  { paths: SETTINGS_LINKS.map(l => l.href), links: SETTINGS_LINKS },
 ]
 
 function matchesPath(pathname, href) {
@@ -69,6 +79,7 @@ export default function LeadershipNav() {
   const [menuOpen, setMenuOpen] = useState(false)
   const subLinks = activeSubnavLinks(pathname)
   const showSubNav = subLinks != null
+  const settingsActive = SETTINGS_LINKS.some(l => matchesPath(pathname, l.href))
 
   useEffect(() => {
     supabase.auth.getUser().then(({ data }) => setEmail(data?.user?.email || null))
@@ -146,6 +157,16 @@ export default function LeadershipNav() {
               {email.split('@')[0]}
             </span>
           )}
+          <a href="/leadership/automations" className="leadership-settings-desktop" style={{
+            color: settingsActive ? '#d4a333' : '#9c9ca3',
+            fontFamily: '-apple-system, "Segoe UI", Roboto, sans-serif',
+            fontSize: '12px',
+            fontWeight: 500,
+            textDecoration: 'none',
+            whiteSpace: 'nowrap',
+          }}>
+            Settings
+          </a>
           <button className="leadership-nav-signout-desktop" onClick={signOut} style={{
             background: 'none',
             color: '#9c9ca3',
@@ -214,6 +235,7 @@ export default function LeadershipNav() {
           .leadership-subnav-desktop { display: none !important; }
           .leadership-nav-email { display: none !important; }
           .leadership-nav-signout-desktop { display: none !important; }
+          .leadership-settings-desktop { display: none !important; }
           .leadership-hamburger { display: inline-flex !important; }
         }
       `}</style>
@@ -315,6 +337,40 @@ function MobileMenu({ pathname, email, onClose, onSignOut }) {
           </div>
         )
       })}
+
+      <div style={{ borderTop: '1px solid #16161c', marginTop: 4 }}>
+        <div style={{
+          padding: '14px 22px 6px',
+          color: '#6f6f76',
+          fontFamily: '-apple-system, "Segoe UI", Roboto, sans-serif',
+          fontSize: 12, fontWeight: 600, letterSpacing: '0.14em', textTransform: 'uppercase',
+        }}>
+          Settings
+        </div>
+        {SETTINGS_LINKS.map(child => {
+          const childActive = matchesPath(pathname, child.href)
+          return (
+            <a
+              key={child.href}
+              href={child.href}
+              onClick={onClose}
+              style={{
+                display: 'block',
+                padding: '12px 22px 12px 38px',
+                paddingRight: 'max(22px, env(safe-area-inset-right))',
+                textDecoration: 'none',
+                color: childActive ? '#d4a333' : '#9c9ca3',
+                fontFamily: '-apple-system, "Segoe UI", Roboto, sans-serif',
+                fontSize: 15,
+                fontWeight: childActive ? 600 : 500,
+                borderBottom: '1px solid #16161c',
+              }}
+            >
+              {child.label}
+            </a>
+          )
+        })}
+      </div>
 
       <div style={{
         display: 'flex',
