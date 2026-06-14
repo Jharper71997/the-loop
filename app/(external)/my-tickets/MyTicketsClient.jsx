@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
+import SecurityChat from '../_components/SecurityChat'
 
 const GOLD = '#d4a333'
 const GOLD_HI = '#f0c24a'
@@ -21,6 +22,7 @@ export default function MyTicketsClient() {
   const [searched, setSearched] = useState(false)
   const [orders, setOrders] = useState([])
   const [referral, setReferral] = useState(null)
+  const [chatCode, setChatCode] = useState(null)
   const [error, setError] = useState(null)
 
   async function lookup(rawPhone, { remember = true } = {}) {
@@ -46,6 +48,7 @@ export default function MyTicketsClient() {
       }
       setOrders(json.orders || [])
       setReferral(json.referral || null)
+      setChatCode(json.chat_code || null)
       setSearched(true)
       // Remember this number so the next visit skips the form.
       if (remember) {
@@ -69,6 +72,7 @@ export default function MyTicketsClient() {
     let saved = null
     try { saved = window.localStorage.getItem(STORAGE_KEY) } catch {}
     if (saved) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setPhone(saved)
       lookup(saved)
     }
@@ -78,6 +82,7 @@ export default function MyTicketsClient() {
     setSearched(false)
     setOrders([])
     setReferral(null)
+    setChatCode(null)
     setError(null)
     setPhone('')
     // Forget the saved number so they can look up a different one.
@@ -106,6 +111,8 @@ export default function MyTicketsClient() {
 
         {referral && <ReferralCard referral={referral} />}
 
+        <AddToHomeScreen />
+
         <button
           type="button"
           onClick={reset}
@@ -123,6 +130,10 @@ export default function MyTicketsClient() {
         >
           Look up another
         </button>
+
+        {/* Floating "Message security" button — reachable here without opening a
+            full boarding pass. Only renders when they hold a ticket for tonight. */}
+        {chatCode && <SecurityChat code={chatCode} />}
       </div>
     )
   }
@@ -590,6 +601,61 @@ function ReferralCard({ referral }) {
         Share my link
       </button>
       {msg && <div style={{ color: GREEN, fontSize: 12, textAlign: 'center', marginTop: 8 }}>{msg}</div>}
+    </Card>
+  )
+}
+
+// Platform-aware "save the Loop to your home screen" how-to. Hides itself once
+// the rider has already installed it (running standalone). Saving it to the home
+// screen is also what lets push alerts (security replies, shuttle heads-ups)
+// reach them on iPhone.
+function AddToHomeScreen() {
+  const [platform, setPlatform] = useState('pending') // pending | hidden | ios | android | other
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return
+    const standalone = window.matchMedia?.('(display-mode: standalone)')?.matches
+      || window.navigator.standalone === true
+    const ua = navigator.userAgent || ''
+    const isIOS = /iphone|ipad|ipod/i.test(ua)
+      || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1)
+    const isAndroid = /android/i.test(ua)
+    const next = standalone ? 'hidden' : isIOS ? 'ios' : isAndroid ? 'android' : 'other'
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    setPlatform(next)
+  }, [])
+
+  if (platform === 'pending' || platform === 'hidden') return null
+
+  const steps = platform === 'ios'
+    ? [
+        <>Tap the <strong style={{ color: INK }}>Share</strong> button (the square with an up-arrow) at the bottom of Safari.</>,
+        <>Scroll down and tap <strong style={{ color: INK }}>Add to Home Screen</strong>, then <strong style={{ color: INK }}>Add</strong>.</>,
+        <>Open the Loop from the new icon — your tickets, pickup, and security chat in one tap, plus alerts.</>,
+      ]
+    : platform === 'android'
+    ? [
+        <>Tap the <strong style={{ color: INK }}>⋮</strong> menu (top-right of Chrome).</>,
+        <>Tap <strong style={{ color: INK }}>Add to Home screen</strong> (or <strong style={{ color: INK }}>Install app</strong>), then confirm.</>,
+        <>Open the Loop from the new icon — your tickets, pickup, and security chat in one tap, plus alerts.</>,
+      ]
+    : [
+        <>Open this page in your phone&rsquo;s browser.</>,
+        <>Use the browser menu and choose <strong style={{ color: INK }}>Add to Home Screen</strong> or <strong style={{ color: INK }}>Install</strong>.</>,
+        <>Open the Loop from the new icon — your tickets and security chat in one tap.</>,
+      ]
+
+  return (
+    <Card>
+      <div style={{ color: GOLD, fontSize: 11, letterSpacing: '0.18em', textTransform: 'uppercase', fontWeight: 700, marginBottom: 8 }}>
+        📱 Save the Loop to your phone
+      </div>
+      <p style={{ color: INK_DIM, fontSize: 13, margin: '0 0 10px' }}>
+        Add it to your home screen so your tickets and the security chat are one tap away all night.
+      </p>
+      <ol style={{ color: INK_DIM, fontSize: 13, margin: 0, paddingLeft: 18, lineHeight: 1.7 }}>
+        {steps.map((s, i) => <li key={i}>{s}</li>)}
+      </ol>
     </Card>
   )
 }
