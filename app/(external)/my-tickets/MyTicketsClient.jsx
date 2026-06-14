@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 
 const GOLD = '#d4a333'
 const GOLD_HI = '#f0c24a'
@@ -11,6 +11,10 @@ const LINE = 'rgba(255,255,255,0.08)'
 const RED = '#e07a7a'
 const GREEN = '#6fbf7f'
 
+// Remember the phone the rider looked up with so they land straight on their
+// tickets next visit instead of re-typing it every time.
+const STORAGE_KEY = 'brewloop:mytickets:phone'
+
 export default function MyTicketsClient() {
   const [phone, setPhone] = useState('')
   const [submitting, setSubmitting] = useState(false)
@@ -19,16 +23,16 @@ export default function MyTicketsClient() {
   const [referral, setReferral] = useState(null)
   const [error, setError] = useState(null)
 
-  async function onSubmit(e) {
-    e.preventDefault()
-    if (submitting) return
+  async function lookup(rawPhone, { remember = true } = {}) {
+    const p = (rawPhone || '').trim()
+    if (p.replace(/\D/g, '').length < 10) return
     setSubmitting(true)
     setError(null)
     try {
       const res = await fetch('/api/my-tickets', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ phone: phone.trim() }),
+        body: JSON.stringify({ phone: p }),
       })
       const json = await res.json()
       if (!res.ok) {
@@ -43,17 +47,41 @@ export default function MyTicketsClient() {
       setOrders(json.orders || [])
       setReferral(json.referral || null)
       setSearched(true)
+      // Remember this number so the next visit skips the form.
+      if (remember) {
+        try { window.localStorage.setItem(STORAGE_KEY, p) } catch {}
+      }
     } catch (err) {
       setError(err.message)
     }
     setSubmitting(false)
   }
 
+  function onSubmit(e) {
+    e.preventDefault()
+    if (submitting) return
+    lookup(phone)
+  }
+
+  // On return visits, auto-load the saved number so riders go straight to their
+  // tickets (and the chat on each boarding pass) without re-typing it.
+  useEffect(() => {
+    let saved = null
+    try { saved = window.localStorage.getItem(STORAGE_KEY) } catch {}
+    if (saved) {
+      setPhone(saved)
+      lookup(saved)
+    }
+  }, [])
+
   function reset() {
     setSearched(false)
     setOrders([])
     setReferral(null)
     setError(null)
+    setPhone('')
+    // Forget the saved number so they can look up a different one.
+    try { window.localStorage.removeItem(STORAGE_KEY) } catch {}
   }
 
   if (searched) {

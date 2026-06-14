@@ -132,6 +132,17 @@ export default function SecurityClient() {
           </>
         ) : (
           <div style={{ display: 'grid', gap: 12 }}>
+            <div style={{ background: SURFACE, border: `1px solid ${LINE}`, borderRadius: 10, padding: '12px 14px' }}>
+              <div style={{ color: GOLD, fontSize: 11, letterSpacing: '0.18em', textTransform: 'uppercase', fontWeight: 700, marginBottom: 7 }}>
+                How messaging works
+              </div>
+              <ul style={{ color: INK_DIM, fontSize: 12.5, margin: 0, paddingLeft: 16, lineHeight: 1.7 }}>
+                <li>Riders message you from their boarding pass — &ldquo;where&rsquo;s pickup,&rdquo; &ldquo;I&rsquo;m at the door,&rdquo; etc.</li>
+                <li>Each rider is a thread below; a gold badge shows unread count.</li>
+                <li>Tap a rider to read and reply — they see it on their ticket within seconds.</li>
+                <li>Turn on alerts above so new messages buzz this phone even when it&rsquo;s closed.</li>
+              </ul>
+            </div>
             <EnableSecurityAlerts />
             <SecurityMessages onUnreadChange={setUnread} />
           </div>
