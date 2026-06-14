@@ -2,6 +2,7 @@ import { createServerClient } from '@supabase/ssr'
 import { cookies } from 'next/headers'
 import { supabaseAdmin } from '@/lib/supabaseAdmin'
 import { canCheckIn } from '@/lib/roles'
+import { sendPushToContact } from '@/lib/push'
 
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
@@ -116,5 +117,18 @@ export async function POST(req) {
     console.error('[security chat] insert failed', error)
     return Response.json({ error: 'send_failed' }, { status: 500 })
   }
+
+  // Push the reply to the rider's device (best-effort; only if they enabled it).
+  try {
+    await sendPushToContact(contactId, {
+      title: 'Brew Loop · Security',
+      body: body.slice(0, 120),
+      url: '/my-tickets',
+      tag: `secchat-${contactId}`,
+    })
+  } catch (err) {
+    console.error('[security chat] rider push failed', err)
+  }
+
   return Response.json({ ok: true })
 }

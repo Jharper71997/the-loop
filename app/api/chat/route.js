@@ -1,4 +1,5 @@
 import { supabaseAdmin } from '@/lib/supabaseAdmin'
+import { sendPushToRole } from '@/lib/push'
 
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
@@ -88,5 +89,18 @@ export async function POST(req) {
     console.error('[chat] rider insert failed', error)
     return Response.json({ error: 'send_failed' }, { status: 500 })
   }
+
+  // Alert whoever's working the door (best-effort).
+  try {
+    await sendPushToRole('security', {
+      title: `Message from ${who.riderName}`,
+      body: body.slice(0, 120),
+      url: '/admin/security',
+      tag: `chat-${who.contactId}`,
+    })
+  } catch (err) {
+    console.error('[chat] security push failed', err)
+  }
+
   return Response.json({ ok: true })
 }

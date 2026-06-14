@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react'
 import Link from 'next/link'
 import Scanner from '@/app/_components/Scanner'
 import SecurityMessages from './SecurityMessages'
+import EnableSecurityAlerts from './EnableSecurityAlerts'
 
 const GOLD = '#d4a333'
 const GOLD_HI = '#f0c24a'
@@ -130,7 +131,10 @@ export default function SecurityClient() {
             </p>
           </>
         ) : (
-          <SecurityMessages onUnreadChange={setUnread} />
+          <div style={{ display: 'grid', gap: 12 }}>
+            <EnableSecurityAlerts />
+            <SecurityMessages onUnreadChange={setUnread} />
+          </div>
         )}
       </div>
     </div>

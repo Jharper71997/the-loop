@@ -22,6 +22,8 @@ export async function POST(req) {
     p256dh: sub.keys.p256dh,
     auth: sub.keys.auth,
     user_agent: body?.user_agent || null,
+    // 'security' for a door-staff device; null for a rider (targeted by contact).
+    role: body?.role === 'security' ? 'security' : null,
   }
 
   const supabase = supabaseAdmin()
