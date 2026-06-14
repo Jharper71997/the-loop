@@ -29,6 +29,7 @@ export default function SecurityChat({ code }) {
   }, [code])
 
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     load()
     const t = setInterval(() => {
       if (document.visibilityState === 'visible') load()
@@ -62,38 +63,62 @@ export default function SecurityChat({ code }) {
 
   const unreadFromSecurity = messages.some(m => m.sender === 'security')
 
+  // Closed: a floating gold pill pinned bottom-right, always visible no matter
+  // how far the rider has scrolled. Sits clear of the centered QR so it never
+  // blocks the scan at the door.
   if (!open) {
     return (
       <button
         type="button"
         onClick={() => setOpen(true)}
+        aria-label="Message security"
         style={{
-          display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10,
-          width: '100%', padding: '14px 16px', borderRadius: 12,
-          background: SURFACE, border: `1px solid ${LINE}`, color: INK,
-          fontWeight: 600, fontSize: 14, cursor: 'pointer',
+          position: 'fixed',
+          right: 16,
+          bottom: 'calc(16px + env(safe-area-inset-bottom, 0px))',
+          zIndex: 60,
+          display: 'flex', alignItems: 'center', gap: 8,
+          padding: '13px 20px', borderRadius: 999,
+          background: `linear-gradient(180deg, ${GOLD_HI}, ${GOLD})`, color: '#0a0a0b',
+          border: 0, fontWeight: 800, fontSize: 15, cursor: 'pointer',
+          boxShadow: '0 12px 32px rgba(212,163,51,0.45), 0 0 0 1px rgba(0,0,0,0.2)',
         }}
       >
-        <span>💬 Message security</span>
-        {unreadFromSecurity
-          ? <span style={{ color: GOLD, fontWeight: 700, fontSize: 12 }}>New reply →</span>
-          : <span style={{ color: INK_DIM, fontSize: 12 }}>at the door / questions</span>}
+        <span style={{ fontSize: 17, lineHeight: 1 }}>💬</span>
+        <span>Security</span>
+        {unreadFromSecurity && (
+          <span style={{
+            width: 10, height: 10, borderRadius: 999, background: '#e07a7a',
+            boxShadow: '0 0 0 2px #0a0a0b', marginLeft: 2,
+          }} />
+        )}
       </button>
     )
   }
 
+  // Open: a floating panel anchored to the same corner (bottom sheet on phones).
   return (
-    <div style={{ background: SURFACE, border: `1px solid ${LINE}`, borderRadius: 14, overflow: 'hidden' }}>
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '12px 14px', borderBottom: `1px solid ${LINE}` }}>
+    <div
+      style={{
+        position: 'fixed',
+        right: 16,
+        bottom: 'calc(16px + env(safe-area-inset-bottom, 0px))',
+        zIndex: 60,
+        width: 'min(380px, calc(100vw - 32px))',
+        background: SURFACE, border: `1px solid ${LINE}`, borderRadius: 16, overflow: 'hidden',
+        boxShadow: '0 24px 60px rgba(0,0,0,0.6)',
+      }}
+    >
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '12px 14px', borderBottom: `1px solid ${LINE}`, background: 'rgba(212,163,51,0.06)' }}>
         <div style={{ color: GOLD, fontSize: 11, letterSpacing: '0.18em', textTransform: 'uppercase', fontWeight: 700 }}>
-          Security chat
+          Message security
         </div>
-        <button type="button" onClick={() => setOpen(false)} style={{ background: 'none', border: 0, color: INK_DIM, fontSize: 13, cursor: 'pointer' }}>
-          Close
+        <button type="button" onClick={() => setOpen(false)} aria-label="Close chat" style={{ background: 'none', border: 0, color: INK_DIM, fontSize: 20, lineHeight: 1, cursor: 'pointer', padding: 2 }}>
+          ×
         </button>
       </div>
 
-      <div ref={scrollRef} style={{ maxHeight: 260, overflowY: 'auto', padding: 12, display: 'grid', gap: 8 }}>
+      <div ref={scrollRef} style={{ maxHeight: 'min(48vh, 320px)', overflowY: 'auto', padding: 12, display: 'grid', gap: 8 }}>
         {messages.length === 0 && (
           <div style={{ color: INK_DIM, fontSize: 13, textAlign: 'center', padding: '12px 0' }}>
             Message security if you can&rsquo;t find the pickup or need help at the door.
@@ -108,9 +133,10 @@ export default function SecurityChat({ code }) {
           onChange={e => setInput(e.target.value)}
           onKeyDown={e => { if (e.key === 'Enter') send() }}
           placeholder="Type a message…"
+          autoFocus
           style={{
             flex: 1, background: '#0a0a0b', border: `1px solid ${LINE}`, color: INK,
-            padding: '10px 12px', borderRadius: 10, fontSize: 14, outline: 'none',
+            padding: '10px 12px', borderRadius: 10, fontSize: 16, outline: 'none', minWidth: 0,
           }}
         />
         <button
