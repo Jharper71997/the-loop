@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from 'react'
 import EnableNotifications from '../../_components/EnableNotifications'
+import SecurityChat from './SecurityChat'
 
 const GOLD = '#d4a333'
 const GOLD_HI = '#f0c24a'
@@ -263,6 +264,8 @@ export default function TicketView({
         </div>
 
         <EnableNotifications contactId={contactId} />
+
+        {isPaid && contactId && <SecurityChat code={code} />}
 
         {brightHint && (
           <p style={{ color: INK_MUTED, fontSize: 12, textAlign: 'center', margin: 0 }}>

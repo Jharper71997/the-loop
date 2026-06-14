@@ -1,8 +1,9 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import Link from 'next/link'
 import Scanner from '@/app/_components/Scanner'
+import SecurityMessages from './SecurityMessages'
 
 const GOLD = '#d4a333'
 const GOLD_HI = '#f0c24a'
@@ -18,6 +19,23 @@ export default function SecurityClient() {
   const [busy, setBusy] = useState(false)
   const [last, setLast] = useState(null)
   const [tally, setTally] = useState({ admitted: 0, rejected: 0 })
+  const [view, setView] = useState('scan') // 'scan' | 'chat'
+  const [unread, setUnread] = useState(0)
+
+  // Keep the Messages tab badge live even while scanning.
+  useEffect(() => {
+    let cancelled = false
+    async function poll() {
+      try {
+        const res = await fetch('/api/security/chat', { cache: 'no-store' })
+        const json = await res.json()
+        if (!cancelled) setUnread((json.threads || []).reduce((s, t) => s + (t.unread || 0), 0))
+      } catch {}
+    }
+    poll()
+    const t = setInterval(() => { if (document.visibilityState === 'visible') poll() }, 10000)
+    return () => { cancelled = true; clearInterval(t) }
+  }, [])
 
   async function onScan(code) {
     if (!code || busy) return
@@ -72,39 +90,86 @@ export default function SecurityClient() {
           </div>
         </header>
 
-        <Link
-          href="/admin/security/door-list"
-          style={{
-            padding: '12px 14px',
-            borderRadius: 10,
-            border: `1px solid ${LINE}`,
-            background: SURFACE,
-            color: INK,
-            textDecoration: 'none',
-            fontSize: 13,
-            fontWeight: 600,
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'space-between',
-          }}
-        >
-          <span>Door list — see who&apos;s riding tonight</span>
-          <span style={{ color: GOLD, fontWeight: 700 }}>→</span>
-        </Link>
+        <div style={{ display: 'flex', gap: 8 }}>
+          <TabButton active={view === 'scan'} onClick={() => setView('scan')} label="Door scanner" />
+          <TabButton active={view === 'chat'} onClick={() => setView('chat')} label="Messages" badge={unread} />
+        </div>
 
-        <Scanner
-          onScan={onScan}
-          busy={busy}
-          prompt="Aim at the rider's boarding pass"
-        />
+        {view === 'scan' ? (
+          <>
+            <Link
+              href="/admin/security/door-list"
+              style={{
+                padding: '12px 14px',
+                borderRadius: 10,
+                border: `1px solid ${LINE}`,
+                background: SURFACE,
+                color: INK,
+                textDecoration: 'none',
+                fontSize: 13,
+                fontWeight: 600,
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+              }}
+            >
+              <span>Door list — see who&apos;s riding tonight</span>
+              <span style={{ color: GOLD, fontWeight: 700 }}>→</span>
+            </Link>
 
-        <ResultCard last={last} />
+            <Scanner
+              onScan={onScan}
+              busy={busy}
+              prompt="Aim at the rider's boarding pass"
+            />
 
-        <p style={{ color: INK_DIM, fontSize: 12, textAlign: 'center', margin: 0 }}>
-          Green = admit. Red = stop. Continuous scan: hold the camera on the next rider.
-        </p>
+            <ResultCard last={last} />
+
+            <p style={{ color: INK_DIM, fontSize: 12, textAlign: 'center', margin: 0 }}>
+              Green = admit. Red = stop. Continuous scan: hold the camera on the next rider.
+            </p>
+          </>
+        ) : (
+          <SecurityMessages onUnreadChange={setUnread} />
+        )}
       </div>
     </div>
+  )
+}
+
+function TabButton({ active, onClick, label, badge = 0 }) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      style={{
+        flex: 1,
+        position: 'relative',
+        padding: '10px 12px',
+        borderRadius: 10,
+        border: `1px solid ${active ? GOLD : LINE}`,
+        background: active ? 'rgba(212,163,51,0.12)' : SURFACE,
+        color: active ? GOLD : INK_DIM,
+        fontSize: 13,
+        fontWeight: 700,
+        cursor: 'pointer',
+      }}
+    >
+      {label}
+      {badge > 0 && (
+        <span style={{
+          marginLeft: 8,
+          background: GOLD,
+          color: '#0a0a0b',
+          fontWeight: 800,
+          fontSize: 11,
+          borderRadius: 999,
+          padding: '1px 7px',
+        }}>
+          {badge}
+        </span>
+      )}
+    </button>
   )
 }
 

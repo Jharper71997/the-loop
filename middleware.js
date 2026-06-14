@@ -38,6 +38,7 @@ const PUBLIC_PREFIXES = [
   '/api/checkout',
   '/api/loop-pass',
   '/api/waitlist',
+  '/api/chat',
   '/api/waiver',
   '/api/leaderboard',
   '/api/bartender-signup',
