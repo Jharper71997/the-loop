@@ -118,6 +118,29 @@ async function handleCheckout(req) {
     }
   }
 
+  // Walk-on pickup. A ticket type with no stop_index has no bar attached, so the
+  // rider chose a pickup bar at checkout (an index into the night's schedule).
+  // Validate it against the schedule and require it when bars exist. Per-bar
+  // tickets ignore this — their pickup is the ticket type's own stop_index.
+  let scheduleLen = 0
+  if (event.group_id) {
+    const { data: g } = await supabase
+      .from('groups').select('schedule').eq('id', event.group_id).maybeSingle()
+    scheduleLen = Array.isArray(g?.schedule) ? g.schedule.length : 0
+  }
+  function pickupIndexFor(r) {
+    const tt = ttById.get(r.ticket_type_id)
+    if (!tt || tt.stop_index != null) return null
+    const raw = Number(r.pickup_stop_index)
+    return Number.isInteger(raw) && raw >= 0 && raw < scheduleLen ? raw : null
+  }
+  for (const r of riders) {
+    const tt = ttById.get(r.ticket_type_id)
+    if (tt && tt.stop_index == null && scheduleLen > 0 && pickupIndexFor(r) == null) {
+      return Response.json({ error: 'pickup_required' }, { status: 400 })
+    }
+  }
+
   // Per-stop capacity check. The shuttle has a physical cap (13) per pickup,
   // and that cap is shared across BOTH native Loop orders and Ticket Tailor
   // orders that have been mirrored into order_items via lib/ticketTailor.js.
@@ -404,6 +427,7 @@ async function handleCheckout(req) {
         rider_phone: null,
         unit_price_cents: tt.price_cents,
         stop_index: tt.stop_index,
+        pickup_stop_index: pickupIndexFor(rc.rider),
         claim_token: mintClaimToken(),
       }
     }
@@ -417,6 +441,7 @@ async function handleCheckout(req) {
       rider_phone: normalizePhone(rc.rider.phone),
       unit_price_cents: priceForRc(rc),
       stop_index: tt.stop_index,
+      pickup_stop_index: pickupIndexFor(rc.rider),
     }
   })
   const { error: itemsErr } = await supabase.from('order_items').insert(orderItemRows)
@@ -520,10 +545,11 @@ async function handleCheckout(req) {
         .filter(rc => rc.contact?.id)
         .map(rc => {
           const tt = ttById.get(rc.rider.ticket_type_id)
+          const eff = tt?.stop_index != null ? tt.stop_index : pickupIndexFor(rc.rider)
           return {
             group_id: event.group_id,
             contact_id: rc.contact.id,
-            ...(tt?.stop_index != null ? { current_stop_index: tt.stop_index } : {}),
+            ...(eff != null ? { current_stop_index: eff } : {}),
           }
         })
       if (memberRows.length) {

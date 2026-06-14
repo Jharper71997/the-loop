@@ -70,6 +70,13 @@ export default async function EventBookingPage({ params }) {
     }
   }
 
+  // The night's bars, for the walk-on pickup picker. Index is the position in
+  // the schedule (same space ticket_type.stop_index points into), preserved
+  // across the name filter so a chosen index still maps to the right bar.
+  const stops = schedule
+    .map((s, i) => ({ index: i, name: s?.name || null, start_time: s?.start_time || null }))
+    .filter(s => s.name)
+
   let ticketTypes = []
   try {
     const r = await supabase
@@ -195,6 +202,7 @@ export default async function EventBookingPage({ params }) {
           eventName={event.name}
           ticketTypes={ticketTypes || []}
           addons={addons}
+          stops={stops}
           waiver={waiver}
         />
       </div>

@@ -6,7 +6,12 @@ const ACCENT = '#d4a333'
 const SURFACE = '#15151a'
 const BORDER = '#2a2a31'
 
-export default function BookingForm({ eventId, eventName, ticketTypes, addons = [], waiver }) {
+export default function BookingForm({ eventId, eventName, ticketTypes, addons = [], stops = [], waiver }) {
+  // A walk-on ticket type carries no bar (stop_index null). When the rider picks
+  // one we make them choose a pickup bar from the night's list so the driver and
+  // security know where to get them.
+  const isWalkOn = tt => !!tt && tt.stop_index == null
+  const needsPickup = tt => isWalkOn(tt) && stops.length > 0
   // Default to the first ticket type that still has seats. If everything is
   // sold out we fall back to the first one anyway so the form renders — the
   // submit button will be disabled by the oversell check below.
@@ -57,6 +62,7 @@ export default function BookingForm({ eventId, eventName, ticketTypes, addons = 
       signed_by_buyer: false,
       claim_link: false,
       typed_name: '',
+      pickup_stop_index: '',
     },
   ])
   // Add-on quantities, keyed by addon id. Default everything to 0 (opt-in).
@@ -98,6 +104,7 @@ export default function BookingForm({ eventId, eventName, ticketTypes, addons = 
       signed_by_buyer: false,
       claim_link: true,
       typed_name: '',
+      pickup_stop_index: '',
     }])
   }
 
@@ -145,6 +152,11 @@ export default function BookingForm({ eventId, eventName, ticketTypes, addons = 
     if (oversellError) return false
     for (const r of riders) {
       if (!r.ticket_type_id) return false
+      // Walk-on riders must pick a pickup bar (applies even to claim-link seats
+      // — the buyer chooses where their friend boards).
+      const tt = ticketTypes.find(t => t.id === r.ticket_type_id)
+      const walkOn = tt && tt.stop_index == null
+      if (walkOn && stops.length > 0 && (r.pickup_stop_index === '' || r.pickup_stop_index == null)) return false
       // claim_link riders skip name + contact + waiver — that's the whole point
       if (r.claim_link) continue
       if (!r.same_as_buyer && (!r.first_name || !r.last_name)) return false
@@ -153,7 +165,7 @@ export default function BookingForm({ eventId, eventName, ticketTypes, addons = 
     }
     if (buyerOwesSig && !buyerTypedName.trim()) return false
     return true
-  }, [buyer, riders, ticketTypes, buyerOwesSig, buyerTypedName, oversellError])
+  }, [buyer, riders, ticketTypes, stops, buyerOwesSig, buyerTypedName, oversellError])
 
   async function onSubmit(e) {
     e.preventDefault()
@@ -162,12 +174,18 @@ export default function BookingForm({ eventId, eventName, ticketTypes, addons = 
     setError(null)
 
     const ridersPayload = riders.map(r => {
+      // Walk-on pickup bar → numeric stop index (null for normal per-bar tickets).
+      const ttSel = ticketTypes.find(t => t.id === r.ticket_type_id)
+      const pickupStopIndex = (ttSel && ttSel.stop_index == null && r.pickup_stop_index !== '' && r.pickup_stop_index != null)
+        ? Number(r.pickup_stop_index)
+        : null
       // Claim-link riders: no contact info collected; checkout mints a token
       // the buyer can forward to the friend. Friend fills info + signs at /c/<token>.
       if (r.claim_link) {
         return {
           ticket_type_id: r.ticket_type_id,
           claim_link: true,
+          pickup_stop_index: pickupStopIndex,
         }
       }
       const baseRider = r.same_as_buyer
@@ -189,6 +207,7 @@ export default function BookingForm({ eventId, eventName, ticketTypes, addons = 
         signed_self: !!r.signed_self,
         signed_by_buyer: !!r.signed_by_buyer,
         typed_name: r.signed_self ? r.typed_name.trim() : '',
+        pickup_stop_index: pickupStopIndex,
       }
     })
 
@@ -228,6 +247,8 @@ export default function BookingForm({ eventId, eventName, ticketTypes, addons = 
             : `Sold out: ${json.ticket_type_name || 'this ticket'} is fully booked.`
         } else if (json.error === 'in_flight_retry') {
           message = 'Hang on — finalizing your previous attempt. Try again in a few seconds.'
+        } else if (json.error === 'pickup_required') {
+          message = 'Please choose a pickup bar for your walk-on ticket.'
         } else if (json.error) {
           console.error('[checkout] server error:', json.error, json)
         }
@@ -318,6 +339,24 @@ export default function BookingForm({ eventId, eventName, ticketTypes, addons = 
                     </div>
                   )
                 })()}
+
+                {needsPickup(ticketTypes.find(x => x.id === r.ticket_type_id)) && (
+                  <label style={{ display: 'grid', gap: 4, fontSize: 12, color: '#9c9ca3' }}>
+                    Pickup bar <span style={{ color: ACCENT, fontWeight: 700 }}>(required)</span>
+                    <select
+                      value={r.pickup_stop_index}
+                      onChange={e => updateRider(idx, { pickup_stop_index: e.target.value })}
+                      style={{ ...input, borderColor: r.pickup_stop_index === '' ? '#f87171' : BORDER }}
+                    >
+                      <option value="" disabled>Which bar should we pick you up at?</option>
+                      {stops.map(s => (
+                        <option key={s.index} value={s.index}>
+                          {s.name}{s.start_time ? ` — ${formatPickupTime(s.start_time)}` : ''}
+                        </option>
+                      ))}
+                    </select>
+                  </label>
+                )}
 
                 {idx === 0 ? (
                   <CheckRow
