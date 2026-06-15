@@ -59,6 +59,7 @@ export default async function LeadershipScoreboard() {
           <Detail href="/leadership/ridership" label="Ridership by bar" />
           <Detail href="/leadership/passes" label="Loop Pass" />
           <Detail href="/leadership/referrals" label="Referrals" />
+          <Detail href="/leadership/comps" label="Free / comped rides" />
         </div>
 
         <style>{`

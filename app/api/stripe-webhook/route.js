@@ -156,6 +156,29 @@ async function upsertPass(supabase, { subId, contactId, plan, customerId, status
   if (error) console.error('[stripe-webhook] loop_passes upsert failed', error)
 }
 
+// Best-effort friendly promo code for a completed session. Prefers the
+// human-readable promotion code (e.g. "FREERIDE") over Stripe's internal ids;
+// falls back to the coupon name/id. Never throws — attribution is non-critical.
+async function resolvePromoCode(session) {
+  try {
+    const disc = Array.isArray(session.discounts) ? session.discounts[0] : null
+    if (!disc) return null
+    if (disc.promotion_code) {
+      const id = typeof disc.promotion_code === 'string' ? disc.promotion_code : disc.promotion_code?.id
+      if (id) {
+        try {
+          const pc = await stripeLib.promotionCodes.retrieve(id)
+          return pc?.code || id
+        } catch { return id }
+      }
+    }
+    if (disc.coupon) {
+      return typeof disc.coupon === 'string' ? disc.coupon : (disc.coupon?.name || disc.coupon?.id || null)
+    }
+    return null
+  } catch { return null }
+}
+
 async function handleCheckoutCompleted(supabase, session) {
   // Loop Pass purchases come through Checkout too, but in subscription mode and
   // with no order_id — route them to the pass handler before the order lookup.
@@ -171,7 +194,7 @@ async function handleCheckoutCompleted(supabase, session) {
 
   const { data: order } = await supabase
     .from('orders')
-    .select('id, event_id, contact_id, status, buyer_phone, party_size')
+    .select('id, event_id, contact_id, status, buyer_phone, party_size, metadata')
     .eq('id', orderId)
     .maybeSingle()
   if (!order) throw new Error(`order ${orderId} not found`)
@@ -183,18 +206,32 @@ async function handleCheckoutCompleted(supabase, session) {
   const utmMedium = session.metadata?.utm_medium || null
   const utmCampaign = session.metadata?.utm_campaign || null
 
+  // Capture what was ACTUALLY collected vs the ticket's face value, plus any
+  // promo code, so leadership can separate real paid sales from free/comped
+  // rides — a 100%-off code completes checkout at $0 but the order still
+  // carries its face value in total_cents.
+  const collectedCents = Number.isInteger(session.amount_total) ? session.amount_total : null
+  const discountCents = session.total_details?.amount_discount ?? 0
+  const promoCode = await resolvePromoCode(session)
+
   const orderUpdate = {
     status: 'paid',
     stripe_payment_intent_id: session.payment_intent || null,
     paid_at: new Date().toISOString(),
   }
+  const baseMeta = (order.metadata && typeof order.metadata === 'object') ? order.metadata : {}
+  orderUpdate.metadata = {
+    ...baseMeta,
+    amount_collected_cents: collectedCents,
+    discount_cents: discountCents,
+    promo_code: promoCode,
+    comp: collectedCents === 0,
+  }
   if (qrCode || utmSource || utmMedium || utmCampaign) {
-    orderUpdate.metadata = {
-      qr_code: qrCode,
-      utm_source: utmSource,
-      utm_medium: utmMedium,
-      utm_campaign: utmCampaign,
-    }
+    orderUpdate.metadata.qr_code = qrCode
+    orderUpdate.metadata.utm_source = utmSource
+    orderUpdate.metadata.utm_medium = utmMedium
+    orderUpdate.metadata.utm_campaign = utmCampaign
   }
 
   await supabase
