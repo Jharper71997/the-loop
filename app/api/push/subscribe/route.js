@@ -22,8 +22,9 @@ export async function POST(req) {
     p256dh: sub.keys.p256dh,
     auth: sub.keys.auth,
     user_agent: body?.user_agent || null,
-    // 'security' for a door-staff device; null for a rider (targeted by contact).
-    role: body?.role === 'security' ? 'security' : null,
+    // 'security' / 'driver' for a staff device; null for a rider (targeted by
+    // contact). Staff roles receive role-fanned pushes (new bookings, etc.).
+    role: (body?.role === 'security' || body?.role === 'driver') ? body.role : null,
   }
 
   const supabase = supabaseAdmin()

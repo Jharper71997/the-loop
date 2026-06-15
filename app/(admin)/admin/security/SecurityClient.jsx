@@ -5,6 +5,7 @@ import Link from 'next/link'
 import Scanner from '@/app/_components/Scanner'
 import SecurityMessages from './SecurityMessages'
 import EnableSecurityAlerts from './EnableSecurityAlerts'
+import ApproachAlert from '../../_components/ApproachAlert'
 
 const GOLD = '#d4a333'
 const GOLD_HI = '#f0c24a'
@@ -16,7 +17,7 @@ const LINE = 'rgba(255,255,255,0.08)'
 const GREEN = '#6fbf7f'
 const RED = '#e07a7a'
 
-export default function SecurityClient() {
+export default function SecurityClient({ eventId = null }) {
   const [busy, setBusy] = useState(false)
   const [last, setLast] = useState(null)
   const [tally, setTally] = useState({ admitted: 0, rejected: 0 })
@@ -98,6 +99,8 @@ export default function SecurityClient() {
 
         {view === 'scan' ? (
           <>
+            <ApproachAlert eventId={eventId} />
+
             <Link
               href="/admin/security/door-list"
               style={{

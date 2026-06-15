@@ -3,6 +3,8 @@
 import { useEffect, useRef, useState } from 'react'
 import 'leaflet/dist/leaflet.css'
 import { haversineMeters as haversine } from '@/lib/geo'
+import EnableDriverAlerts from './EnableDriverAlerts'
+import ApproachAlert from '../../_components/ApproachAlert'
 
 const GOLD = '#d4a333'
 const GOLD_HI = '#f0c24a'
@@ -195,6 +197,7 @@ export default function DriverClient({
     setExpandedStopId(arrivalSlotId)
   }, [arrivalSlotId])
 
+
   async function refetchRouteLog() {
     if (!eventId) return
     try {
@@ -359,6 +362,10 @@ export default function DriverClient({
             </div>
           )}
         </header>
+
+        <EnableDriverAlerts />
+
+        <ApproachAlert eventId={eventId} />
 
         <div
           style={{
