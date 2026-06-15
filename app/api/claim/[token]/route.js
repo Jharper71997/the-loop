@@ -36,7 +36,7 @@ export async function POST(req, ctx) {
   // only the first request flips the row.
   const { data: item } = await sb
     .from('order_items')
-    .select('id, order_id, ticket_type_id, claim_token, claimed_at, voided_at, contact_id')
+    .select('id, order_id, ticket_type_id, claim_token, claimed_at, voided_at, contact_id, stop_index, pickup_stop_index')
     .eq('claim_token', token)
     .maybeSingle()
 
@@ -102,9 +102,18 @@ export async function POST(req, ctx) {
       .eq('id', order.event_id)
       .maybeSingle()
     if (ev?.group_id) {
+      // Seat the friend at their boarding bar so the dispatch board shows their
+      // pickup instead of a blank. Per-bar tickets carry stop_index; walk-ons
+      // carry the chosen pickup_stop_index. Mirrors how the webhook seats buyers.
+      const boardingStop = Number.isInteger(item.stop_index) ? item.stop_index
+        : (Number.isInteger(item.pickup_stop_index) ? item.pickup_stop_index : null)
       await sb
         .from('group_members')
-        .upsert([{ group_id: ev.group_id, contact_id: contact.id }], {
+        .upsert([{
+          group_id: ev.group_id,
+          contact_id: contact.id,
+          ...(boardingStop != null ? { current_stop_index: boardingStop } : {}),
+        }], {
           onConflict: 'group_id,contact_id',
           ignoreDuplicates: true,
         })
