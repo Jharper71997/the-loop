@@ -215,25 +215,30 @@ export async function POST(req) {
     }
   }
 
-  // Boarding-pass code to message security with, surfaced on /my-tickets so a
-  // rider doesn't have to open a full pass first. Gated to a paid ticket for an
-  // upcoming/tonight loop (event_date today or later in ET). Prefer the
-  // looked-up rider's own seat; fall back to any claimed seat on that order so a
-  // buyer who only booked for friends can still reach the door.
+  // Boarding-pass code to message security with, surfaced on /my-tickets so the
+  // chat embeds without opening a full pass first. Prefer a paid ticket for an
+  // upcoming/tonight loop (event_date today or later in ET); if there's no
+  // upcoming loop, fall back to the rider's most recent paid pass so the chat is
+  // available whenever they hold a ticket, not only on loop nights. Within each
+  // tier, prefer the looked-up rider's own seat, else any claimed seat on the
+  // order (so a buyer who booked only for friends can still reach the door).
   const todayET = new Date().toLocaleDateString('en-CA', { timeZone: 'America/Indiana/Indianapolis' })
-  let chatCode = null
-  const upcomingPaid = result.filter(
-    o => o.status === 'paid' && o.event?.event_date && o.event.event_date >= todayET)
-  for (const o of upcomingPaid) {
-    const self = o.riders.find(r => r.ticket_code && r.contact_id && r.contact_id === primaryContactId)
-    if (self) { chatCode = self.ticket_code; break }
-  }
-  if (!chatCode) {
-    for (const o of upcomingPaid) {
-      const any = o.riders.find(r => r.ticket_code)
-      if (any) { chatCode = any.ticket_code; break }
+  const paid = result.filter(o => o.status === 'paid')
+  const upcomingPaid = paid.filter(o => o.event?.event_date && o.event.event_date >= todayET)
+
+  function pickCode(orders) {
+    for (const o of orders) {
+      const self = o.riders.find(r => r.ticket_code && r.contact_id && r.contact_id === primaryContactId)
+      if (self) return self.ticket_code
     }
+    for (const o of orders) {
+      const any = o.riders.find(r => r.ticket_code)
+      if (any) return any.ticket_code
+    }
+    return null
   }
+
+  const chatCode = pickCode(upcomingPaid) || pickCode(paid)
 
   return Response.json({ orders: result, referral, chat_code: chatCode })
 }
