@@ -1,8 +1,8 @@
 import MyTicketsClient from './MyTicketsClient'
 
 export const metadata = {
-  title: 'My Tickets',
-  description: 'Look up your Brew Loop tickets and waiver status.',
+  title: 'My Tickets & Messages',
+  description: 'Pull up your Brew Loop tickets, waiver, and message security.',
   robots: { index: false, follow: false },
   alternates: { canonical: '/my-tickets' },
 }
@@ -45,16 +45,16 @@ export default function MyTicketsPage() {
                 fontWeight: 700,
               }}
             >
-              My tickets
+              Tickets &amp; messaging
             </div>
             <h1 style={{ color: INK, fontSize: 22, fontWeight: 800, margin: '2px 0 0', lineHeight: 1.15 }}>
-              Find your ride.
+              Your ride &amp; security chat.
             </h1>
           </div>
         </header>
 
         <p style={{ color: '#b8b8bf', fontSize: 14, margin: 0 }}>
-          Enter the phone you booked with. We&rsquo;ll show your tickets and waiver.
+          Enter the phone you booked with. We&rsquo;ll pull up your tickets, waiver, and a direct line to security.
         </p>
 
         <MyTicketsClient />

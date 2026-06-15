@@ -23,6 +23,8 @@ export default function MyTicketsClient() {
   const [orders, setOrders] = useState([])
   const [referral, setReferral] = useState(null)
   const [chatCode, setChatCode] = useState(null)
+  const [chatOpen, setChatOpen] = useState(false)
+  const [chatUnread, setChatUnread] = useState(false)
   const [error, setError] = useState(null)
 
   async function lookup(rawPhone, { remember = true } = {}) {
@@ -92,6 +94,13 @@ export default function MyTicketsClient() {
   if (searched) {
     return (
       <div style={{ display: 'grid', gap: 16 }}>
+        {/* Messaging leads the results — this page is a direct line to security,
+            not just a ticket lookup. Only shows when they hold a ride for
+            tonight (chatCode is date-gated). */}
+        {chatCode && (
+          <MessageSecurityCard unread={chatUnread} onOpen={() => setChatOpen(true)} />
+        )}
+
         {orders.length === 0 && (
           <Card>
             <div style={{ color: INK, fontWeight: 600, fontSize: 17, marginBottom: 6 }}>
@@ -131,9 +140,16 @@ export default function MyTicketsClient() {
           Look up another
         </button>
 
-        {/* Floating "Message security" button — reachable here without opening a
-            full boarding pass. Only renders when they hold a ticket for tonight. */}
-        {chatCode && <SecurityChat code={chatCode} />}
+        {/* Floating pill stays for persistence while scrolling; the card above
+            is the in-front entry. Both drive the same chat. */}
+        {chatCode && (
+          <SecurityChat
+            code={chatCode}
+            open={chatOpen}
+            onOpenChange={setChatOpen}
+            onUnreadChange={setChatUnread}
+          />
+        )}
       </div>
     )
   }
@@ -182,9 +198,65 @@ export default function MyTicketsClient() {
       </button>
 
       <p style={{ color: INK_MUTED, fontSize: 12, textAlign: 'center', margin: '8px 0 0' }}>
-        Enter the phone you booked with. We&rsquo;ll show your tickets and waiver.
+        Enter the phone you booked with to see your tickets, waiver, and message security.
       </p>
     </form>
+  )
+}
+
+// Prominent, in-front entry to the security chat. Tapping opens the same chat
+// panel the floating pill uses. Shows a red dot when security has replied.
+function MessageSecurityCard({ unread, onOpen }) {
+  return (
+    <button
+      type="button"
+      onClick={onOpen}
+      style={{
+        textAlign: 'left',
+        width: '100%',
+        cursor: 'pointer',
+        padding: '16px 18px',
+        borderRadius: 14,
+        background: 'linear-gradient(180deg, rgba(212,163,51,0.16), rgba(212,163,51,0.05))',
+        border: '1.5px solid rgba(212,163,51,0.5)',
+        display: 'flex',
+        alignItems: 'center',
+        gap: 14,
+        boxShadow: '0 8px 24px rgba(0,0,0,0.3)',
+      }}
+    >
+      <span
+        aria-hidden
+        style={{
+          flex: '0 0 auto',
+          width: 44,
+          height: 44,
+          borderRadius: '50%',
+          background: 'rgba(212,163,51,0.18)',
+          border: `1px solid ${GOLD}`,
+          display: 'inline-flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          fontSize: 22,
+        }}
+      >
+        💬
+      </span>
+      <div style={{ flex: 1, minWidth: 0 }}>
+        <div style={{ color: INK, fontSize: 16, fontWeight: 800, display: 'flex', alignItems: 'center', gap: 8 }}>
+          Message security
+          {unread && (
+            <span style={{ width: 9, height: 9, borderRadius: 999, background: RED, boxShadow: '0 0 0 2px #0a0a0b' }} />
+          )}
+        </div>
+        <div style={{ color: INK_DIM, fontSize: 13, marginTop: 2 }}>
+          {unread
+            ? 'Security replied. Tap to read.'
+            : 'Can’t find pickup or need help at the door? Text security right here.'}
+        </div>
+      </div>
+      <span style={{ color: GOLD, fontWeight: 800, fontSize: 18, flex: '0 0 auto' }}>→</span>
+    </button>
   )
 }
 

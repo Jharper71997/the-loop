@@ -11,8 +11,19 @@ const LINE = 'rgba(255,255,255,0.08)'
 
 // Rider's side of the chat with security. Identity = the boarding-pass code in
 // the URL, so no login. Near-live via a 5s poll (pauses when the tab's hidden).
-export default function SecurityChat({ code }) {
-  const [open, setOpen] = useState(false)
+//
+// Open state is uncontrolled by default (the floating pill opens it). Pass
+// `open` + `onOpenChange` to drive it from a parent (e.g. the prominent
+// "Message security" card on /my-tickets). `onUnreadChange` lets that card show
+// a reply badge.
+export default function SecurityChat({ code, open: openProp, onOpenChange, onUnreadChange }) {
+  const [internalOpen, setInternalOpen] = useState(false)
+  const isControlled = openProp !== undefined
+  const open = isControlled ? openProp : internalOpen
+  const setOpen = useCallback((v) => {
+    if (!isControlled) setInternalOpen(v)
+    if (onOpenChange) onOpenChange(v)
+  }, [isControlled, onOpenChange])
   const [messages, setMessages] = useState([])
   const [disabled, setDisabled] = useState(false)
   const [input, setInput] = useState('')
@@ -59,9 +70,14 @@ export default function SecurityChat({ code }) {
     setSending(false)
   }
 
-  if (disabled) return null
-
   const unreadFromSecurity = messages.some(m => m.sender === 'security')
+
+  // Surface "security replied" to a controlling parent (the prominent card).
+  useEffect(() => {
+    if (onUnreadChange) onUnreadChange(unreadFromSecurity)
+  }, [unreadFromSecurity, onUnreadChange])
+
+  if (disabled) return null
 
   // Closed: a floating gold pill pinned bottom-right, always visible no matter
   // how far the rider has scrolled. Sits clear of the centered QR so it never
