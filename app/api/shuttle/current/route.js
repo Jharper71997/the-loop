@@ -1,6 +1,6 @@
 import { supabaseAdmin } from '@/lib/supabaseAdmin'
 import { operationalDateInTZ } from '@/lib/schedule'
-import { lookupBarsByNames } from '@/lib/barsServer'
+import { resolveScheduleStops } from '@/lib/barsServer'
 import { haversineMeters } from '@/lib/geo'
 
 export const runtime = 'nodejs'
@@ -28,20 +28,38 @@ const MIN_VISIT_PINGS = 2
 const MIN_VISIT_DURATION_MS = 60_000
 const PING_LOOKBACK_MS = 8 * 60 * 60 * 1000
 
-export async function GET() {
+// Two products now share this table. A rider on /track passes ?group_id= so
+// they see THEIR shuttle; the global Brew Loop chrome (TabBar, LiveStatusStrip)
+// calls with no params and must only ever see the Brew Loop bus — never a
+// Marines ping. So: explicit group_id → scope to it; no group_id → exclude
+// every kind='marines' group.
+export async function GET(req) {
   const admin = supabaseAdmin()
-  const { data, error } = await admin
+  const groupId = new URL(req.url).searchParams.get('group_id') || null
+
+  let query = admin
     .from('shuttle_pings')
     .select('lat, lng, speed_mph, heading, is_active, recorded_at')
     .order('recorded_at', { ascending: false })
     .limit(1)
-    .maybeSingle()
+
+  if (groupId) {
+    query = query.eq('group_id', groupId)
+  } else {
+    const marinesIds = await marinesGroupIds(admin)
+    if (marinesIds.length) {
+      // Legacy Brew Loop pings predate group_id (null); keep showing them.
+      query = query.or(`group_id.is.null,group_id.not.in.(${marinesIds.join(',')})`)
+    }
+  }
+
+  const { data, error } = await query.maybeSingle()
 
   if (error) {
     return Response.json({ shuttle: null, error: error.message }, { status: 500 })
   }
 
-  const nextStop = await loadNextStop(admin).catch(() => null)
+  const nextStop = await loadNextStop(admin, groupId).catch(() => null)
 
   if (!data) {
     return Response.json({ shuttle: null, next_stop: nextStop })
@@ -55,18 +73,43 @@ export async function GET() {
   return Response.json({ shuttle: data, next_stop: nextStop })
 }
 
-async function loadNextStop(admin) {
-  // Eastern operational date: keeps tonight's event in scope until 9 AM the
-  // next morning. Plain UTC slicing rolls over at 8 PM EDT mid-shift.
-  const today = operationalDateInTZ()
-  const { data: eventRow } = await admin
-    .from('events')
-    .select('id, group_id')
-    .eq('status', 'on_sale')
-    .gte('event_date', today)
-    .order('event_date', { ascending: true })
-    .limit(1)
-    .maybeSingle()
+// group_ids of every Marines loop, used to exclude them from the unscoped
+// (Brew Loop) ping read.
+async function marinesGroupIds(admin) {
+  const { data } = await admin.from('groups').select('id').eq('kind', 'marines')
+  return Array.isArray(data) ? data.map(r => r.id) : []
+}
+
+// next_stop hint. With an explicit group_id, scope to that loop's event
+// (any status — the driver may run a not-yet-on-sale event). Without one,
+// fall back to the next on-sale BREW event so Marines never leaks into the
+// Brew Loop chrome.
+async function loadNextStop(admin, groupId) {
+  let eventRow = null
+  if (groupId) {
+    const { data } = await admin
+      .from('events')
+      .select('id, group_id')
+      .eq('group_id', groupId)
+      .order('event_date', { ascending: true })
+      .limit(1)
+      .maybeSingle()
+    eventRow = data
+  } else {
+    // Eastern operational date: keeps tonight's event in scope until 9 AM the
+    // next morning. Plain UTC slicing rolls over at 8 PM EDT mid-shift.
+    const today = operationalDateInTZ()
+    const { data } = await admin
+      .from('events')
+      .select('id, group_id')
+      .eq('status', 'on_sale')
+      .eq('kind', 'brew')
+      .gte('event_date', today)
+      .order('event_date', { ascending: true })
+      .limit(1)
+      .maybeSingle()
+    eventRow = data
+  }
   if (!eventRow?.id) return null
 
   const logged = await loadLoggedNextStop(admin, eventRow.id)
@@ -121,28 +164,18 @@ async function loadPositionDerivedNextStop(admin, groupId) {
     .select('schedule')
     .eq('id', groupId)
     .maybeSingle()
-  const schedule = Array.isArray(group?.schedule) ? group.schedule : []
-  const named = schedule.map(s => s?.name).filter(Boolean)
-  if (!named.length) return null
 
-  const barLookup = await lookupBarsByNames(admin, named).catch(() => new Map())
-  const placed = schedule
-    .map(s => {
-      const bar = s?.name ? barLookup.get(s.name) : null
-      return {
-        name: s?.name || '',
-        slug: bar?.slug ?? null,
-        lat: Number.isFinite(bar?.lat) ? bar.lat : null,
-        lng: Number.isFinite(bar?.lng) ? bar.lng : null,
-      }
-    })
-    .filter(s => s.name && s.lat != null && s.lng != null)
+  // resolveScheduleStops honors inline lat/lng (Marines stops) and falls back
+  // to the bars table by name (Brew Loop stops), so this one path serves both.
+  const placed = (await resolveScheduleStops(admin, group?.schedule).catch(() => []))
+    .filter(s => s.name && Number.isFinite(s.lat) && Number.isFinite(s.lng))
   if (!placed.length) return null
 
   const since = new Date(Date.now() - PING_LOOKBACK_MS).toISOString()
   const { data: pings } = await admin
     .from('shuttle_pings')
     .select('lat, lng, recorded_at')
+    .eq('group_id', groupId)
     .gte('recorded_at', since)
     .eq('is_active', true)
     .order('recorded_at', { ascending: true })
@@ -153,7 +186,7 @@ async function loadPositionDerivedNextStop(admin, groupId) {
   const next = placed[visitedCount]
   return {
     bar_name: next.name,
-    bar_slug: next.slug,
+    bar_slug: next.slug ?? null,
     stop_index: visitedCount + 1,
     cycle_index: null,
     bar_position: null,

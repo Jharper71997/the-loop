@@ -46,6 +46,7 @@ export async function GET(req) {
     .select('id, name, event_date, group_id')
     .in('event_date', [today, tomorrow])
     .eq('status', 'on_sale')
+    .eq('kind', 'brew')   // Brew Loop reminder copy/templates — Marines is out of scope here
   if (evErr) return Response.json({ error: evErr.message }, { status: 500 })
   if (!events?.length) return Response.json({ ok: true, processed: 0, reason: 'no_events' })
 

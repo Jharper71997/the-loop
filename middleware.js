@@ -30,7 +30,12 @@ const PUBLIC_PREFIXES = [
   '/marines',
   '/api/marines/',
   '/api/loop-admin',
+  '/api/loop-driver',
   '/api/shuttle/current',
+  // The Loop driver pings with a code (loop_driver cookie), no Supabase session,
+  // so middleware must let the request reach the handler — which authorizes
+  // both Brew Loop (isDriver) and Loop (code + marines group) drivers itself.
+  '/api/shuttle/ping',
   '/api/track/cohort',
   '/api/qr-image',
   '/api/ticket-tailor-webhook',

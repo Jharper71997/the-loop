@@ -2,11 +2,12 @@
 
 import { useState } from 'react'
 
+// Names kept (OLIVE/SAND) to avoid churn; values are now the red theme.
 const INK = '#eef1f3'
 const INK_DIM = '#9aa3ab'
-const OLIVE = '#8a9a4f'
-const OLIVE_HI = '#aebb6a'
-const SAND = '#c8b88f'
+const OLIVE = '#e5484d'
+const OLIVE_HI = '#f2585d'
+const SAND = '#c9ccd1'
 const SURFACE = '#1a2027'
 const LINE = 'rgba(255,255,255,0.10)'
 
@@ -81,7 +82,7 @@ export default function VerifyClient() {
           <div style={{ color: SAND, fontSize: 11, letterSpacing: '0.22em', textTransform: 'uppercase', fontWeight: 700 }}>The Loop</div>
           <h1 style={{ color: INK, fontSize: 26, fontWeight: 800, margin: '8px 0 6px', letterSpacing: '-0.01em' }}>Verify to ride</h1>
           <p style={{ color: INK_DIM, fontSize: 14, lineHeight: 1.5, margin: 0 }}>
-            The Loop is for military only, so we confirm everyone once. Takes a minute. After this you're cleared for every ride.
+            Quick one-time ID check so we know you're cleared to ride. Takes a minute. After this you're set for every ride.
           </p>
         </div>
 
@@ -131,5 +132,5 @@ function Field({ label, children }) {
 
 const card = { borderRadius: 14, background: SURFACE, border: `1px solid ${LINE}` }
 const input = { width: '100%', padding: '11px 12px', borderRadius: 9, background: 'rgba(255,255,255,0.05)', border: `1px solid ${LINE}`, color: INK, fontSize: 15, outline: 'none' }
-const primaryCta = { padding: '13px 22px', borderRadius: 10, background: `linear-gradient(180deg, ${OLIVE_HI}, ${OLIVE})`, color: '#13160c', fontWeight: 800, fontSize: 15 }
+const primaryCta = { padding: '13px 22px', borderRadius: 10, background: `linear-gradient(180deg, ${OLIVE_HI}, ${OLIVE})`, color: '#fff', fontWeight: 800, fontSize: 15 }
 const ghostCta = { padding: '12px 18px', borderRadius: 999, background: 'transparent', color: INK, border: `1px solid ${LINE}`, fontWeight: 600, textDecoration: 'none', fontSize: 14 }

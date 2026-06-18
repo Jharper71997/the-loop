@@ -149,6 +149,7 @@ async function loadActiveLoop() {
     .from('events')
     .select('id, group_id, name, event_date, pickup_time, status')
     .eq('status', 'on_sale')
+    .eq('kind', 'brew')   // Brew Loop /track only — Marines tracks at /marines/track
     .gte('event_date', today)
     .order('event_date', { ascending: true })
     .limit(1)

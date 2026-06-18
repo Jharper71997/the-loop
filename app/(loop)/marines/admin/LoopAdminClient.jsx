@@ -2,17 +2,16 @@
 
 import { useEffect, useMemo, useState } from 'react'
 
+// Names kept (OLIVE/SAND) to minimize churn; values are the red theme now.
 const INK = '#eef1f3'
 const INK_DIM = '#9aa3ab'
 const FAINT = '#7c8088'
-const OLIVE = '#8a9a4f'
-const OLIVE_HI = '#aebb6a'
-const SAND = '#c8b88f'
+const OLIVE = '#e5484d'
+const OLIVE_HI = '#f2585d'
+const SAND = '#c9ccd1'
 const SURFACE = '#1a2027'
 const LINE = 'rgba(255,255,255,0.10)'
 const STATUS_COLOR = { pending: SAND, approved: '#7fc88a', rejected: '#ff8585' }
-
-const SCHEDULE = [['Friday', '9:00 – 5:00'], ['Saturday', '9:00 – 5:00'], ['Sunday', '9:00 – 5:00']]
 
 export default function LoopAdminClient() {
   const [rows, setRows] = useState([])
@@ -108,7 +107,7 @@ export default function LoopAdminClient() {
 
       {!loading && tab === 'requests' && (
         <Section>
-          {!pending.length && <Empty>No pending requests. You're all caught up.</Empty>}
+          {!pending.length && <Empty>No pending requests. You&apos;re all caught up.</Empty>}
           {pending.map(r => <RiderCard key={r.id} r={r} acting={actingId === r.id}
             onApprove={() => patch(r.id, { action: 'approve' })}
             onReject={() => patch(r.id, { action: 'reject' })}
@@ -127,39 +126,172 @@ export default function LoopAdminClient() {
         </Section>
       )}
 
-      {!loading && tab === 'passes' && (
-        <Section>
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 10 }}>
-            <Stat label="Passes sold" value="—" />
-            <Stat label="Active passes" value="—" />
-            <Stat label="Revenue" value="—" />
-          </div>
-          <Empty>Pass sales and revenue light up here once verified riders can buy passes (pending prices + the verification method).</Empty>
-        </Section>
-      )}
+      {!loading && tab === 'passes' && <RevenueTab />}
 
-      {!loading && tab === 'service' && (
-        <Section>
-          <div style={{ ...card, padding: '16px 18px' }}>
-            <div style={sectionLabel}>Schedule</div>
-            <div style={{ marginTop: 10, display: 'grid', gap: 8 }}>
-              {SCHEDULE.map(([d, h]) => (
-                <div key={d} style={{ display: 'flex', justifyContent: 'space-between', fontSize: 14 }}>
-                  <span style={{ fontWeight: 600 }}>{d}</span><span style={{ color: SAND }}>{h}</span>
-                </div>
-              ))}
-            </div>
-          </div>
-          <div style={{ ...card, padding: '16px 18px' }}>
-            <div style={sectionLabel}>Route</div>
-            <p style={{ color: INK_DIM, fontSize: 13.5, lineHeight: 1.5, margin: '8px 0 0' }}>
-              Base gate through your sponsor locations and back. The stop list + live map turn on once the
-              route is set and the shuttle is broadcasting position.
-            </p>
-          </div>
-        </Section>
-      )}
+      {!loading && tab === 'service' && <ServiceTab />}
     </main>
+  )
+}
+
+function RevenueTab() {
+  const [data, setData] = useState(null)
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState(null)
+
+  useEffect(() => {
+    let cancelled = false
+    ;(async () => {
+      setLoading(true); setError(null)
+      try {
+        const res = await fetch('/api/loop-admin/revenue', { cache: 'no-store' })
+        const json = await res.json().catch(() => ({}))
+        if (cancelled) return
+        if (!res.ok) { setError(json.error || `Failed (${res.status})`); return }
+        setData(json)
+      } catch (err) { if (!cancelled) setError(err.message || 'Network error') }
+      finally { if (!cancelled) setLoading(false) }
+    })()
+    return () => { cancelled = true }
+  }, [])
+
+  return (
+    <Section>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 10 }}>
+        <Stat label="Rides sold" value={loading ? '…' : (data?.rides ?? 0)} />
+        <Stat label="Day passes" value={loading ? '…' : (data?.day ?? 0)} />
+        <Stat label="Revenue" value={loading ? '…' : formatCents(data?.revenue_cents)} />
+      </div>
+      {error && <div style={{ color: '#ff8585', fontSize: 13 }}>{error}</div>}
+      {!loading && !error && (
+        (data?.rides ?? 0) === 0
+          ? <Empty>No rides sold yet. Single rides and day passes show up here as Marines buy — tagged separately from Brew Loop.</Empty>
+          : (
+            <div style={{ ...card, padding: '14px 16px', color: INK_DIM, fontSize: 13.5, lineHeight: 1.6 }}>
+              <div>Single rides: <strong style={{ color: INK }}>{data.single}</strong></div>
+              <div>Day passes: <strong style={{ color: INK }}>{data.day}</strong></div>
+              {data.other > 0 && <div>Other: <strong style={{ color: INK }}>{data.other}</strong></div>}
+              {data.comps > 0 && <div>Comped: <strong style={{ color: INK }}>{data.comps}</strong></div>}
+              <div style={{ marginTop: 6, color: FAINT, fontSize: 12 }}>{data.orders} order{data.orders === 1 ? '' : 's'} · The Loop only</div>
+            </div>
+          )
+      )}
+    </Section>
+  )
+}
+
+function ServiceTab() {
+  const [data, setData] = useState(null)
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState(null)
+  const [saving, setSaving] = useState(false)
+  const [saved, setSaved] = useState(false)
+
+  useEffect(() => {
+    let cancelled = false
+    ;(async () => {
+      setLoading(true); setError(null)
+      try {
+        const res = await fetch('/api/loop-admin/service', { cache: 'no-store' })
+        const json = await res.json().catch(() => ({}))
+        if (cancelled) return
+        if (!res.ok) { setError(json.error || `Failed (${res.status})`); return }
+        setData(json)
+      } catch (err) { if (!cancelled) setError(err.message || 'Network error') }
+      finally { if (!cancelled) setLoading(false) }
+    })()
+    return () => { cancelled = true }
+  }, [])
+
+  function updateStop(i, patch) {
+    setData(d => ({ ...d, schedule: d.schedule.map((s, idx) => idx === i ? { ...s, ...patch } : s) }))
+    setSaved(false)
+  }
+  function addStop() {
+    setData(d => ({ ...d, schedule: [...(d.schedule || []), { name: '', start_time: '', lat: null, lng: null, on_base: false }] }))
+    setSaved(false)
+  }
+  function removeStop(i) {
+    setData(d => ({ ...d, schedule: d.schedule.filter((_, idx) => idx !== i) }))
+    setSaved(false)
+  }
+  function updateFare(id, dollars) {
+    setData(d => ({ ...d, fares: d.fares.map(f => f.id === id ? { ...f, price_cents: Math.round(Number(dollars || 0) * 100) } : f) }))
+    setSaved(false)
+  }
+
+  async function save() {
+    if (!data?.group?.id) return
+    setSaving(true); setError(null); setSaved(false)
+    try {
+      const res = await fetch('/api/loop-admin/service', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ group_id: data.group.id, event_id: data.event_id, schedule: data.schedule, fares: data.fares }),
+      })
+      const json = await res.json().catch(() => ({}))
+      if (!res.ok) { setError(json.error || `Save failed (${res.status})`); return }
+      setSaved(true)
+    } catch (err) { setError(err.message || 'Network error') }
+    finally { setSaving(false) }
+  }
+
+  if (loading) return <Section><div style={{ color: INK_DIM }}>Loading…</div></Section>
+  if (error) return <Section><div style={{ color: '#ff8585' }}>{error}</div></Section>
+  if (!data?.group) {
+    return <Section><Empty>No active loop. Build this weekend&apos;s route with the weekend script, then edit its stops and fares here.</Empty></Section>
+  }
+
+  return (
+    <Section>
+      <div style={{ ...card, padding: '16px 18px' }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', gap: 10 }}>
+          <div style={sectionLabel}>The red line · {data.group.name}</div>
+          <span style={{ color: FAINT, fontSize: 12 }}>{data.group.event_date || ''}</span>
+        </div>
+        <div style={{ display: 'grid', gap: 10, marginTop: 12 }}>
+          {(data.schedule || []).map((s, i) => (
+            <div key={i} style={{ display: 'grid', gap: 8, padding: '12px 12px', borderRadius: 10, background: 'rgba(255,255,255,0.04)', border: `1px solid ${LINE}` }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                <span style={{ color: OLIVE_HI, fontWeight: 800, fontSize: 13, width: 20 }}>{i + 1}</span>
+                <input value={s.name || ''} onChange={e => updateStop(i, { name: e.target.value })} placeholder="Stop name" style={{ ...input, flex: 1 }} />
+                <button type="button" onClick={() => removeStop(i)} style={{ ...mini, color: '#ff8585' }}>✕</button>
+              </div>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 8 }}>
+                <input value={s.start_time || ''} onChange={e => updateStop(i, { start_time: e.target.value })} placeholder="09:30" style={input} />
+                <input value={s.lat ?? ''} onChange={e => updateStop(i, { lat: e.target.value })} placeholder="lat" inputMode="decimal" style={input} />
+                <input value={s.lng ?? ''} onChange={e => updateStop(i, { lng: e.target.value })} placeholder="lng" inputMode="decimal" style={input} />
+              </div>
+              <label style={{ display: 'flex', alignItems: 'center', gap: 8, color: INK_DIM, fontSize: 13 }}>
+                <input type="checkbox" checked={!!s.on_base} onChange={e => updateStop(i, { on_base: e.target.checked })} />
+                On-base gate (first pickup)
+              </label>
+            </div>
+          ))}
+          <button type="button" onClick={addStop} style={ghost}>+ Add stop</button>
+        </div>
+      </div>
+
+      <div style={{ ...card, padding: '16px 18px' }}>
+        <div style={sectionLabel}>Fares</div>
+        <div style={{ display: 'grid', gap: 8, marginTop: 12 }}>
+          {(data.fares || []).map(f => (
+            <div key={f.id} style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+              <span style={{ flex: 1, fontSize: 14, fontWeight: 600 }}>{f.name}</span>
+              <span style={{ color: INK_DIM }}>$</span>
+              <input value={(f.price_cents ?? 0) / 100} onChange={e => updateFare(f.id, e.target.value)} inputMode="decimal" style={{ ...input, width: 90, textAlign: 'right' }} />
+            </div>
+          ))}
+          {(!data.fares || !data.fares.length) && <div style={{ color: INK_DIM, fontSize: 13 }}>No fares on this loop yet.</div>}
+        </div>
+      </div>
+
+      <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+        <button type="button" onClick={save} disabled={saving} style={{ ...approve, opacity: saving ? 0.6 : 1 }}>{saving ? 'Saving…' : 'Save changes'}</button>
+        {saved && <span style={{ color: '#7fc88a', fontSize: 13, fontWeight: 700 }}>Saved ✓</span>}
+      </div>
+      <div style={{ color: FAINT, fontSize: 12 }}>
+        Lat/lng place the stop on the live map and feed the red-line drawing. Leave blank for a stop with no pin.
+      </div>
+    </Section>
   )
 }
 
@@ -172,7 +304,7 @@ function RiderCard({ r, acting, onApprove, onReject, onFlag, onNote, mode }) {
           <div style={{ fontSize: 16, fontWeight: 700 }}>
             {r.full_name || '(no name)'}{r.flagged && <span style={{ color: '#ffb05a', fontSize: 12, marginLeft: 8 }}>⚑ flagged</span>}
           </div>
-          <div style={{ color: INK_DIM, fontSize: 13, marginTop: 2 }}>{meta || 'Military'}</div>
+          <div style={{ color: INK_DIM, fontSize: 13, marginTop: 2 }}>{meta || 'Rider'}</div>
           <div style={{ color: INK_DIM, fontSize: 13, marginTop: 2 }}>{r.email || r.phone || 'no contact'}</div>
           {r.note && <div style={{ color: INK_DIM, fontSize: 12.5, marginTop: 6, fontStyle: 'italic' }}>“{r.note}”</div>}
           {r.admin_note && <div style={{ color: SAND, fontSize: 12.5, marginTop: 6 }}>Note: {r.admin_note}</div>}
@@ -211,11 +343,18 @@ function fmt(iso) {
   try { return new Date(iso).toLocaleString('en-US', { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' }) }
   catch { return iso }
 }
+function formatCents(cents) {
+  if (cents == null) return '—'
+  const d = cents / 100
+  return `$${d.toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}`
+}
 
 const card = { borderRadius: 14, background: SURFACE, border: `1px solid ${LINE}` }
 const sectionLabel = { fontSize: 11, color: SAND, letterSpacing: '0.2em', textTransform: 'uppercase', fontWeight: 700 }
 const chip = { padding: '8px 13px', borderRadius: 999, background: 'rgba(255,255,255,0.04)', border: `1px solid ${LINE}`, color: INK_DIM, fontSize: 12.5, fontWeight: 600, cursor: 'pointer' }
-const chipActive = { background: 'rgba(138,154,79,0.14)', borderColor: 'rgba(138,154,79,0.5)', color: OLIVE_HI }
+const chipActive = { background: 'rgba(229,72,77,0.14)', borderColor: 'rgba(229,72,77,0.5)', color: OLIVE_HI }
 const ghost = { padding: '8px 14px', borderRadius: 999, background: 'transparent', border: `1px solid ${LINE}`, color: INK, fontSize: 13, fontWeight: 600, cursor: 'pointer' }
-const approve = { padding: '9px 18px', borderRadius: 10, background: `linear-gradient(180deg, ${OLIVE_HI}, ${OLIVE})`, color: '#13160c', fontWeight: 800, fontSize: 14, border: 'none', cursor: 'pointer' }
+const approve = { padding: '9px 18px', borderRadius: 10, background: `linear-gradient(180deg, ${OLIVE_HI}, ${OLIVE})`, color: '#fff', fontWeight: 800, fontSize: 14, border: 'none', cursor: 'pointer' }
 const reject = { padding: '9px 14px', borderRadius: 10, background: 'transparent', border: `1px solid ${LINE}`, color: INK_DIM, fontWeight: 600, fontSize: 14, cursor: 'pointer' }
+const input = { padding: '9px 10px', borderRadius: 8, background: 'rgba(255,255,255,0.05)', border: `1px solid ${LINE}`, color: INK, fontSize: 14, outline: 'none', boxSizing: 'border-box', width: '100%' }
+const mini = { padding: '6px 10px', borderRadius: 8, background: 'transparent', border: `1px solid ${LINE}`, fontSize: 14, fontWeight: 700, cursor: 'pointer' }

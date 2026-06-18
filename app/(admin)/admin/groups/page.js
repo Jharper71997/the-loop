@@ -51,6 +51,7 @@ export default function Groups() {
           contacts ( id, first_name, last_name, phone )
         )
       `)
+      .eq('kind', 'brew')   // Brew Loop groups admin; Marines is managed at /marines/admin
       .order('event_date')
     const groupRows = data || []
     setGroups(groupRows)

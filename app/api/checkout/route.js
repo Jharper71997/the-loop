@@ -7,6 +7,7 @@ import { normalizePhone } from '@/lib/phone'
 import { getCurrentWaiverVersion, contactHasSignedCurrent, recordSignature } from '@/lib/waiver'
 import { syncTtForEvent } from '@/lib/ticketTailorSync'
 import { getActivePass } from '@/lib/loopPass'
+import { isContactVerified } from '@/lib/marinesVerify'
 import { finalizeBooking } from '@/lib/booking'
 
 function mintClaimToken() {
@@ -96,12 +97,24 @@ async function handleCheckout(req) {
 
   const { data: event } = await supabase
     .from('events')
-    .select('id, name, event_date, pickup_time, status, group_id')
+    .select('id, name, event_date, pickup_time, status, group_id, kind')
     .eq('id', event_id)
     .maybeSingle()
   if (!event) return Response.json({ error: 'event not found' }, { status: 404 })
   if (event.status !== 'on_sale') {
     return Response.json({ error: `event_not_on_sale_${event.status}` }, { status: 400 })
+  }
+
+  // The Loop (Marines) is ID-gated: the buyer must be military_verified before
+  // they can purchase. This is the authoritative server gate (the buy page also
+  // soft-checks); the driver re-checks an ID at the door. Fully behind the
+  // kind check, so the Brew Loop path is untouched.
+  const isMarines = event.kind === 'marines'
+  if (isMarines) {
+    const verified = await isContactVerified(supabase, { phone: buyer.phone, email: buyer.email })
+    if (!verified) {
+      return Response.json({ error: 'verification_required' }, { status: 403 })
+    }
   }
 
   const ticketTypeIds = [...new Set(riders.map(r => r.ticket_type_id).filter(Boolean))]
@@ -258,6 +271,10 @@ async function handleCheckout(req) {
 
   const waiverQueue = []
   for (const rc of riderContacts) {
+    // The Loop (Marines) doesn't carry the Brew Loop liability waiver — its
+    // riders just buy a shuttle fare. Leave the queue empty so checkout never
+    // demands a signature for a Marines order.
+    if (isMarines) break
     if (rc.claim) continue // friend will sign at /c/<token>
     const alreadySigned = await contactHasSignedCurrent(supabase, rc.contact.id)
     if (alreadySigned) continue
@@ -315,6 +332,10 @@ async function handleCheckout(req) {
   const usedPassContacts = new Set()
   for (const rc of riderContacts) {
     rc.covered = false
+    // The Loop (Marines) never honors a Brew Loop subscription pass — its fares
+    // ($10 single / $20 day pass) are always charged. Without this, a Marine
+    // who happens to hold a Brew Loop Loop Pass would ride free.
+    if (isMarines) continue
     if (rc.claim || !rc.contact?.id) continue
     if (usedPassContacts.has(rc.contact.id)) continue
     const pass = await getActivePass(supabase, rc.contact.id)
@@ -386,6 +407,10 @@ async function handleCheckout(req) {
       party_size: riders.length,
       referrer_contact_id: referrerContactId,
       client_token: client_token || null,
+      // Tag the order's product so dashboards filter Marines vs Brew Loop
+      // revenue with one metadata->>kind test. The webhook spreads existing
+      // order.metadata before its own fields, so this survives settlement.
+      ...(isMarines ? { metadata: { kind: 'marines' } } : {}),
     })
     .select('id')
     .single()

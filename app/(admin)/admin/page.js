@@ -22,6 +22,7 @@ export default async function TonightPage() {
         contacts ( id, first_name, last_name, phone, has_signed_waiver )
       )
     `)
+    .eq('kind', 'brew')   // Brew Loop admin "Tonight"; Marines runs at /marines/admin
     .is('closed_out_at', null)
     .order('event_date', { ascending: true })
     .limit(12)

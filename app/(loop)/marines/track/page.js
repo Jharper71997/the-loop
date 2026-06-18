@@ -1,59 +1,89 @@
-// The Loop — live tracking (Phase 1 scaffold, standalone military/transit style).
-// Real-time map needs the Loop shuttle to broadcast GPS + a built route/schedule,
-// which don't exist yet, so this shows schedule + status + a map placeholder.
-// "Military-only" access will hard-gate once riders have logins; for now it's
-// the military shuttle's own tracker, separate from the Brew Loop /track page.
+// The Loop — live tracking. Mirrors the Brew Loop (external)/track page but for
+// the active Marines loop: loads the kind='marines' group, reads its inline-coord
+// stops, and renders the red-line live map (LoopTrackMap polls /api/shuttle/current
+// scoped to this group_id, so it never shows the Brew Loop bus).
+
+import { getActiveMarinesLoop } from '@/lib/marinesLoop'
+import LoopTrackMap from './LoopTrackMap'
+import { C, card, ghostCta } from '../../_theme'
 
 export const metadata = {
   title: 'Live',
-  description: 'See The Loop shuttle live. Camp Lejeune, Friday to Sunday, 9 to 5.',
+  description: 'See The Loop shuttle live — where it is on the red line and which stop is next.',
   alternates: { canonical: '/marines/track' },
 }
 export const dynamic = 'force-dynamic'
 
-const INK = '#eef1f3'
-const INK_DIM = '#9aa3ab'
-const OLIVE = '#8a9a4f'
-const SAND = '#c8b88f'
-const SURFACE = '#1a2027'
-const LINE = 'rgba(255,255,255,0.10)'
+// Camp Lejeune area — map center when no stops have coords yet.
+const FALLBACK_CENTER = { lat: 34.7541, lng: -77.4302 }
 
-export default function LoopTrackPage() {
+export default async function LoopTrackPage() {
+  let loop = null
+  try { loop = await getActiveMarinesLoop() } catch {}
+
+  const stops = loop?.stops || []
+
   return (
     <main style={{ padding: '16px 14px 28px' }}>
-      <div style={{ maxWidth: 560, margin: '0 auto', display: 'grid', gap: 14 }}>
-        <header>
-          <div style={{ color: SAND, fontSize: 11, letterSpacing: '0.22em', textTransform: 'uppercase', fontWeight: 700 }}>Live track</div>
-          <h1 style={{ color: INK, fontSize: 22, fontWeight: 800, margin: '4px 0 0' }}>The Loop shuttle</h1>
+      <div style={{ maxWidth: 720, margin: '0 auto', display: 'grid', gap: 14 }}>
+        <header style={{ padding: '4px 4px 0' }}>
+          <div style={{ color: C.RED, fontSize: 11, letterSpacing: '0.22em', textTransform: 'uppercase', fontWeight: 700 }}>
+            Live track
+          </div>
+          <h1 style={{ color: C.INK, fontSize: 22, fontWeight: 800, margin: '4px 0 0', lineHeight: 1.15 }}>
+            {loop?.name || 'The Loop shuttle'}
+          </h1>
+          {loop && (
+            <div style={{ color: C.INK_DIM, fontSize: 13, marginTop: 2 }}>
+              {formatSubtitle(loop.eventDate, loop.pickupTime)}
+            </div>
+          )}
         </header>
 
-        {/* Status */}
-        <section style={{ ...card, padding: '16px 18px', display: 'flex', alignItems: 'center', gap: 12 }}>
-          <span aria-hidden style={{ width: 10, height: 10, borderRadius: '50%', background: '#6b727a', flex: '0 0 auto' }} />
-          <div>
-            <div style={{ color: INK, fontSize: 15, fontWeight: 700 }}>Not running right now</div>
-            <div style={{ color: INK_DIM, fontSize: 13, marginTop: 2 }}>Next service: Friday to Sunday, 9 to 5.</div>
-          </div>
-        </section>
-
-        {/* Map placeholder */}
-        <section style={{ ...card, overflow: 'hidden' }}>
-          <div style={{ height: 280, display: 'grid', placeItems: 'center', textAlign: 'center',
-            background: 'repeating-linear-gradient(45deg, rgba(255,255,255,0.02) 0 12px, rgba(255,255,255,0.04) 12px 24px)' }}>
-            <div style={{ display: 'grid', gap: 6, padding: 20 }}>
-              <div style={{ color: OLIVE, fontSize: 13, fontWeight: 800, letterSpacing: '0.14em', textTransform: 'uppercase' }}>Live map</div>
-              <div style={{ color: INK_DIM, fontSize: 13, maxWidth: 320, lineHeight: 1.5 }}>
-                When The Loop is rolling, the shuttle shows here in real time with the next stop and arrival.
-              </div>
+        {loop ? (
+          <LoopTrackMap
+            stops={stops}
+            eventDate={loop.eventDate}
+            groupId={loop.groupId}
+            fallbackCenter={FALLBACK_CENTER}
+          />
+        ) : (
+          <section style={{ ...card, padding: '16px 18px', display: 'flex', alignItems: 'center', gap: 12 }}>
+            <span aria-hidden style={{ width: 10, height: 10, borderRadius: '50%', background: '#6b727a', flex: '0 0 auto' }} />
+            <div>
+              <div style={{ color: C.INK, fontSize: 15, fontWeight: 700 }}>Not running right now</div>
+              <div style={{ color: C.INK_DIM, fontSize: 13, marginTop: 2 }}>Check back this weekend — the red line shows here when the shuttle is rolling.</div>
             </div>
-          </div>
-        </section>
+          </section>
+        )}
 
-        <a href="/marines" style={{ ...ghost, textAlign: 'center' }}>Back to The Loop</a>
+        <a href="/marines" style={{ ...ghostCta, display: 'block', textAlign: 'center' }}>Back to The Loop</a>
       </div>
     </main>
   )
 }
 
-const card = { borderRadius: 14, background: SURFACE, border: `1px solid ${LINE}` }
-const ghost = { display: 'block', padding: '12px 18px', borderRadius: 999, background: 'transparent', color: INK, border: `1px solid ${LINE}`, fontWeight: 600, textDecoration: 'none', fontSize: 14 }
+function formatSubtitle(date, pickup) {
+  const d = formatDate(date)
+  const t = formatTime(pickup)
+  if (d && t) return `${d} · ${t} first pickup`
+  return d || t || ''
+}
+
+function formatDate(iso) {
+  if (!iso) return ''
+  try {
+    const d = new Date(`${iso}T12:00:00-05:00`)
+    return d.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })
+  } catch { return iso }
+}
+
+function formatTime(hhmm) {
+  if (!hhmm) return ''
+  const [hStr, mStr] = String(hhmm).split(':')
+  const h = Number(hStr); const m = Number(mStr)
+  if (!Number.isFinite(h) || !Number.isFinite(m)) return ''
+  const suffix = h >= 12 ? 'PM' : 'AM'
+  const h12 = ((h + 11) % 12) + 1
+  return `${h12}:${String(m).padStart(2, '0')} ${suffix}`
+}

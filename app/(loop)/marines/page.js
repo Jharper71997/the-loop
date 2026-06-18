@@ -1,36 +1,29 @@
-// The Loop — rider-facing landing (Phase 1 scaffold).
-// A hop-on/off shuttle for Camp Lejeune (all ages, military only). Standalone
-// identity — NOT Brew Loop branded. Prices, stops, schedule are placeholders
-// pending Jacob + Stephen. See OneDrive/Desktop/Marines-Loop-How-It-Works.md.
+// The Loop — rider-facing landing.
+// A fixed-route shuttle: board at the on-base gate, ride the "red line" through
+// stops all over town. Single Ride $10 (one boarding) or Day Pass $20 (hop on
+// and off all day). ID required to ride — you verify once, and the driver
+// checks an ID at the door. Standalone identity, NOT Brew Loop branded.
+
+import { C, card, eyebrow, sectionLabel, primaryCta, ghostCta } from '../_theme'
 
 export const metadata = {
-  title: { absolute: 'The Loop — Camp Lejeune shuttle' },
-  description: 'Hop on, hop off to local spots all weekend. Camp Lejeune, Friday to Sunday, 9 to 5.',
+  title: { absolute: 'The Loop — ride the red line' },
+  description: 'Board at the gate and ride the red line all weekend. Single ride $10 or a $20 day pass to hop on and off all day.',
   alternates: { canonical: '/marines' },
 }
 
-const BG_GLOW = 'radial-gradient(120% 80% at 50% 0%, rgba(138,154,79,0.20), transparent 60%), #1a2027'
-const INK = '#eef1f3'
-const INK_DIM = '#9aa3ab'
-const OLIVE = '#8a9a4f'
-const OLIVE_HI = '#aebb6a'
-const SAND = '#c8b88f'
-const SURFACE = '#1a2027'
-const LINE = 'rgba(255,255,255,0.10)'
+const BG_GLOW = 'radial-gradient(120% 80% at 50% 0%, rgba(229,72,77,0.20), transparent 60%), #1a2027'
 
 const PASSES = [
-  { name: 'Single Ride', price: 'TBD', note: 'One boarding. Hop off where you want.' },
-  { name: 'Day Pass', price: 'TBD', note: 'Unlimited hop-on, hop-off all day. The easy one.', featured: true },
-  { name: 'Monthly Pass', price: 'TBD', note: 'Ride all month. For regulars who skip the car.' },
-  { name: 'Sponsor Comped', price: 'Free', note: 'Some stops cover your ride. Look for the badge.' },
+  { name: 'Single Ride', price: '$10', note: 'One boarding. Ride to a stop and hop off.' },
+  { name: 'Day Pass', price: '$20', note: 'Hop on and off all day, as many loops as you want.', featured: true },
 ]
 
 const STEPS = [
-  ['Verify once', 'Confirm your military ID. One time, then you are cleared to ride.'],
-  ['Grab a pass', 'Pick a single ride, a day pass, or go monthly.'],
-  ['Hop on at the gate', 'Catch the shuttle at the base stop. Friday to Sunday, 9 to 5.'],
-  ['Hop off anywhere', 'Stop at any spot on the route, then hop back on the next loop.'],
-  ['Ride all day', 'Ride as many loops as you want while we are running.'],
+  ['Verify once', 'Confirm your ID one time, then you are cleared to ride.'],
+  ['Get your ride', 'Grab a single ride for $10, or a day pass for $20.'],
+  ['Board at the gate', 'Catch The Loop at the on-base stop — the first stop on the red line.'],
+  ['Ride the red line', 'Stay on to your stop, or with a day pass hop on and off all day.'],
 ]
 
 export default function LoopLanding() {
@@ -40,19 +33,19 @@ export default function LoopLanding() {
 
         {/* Hero */}
         <section style={{ ...card, position: 'relative', overflow: 'hidden', padding: '26px 20px 22px', background: BG_GLOW }}>
-          <div style={eyebrow}>Camp Lejeune · Fri to Sun</div>
-          <h1 style={{ color: INK, fontSize: 30, fontWeight: 900, margin: '8px 0 8px', letterSpacing: '-0.01em', lineHeight: 1.08 }}>
-            Hop around town all weekend.
+          <div style={eyebrow}>The red line · all weekend</div>
+          <h1 style={{ color: C.INK, fontSize: 30, fontWeight: 900, margin: '8px 0 8px', letterSpacing: '-0.01em', lineHeight: 1.08 }}>
+            Board at the gate. Ride the red line.
           </h1>
-          <p style={{ color: INK_DIM, fontSize: 14.5, lineHeight: 1.5, margin: 0 }}>
-            The Loop is a hop-on, hop-off shuttle for Camp Lejeune, running our partner spots Friday,
-            Saturday, and Sunday from 9 to 5. Catch it at the gate, ride all day, no car needed.
+          <p style={{ color: C.INK_DIM, fontSize: 14.5, lineHeight: 1.5, margin: 0 }}>
+            The Loop is a fixed-route shuttle. Hop on at the on-base stop and ride the red line to spots
+            all over town. Ten dollars to ride, or grab a day pass and hop on and off all day. No car needed.
           </p>
           <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap', marginTop: 18 }}>
-            <a href="/marines/verify" style={primaryCta}>Verify to ride</a>
+            <a href="/marines/buy" style={primaryCta}>Get a ride</a>
             <a href="/marines/track" style={ghostCta}>See it live</a>
           </div>
-          <div style={{ color: INK_DIM, fontSize: 12, marginTop: 12 }}>Military ID required. You only verify once.</div>
+          <div style={{ color: C.INK_DIM, fontSize: 12, marginTop: 12 }}>ID required to ride. You only verify once.</div>
         </section>
 
         {/* How it works */}
@@ -63,8 +56,8 @@ export default function LoopLanding() {
               <div key={title} style={{ ...card, padding: '14px 16px', display: 'flex', gap: 14, alignItems: 'flex-start' }}>
                 <span style={stepNum}>{i + 1}</span>
                 <div>
-                  <div style={{ color: INK, fontSize: 15, fontWeight: 700 }}>{title}</div>
-                  <div style={{ color: INK_DIM, fontSize: 13.5, marginTop: 2, lineHeight: 1.45 }}>{body}</div>
+                  <div style={{ color: C.INK, fontSize: 15, fontWeight: 700 }}>{title}</div>
+                  <div style={{ color: C.INK_DIM, fontSize: 13.5, marginTop: 2, lineHeight: 1.45 }}>{body}</div>
                 </div>
               </div>
             ))}
@@ -73,38 +66,38 @@ export default function LoopLanding() {
 
         {/* Passes */}
         <section>
-          <div style={sectionLabel}>Passes</div>
+          <div style={sectionLabel}>Fares</div>
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8, marginTop: 8 }}>
             {PASSES.map(p => (
-              <div key={p.name} style={{ ...card, padding: '14px 14px',
-                border: `1px solid ${p.featured ? 'rgba(138,154,79,0.5)' : LINE}`,
-                background: p.featured ? 'rgba(138,154,79,0.10)' : SURFACE }}>
-                <div style={{ color: p.featured ? OLIVE_HI : INK, fontSize: 14, fontWeight: 800 }}>{p.name}</div>
-                <div style={{ color: SAND, fontSize: 20, fontWeight: 800, margin: '4px 0 6px' }}>{p.price}</div>
-                <div style={{ color: INK_DIM, fontSize: 12.5, lineHeight: 1.4 }}>{p.note}</div>
+              <div key={p.name} style={{ ...card, padding: '16px 14px',
+                border: `1px solid ${p.featured ? 'rgba(229,72,77,0.5)' : C.LINE}`,
+                background: p.featured ? 'rgba(229,72,77,0.10)' : C.SURFACE }}>
+                <div style={{ color: p.featured ? C.RED_HI : C.INK, fontSize: 14, fontWeight: 800 }}>{p.name}</div>
+                <div style={{ color: C.WARM, fontSize: 24, fontWeight: 800, margin: '4px 0 6px' }}>{p.price}</div>
+                <div style={{ color: C.INK_DIM, fontSize: 12.5, lineHeight: 1.4 }}>{p.note}</div>
               </div>
             ))}
           </div>
-          <div style={{ color: INK_DIM, fontSize: 12, marginTop: 8 }}>
-            Pricing is being finalized. Verify now and you will be first to ride.
+          <div style={{ color: C.INK_DIM, fontSize: 12, marginTop: 8 }}>
+            Single ride is one boarding — hop off and the next ride is another $10. The day pass is the easy one.
           </div>
         </section>
 
         {/* Route */}
         <section style={{ ...card, padding: '16px 16px' }}>
           <div style={sectionLabel}>The route</div>
-          <p style={{ color: INK_DIM, fontSize: 13.5, lineHeight: 1.5, margin: '8px 0 0' }}>
-            The Loop runs Friday, Saturday, and Sunday from 9 to 5, from the base gate through our sponsor
-            spots and back. Pick a stop, hop off, and catch the next loop when you are ready.
+          <p style={{ color: C.INK_DIM, fontSize: 13.5, lineHeight: 1.5, margin: '8px 0 0' }}>
+            The red line starts at the on-base gate and runs a fixed loop of stops all over town. The route
+            changes week to week — check the live map for this weekend{"'"}s stops and where the shuttle is right now.
           </p>
         </section>
 
         <section style={{ ...card, padding: '20px 18px', textAlign: 'center' }}>
-          <div style={{ color: INK, fontSize: 17, fontWeight: 800 }}>Ready to ride?</div>
-          <div style={{ color: INK_DIM, fontSize: 13.5, margin: '6px 0 14px' }}>
-            Verify your military ID once and you are cleared for every loop.
+          <div style={{ color: C.INK, fontSize: 17, fontWeight: 800 }}>Ready to ride?</div>
+          <div style={{ color: C.INK_DIM, fontSize: 13.5, margin: '6px 0 14px' }}>
+            Verify your ID once and you are cleared for every loop.
           </div>
-          <a href="/marines/verify" style={primaryCta}>Verify to ride</a>
+          <a href="/marines/buy" style={primaryCta}>Get a ride</a>
         </section>
 
       </div>
@@ -112,9 +105,4 @@ export default function LoopLanding() {
   )
 }
 
-const card = { borderRadius: 14, background: SURFACE, border: `1px solid ${LINE}` }
-const eyebrow = { color: SAND, fontSize: 11, letterSpacing: '0.22em', textTransform: 'uppercase', fontWeight: 700 }
-const sectionLabel = { fontSize: 11, color: SAND, letterSpacing: '0.2em', textTransform: 'uppercase', fontWeight: 700 }
-const stepNum = { flex: '0 0 auto', width: 26, height: 26, borderRadius: 7, border: `1px solid ${OLIVE}`, color: OLIVE_HI, fontSize: 13, fontWeight: 800, display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }
-const primaryCta = { display: 'inline-block', padding: '13px 22px', borderRadius: 10, background: `linear-gradient(180deg, ${OLIVE_HI}, ${OLIVE})`, color: '#13160c', fontWeight: 800, textDecoration: 'none', fontSize: 15, boxShadow: '0 10px 24px rgba(138,154,79,0.28)' }
-const ghostCta = { display: 'inline-block', padding: '12px 18px', borderRadius: 999, background: 'transparent', color: INK, border: `1px solid ${LINE}`, fontWeight: 600, textDecoration: 'none', fontSize: 14 }
+const stepNum = { flex: '0 0 auto', width: 26, height: 26, borderRadius: 7, border: `1px solid ${C.RED}`, color: C.RED_HI, fontSize: 13, fontWeight: 800, display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }
