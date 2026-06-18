@@ -102,7 +102,7 @@ export default function BuyClient({ eventId, ticketTypes = [], stops = [] }) {
   const selected = ticketTypes.find(t => t.id === ticketTypeId) || null
 
   return (
-    <form onSubmit={handlePay} style={{ ...card, padding: '18px 16px', display: 'grid', gap: 14 }}>
+    <form onSubmit={handlePay} style={{ ...card, borderRadius: 16, boxShadow: '0 18px 40px rgba(0,0,0,0.28)', padding: '18px 16px', display: 'grid', gap: 14 }}>
       {/* Fare */}
       <div style={{ display: 'grid', gap: 8 }}>
         <span style={fieldLabel}>Your fare</span>

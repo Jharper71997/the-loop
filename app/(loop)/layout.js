@@ -41,7 +41,7 @@ export default async function LoopLayout({ children }) {
   const staff = isAdmin || isDriver
 
   return (
-    <div style={{ minHeight: '100dvh', background: BG, color: INK, WebkitFontSmoothing: 'antialiased',
+    <div className="loop-shell" style={{ minHeight: '100dvh', background: BG, color: INK, WebkitFontSmoothing: 'antialiased',
       fontFamily: 'ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, sans-serif',
       paddingBottom: staff ? 'calc(78px + env(safe-area-inset-bottom))' : 'env(safe-area-inset-bottom)' }}>
       {/* the red line */}

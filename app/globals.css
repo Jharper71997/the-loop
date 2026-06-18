@@ -536,3 +536,55 @@ nav a:hover { color: var(--gold) !important; }
 .external-shell h2::before { content: none; }
 .external-shell h3 { font-size: 18px; font-weight: 600; }
 .external-shell p { font-size: 16px; line-height: 1.65; color: var(--ext-ink-dim); }
+
+/* ============================================================
+   The Loop (Marines) — RED mirror of the gold design system.
+   Reuses every Brew class (.card, .hud-shell, .stat, .hud-heading,
+   .chip, .pulse-dot, .tag-status, .btn-primary, .external-shell …)
+   by overriding the CSS variables they read, plus a few literal-color
+   rules that don't go through a variable. Memory: Marines must keep
+   the Brew polish but in dark + RED, never gold.
+   ============================================================ */
+.loop-shell {
+  --bg:        #14181c;
+  --bg-1:      #14181c;
+  --bg-2:      #1a2027;
+  --bg-3:      #20272f;
+  --ink:       #eef1f3;
+  --ink-dim:   #9aa3ab;
+  --ink-muted: #7c8088;
+  --ink-faint: #5c6168;
+  --line:      rgba(255,255,255,0.07);
+  --line-hi:   rgba(255,255,255,0.12);
+  --gold:      #e5484d;
+  --gold-hi:   #f2585d;
+  --gold-dim:  #a23035;
+  --gold-glow: rgba(229,72,77,0.35);
+  --gold-wash: rgba(229,72,77,0.08);
+  /* external-shell tokens, red-tinted ink kept neutral */
+  --ext-ink:     #f4f6f7;
+  --ext-ink-dim: #aeb6bd;
+  --ext-surface: #1a2027;
+  --ext-surface-hi: #20272f;
+}
+
+/* Literal gold washes that don't flow through a variable → red */
+.loop-shell .card {
+  background:
+    linear-gradient(180deg, rgba(229,72,77,0.03), transparent 40%),
+    linear-gradient(180deg, var(--bg-2), var(--bg-1));
+}
+.loop-shell .card-active {
+  background:
+    linear-gradient(180deg, rgba(229,72,77,0.08), transparent 50%),
+    linear-gradient(180deg, var(--bg-3), var(--bg-2));
+}
+.loop-shell.hud-shell::before,
+.loop-shell .hud-shell::before {
+  background-image:
+    linear-gradient(rgba(229,72,77,0.05) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(229,72,77,0.05) 1px, transparent 1px);
+}
+.loop-shell .chip-gold {
+  background: rgba(229,72,77,0.12);
+}

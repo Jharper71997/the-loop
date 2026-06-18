@@ -136,7 +136,7 @@ function OrderCard({ order }) {
   const riders = order.riders || []
 
   return (
-    <div style={{ ...card, padding: '18px 18px' }}>
+    <div style={{ ...card, borderRadius: 16, boxShadow: '0 16px 34px rgba(0,0,0,0.26)', padding: '18px 18px' }}>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 12, marginBottom: 12 }}>
         <div style={{ minWidth: 0 }}>
           <div style={{ color: C.RED, fontSize: 11, letterSpacing: '0.18em', textTransform: 'uppercase', fontWeight: 700 }}>

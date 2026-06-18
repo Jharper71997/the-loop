@@ -24,13 +24,14 @@ export default async function LoopTrackPage() {
   const stops = loop?.stops || []
 
   return (
-    <main style={{ padding: '16px 14px 28px' }}>
+    <main className="external-shell" style={{ padding: '16px 14px 28px' }}>
       <div style={{ maxWidth: 720, margin: '0 auto', display: 'grid', gap: 14 }}>
         <header style={{ padding: '4px 4px 0' }}>
-          <div style={{ color: C.RED, fontSize: 11, letterSpacing: '0.22em', textTransform: 'uppercase', fontWeight: 700 }}>
+          <div style={{ color: C.RED, fontSize: 11, letterSpacing: '0.22em', textTransform: 'uppercase', fontWeight: 700, display: 'inline-flex', alignItems: 'center', gap: 8 }}>
+            <span style={{ width: 8, height: 8, borderRadius: '50%', background: C.RED, boxShadow: `0 0 10px ${C.RED}`, display: 'inline-block' }} />
             Live track
           </div>
-          <h1 style={{ color: C.INK, fontSize: 22, fontWeight: 800, margin: '4px 0 0', lineHeight: 1.15 }}>
+          <h1 style={{ color: C.INK, fontSize: 26, fontWeight: 800, margin: '6px 0 0', lineHeight: 1.1, letterSpacing: '-0.015em' }}>
             {loop?.name || 'The Loop shuttle'}
           </h1>
           {loop && (
@@ -48,7 +49,7 @@ export default async function LoopTrackPage() {
             fallbackCenter={FALLBACK_CENTER}
           />
         ) : (
-          <section style={{ ...card, padding: '16px 18px', display: 'flex', alignItems: 'center', gap: 12 }}>
+          <section style={{ ...card, borderRadius: 16, boxShadow: '0 16px 34px rgba(0,0,0,0.26)', padding: '16px 18px', display: 'flex', alignItems: 'center', gap: 12 }}>
             <span aria-hidden style={{ width: 10, height: 10, borderRadius: '50%', background: '#6b727a', flex: '0 0 auto' }} />
             <div>
               <div style={{ color: C.INK, fontSize: 15, fontWeight: 700 }}>Not running right now</div>

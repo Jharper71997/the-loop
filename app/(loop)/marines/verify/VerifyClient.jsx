@@ -2,12 +2,11 @@
 
 import { useState } from 'react'
 
-// Names kept (OLIVE/SAND) to avoid churn; values are now the red theme.
+// Name kept (OLIVE) to avoid churn; values are now the red theme.
 const INK = '#eef1f3'
 const INK_DIM = '#9aa3ab'
 const OLIVE = '#e5484d'
 const OLIVE_HI = '#f2585d'
-const SAND = '#c9ccd1'
 const SURFACE = '#1a2027'
 const LINE = 'rgba(255,255,255,0.10)'
 
@@ -61,10 +60,10 @@ export default function VerifyClient() {
 
   if (done) {
     return (
-      <main style={{ padding: '16px 14px 28px' }}>
-        <div style={{ maxWidth: 460, margin: '0 auto', ...card, padding: '28px 22px', textAlign: 'center' }}>
-          <div style={{ color: SAND, fontSize: 11, letterSpacing: '0.22em', textTransform: 'uppercase', fontWeight: 700 }}>Request received</div>
-          <h1 style={{ color: INK, fontSize: 24, fontWeight: 800, margin: '10px 0 8px' }}>You're in the queue</h1>
+      <main className="external-shell" style={{ padding: '16px 14px 28px' }}>
+        <div style={{ maxWidth: 460, margin: '0 auto', ...card, borderRadius: 18, boxShadow: '0 24px 50px rgba(0,0,0,0.34)', padding: '30px 22px', textAlign: 'center' }}>
+          <div style={{ color: OLIVE, fontSize: 11, letterSpacing: '0.22em', textTransform: 'uppercase', fontWeight: 700 }}>Request received</div>
+          <h1 style={{ color: INK, fontSize: 26, fontWeight: 800, margin: '12px 0 8px', letterSpacing: '-0.015em' }}>You're in the queue</h1>
           <p style={{ color: INK_DIM, fontSize: 14.5, lineHeight: 1.5, margin: 0 }}>
             We'll confirm your military ID and unlock your pass. You'll get a text or email the moment
             you're cleared to ride. Have your ID ready when you board.
@@ -76,17 +75,17 @@ export default function VerifyClient() {
   }
 
   return (
-    <main style={{ padding: '16px 14px 28px' }}>
+    <main className="external-shell" style={{ padding: '16px 14px 28px' }}>
       <div style={{ maxWidth: 460, margin: '0 auto', display: 'grid', gap: 14 }}>
         <div>
-          <div style={{ color: SAND, fontSize: 11, letterSpacing: '0.22em', textTransform: 'uppercase', fontWeight: 700 }}>The Loop</div>
-          <h1 style={{ color: INK, fontSize: 26, fontWeight: 800, margin: '8px 0 6px', letterSpacing: '-0.01em' }}>Verify to ride</h1>
+          <div style={{ color: OLIVE, fontSize: 11, letterSpacing: '0.22em', textTransform: 'uppercase', fontWeight: 700 }}>The Loop</div>
+          <h1 style={{ color: INK, fontSize: 28, fontWeight: 800, margin: '10px 0 6px', letterSpacing: '-0.015em', lineHeight: 1.08 }}>Verify to ride</h1>
           <p style={{ color: INK_DIM, fontSize: 14, lineHeight: 1.5, margin: 0 }}>
             Quick one-time ID check so we know you're cleared to ride. Takes a minute. After this you're set for every ride.
           </p>
         </div>
 
-        <form onSubmit={handleSubmit} style={{ ...card, padding: '18px 16px', display: 'grid', gap: 12 }}>
+        <form onSubmit={handleSubmit} style={{ ...card, borderRadius: 16, boxShadow: '0 18px 40px rgba(0,0,0,0.28)', padding: '18px 16px', display: 'grid', gap: 12 }}>
           <Row>
             <Field label="First name"><input style={input} value={firstName} onChange={e => setFirstName(e.target.value)} autoComplete="given-name" /></Field>
             <Field label="Last name"><input style={input} value={lastName} onChange={e => setLastName(e.target.value)} autoComplete="family-name" /></Field>

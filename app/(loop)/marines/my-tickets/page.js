@@ -16,11 +16,11 @@ export const dynamic = 'force-dynamic'
 
 export default function MarinesMyTicketsPage() {
   return (
-    <main style={{ padding: '16px 14px 28px' }}>
+    <main className="external-shell" style={{ padding: '16px 14px 28px' }}>
       <div style={{ maxWidth: 460, margin: '0 auto', display: 'grid', gap: 14 }}>
         <div>
           <div style={eyebrow}>The Loop · Your passes</div>
-          <h1 style={{ color: C.INK, fontSize: 26, fontWeight: 800, margin: '8px 0 6px', letterSpacing: '-0.01em' }}>
+          <h1 style={{ color: C.INK, fontSize: 28, fontWeight: 800, margin: '10px 0 6px', letterSpacing: '-0.015em', lineHeight: 1.08 }}>
             Find my passes
           </h1>
           <p style={{ color: C.INK_DIM, fontSize: 14, lineHeight: 1.5, margin: 0 }}>

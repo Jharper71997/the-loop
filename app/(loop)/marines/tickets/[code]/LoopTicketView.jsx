@@ -75,11 +75,11 @@ export default function LoopTicketView({
 
   if (isVoided) {
     return (
-      <div style={{ minHeight: '100dvh', background: C.BG, color: C.INK, padding: '24px 16px 48px',
+      <div className="external-shell" style={{ minHeight: '100dvh', background: C.BG, color: C.INK, padding: '24px 16px 48px',
         display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}>
         <div style={{ maxWidth: 420, width: '100%', textAlign: 'center', display: 'grid', gap: 14 }}>
           <div style={{ fontSize: 36 }}>×</div>
-          <h1 style={{ color: C.INK, fontSize: 22, fontWeight: 700, margin: 0 }}>This pass has been voided</h1>
+          <h1 style={{ color: C.INK, fontSize: 24, fontWeight: 700, margin: 0, letterSpacing: '-0.015em' }}>This pass has been voided</h1>
           <p style={{ color: C.INK_DIM, fontSize: 14, lineHeight: 1.5, margin: 0 }}>
             It&apos;s no longer valid for boarding. If this looks wrong, see your loop staff.
           </p>
@@ -90,14 +90,14 @@ export default function LoopTicketView({
   }
 
   return (
-    <div style={{ minHeight: '100dvh', background: C.BG, color: C.INK, padding: '24px 16px 48px',
+    <div className="external-shell" style={{ minHeight: '100dvh', background: C.BG, color: C.INK, padding: '24px 16px 48px',
       display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
       <div style={{ maxWidth: 460, width: '100%', display: 'grid', gap: 18 }}>
         <header style={{ textAlign: 'center', paddingTop: 8 }}>
           <div style={{ color: C.RED, fontSize: 11, letterSpacing: '0.22em', textTransform: 'uppercase', fontWeight: 700 }}>
             The Loop · Boarding pass
           </div>
-          <h1 style={{ color: C.INK, fontSize: 22, fontWeight: 700, margin: '6px 0 0' }}>{riderName}</h1>
+          <h1 style={{ color: C.INK, fontSize: 24, fontWeight: 700, margin: '8px 0 0', letterSpacing: '-0.015em' }}>{riderName}</h1>
           <div style={{ color: C.INK_DIM, fontSize: 14, marginTop: 4 }}>
             {eventName}{dateLabel ? ` · ${dateLabel}` : ''}
           </div>

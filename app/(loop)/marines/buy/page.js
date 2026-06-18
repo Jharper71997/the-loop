@@ -37,11 +37,11 @@ export default async function BuyPage() {
 
   if (!onSale || !ticketTypes.length) {
     return (
-      <main style={{ padding: '16px 14px 28px' }}>
+      <main className="external-shell" style={{ padding: '16px 14px 28px' }}>
         <div style={{ maxWidth: 460, margin: '0 auto', display: 'grid', gap: 14 }}>
           <div>
             <div style={eyebrow}>The Loop</div>
-            <h1 style={{ color: C.INK, fontSize: 26, fontWeight: 800, margin: '8px 0 6px', letterSpacing: '-0.01em' }}>No rides on sale yet</h1>
+            <h1 style={{ color: C.INK, fontSize: 28, fontWeight: 800, margin: '10px 0 6px', letterSpacing: '-0.015em', lineHeight: 1.08 }}>No rides on sale yet</h1>
             <p style={{ color: C.INK_DIM, fontSize: 14, lineHeight: 1.5, margin: 0 }}>
               This weekend{"'"}s red line isn{"'"}t open for booking yet. Verify your ID now so you{"'"}re ready, and check the live map when the shuttle is rolling.
             </p>
@@ -64,11 +64,11 @@ export default async function BuyPage() {
   }))
 
   return (
-    <main style={{ padding: '16px 14px 28px' }}>
+    <main className="external-shell" style={{ padding: '16px 14px 28px' }}>
       <div style={{ maxWidth: 460, margin: '0 auto', display: 'grid', gap: 14 }}>
         <div>
           <div style={eyebrow}>The Loop · {loop.name}</div>
-          <h1 style={{ color: C.INK, fontSize: 26, fontWeight: 800, margin: '8px 0 6px', letterSpacing: '-0.01em' }}>Get a ride</h1>
+          <h1 style={{ color: C.INK, fontSize: 28, fontWeight: 800, margin: '10px 0 6px', letterSpacing: '-0.015em', lineHeight: 1.08 }}>Get a ride</h1>
           <p style={{ color: C.INK_DIM, fontSize: 14, lineHeight: 1.5, margin: 0 }}>
             Pick a single ride or a day pass, choose where you{"'"}re boarding, and you{"'"}re set. Have your ID ready at the door.
           </p>

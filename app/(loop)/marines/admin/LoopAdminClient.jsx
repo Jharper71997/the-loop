@@ -12,6 +12,9 @@ const SAND = '#c9ccd1'
 const SURFACE = '#1a2027'
 const LINE = 'rgba(255,255,255,0.10)'
 const STATUS_COLOR = { pending: SAND, approved: '#7fc88a', rejected: '#ff8585' }
+// Brew-admin HUD fonts (globally imported in globals.css), red-skinned here.
+const DISPLAY = "'Orbitron', system-ui, sans-serif"
+const MONO = "'JetBrains Mono', ui-monospace, monospace"
 
 export default function LoopAdminClient() {
   const [rows, setRows] = useState([])
@@ -81,9 +84,15 @@ export default function LoopAdminClient() {
   }, [rows, search])
 
   return (
-    <main style={{ padding: '18px 16px 44px', maxWidth: 820, margin: '0 auto', color: INK }}>
-      <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', gap: 12, flexWrap: 'wrap' }}>
-        <h1 style={{ fontSize: 22, fontWeight: 800, margin: 0 }}>Operations</h1>
+    <main className="hud-shell" style={{ padding: '18px 16px 44px', maxWidth: 820, margin: '0 auto', color: INK }}>
+      <div style={{ display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between', gap: 12, flexWrap: 'wrap' }}>
+        <div>
+          <div style={{ fontFamily: MONO, fontSize: 10, fontWeight: 700, letterSpacing: '0.28em', textTransform: 'uppercase', color: OLIVE, display: 'inline-flex', alignItems: 'center', gap: 8 }}>
+            <span style={{ width: 6, height: 6, borderRadius: '50%', background: OLIVE, boxShadow: `0 0 8px ${OLIVE}` }} />
+            The Loop · Ops
+          </div>
+          <h1 style={{ fontFamily: DISPLAY, fontSize: 'clamp(22px, 6vw, 28px)', fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase', margin: '4px 0 0', color: OLIVE_HI, textShadow: '0 0 18px rgba(229,72,77,0.30)' }}>Operations</h1>
+        </div>
         <button onClick={load} style={ghost}>Refresh</button>
       </div>
 
@@ -311,8 +320,8 @@ function ScoreboardTab() {
 function LiveCell({ value, label, accent, small }) {
   return (
     <div>
-      <div style={{ fontSize: small ? 16 : 26, fontWeight: 800, color: accent ? OLIVE_HI : INK, lineHeight: 1.1, wordBreak: 'break-word' }}>{value}</div>
-      <div style={{ color: INK_DIM, fontSize: 11, letterSpacing: '0.06em', textTransform: 'uppercase', fontWeight: 600, marginTop: 6 }}>{label}</div>
+      <div style={{ fontFamily: DISPLAY, fontVariantNumeric: 'tabular-nums', fontSize: small ? 16 : 26, fontWeight: 700, letterSpacing: '0.03em', color: accent ? OLIVE_HI : INK, lineHeight: 1.1, wordBreak: 'break-word', textShadow: accent ? '0 0 16px rgba(229,72,77,0.35)' : 'none' }}>{value}</div>
+      <div style={{ fontFamily: MONO, color: INK_DIM, fontSize: 10, letterSpacing: '0.2em', textTransform: 'uppercase', fontWeight: 600, marginTop: 6 }}>{label}</div>
     </div>
   )
 }
@@ -513,8 +522,8 @@ function RiderCard({ r, acting, onApprove, onReject, onFlag, onNote, mode }) {
 function Stat({ label, value, sub, accent }) {
   return (
     <div style={{ ...card, padding: '14px 14px' }}>
-      <div style={{ fontFamily: 'inherit', fontSize: 30, fontWeight: 800, color: accent ? OLIVE_HI : INK, lineHeight: 1 }}>{value}</div>
-      <div style={{ color: INK_DIM, fontSize: 11, letterSpacing: '0.08em', textTransform: 'uppercase', fontWeight: 600, marginTop: 8 }}>{label}</div>
+      <div style={{ fontFamily: DISPLAY, fontVariantNumeric: 'tabular-nums', fontSize: 28, fontWeight: 700, letterSpacing: '0.04em', color: accent ? OLIVE_HI : INK, lineHeight: 1, textShadow: accent ? '0 0 18px rgba(229,72,77,0.35)' : 'none' }}>{value}</div>
+      <div style={{ fontFamily: MONO, color: INK_DIM, fontSize: 10, letterSpacing: '0.22em', textTransform: 'uppercase', fontWeight: 600, marginTop: 8 }}>{label}</div>
       {sub && <div style={{ color: SAND, fontSize: 12, marginTop: 3 }}>{sub}</div>}
     </div>
   )
@@ -533,10 +542,15 @@ function formatCents(cents) {
   return `$${d.toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}`
 }
 
-const card = { borderRadius: 14, background: SURFACE, border: `1px solid ${LINE}` }
-const sectionLabel = { fontSize: 11, color: SAND, letterSpacing: '0.2em', textTransform: 'uppercase', fontWeight: 700 }
-const chip = { padding: '8px 13px', borderRadius: 999, background: 'rgba(255,255,255,0.04)', border: `1px solid ${LINE}`, color: INK_DIM, fontSize: 12.5, fontWeight: 600, cursor: 'pointer' }
-const chipActive = { background: 'rgba(229,72,77,0.14)', borderColor: 'rgba(229,72,77,0.5)', color: OLIVE_HI }
+const card = {
+  borderRadius: 12,
+  background: 'linear-gradient(180deg, rgba(229,72,77,0.03), transparent 40%), linear-gradient(180deg, #1a2027, #14181c)',
+  border: `1px solid ${LINE}`,
+  boxShadow: '0 1px 0 rgba(255,255,255,0.02) inset, 0 8px 24px rgba(0,0,0,0.35)',
+}
+const sectionLabel = { fontFamily: MONO, fontSize: 10, color: OLIVE, letterSpacing: '0.28em', textTransform: 'uppercase', fontWeight: 700 }
+const chip = { fontFamily: MONO, padding: '7px 12px', borderRadius: 6, background: 'rgba(255,255,255,0.03)', border: `1px solid ${LINE}`, color: INK_DIM, fontSize: 11, fontWeight: 700, letterSpacing: '0.12em', textTransform: 'uppercase', cursor: 'pointer' }
+const chipActive = { background: `linear-gradient(180deg, ${OLIVE_HI}, ${OLIVE})`, borderColor: 'rgba(0,0,0,0.35)', color: '#fff', boxShadow: '0 0 18px rgba(229,72,77,0.4)' }
 const ghost = { padding: '8px 14px', borderRadius: 999, background: 'transparent', border: `1px solid ${LINE}`, color: INK, fontSize: 13, fontWeight: 600, cursor: 'pointer' }
 const approve = { padding: '9px 18px', borderRadius: 10, background: `linear-gradient(180deg, ${OLIVE_HI}, ${OLIVE})`, color: '#fff', fontWeight: 800, fontSize: 14, border: 'none', cursor: 'pointer' }
 const reject = { padding: '9px 14px', borderRadius: 10, background: 'transparent', border: `1px solid ${LINE}`, color: INK_DIM, fontWeight: 600, fontSize: 14, cursor: 'pointer' }

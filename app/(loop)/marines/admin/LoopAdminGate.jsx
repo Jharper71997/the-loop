@@ -4,11 +4,11 @@ import { useState } from 'react'
 
 const INK = '#eef1f3'
 const INK_DIM = '#9aa3ab'
-const OLIVE = '#8a9a4f'
-const OLIVE_HI = '#aebb6a'
-const SAND = '#c8b88f'
-const SURFACE = '#1a2027'
+const RED = '#e5484d'
+const RED_HI = '#f2585d'
 const LINE = 'rgba(255,255,255,0.10)'
+const DISPLAY = "'Orbitron', system-ui, sans-serif"
+const MONO = "'JetBrains Mono', ui-monospace, monospace"
 
 export default function LoopAdminGate() {
   const [code, setCode] = useState('')
@@ -31,16 +31,22 @@ export default function LoopAdminGate() {
   }
 
   return (
-    <main style={{ padding: '40px 16px', display: 'grid', placeItems: 'center', minHeight: '70dvh' }}>
-      <form onSubmit={submit} style={{ width: '100%', maxWidth: 340, background: SURFACE, border: `1px solid ${LINE}`, borderRadius: 14, padding: '24px 20px', display: 'grid', gap: 14 }}>
-        <div style={{ color: SAND, fontSize: 11, letterSpacing: '0.22em', textTransform: 'uppercase', fontWeight: 700 }}>The Loop · Admin</div>
-        <div style={{ color: INK, fontSize: 18, fontWeight: 800 }}>Enter access code</div>
+    <main className="hud-shell" style={{ padding: '40px 16px', display: 'grid', placeItems: 'center', minHeight: '70dvh' }}>
+      <form onSubmit={submit} style={{ width: '100%', maxWidth: 340,
+        background: 'linear-gradient(180deg, rgba(229,72,77,0.04), transparent 45%), linear-gradient(180deg, #1a2027, #14181c)',
+        border: `1px solid ${LINE}`, borderRadius: 12, padding: '24px 20px', display: 'grid', gap: 14,
+        boxShadow: '0 1px 0 rgba(255,255,255,0.02) inset, 0 8px 28px rgba(0,0,0,0.45)' }}>
+        <div style={{ fontFamily: MONO, color: RED, fontSize: 10, letterSpacing: '0.28em', textTransform: 'uppercase', fontWeight: 700, display: 'inline-flex', alignItems: 'center', gap: 8 }}>
+          <span style={{ width: 6, height: 6, borderRadius: '50%', background: RED, boxShadow: `0 0 8px ${RED}` }} />
+          The Loop · Admin
+        </div>
+        <div style={{ fontFamily: DISPLAY, color: INK, fontSize: 19, fontWeight: 700, letterSpacing: '0.06em', textTransform: 'uppercase' }}>Access code</div>
         <input
-          autoFocus value={code} onChange={e => setCode(e.target.value)} placeholder="Access code" type="password"
-          style={{ width: '100%', padding: '12px 12px', borderRadius: 9, background: 'rgba(255,255,255,0.05)', border: `1px solid ${LINE}`, color: INK, fontSize: 16, outline: 'none' }}
+          autoFocus value={code} onChange={e => setCode(e.target.value)} placeholder="Enter code" type="password"
+          style={{ width: '100%', padding: '12px 12px', borderRadius: 9, background: 'rgba(255,255,255,0.05)', border: `1px solid ${LINE}`, color: INK, fontSize: 16, outline: 'none', fontFamily: MONO, letterSpacing: '0.1em' }}
         />
         {error && <div style={{ color: '#ff8585', fontSize: 13 }}>{error}</div>}
-        <button type="submit" disabled={submitting} style={{ padding: '12px 18px', borderRadius: 10, border: 'none', background: `linear-gradient(180deg, ${OLIVE_HI}, ${OLIVE})`, color: '#13160c', fontWeight: 800, fontSize: 15, cursor: submitting ? 'default' : 'pointer', opacity: submitting ? 0.6 : 1 }}>
+        <button type="submit" disabled={submitting} style={{ padding: '12px 18px', borderRadius: 10, border: 'none', background: `linear-gradient(180deg, ${RED_HI}, ${RED})`, color: '#fff', fontWeight: 800, fontSize: 14, letterSpacing: '0.08em', textTransform: 'uppercase', cursor: submitting ? 'default' : 'pointer', opacity: submitting ? 0.6 : 1, boxShadow: '0 0 24px rgba(229,72,77,0.3)' }}>
           {submitting ? 'Checking…' : 'Unlock'}
         </button>
       </form>

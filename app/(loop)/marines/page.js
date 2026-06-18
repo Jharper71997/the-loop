@@ -28,24 +28,28 @@ const STEPS = [
 
 export default function LoopLanding() {
   return (
-    <main style={{ padding: '16px 14px 28px' }}>
+    <main className="external-shell" style={{ padding: '16px 14px 28px' }}>
       <div style={{ maxWidth: 560, margin: '0 auto', display: 'grid', gap: 14 }}>
 
         {/* Hero */}
-        <section style={{ ...card, position: 'relative', overflow: 'hidden', padding: '26px 20px 22px', background: BG_GLOW }}>
-          <div style={eyebrow}>The red line · all weekend</div>
-          <h1 style={{ color: C.INK, fontSize: 30, fontWeight: 900, margin: '8px 0 8px', letterSpacing: '-0.01em', lineHeight: 1.08 }}>
+        <section style={{ ...card, borderRadius: 18, position: 'relative', overflow: 'hidden', padding: '28px 22px 24px', background: BG_GLOW, border: `1px solid ${C.LINE}`, boxShadow: '0 30px 60px rgba(0,0,0,0.4)' }}>
+          <div aria-hidden style={{ position: 'absolute', right: -40, bottom: -40, width: 220, height: 220, borderRadius: '50%', background: 'radial-gradient(50% 50% at 50% 50%, rgba(229,72,77,0.18), transparent 70%)', pointerEvents: 'none' }} />
+          <div style={{ position: 'relative', ...eyebrow, display: 'inline-flex', alignItems: 'center', gap: 8 }}>
+            <span style={{ width: 8, height: 8, borderRadius: '50%', background: C.RED, boxShadow: `0 0 10px ${C.RED}`, display: 'inline-block' }} />
+            The red line · all weekend
+          </div>
+          <h1 style={{ position: 'relative', color: C.INK, fontSize: 32, fontWeight: 800, margin: '10px 0 8px', letterSpacing: '-0.015em', lineHeight: 1.06 }}>
             Board at the gate. Ride the red line.
           </h1>
-          <p style={{ color: C.INK_DIM, fontSize: 14.5, lineHeight: 1.5, margin: 0 }}>
+          <p style={{ position: 'relative', color: C.INK_DIM, fontSize: 14.5, lineHeight: 1.55, margin: 0 }}>
             The Loop is a fixed-route shuttle. Hop on at the on-base stop and ride the red line to spots
             all over town. Ten dollars to ride, or grab a day pass and hop on and off all day. No car needed.
           </p>
-          <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap', marginTop: 18 }}>
+          <div style={{ position: 'relative', display: 'flex', gap: 10, alignItems: 'center', flexWrap: 'wrap', marginTop: 18 }}>
             <a href="/marines/buy" style={primaryCta}>Get a ride</a>
             <a href="/marines/track" style={ghostCta}>See it live</a>
           </div>
-          <div style={{ color: C.INK_DIM, fontSize: 12, marginTop: 12 }}>ID required to ride. You only verify once.</div>
+          <div style={{ position: 'relative', color: C.INK_DIM, fontSize: 12, marginTop: 12 }}>ID required to ride. You only verify once.</div>
         </section>
 
         {/* How it works */}
@@ -53,7 +57,7 @@ export default function LoopLanding() {
           <div style={sectionLabel}>How it works</div>
           <div style={{ display: 'grid', gap: 8, marginTop: 8 }}>
             {STEPS.map(([title, body], i) => (
-              <div key={title} style={{ ...card, padding: '14px 16px', display: 'flex', gap: 14, alignItems: 'flex-start' }}>
+              <div key={title} style={{ ...softCard, padding: '14px 16px', display: 'flex', gap: 14, alignItems: 'flex-start' }}>
                 <span style={stepNum}>{i + 1}</span>
                 <div>
                   <div style={{ color: C.INK, fontSize: 15, fontWeight: 700 }}>{title}</div>
@@ -69,9 +73,10 @@ export default function LoopLanding() {
           <div style={sectionLabel}>Fares</div>
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8, marginTop: 8 }}>
             {PASSES.map(p => (
-              <div key={p.name} style={{ ...card, padding: '16px 14px',
+              <div key={p.name} style={{ ...softCard, padding: '16px 14px',
                 border: `1px solid ${p.featured ? 'rgba(229,72,77,0.5)' : C.LINE}`,
-                background: p.featured ? 'rgba(229,72,77,0.10)' : C.SURFACE }}>
+                background: p.featured ? 'rgba(229,72,77,0.10)' : C.SURFACE,
+                boxShadow: p.featured ? '0 14px 30px rgba(229,72,77,0.16)' : '0 14px 30px rgba(0,0,0,0.22)' }}>
                 <div style={{ color: p.featured ? C.RED_HI : C.INK, fontSize: 14, fontWeight: 800 }}>{p.name}</div>
                 <div style={{ color: C.WARM, fontSize: 24, fontWeight: 800, margin: '4px 0 6px' }}>{p.price}</div>
                 <div style={{ color: C.INK_DIM, fontSize: 12.5, lineHeight: 1.4 }}>{p.note}</div>
@@ -84,7 +89,7 @@ export default function LoopLanding() {
         </section>
 
         {/* Route */}
-        <section style={{ ...card, padding: '16px 16px' }}>
+        <section style={{ ...softCard, padding: '16px 16px' }}>
           <div style={sectionLabel}>The route</div>
           <p style={{ color: C.INK_DIM, fontSize: 13.5, lineHeight: 1.5, margin: '8px 0 0' }}>
             The red line starts at the on-base gate and runs a fixed loop of stops all over town. The route
@@ -92,7 +97,7 @@ export default function LoopLanding() {
           </p>
         </section>
 
-        <section style={{ ...card, padding: '20px 18px', textAlign: 'center' }}>
+        <section style={{ ...softCard, padding: '22px 18px', textAlign: 'center', background: BG_GLOW }}>
           <div style={{ color: C.INK, fontSize: 17, fontWeight: 800 }}>Ready to ride?</div>
           <div style={{ color: C.INK_DIM, fontSize: 13.5, margin: '6px 0 14px' }}>
             Verify your ID once and you are cleared for every loop.
@@ -105,4 +110,5 @@ export default function LoopLanding() {
   )
 }
 
+const softCard = { ...card, borderRadius: 16, boxShadow: '0 14px 30px rgba(0,0,0,0.22)' }
 const stepNum = { flex: '0 0 auto', width: 26, height: 26, borderRadius: 7, border: `1px solid ${C.RED}`, color: C.RED_HI, fontSize: 13, fontWeight: 800, display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }
