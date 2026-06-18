@@ -3,6 +3,10 @@
 // branding, because under-21 riders are aboard and it must not read as a
 // bar-hop service. Dark base + red accent (the "red line"), its own metadata.
 
+import { isLoopAdmin } from '@/lib/loopAdmin'
+import { isLoopDriver } from '@/lib/loopDriver'
+import LoopStaffNav from './_components/LoopStaffNav'
+
 const BG = '#14181c'
 const INK = '#eef1f3'
 const RED = '#e5484d'
@@ -30,11 +34,16 @@ export const viewport = {
   themeColor: '#14181c',
 }
 
-export default function LoopLayout({ children }) {
+export default async function LoopLayout({ children }) {
+  // Staff (code-cookie) gets the bottom nav; riders never see it. Reserve room
+  // at the bottom so the fixed bar doesn't cover page content.
+  const [isAdmin, isDriver] = await Promise.all([isLoopAdmin(), isLoopDriver()])
+  const staff = isAdmin || isDriver
+
   return (
     <div style={{ minHeight: '100dvh', background: BG, color: INK, WebkitFontSmoothing: 'antialiased',
       fontFamily: 'ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, sans-serif',
-      paddingBottom: 'env(safe-area-inset-bottom)' }}>
+      paddingBottom: staff ? 'calc(78px + env(safe-area-inset-bottom))' : 'env(safe-area-inset-bottom)' }}>
       {/* the red line */}
       <div aria-hidden style={{ height: 4, background: `linear-gradient(90deg, ${RED_DEEP}, ${RED})` }} />
       <header style={{ position: 'sticky', top: 0, zIndex: 40, background: 'rgba(20,24,28,0.92)',
@@ -55,6 +64,7 @@ export default function LoopLayout({ children }) {
         </nav>
       </header>
       {children}
+      <LoopStaffNav isAdmin={isAdmin} isDriver={isDriver} />
     </div>
   )
 }
