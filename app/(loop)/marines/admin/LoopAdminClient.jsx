@@ -97,7 +97,7 @@ export default function LoopAdminClient() {
 
       {/* Tabs */}
       <div style={{ display: 'flex', gap: 8, margin: '14px 0', flexWrap: 'wrap' }}>
-        {[['requests', `Requests${stats.pending ? ` (${stats.pending})` : ''}`], ['riders', 'Riders'], ['passes', 'Passes & Revenue'], ['service', 'Service']].map(([k, label]) => (
+        {[['requests', `Requests${stats.pending ? ` (${stats.pending})` : ''}`], ['dispatch', 'Dispatch'], ['scoreboard', 'Scoreboard'], ['riders', 'Riders'], ['passes', 'Passes & Revenue'], ['service', 'Service']].map(([k, label]) => (
           <button key={k} onClick={() => setTab(k)} style={{ ...chip, ...(tab === k ? chipActive : {}) }}>{label}</button>
         ))}
       </div>
@@ -126,10 +126,194 @@ export default function LoopAdminClient() {
         </Section>
       )}
 
+      {!loading && tab === 'dispatch' && <DispatchTab />}
+
+      {!loading && tab === 'scoreboard' && <ScoreboardTab />}
+
       {!loading && tab === 'passes' && <RevenueTab />}
 
       {!loading && tab === 'service' && <ServiceTab />}
     </main>
+  )
+}
+
+function DispatchTab() {
+  const [data, setData] = useState(null)
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState(null)
+
+  useEffect(() => {
+    let cancelled = false
+    async function load(initial) {
+      if (initial) { setLoading(true) }
+      try {
+        const res = await fetch('/api/loop-admin/manifest', { cache: 'no-store' })
+        const json = await res.json().catch(() => ({}))
+        if (cancelled) return
+        if (!res.ok) { setError(json.error || `Failed (${res.status})`); return }
+        setError(null); setData(json)
+      } catch (err) { if (!cancelled) setError(err.message || 'Network error') }
+      finally { if (!cancelled && initial) setLoading(false) }
+    }
+    load(true)
+    // Auto-refresh every ~10s, but pause while the tab is backgrounded.
+    const id = setInterval(() => { if (!document.hidden) load(false) }, 10000)
+    return () => { cancelled = true; clearInterval(id) }
+  }, [])
+
+  if (loading) return <Section><div style={{ color: INK_DIM }}>Loading…</div></Section>
+  if (error) return <Section><div style={{ color: '#ff8585' }}>{error}</div></Section>
+  if (!data?.group) {
+    return <Section><Empty>No active loop. Build this weekend&apos;s route with the weekend script — riders waiting and on board show up here once the loop is live.</Empty></Section>
+  }
+
+  const stops = data.stops || []
+  const t = data.totals || { waiting: 0, onBoard: 0, stops: 0 }
+
+  return (
+    <Section>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 10 }}>
+        <Stat label="Waiting" value={t.waiting} accent={t.waiting > 0} />
+        <Stat label="On board" value={t.onBoard} />
+        <Stat label="Stops" value={t.stops} />
+      </div>
+      {!stops.some(s => s.waiting.length || s.onBoard.length) && (
+        <Empty>No riders booked on this loop yet.</Empty>
+      )}
+      {stops.map((s) => (
+        <div key={s.index ?? 'unassigned'} style={{ ...card, padding: '14px 16px' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', gap: 10 }}>
+            <div style={{ display: 'flex', alignItems: 'baseline', gap: 8, minWidth: 0 }}>
+              {s.index != null && <span style={{ color: OLIVE_HI, fontWeight: 800, fontSize: 13 }}>{s.index + 1}</span>}
+              <span style={{ fontSize: 15, fontWeight: 700 }}>{s.name}</span>
+              {s.onBase && <span style={{ color: SAND, fontSize: 11, fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase' }}>· on base</span>}
+            </div>
+            {s.startTime && <span style={{ color: FAINT, fontSize: 12 }}>{s.startTime}</span>}
+          </div>
+          <div style={{ marginTop: 10, color: INK_DIM, fontSize: 13.5, lineHeight: 1.55 }}>
+            <div>
+              <span style={{ color: OLIVE_HI, fontWeight: 700 }}>Waiting here ({s.waiting.length}):</span>{' '}
+              {s.waiting.length
+                ? s.waiting.map((r, i) => <span key={i}>{i ? ', ' : ''}<span style={{ color: INK }}>{r.name}</span></span>)
+                : <span style={{ color: FAINT }}>—</span>}
+            </div>
+            <div style={{ marginTop: 6 }}>
+              <span style={{ color: '#7fc88a', fontWeight: 700 }}>On board ({s.onBoard.length}):</span>{' '}
+              {s.onBoard.length
+                ? s.onBoard.map((r, i) => (
+                    <span key={i}>{i ? ', ' : ''}<span style={{ color: INK }}>{r.name}</span> <span style={{ color: FAINT, fontSize: 12 }}>({r.pass})</span></span>
+                  ))
+                : <span style={{ color: FAINT }}>—</span>}
+            </div>
+          </div>
+        </div>
+      ))}
+      <div style={{ color: FAINT, fontSize: 12 }}>Auto-refreshes every 10s.</div>
+    </Section>
+  )
+}
+
+function ScoreboardTab() {
+  const [data, setData] = useState(null)
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState(null)
+
+  useEffect(() => {
+    let cancelled = false
+    async function load(initial) {
+      if (initial) setLoading(true)
+      try {
+        const res = await fetch('/api/loop-admin/scoreboard', { cache: 'no-store' })
+        const json = await res.json().catch(() => ({}))
+        if (cancelled) return
+        if (!res.ok) { setError(json.error || `Failed (${res.status})`); return }
+        setError(null); setData(json)
+      } catch (err) { if (!cancelled) setError(err.message || 'Network error') }
+      finally { if (!cancelled && initial) setLoading(false) }
+    }
+    load(true)
+    const id = setInterval(() => { if (!document.hidden) load(false) }, 15000)
+    return () => { cancelled = true; clearInterval(id) }
+  }, [])
+
+  if (loading) return <Section><div style={{ color: INK_DIM }}>Loading…</div></Section>
+  if (error) return <Section><div style={{ color: '#ff8585' }}>{error}</div></Section>
+
+  const live = data?.live
+  const weekend = data?.weekend || { riders: 0, revenueCents: 0, single: 0, day: 0 }
+  const cumulative = data?.cumulative || { riders: 0, revenueCents: 0, single: 0, day: 0 }
+
+  if (!live) {
+    return (
+      <Section>
+        <Empty>No active loop running. Cumulative totals below.</Empty>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 10 }}>
+          <Stat label="Riders all-time" value={cumulative.riders} />
+          <Stat label="Single rides" value={cumulative.single} />
+          <Stat label="Day passes" value={cumulative.day} />
+        </div>
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: 10 }}>
+          <Stat label="Revenue all-time" value={formatCents(cumulative.revenueCents)} />
+        </div>
+      </Section>
+    )
+  }
+
+  const stopLabel = live.stopCount
+    ? `Stop ${live.currentStopIndex != null ? live.currentStopIndex + 1 : '–'}/${live.stopCount}`
+    : '—'
+
+  return (
+    <Section>
+      {/* Live strip */}
+      <div style={{ ...card, padding: '16px 18px', borderColor: 'rgba(229,72,77,0.4)', background: 'rgba(229,72,77,0.06)' }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', gap: 10, flexWrap: 'wrap' }}>
+          <div style={sectionLabel}>Live · {live.name}</div>
+          <span style={{ color: FAINT, fontSize: 12 }}>{live.eventDate || ''}</span>
+        </div>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 12, marginTop: 14 }}>
+          <LiveCell value={live.onBoardNow} label="On board now" accent />
+          <LiveCell value={formatCents(live.revenueCents)} label="Collected" />
+          <LiveCell value={live.currentStopName || live.nextStopName || '—'} label={live.currentStopName ? 'At stop' : 'Next stop'} small />
+          <LiveCell value={stopLabel} label="Progress" />
+        </div>
+      </div>
+
+      {/* Weekend + cumulative stat grid */}
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 10 }}>
+        <Stat label="Riders this weekend" value={weekend.riders} accent={weekend.riders > 0} />
+        <Stat label="Riders cumulative" value={cumulative.riders} />
+        <Stat label="Revenue this weekend" value={formatCents(weekend.revenueCents)} />
+      </div>
+
+      {/* Single vs Day breakdown */}
+      <div style={{ ...card, padding: '14px 16px' }}>
+        <div style={sectionLabel}>Single vs Day Pass</div>
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr auto auto', gap: '8px 16px', marginTop: 12, fontSize: 13.5, alignItems: 'baseline' }}>
+          <span style={{ color: FAINT, fontSize: 11, letterSpacing: '0.08em', textTransform: 'uppercase' }} />
+          <span style={{ color: FAINT, fontSize: 11, letterSpacing: '0.08em', textTransform: 'uppercase', textAlign: 'right' }}>Weekend</span>
+          <span style={{ color: FAINT, fontSize: 11, letterSpacing: '0.08em', textTransform: 'uppercase', textAlign: 'right' }}>All-time</span>
+
+          <span style={{ color: INK_DIM }}>Single Ride</span>
+          <span style={{ color: INK, fontWeight: 700, textAlign: 'right' }}>{weekend.single}</span>
+          <span style={{ color: INK, fontWeight: 700, textAlign: 'right' }}>{cumulative.single}</span>
+
+          <span style={{ color: INK_DIM }}>Day Pass</span>
+          <span style={{ color: INK, fontWeight: 700, textAlign: 'right' }}>{weekend.day}</span>
+          <span style={{ color: INK, fontWeight: 700, textAlign: 'right' }}>{cumulative.day}</span>
+        </div>
+      </div>
+      <div style={{ color: FAINT, fontSize: 12 }}>Revenue counts what was actually collected, so comps don&apos;t inflate it. Auto-refreshes every 15s.</div>
+    </Section>
+  )
+}
+
+function LiveCell({ value, label, accent, small }) {
+  return (
+    <div>
+      <div style={{ fontSize: small ? 16 : 26, fontWeight: 800, color: accent ? OLIVE_HI : INK, lineHeight: 1.1, wordBreak: 'break-word' }}>{value}</div>
+      <div style={{ color: INK_DIM, fontSize: 11, letterSpacing: '0.06em', textTransform: 'uppercase', fontWeight: 600, marginTop: 6 }}>{label}</div>
+    </div>
   )
 }
 

@@ -31,6 +31,9 @@ const PUBLIC_PREFIXES = [
   '/api/marines/',
   '/api/loop-admin',
   '/api/loop-driver',
+  // The Loop door scanner pings with the loop_admin cookie (no Supabase
+  // session); the route gates itself via isLoopAdmin().
+  '/api/loop-security',
   '/api/shuttle/current',
   // The Loop driver pings with a code (loop_driver cookie), no Supabase session,
   // so middleware must let the request reach the handler — which authorizes
