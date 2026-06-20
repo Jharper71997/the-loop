@@ -70,15 +70,13 @@ export default async function TonightPage() {
   let ticketsByContact = {}
   let totalTickets = 0
   const seenOrderIds = new Set()
+  const orderBuyer = new Map()
 
   function rollUpOrder(o) {
     if (!o?.id || seenOrderIds.has(o.id)) return
     seenOrderIds.add(o.id)
-    const size = Number(o.party_size) || 1
-    totalTickets += size
-    if (o.contact_id) {
-      ticketsByContact[o.contact_id] = (ticketsByContact[o.contact_id] || 0) + size
-    }
+    totalTickets += Number(o.party_size) || 1
+    orderBuyer.set(o.id, o.contact_id || null)
   }
 
   if (activeGroup?.id) {
@@ -103,6 +101,24 @@ export default async function TonightPage() {
         .eq('status', 'paid')
         .eq('metadata->>tt_event_id', String(activeGroup.tt_event_id))
       for (const o of ttOrders || []) rollUpOrder(o)
+    }
+
+    // Seats per contact from order_items, crediting a group buy's unnamed seats
+    // to the buyer — so a 4-ticket buyer counts as 4 at their stop while a named
+    // companion (who has their own contact row) isn't double-counted.
+    // totalTickets stays the party_size sum (the group's true ticket count).
+    const orderIds = [...orderBuyer.keys()]
+    for (let i = 0; i < orderIds.length; i += 100) {
+      const chunk = orderIds.slice(i, i + 100)
+      const { data: items } = await supabase
+        .from('order_items')
+        .select('order_id, contact_id, voided_at')
+        .in('order_id', chunk)
+        .is('voided_at', null)
+      for (const it of items || []) {
+        const c = it.contact_id || orderBuyer.get(it.order_id)
+        if (c) ticketsByContact[c] = (ticketsByContact[c] || 0) + 1
+      }
     }
   }
 

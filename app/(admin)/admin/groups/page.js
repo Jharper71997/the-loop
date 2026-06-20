@@ -56,58 +56,20 @@ export default function Groups() {
     const groupRows = data || []
     setGroups(groupRows)
 
-    const groupIds = groupRows.map(g => g.id)
-    if (!groupIds.length) {
-      setTicketsByGroup({})
-      setTicketsByContact({})
-      return
+    // Ticket aggregates come from a service-key route: this page uses the anon
+    // key and RLS hides `orders`, so a direct party_size query returns nothing
+    // and counts fall back to contact rows (a 4-ticket group buy → "1 rider").
+    // seatsByContact already credits unnamed group-buy seats to the buyer.
+    try {
+      const res = await fetch('/api/admin/loop-tickets')
+      const j = res.ok ? await res.json() : {}
+      setGroupHasEvent(j.groupHasEvent || {})
+      setTicketsByGroup(j.ticketsByGroup || {})
+      setTicketsByContact(j.seatsByContact || {})
+      if (!res.ok) console.error('[Loops] ticket aggregates fetch failed', res.status)
+    } catch (e) {
+      console.error('[Loops] ticket aggregates fetch error', e)
     }
-
-    // Build lookup tables: event_id → group_id, tt_event_id → group_id.
-    // Then pull all recent paid orders once and attribute by either path.
-    const { data: events } = await supabase
-      .from('events')
-      .select('id, group_id')
-      .in('group_id', groupIds)
-    const eventToGroup = new Map((events || []).map(e => [e.id, e.group_id]))
-    // Track which groups have a paired event so the list view can dedupe
-    // dates that ended up with both an old orphan group and a new
-    // group-with-event from a re-create.
-    const hasEvent = {}
-    for (const e of events || []) hasEvent[e.group_id] = true
-    setGroupHasEvent(hasEvent)
-    const ttToGroup = new Map(
-      groupRows.filter(g => g.tt_event_id).map(g => [String(g.tt_event_id), g.id])
-    )
-
-    // Pull paid orders from the last 90 days — broad enough for any visible
-    // Loop's purchases. Filter client-side so we don't depend on a specific
-    // PostgREST JSON-path .in() syntax that's harder to verify.
-    const since = new Date(Date.now() - 90 * 24 * 3600 * 1000).toISOString()
-    const { data: paidOrders, error: ordersErr } = await supabase
-      .from('orders')
-      .select('id, contact_id, party_size, event_id, metadata, paid_at')
-      .eq('status', 'paid')
-      .gte('paid_at', since)
-    if (ordersErr) console.error('[Loops] orders fetch failed', ordersErr)
-
-    const groupTotals = {}
-    const contactTotals = {}
-    for (const o of paidOrders || []) {
-      let gid = eventToGroup.get(o.event_id) || null
-      if (!gid && o.metadata?.tt_event_id) {
-        gid = ttToGroup.get(String(o.metadata.tt_event_id)) || null
-      }
-      if (!gid) continue
-      const size = Number(o.party_size) || 1
-      groupTotals[gid] = (groupTotals[gid] || 0) + size
-      if (o.contact_id) {
-        contactTotals[o.contact_id] = (contactTotals[o.contact_id] || 0) + size
-      }
-    }
-
-    setTicketsByGroup(groupTotals)
-    setTicketsByContact(contactTotals)
   }
 
   async function moveRider(memberId, stopIdx) {
@@ -191,6 +153,11 @@ export default function Groups() {
     }
     return out
   }, [groups, today, ticketsByGroup])
+
+  // Seats at a stop: a group buy is one contact row but N riders, so sum
+  // per-contact seats (Kolby's 4) rather than counting rows (which read as 1).
+  const seatsAt = (list) =>
+    (list || []).reduce((sum, m) => sum + (ticketsByContact[m.contacts?.id] || 1), 0)
 
   return (
     <main>
@@ -290,12 +257,12 @@ export default function Groups() {
                   Summary
                 </a>
                 {hasGap ? (
-                  // Tickets sold > named contacts on roster — usually TT orders
-                  // shipped without buyer details. Surface both numbers + a
-                  // warning tint so the admin knows to chase the missing info.
+                  // Group buys: more tickets than named rider rows (e.g. a party
+                  // of 4 bought under one name). Show the true ticket headcount;
+                  // tint + tooltip note how many have individual rider details.
                   <span
                     className="chip"
-                    title={`${tickets} ticket${tickets === 1 ? '' : 's'} sold, ${members.length} rider${members.length === 1 ? '' : 's'} with contact info — ${tickets - members.length} missing`}
+                    title={`${tickets} ticket${tickets === 1 ? '' : 's'} sold · ${members.length} with rider details${tickets > members.length ? ` · ${tickets - members.length} on group buys without names` : ''}`}
                     style={{
                       background: 'rgba(212,163,51,0.12)',
                       borderColor: 'rgba(212,163,51,0.5)',
@@ -303,10 +270,10 @@ export default function Groups() {
                       fontWeight: 700,
                     }}
                   >
-                    {members.length}/{tickets} riders
+                    {tickets} rider{tickets === 1 ? '' : 's'}
                   </span>
                 ) : (
-                  <span className="chip">{members.length} rider{members.length === 1 ? '' : 's'}</span>
+                  <span className="chip">{(tickets || members.length)} rider{(tickets || members.length) === 1 ? '' : 's'}</span>
                 )}
                 <span className="muted" style={{ fontSize: '14px' }}>{isExpanded ? '▾' : '▸'}</span>
               </div>
@@ -371,7 +338,7 @@ export default function Groups() {
                                 <p className="tiny" style={{ color: '#f87171' }}>No stop yet — tap a rider to assign</p>
                               </div>
                               <div style={{ display: 'flex', gap: '6px', alignItems: 'center' }}>
-                                <span className="chip" style={{ background: '#3a1a1a', color: '#f87171', borderColor: '#f87171' }}>{unassigned.length}</span>
+                                <span className="chip" style={{ background: '#3a1a1a', color: '#f87171', borderColor: '#f87171' }}>{seatsAt(unassigned)}</span>
                                 <span className="muted" style={{ fontSize: '12px' }}>{isOpen ? '▾' : '▸'}</span>
                               </div>
                             </div>
@@ -417,7 +384,7 @@ export default function Groups() {
                                 <p className="tiny">{formatStopTime(stop.start_time)}</p>
                               </div>
                               <div style={{ display: 'flex', gap: '6px', alignItems: 'center' }}>
-                                <span className="chip">{atStop.length}</span>
+                                <span className="chip">{seatsAt(atStop)}</span>
                                 <span className="muted" style={{ fontSize: '12px' }}>{isOpen ? '▾' : '▸'}</span>
                               </div>
                             </div>
