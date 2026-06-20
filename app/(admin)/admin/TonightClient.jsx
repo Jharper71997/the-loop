@@ -306,6 +306,13 @@ function InProgressState({ group, currentIdx, ticketsByContact, totalTickets }) 
   )
 }
 
+// A party of N is one contact row but N riders. Rider counts must reflect
+// tickets (party_size), not contact rows — otherwise a 4-ticket buyer like
+// Kolby reads as "1 rider" even though his row shows a "4 tix" badge.
+function seatsOf(list) {
+  return (list || []).reduce((sum, r) => sum + (Number(r.tickets) || 1), 0)
+}
+
 function StopCards({ stops, riders, currentIdx, showCheckoff = false }) {
   const byStop = useMemo(() => {
     const map = new Map()
@@ -323,6 +330,7 @@ function StopCards({ stops, riders, currentIdx, showCheckoff = false }) {
     ),
     [riders, stops.length],
   )
+  const unassignedSeats = seatsOf(unassigned)
 
   if (!stops.length) {
     return (
@@ -348,7 +356,7 @@ function StopCards({ stops, riders, currentIdx, showCheckoff = false }) {
               <div style={{ fontSize: 15, fontWeight: 700, color: '#f87171' }}>No stop yet — assign on Loops tab</div>
             </div>
             <span style={{ fontSize: 12, color: '#f87171' }}>
-              {unassigned.length} rider{unassigned.length === 1 ? '' : 's'}
+              {unassignedSeats} rider{unassignedSeats === 1 ? '' : 's'}
             </span>
           </div>
           <div style={{ display: 'grid', gap: 6, marginTop: 10 }}>
@@ -371,6 +379,7 @@ function StopCards({ stops, riders, currentIdx, showCheckoff = false }) {
 
       {stops.map((stop, i) => {
         const atStop = (riders || []).filter(r => (r.current_stop_index ?? -1) === i)
+        const atStopSeats = seatsOf(atStop)
         const isCurrent = i === currentIdx
         const past = currentIdx > i
         return (
@@ -386,7 +395,7 @@ function StopCards({ stops, riders, currentIdx, showCheckoff = false }) {
                 <div style={{ fontSize: 15, fontWeight: 700, color: isCurrent ? ACCENT : '#fff' }}>{stop.name}</div>
               </div>
               <span style={{ fontSize: 12, color: '#9c9ca3' }}>
-                {atStop.length} rider{atStop.length === 1 ? '' : 's'}
+                {atStopSeats} rider{atStopSeats === 1 ? '' : 's'}
               </span>
             </div>
 
