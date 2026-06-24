@@ -332,10 +332,10 @@ async function handleCheckout(req) {
   const usedPassContacts = new Set()
   for (const rc of riderContacts) {
     rc.covered = false
-    // The Loop (Marines) never honors a Brew Loop subscription pass — its fares
-    // ($10 single / $20 day pass) are always charged. Without this, a Marine
-    // who happens to hold a Brew Loop Loop Pass would ride free.
-    if (isMarines) continue
+    // Only Brew Loop honors the Brew Loop subscription pass. Marines + Surf City
+    // are separate businesses — their fares are always charged, so a rider who
+    // happens to hold a Brew Loop Pass can't ride those free.
+    if (event.kind !== 'brew') continue
     if (rc.claim || !rc.contact?.id) continue
     if (usedPassContacts.has(rc.contact.id)) continue
     const pass = await getActivePass(supabase, rc.contact.id)
@@ -407,10 +407,11 @@ async function handleCheckout(req) {
       party_size: riders.length,
       referrer_contact_id: referrerContactId,
       client_token: client_token || null,
-      // Tag the order's product so dashboards filter Marines vs Brew Loop
-      // revenue with one metadata->>kind test. The webhook spreads existing
-      // order.metadata before its own fields, so this survives settlement.
-      ...(isMarines ? { metadata: { kind: 'marines' } } : {}),
+      // Tag the order's product so dashboards filter by business with one
+      // metadata->>kind test (marines / surf). Brew Loop stays untagged. The
+      // webhook spreads existing order.metadata before its own fields, so this
+      // survives settlement.
+      ...(event.kind && event.kind !== 'brew' ? { metadata: { kind: event.kind } } : {}),
     })
     .select('id')
     .single()

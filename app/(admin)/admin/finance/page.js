@@ -49,7 +49,7 @@ export default function Finance() {
       const [sumRes, dataRes, groupsRes] = await Promise.all([
         fetch('/api/finance-summary').then(r => r.json()),
         fetch('/api/finance-data').then(r => r.json()),
-        supabase.from('groups').select('id, name, event_date').order('event_date', { ascending: false }).limit(40),
+        supabase.from('groups').select('id, name, event_date').eq('kind', 'brew').order('event_date', { ascending: false }).limit(40),
       ])
       if (sumRes.error) throw new Error(sumRes.error)
       setSummary(sumRes)

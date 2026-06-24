@@ -34,6 +34,15 @@ const PUBLIC_PREFIXES = [
   // The Loop door scanner pings with the loop_admin cookie (no Supabase
   // session); the route gates itself via isLoopAdmin().
   '/api/loop-security',
+  // Surf City Loop — second bar-shuttle business (kind='surf'). The whole
+  // rider surface is public; the console/driver/security live under /surfcity
+  // and gate themselves via the surf_admin / surf_driver code cookies (no
+  // Supabase session), exactly like Marines.
+  '/surfcity',
+  '/api/surf/',
+  '/api/surf-admin',
+  '/api/surf-driver',
+  '/api/surf-security',
   '/api/shuttle/current',
   // The Loop driver pings with a code (loop_driver cookie), no Supabase session,
   // so middleware must let the request reach the handler — which authorizes

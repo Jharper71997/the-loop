@@ -21,6 +21,7 @@ export async function GET() {
     groups: (groups.data || []).map(g => ({
       id: g.id,
       name: g.name,
+      kind: g.kind,
       tt_event_id: g.tt_event_id,
       event_date: g.event_date,
       pickup_time: g.pickup_time,

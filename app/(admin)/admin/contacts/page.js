@@ -42,7 +42,8 @@ export default function Contacts() {
   async function refresh() {
     const [c, g, m] = await Promise.all([
       supabase.from('contacts').select('*').order('last_name'),
-      supabase.from('groups').select('*'),
+      // Brew Loop admin only — exclude Marines/Surf groups from the assign dropdown.
+      supabase.from('groups').select('*').eq('kind', 'brew'),
       supabase.from('group_members').select('id, group_id, contact_id'),
     ])
     setContacts(c.data || [])
