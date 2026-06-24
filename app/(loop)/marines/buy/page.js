@@ -1,5 +1,5 @@
 // The Loop — buy a ride. Loads the active Marines loop, its two fares
-// (Single Ride $10 / Day Pass $20) and the red-line stops, then hands off to
+// (Single Ride $10 / Day Pass $20) and the loop stops, then hands off to
 // BuyClient. The actual gate (must be verified) is enforced server-side in
 // /api/checkout; BuyClient soft-checks first so the rider isn't surprised.
 
@@ -43,7 +43,7 @@ export default async function BuyPage() {
             <div style={eyebrow}>The Loop</div>
             <h1 style={{ color: C.INK, fontSize: 28, fontWeight: 800, margin: '10px 0 6px', letterSpacing: '-0.015em', lineHeight: 1.08 }}>No rides on sale yet</h1>
             <p style={{ color: C.INK_DIM, fontSize: 14, lineHeight: 1.5, margin: 0 }}>
-              This weekend{"'"}s red line isn{"'"}t open for booking yet. Verify your ID now so you{"'"}re ready, and check the live map when the shuttle is rolling.
+              This weekend{"'"}s loop isn{"'"}t open for booking yet. Verify your ID now so you{"'"}re ready, and check the live map when the shuttle is rolling.
             </p>
           </div>
           <div style={{ display: 'grid', gap: 8 }}>

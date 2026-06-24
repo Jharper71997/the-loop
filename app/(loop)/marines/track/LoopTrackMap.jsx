@@ -3,18 +3,18 @@
 // Live map for The Loop (Marines). Fork of the Brew Loop (external)/track
 // TrackMap with three deltas: (1) it polls /api/shuttle/current scoped to its
 // own group_id so it shows the Loop shuttle, never the Brew Loop bus; (2) it
-// draws the red-line polyline connecting the stops in order; (3) red accent +
+// draws the loop polyline connecting the stops in order; (3) gold accent +
 // a plain marker (no Brew Loop badge). ETA + StopList logic is unchanged.
 
 import { useEffect, useRef, useState } from 'react'
 import 'leaflet/dist/leaflet.css'
 import { haversineMeters } from '@/lib/geo'
 
-const RED = '#e5484d'
-const RED_HI = '#f2585d'
+const GOLD = '#d4a333'
+const GOLD_HI = '#f0c24a'
 const INK = '#f5f5f7'
 const INK_DIM = '#b8b8bf'
-const SURFACE = '#1a2027'
+const SURFACE = '#121216'
 const LINE = 'rgba(255,255,255,0.10)'
 
 export default function LoopTrackMap({ stops = [], eventDate = null, groupId = null, fallbackCenter }) {
@@ -61,11 +61,11 @@ export default function LoopTrackMap({ stops = [], eventDate = null, groupId = n
         .addAttribution('&copy; OpenStreetMap')
         .addTo(map)
 
-      // The red line — connect the stops in route order. Drawn first so the
+      // The loop line — connect the stops in route order. Drawn first so the
       // numbered stop pins sit on top of it.
       let line = null
       if (fitTargets.length > 1) {
-        line = L.polyline(fitTargets, { color: RED, weight: 4, opacity: 0.85 }).addTo(map)
+        line = L.polyline(fitTargets, { color: GOLD, weight: 4, opacity: 0.85 }).addTo(map)
       }
 
       const stopMarkers = stops
@@ -178,17 +178,17 @@ export default function LoopTrackMap({ stops = [], eventDate = null, groupId = n
         .loop-stop-pin > div { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; }
         .leaflet-container { background: #0d0d10; }
         .leaflet-popup-content-wrapper {
-          background: #1a2027;
+          background: #121216;
           color: #f5f5f7;
           border: 1px solid rgba(255,255,255,0.10);
           border-radius: 10px;
         }
-        .leaflet-popup-tip { background: #1a2027; }
+        .leaflet-popup-tip { background: #121216; }
         .leaflet-control-attribution {
           background: rgba(10,10,11,0.6) !important;
           color: #9c9ca3 !important;
         }
-        .leaflet-control-attribution a { color: ${RED} !important; }
+        .leaflet-control-attribution a { color: ${GOLD} !important; }
       `}</style>
     </>
   )
@@ -209,8 +209,8 @@ function StatusRow({ shuttle, lastSeenAt, now, stops = [], eventDate = null, nex
           alignItems: 'center',
           gap: 10,
           padding: '10px 14px',
-          background: live ? 'rgba(229,72,77,0.08)' : SURFACE,
-          border: `1px solid ${live ? 'rgba(229,72,77,0.35)' : LINE}`,
+          background: live ? 'rgba(212,163,51,0.08)' : SURFACE,
+          border: `1px solid ${live ? 'rgba(212,163,51,0.35)' : LINE}`,
           borderRadius: 12,
         }}
       >
@@ -218,13 +218,13 @@ function StatusRow({ shuttle, lastSeenAt, now, stops = [], eventDate = null, nex
           aria-hidden
           style={{
             width: 10, height: 10, borderRadius: '50%',
-            background: live ? RED : '#3a3a44',
-            boxShadow: live ? `0 0 12px ${RED}` : 'none',
+            background: live ? GOLD : '#3a3a44',
+            boxShadow: live ? `0 0 12px ${GOLD}` : 'none',
             flex: '0 0 auto',
           }}
         />
         <div style={{ flex: 1, minWidth: 0 }}>
-          <div style={{ color: live ? RED_HI : INK, fontSize: 13, fontWeight: 700 }}>
+          <div style={{ color: live ? GOLD_HI : INK, fontSize: 13, fontWeight: 700 }}>
             {live ? 'Shuttle live' : 'Shuttle off duty'}
           </div>
           <div style={{ color: INK_DIM, fontSize: 12 }}>
@@ -254,8 +254,8 @@ function StatusRow({ shuttle, lastSeenAt, now, stops = [], eventDate = null, nex
             alignItems: 'center',
             gap: 12,
             padding: '12px 14px',
-            background: 'linear-gradient(180deg, rgba(229,72,77,0.14), rgba(229,72,77,0.05))',
-            border: `1px solid rgba(229,72,77,0.45)`,
+            background: 'linear-gradient(180deg, rgba(212,163,51,0.14), rgba(212,163,51,0.05))',
+            border: `1px solid rgba(212,163,51,0.45)`,
             borderRadius: 12,
           }}
         >
@@ -263,9 +263,9 @@ function StatusRow({ shuttle, lastSeenAt, now, stops = [], eventDate = null, nex
             aria-hidden
             style={{
               width: 32, height: 32, borderRadius: '50%',
-              background: 'rgba(229,72,77,0.18)',
-              border: `1px solid ${RED}`,
-              color: RED_HI,
+              background: 'rgba(212,163,51,0.18)',
+              border: `1px solid ${GOLD}`,
+              color: GOLD_HI,
               display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
               fontSize: 16, fontWeight: 800,
               flex: '0 0 auto',
@@ -274,7 +274,7 @@ function StatusRow({ shuttle, lastSeenAt, now, stops = [], eventDate = null, nex
             →
           </span>
           <div style={{ flex: 1, minWidth: 0 }}>
-            <div style={{ color: RED, fontSize: 10, letterSpacing: '0.22em', textTransform: 'uppercase', fontWeight: 700 }}>
+            <div style={{ color: GOLD, fontSize: 10, letterSpacing: '0.22em', textTransform: 'uppercase', fontWeight: 700 }}>
               {eta.status === 'arrived' ? 'At stop' : `Next stop · #${dest.index + 1}`}
             </div>
             <div style={{ color: INK, fontSize: 16, fontWeight: 800, marginTop: 2, lineHeight: 1.15 }}>
@@ -283,7 +283,7 @@ function StatusRow({ shuttle, lastSeenAt, now, stops = [], eventDate = null, nex
           </div>
           <div style={{ textAlign: 'right', flex: '0 0 auto' }}>
             {eta.status === 'arrived' ? (
-              <div style={{ color: RED_HI, fontSize: 13, fontWeight: 800 }}>Arrived</div>
+              <div style={{ color: GOLD_HI, fontSize: 13, fontWeight: 800 }}>Arrived</div>
             ) : (
               <>
                 <div style={{ color: INK_DIM, fontSize: 10, letterSpacing: '0.18em', textTransform: 'uppercase', fontWeight: 700 }}>
@@ -324,7 +324,7 @@ function StopList({ stops, shuttle, eventDate, now, nextStopHint = null }) {
       }}
     >
       <div style={{ padding: '10px 14px', borderBottom: `1px solid ${LINE}` }}>
-        <div style={{ color: RED, fontSize: 11, letterSpacing: '0.22em', textTransform: 'uppercase', fontWeight: 700 }}>
+        <div style={{ color: GOLD, fontSize: 11, letterSpacing: '0.22em', textTransform: 'uppercase', fontWeight: 700 }}>
           Today&rsquo;s stops
         </div>
       </div>
@@ -347,9 +347,9 @@ function StopList({ stops, shuttle, eventDate, now, nextStopHint = null }) {
               <span
                 style={{
                   width: 26, height: 26, borderRadius: '50%',
-                  background: isPast ? 'rgba(255,255,255,0.04)' : 'rgba(229,72,77,0.12)',
-                  border: `1px solid ${isPast ? LINE : 'rgba(229,72,77,0.4)'}`,
-                  color: isPast ? INK_DIM : RED_HI,
+                  background: isPast ? 'rgba(255,255,255,0.04)' : 'rgba(212,163,51,0.12)',
+                  border: `1px solid ${isPast ? LINE : 'rgba(212,163,51,0.4)'}`,
+                  color: isPast ? INK_DIM : GOLD_HI,
                   fontSize: 12, fontWeight: 800,
                   display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
                   flex: '0 0 auto',
@@ -372,10 +372,10 @@ function StopList({ stops, shuttle, eventDate, now, nextStopHint = null }) {
               ) : eta ? (
                 <div style={{ textAlign: 'right', flex: '0 0 auto' }}>
                   {eta.status === 'arrived' ? (
-                    <div style={{ color: RED_HI, fontSize: 12, fontWeight: 800 }}>At stop</div>
+                    <div style={{ color: GOLD_HI, fontSize: 12, fontWeight: 800 }}>At stop</div>
                   ) : (
                     <>
-                      <div style={{ color: RED_HI, fontSize: 14, fontWeight: 800, fontVariantNumeric: 'tabular-nums', letterSpacing: '-0.01em' }}>
+                      <div style={{ color: GOLD_HI, fontSize: 14, fontWeight: 800, fontVariantNumeric: 'tabular-nums', letterSpacing: '-0.01em' }}>
                         {formatClock(now + eta.etaMin * 60_000)}
                       </div>
                       <div style={{ color: INK_DIM, fontSize: 11, fontVariantNumeric: 'tabular-nums', marginTop: 2 }}>
@@ -492,12 +492,12 @@ function formatDistance(distanceMi, meters) {
 }
 
 function stopPinHtml(n, onBase) {
-  const border = onBase ? '#fff' : RED
+  const border = onBase ? '#fff' : GOLD
   return `
     <div style="
       width:28px;height:28px;border-radius:50%;
-      background:#1a2027;border:2px solid ${border};
-      color:${RED_HI};font-size:12px;font-weight:800;
+      background:#121216;border:2px solid ${border};
+      color:${GOLD_HI};font-size:12px;font-weight:800;
       display:flex;align-items:center;justify-content:center;
       box-shadow:0 4px 14px rgba(0,0,0,0.55);
     ">${n}</div>
@@ -508,15 +508,15 @@ function shuttleIconHtml() {
   return `
     <div style="
       width:40px;height:40px;border-radius:50%;
-      background: radial-gradient(circle at 35% 30%, ${RED_HI}, ${RED});
+      background: radial-gradient(circle at 35% 30%, ${GOLD_HI}, ${GOLD});
       border:2px solid #0a0a0b;
-      box-shadow:0 0 0 4px rgba(229,72,77,0.35), 0 8px 22px rgba(0,0,0,0.5);
+      box-shadow:0 0 0 4px rgba(212,163,51,0.35), 0 8px 22px rgba(0,0,0,0.5);
       animation: loop-shuttle-pulse 1.8s ease-in-out infinite;
     "></div>
     <style>
       @keyframes loop-shuttle-pulse {
-        0%,100% { box-shadow: 0 0 0 4px rgba(229,72,77,0.35), 0 8px 22px rgba(0,0,0,0.5); }
-        50%     { box-shadow: 0 0 0 10px rgba(229,72,77,0.05), 0 8px 22px rgba(0,0,0,0.5); }
+        0%,100% { box-shadow: 0 0 0 4px rgba(212,163,51,0.35), 0 8px 22px rgba(0,0,0,0.5); }
+        50%     { box-shadow: 0 0 0 10px rgba(212,163,51,0.05), 0 8px 22px rgba(0,0,0,0.5); }
       }
     </style>
   `

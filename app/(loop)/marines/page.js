@@ -1,5 +1,5 @@
 // The Loop — rider-facing landing.
-// A fixed-route shuttle: board at the on-base gate, ride the "red line" through
+// A fixed-route shuttle: board at the on-base gate, ride the loop through
 // stops all over town. Single Ride $10 (one boarding) or Day Pass $20 (hop on
 // and off all day). ID required to ride — you verify once, and the driver
 // checks an ID at the door. Standalone identity, NOT Brew Loop branded.
@@ -7,12 +7,12 @@
 import { C, card, eyebrow, sectionLabel, primaryCta, ghostCta } from '../_theme'
 
 export const metadata = {
-  title: { absolute: 'The Loop — ride the red line' },
-  description: 'Board at the gate and ride the red line all weekend. Single ride $10 or a $20 day pass to hop on and off all day.',
+  title: { absolute: 'The Loop — ride the loop' },
+  description: 'Board at the gate and ride the loop all weekend. Single ride $10 or a $20 day pass to hop on and off all day.',
   alternates: { canonical: '/marines' },
 }
 
-const BG_GLOW = 'radial-gradient(120% 80% at 50% 0%, rgba(229,72,77,0.20), transparent 60%), #1a2027'
+const BG_GLOW = 'radial-gradient(120% 80% at 50% 0%, rgba(212,163,51,0.20), transparent 60%), #121216'
 
 const PASSES = [
   { name: 'Single Ride', price: '$10', note: 'One boarding. Ride to a stop and hop off.' },
@@ -22,8 +22,8 @@ const PASSES = [
 const STEPS = [
   ['Verify once', 'Confirm your ID one time, then you are cleared to ride.'],
   ['Get your ride', 'Grab a single ride for $10, or a day pass for $20.'],
-  ['Board at the gate', 'Catch The Loop at the on-base stop — the first stop on the red line.'],
-  ['Ride the red line', 'Stay on to your stop, or with a day pass hop on and off all day.'],
+  ['Board at the gate', 'Catch The Loop at the on-base stop — the first stop on the loop.'],
+  ['Ride the loop', 'Stay on to your stop, or with a day pass hop on and off all day.'],
 ]
 
 export default function LoopLanding() {
@@ -33,16 +33,16 @@ export default function LoopLanding() {
 
         {/* Hero */}
         <section style={{ ...card, borderRadius: 18, position: 'relative', overflow: 'hidden', padding: '28px 22px 24px', background: BG_GLOW, border: `1px solid ${C.LINE}`, boxShadow: '0 30px 60px rgba(0,0,0,0.4)' }}>
-          <div aria-hidden style={{ position: 'absolute', right: -40, bottom: -40, width: 220, height: 220, borderRadius: '50%', background: 'radial-gradient(50% 50% at 50% 50%, rgba(229,72,77,0.18), transparent 70%)', pointerEvents: 'none' }} />
+          <div aria-hidden style={{ position: 'absolute', right: -40, bottom: -40, width: 220, height: 220, borderRadius: '50%', background: 'radial-gradient(50% 50% at 50% 50%, rgba(212,163,51,0.18), transparent 70%)', pointerEvents: 'none' }} />
           <div style={{ position: 'relative', ...eyebrow, display: 'inline-flex', alignItems: 'center', gap: 8 }}>
-            <span style={{ width: 8, height: 8, borderRadius: '50%', background: C.RED, boxShadow: `0 0 10px ${C.RED}`, display: 'inline-block' }} />
-            The red line · all weekend
+            <span style={{ width: 8, height: 8, borderRadius: '50%', background: C.GOLD, boxShadow: `0 0 10px ${C.GOLD}`, display: 'inline-block' }} />
+            The loop · all weekend
           </div>
           <h1 style={{ position: 'relative', color: C.INK, fontSize: 32, fontWeight: 800, margin: '10px 0 8px', letterSpacing: '-0.015em', lineHeight: 1.06 }}>
-            Board at the gate. Ride the red line.
+            Board at the gate. Ride the loop.
           </h1>
           <p style={{ position: 'relative', color: C.INK_DIM, fontSize: 14.5, lineHeight: 1.55, margin: 0 }}>
-            The Loop is a fixed-route shuttle. Hop on at the on-base stop and ride the red line to spots
+            The Loop is a fixed-route shuttle. Hop on at the on-base stop and ride the loop to spots
             all over town. Ten dollars to ride, or grab a day pass and hop on and off all day. No car needed.
           </p>
           <div style={{ position: 'relative', display: 'flex', gap: 10, alignItems: 'center', flexWrap: 'wrap', marginTop: 18 }}>
@@ -74,10 +74,10 @@ export default function LoopLanding() {
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8, marginTop: 8 }}>
             {PASSES.map(p => (
               <div key={p.name} style={{ ...softCard, padding: '16px 14px',
-                border: `1px solid ${p.featured ? 'rgba(229,72,77,0.5)' : C.LINE}`,
-                background: p.featured ? 'rgba(229,72,77,0.10)' : C.SURFACE,
-                boxShadow: p.featured ? '0 14px 30px rgba(229,72,77,0.16)' : '0 14px 30px rgba(0,0,0,0.22)' }}>
-                <div style={{ color: p.featured ? C.RED_HI : C.INK, fontSize: 14, fontWeight: 800 }}>{p.name}</div>
+                border: `1px solid ${p.featured ? 'rgba(212,163,51,0.5)' : C.LINE}`,
+                background: p.featured ? 'rgba(212,163,51,0.10)' : C.SURFACE,
+                boxShadow: p.featured ? '0 14px 30px rgba(212,163,51,0.16)' : '0 14px 30px rgba(0,0,0,0.22)' }}>
+                <div style={{ color: p.featured ? C.GOLD_HI : C.INK, fontSize: 14, fontWeight: 800 }}>{p.name}</div>
                 <div style={{ color: C.WARM, fontSize: 24, fontWeight: 800, margin: '4px 0 6px' }}>{p.price}</div>
                 <div style={{ color: C.INK_DIM, fontSize: 12.5, lineHeight: 1.4 }}>{p.note}</div>
               </div>
@@ -92,7 +92,7 @@ export default function LoopLanding() {
         <section style={{ ...softCard, padding: '16px 16px' }}>
           <div style={sectionLabel}>The route</div>
           <p style={{ color: C.INK_DIM, fontSize: 13.5, lineHeight: 1.5, margin: '8px 0 0' }}>
-            The red line starts at the on-base gate and runs a fixed loop of stops all over town. The route
+            The loop starts at the on-base gate and runs a fixed loop of stops all over town. The route
             changes week to week — check the live map for this weekend{"'"}s stops and where the shuttle is right now.
           </p>
         </section>
@@ -111,4 +111,4 @@ export default function LoopLanding() {
 }
 
 const softCard = { ...card, borderRadius: 16, boxShadow: '0 14px 30px rgba(0,0,0,0.22)' }
-const stepNum = { flex: '0 0 auto', width: 26, height: 26, borderRadius: 7, border: `1px solid ${C.RED}`, color: C.RED_HI, fontSize: 13, fontWeight: 800, display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }
+const stepNum = { flex: '0 0 auto', width: 26, height: 26, borderRadius: 7, border: `1px solid ${C.GOLD}`, color: C.GOLD_HI, fontSize: 13, fontWeight: 800, display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }

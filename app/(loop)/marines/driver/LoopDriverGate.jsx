@@ -4,7 +4,7 @@ import { useState } from 'react'
 import { C } from '../../_theme'
 
 // Code entry for the standalone Loop driver surface. Clone of LoopAdminGate,
-// red theme, posts to /api/loop-driver. Drivers run the shuttle from their
+// gold theme, posts to /api/loop-driver. Drivers run the shuttle from their
 // phone after entering LOOP_DRIVER_CODE once.
 export default function LoopDriverGate() {
   const [code, setCode] = useState('')
@@ -36,7 +36,7 @@ export default function LoopDriverGate() {
           style={{ width: '100%', padding: '12px 12px', borderRadius: 9, background: 'rgba(255,255,255,0.05)', border: `1px solid ${C.LINE}`, color: C.INK, fontSize: 16, outline: 'none' }}
         />
         {error && <div style={{ color: '#ff8585', fontSize: 13 }}>{error}</div>}
-        <button type="submit" disabled={submitting} style={{ padding: '12px 18px', borderRadius: 10, border: 'none', background: `linear-gradient(180deg, ${C.RED_HI}, ${C.RED})`, color: '#fff', fontWeight: 800, fontSize: 15, cursor: submitting ? 'default' : 'pointer', opacity: submitting ? 0.6 : 1 }}>
+        <button type="submit" disabled={submitting} style={{ padding: '12px 18px', borderRadius: 10, border: 'none', background: `linear-gradient(180deg, ${C.GOLD_HI}, ${C.GOLD})`, color: '#0a0a0b', fontWeight: 800, fontSize: 15, cursor: submitting ? 'default' : 'pointer', opacity: submitting ? 0.6 : 1 }}>
           {submitting ? 'Checking…' : 'Unlock'}
         </button>
       </form>

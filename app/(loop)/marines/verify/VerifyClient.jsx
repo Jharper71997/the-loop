@@ -2,12 +2,12 @@
 
 import { useState } from 'react'
 
-// Name kept (OLIVE) to avoid churn; values are now the red theme.
-const INK = '#eef1f3'
-const INK_DIM = '#9aa3ab'
-const OLIVE = '#e5484d'
-const OLIVE_HI = '#f2585d'
-const SURFACE = '#1a2027'
+// Gold theme constants.
+const INK = '#e8e8ea'
+const INK_DIM = '#9c9ca3'
+const GOLD = '#d4a333'
+const GOLD_HI = '#f0c24a'
+const SURFACE = '#121216'
 const LINE = 'rgba(255,255,255,0.10)'
 
 const BRANCHES = ['Marine Corps', 'Navy', 'Army', 'Air Force', 'Coast Guard', 'Space Force']
@@ -62,7 +62,7 @@ export default function VerifyClient() {
     return (
       <main className="external-shell" style={{ padding: '16px 14px 28px' }}>
         <div style={{ maxWidth: 460, margin: '0 auto', ...card, borderRadius: 18, boxShadow: '0 24px 50px rgba(0,0,0,0.34)', padding: '30px 22px', textAlign: 'center' }}>
-          <div style={{ color: OLIVE, fontSize: 11, letterSpacing: '0.22em', textTransform: 'uppercase', fontWeight: 700 }}>Request received</div>
+          <div style={{ color: GOLD, fontSize: 11, letterSpacing: '0.22em', textTransform: 'uppercase', fontWeight: 700 }}>Request received</div>
           <h1 style={{ color: INK, fontSize: 26, fontWeight: 800, margin: '12px 0 8px', letterSpacing: '-0.015em' }}>You're in the queue</h1>
           <p style={{ color: INK_DIM, fontSize: 14.5, lineHeight: 1.5, margin: 0 }}>
             We'll confirm your military ID and unlock your pass. You'll get a text or email the moment
@@ -78,7 +78,7 @@ export default function VerifyClient() {
     <main className="external-shell" style={{ padding: '16px 14px 28px' }}>
       <div style={{ maxWidth: 460, margin: '0 auto', display: 'grid', gap: 14 }}>
         <div>
-          <div style={{ color: OLIVE, fontSize: 11, letterSpacing: '0.22em', textTransform: 'uppercase', fontWeight: 700 }}>The Loop</div>
+          <div style={{ color: GOLD, fontSize: 11, letterSpacing: '0.22em', textTransform: 'uppercase', fontWeight: 700 }}>The Loop</div>
           <h1 style={{ color: INK, fontSize: 28, fontWeight: 800, margin: '10px 0 6px', letterSpacing: '-0.015em', lineHeight: 1.08 }}>Verify to ride</h1>
           <p style={{ color: INK_DIM, fontSize: 14, lineHeight: 1.5, margin: 0 }}>
             Quick one-time ID check so we know you're cleared to ride. Takes a minute. After this you're set for every ride.
@@ -131,5 +131,5 @@ function Field({ label, children }) {
 
 const card = { borderRadius: 14, background: SURFACE, border: `1px solid ${LINE}` }
 const input = { width: '100%', padding: '11px 12px', borderRadius: 9, background: 'rgba(255,255,255,0.05)', border: `1px solid ${LINE}`, color: INK, fontSize: 15, outline: 'none' }
-const primaryCta = { padding: '13px 22px', borderRadius: 10, background: `linear-gradient(180deg, ${OLIVE_HI}, ${OLIVE})`, color: '#fff', fontWeight: 800, fontSize: 15 }
+const primaryCta = { padding: '13px 22px', borderRadius: 10, background: `linear-gradient(180deg, ${GOLD_HI}, ${GOLD})`, color: '#0a0a0b', fontWeight: 800, fontSize: 15 }
 const ghostCta = { padding: '12px 18px', borderRadius: 999, background: 'transparent', color: INK, border: `1px solid ${LINE}`, fontWeight: 600, textDecoration: 'none', fontSize: 14 }

@@ -2,17 +2,17 @@
 
 import { useEffect, useMemo, useState } from 'react'
 
-// Names kept (OLIVE/SAND) to minimize churn; values are the red theme now.
-const INK = '#eef1f3'
-const INK_DIM = '#9aa3ab'
+// Gold theme constants.
+const INK = '#e8e8ea'
+const INK_DIM = '#9c9ca3'
 const FAINT = '#7c8088'
-const OLIVE = '#e5484d'
-const OLIVE_HI = '#f2585d'
-const SAND = '#c9ccd1'
-const SURFACE = '#1a2027'
+const GOLD = '#d4a333'
+const GOLD_HI = '#f0c24a'
+const SURFACE = '#121216'
 const LINE = 'rgba(255,255,255,0.10)'
-const STATUS_COLOR = { pending: SAND, approved: '#7fc88a', rejected: '#ff8585' }
-// Brew-admin HUD fonts (globally imported in globals.css), red-skinned here.
+const CARD_BORDER = 'rgba(212,163,51,0.20)'
+const STATUS_COLOR = { pending: GOLD, approved: '#7fc88a', rejected: '#ff8585' }
+// Brew-admin HUD fonts (globally imported in globals.css).
 const DISPLAY = "'Orbitron', system-ui, sans-serif"
 const MONO = "'JetBrains Mono', ui-monospace, monospace"
 
@@ -35,6 +35,15 @@ export default function LoopAdminClient() {
     finally { setLoading(false) }
   }
   useEffect(() => { load() }, [])
+
+  // Honor deep-links from the staff nav rider search: /marines/admin?tab=riders&q=…
+  useEffect(() => {
+    const p = new URLSearchParams(window.location.search)
+    const t = p.get('tab')
+    const q = p.get('q')
+    if (t && ['requests', 'dispatch', 'scoreboard', 'riders', 'passes', 'service'].includes(t)) setTab(t)
+    if (q) setSearch(q)
+  }, [])
 
   async function patch(id, payload) {
     if (actingId) return
@@ -84,14 +93,14 @@ export default function LoopAdminClient() {
   }, [rows, search])
 
   return (
-    <main className="hud-shell" style={{ padding: '18px 16px 44px', maxWidth: 820, margin: '0 auto', color: INK }}>
+    <main className="hud-shell" style={{ padding: '18px 16px 44px', maxWidth: 1100, margin: '0 auto', color: INK }}>
       <div style={{ display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between', gap: 12, flexWrap: 'wrap' }}>
         <div>
-          <div style={{ fontFamily: MONO, fontSize: 10, fontWeight: 700, letterSpacing: '0.28em', textTransform: 'uppercase', color: OLIVE, display: 'inline-flex', alignItems: 'center', gap: 8 }}>
-            <span style={{ width: 6, height: 6, borderRadius: '50%', background: OLIVE, boxShadow: `0 0 8px ${OLIVE}` }} />
+          <div style={{ fontFamily: MONO, fontSize: 10, fontWeight: 700, letterSpacing: '0.28em', textTransform: 'uppercase', color: GOLD, display: 'inline-flex', alignItems: 'center', gap: 8 }}>
+            <span style={{ width: 6, height: 6, borderRadius: '50%', background: GOLD, boxShadow: `0 0 8px ${GOLD}` }} />
             The Loop · Ops
           </div>
-          <h1 style={{ fontFamily: DISPLAY, fontSize: 'clamp(22px, 6vw, 28px)', fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase', margin: '4px 0 0', color: OLIVE_HI, textShadow: '0 0 18px rgba(229,72,77,0.30)' }}>Operations</h1>
+          <h1 style={{ fontFamily: DISPLAY, fontSize: 'clamp(22px, 6vw, 28px)', fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase', margin: '4px 0 0', color: GOLD_HI, textShadow: '0 0 18px rgba(212,163,51,0.30)' }}>Operations</h1>
         </div>
         <button onClick={load} style={ghost}>Refresh</button>
       </div>
@@ -193,15 +202,15 @@ function DispatchTab() {
         <div key={s.index ?? 'unassigned'} style={{ ...card, padding: '14px 16px' }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', gap: 10 }}>
             <div style={{ display: 'flex', alignItems: 'baseline', gap: 8, minWidth: 0 }}>
-              {s.index != null && <span style={{ color: OLIVE_HI, fontWeight: 800, fontSize: 13 }}>{s.index + 1}</span>}
+              {s.index != null && <span style={{ color: GOLD_HI, fontWeight: 800, fontSize: 13 }}>{s.index + 1}</span>}
               <span style={{ fontSize: 15, fontWeight: 700 }}>{s.name}</span>
-              {s.onBase && <span style={{ color: SAND, fontSize: 11, fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase' }}>· on base</span>}
+              {s.onBase && <span style={{ color: GOLD, fontSize: 11, fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase' }}>· on base</span>}
             </div>
             {s.startTime && <span style={{ color: FAINT, fontSize: 12 }}>{s.startTime}</span>}
           </div>
           <div style={{ marginTop: 10, color: INK_DIM, fontSize: 13.5, lineHeight: 1.55 }}>
             <div>
-              <span style={{ color: OLIVE_HI, fontWeight: 700 }}>Waiting here ({s.waiting.length}):</span>{' '}
+              <span style={{ color: GOLD_HI, fontWeight: 700 }}>Waiting here ({s.waiting.length}):</span>{' '}
               {s.waiting.length
                 ? s.waiting.map((r, i) => <span key={i}>{i ? ', ' : ''}<span style={{ color: INK }}>{r.name}</span></span>)
                 : <span style={{ color: FAINT }}>—</span>}
@@ -275,7 +284,7 @@ function ScoreboardTab() {
   return (
     <Section>
       {/* Live strip */}
-      <div style={{ ...card, padding: '16px 18px', borderColor: 'rgba(229,72,77,0.4)', background: 'rgba(229,72,77,0.06)' }}>
+      <div style={{ ...card, padding: '16px 18px', borderColor: 'rgba(212,163,51,0.4)', background: 'rgba(212,163,51,0.06)' }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', gap: 10, flexWrap: 'wrap' }}>
           <div style={sectionLabel}>Live · {live.name}</div>
           <span style={{ color: FAINT, fontSize: 12 }}>{live.eventDate || ''}</span>
@@ -320,7 +329,7 @@ function ScoreboardTab() {
 function LiveCell({ value, label, accent, small }) {
   return (
     <div>
-      <div style={{ fontFamily: DISPLAY, fontVariantNumeric: 'tabular-nums', fontSize: small ? 16 : 26, fontWeight: 700, letterSpacing: '0.03em', color: accent ? OLIVE_HI : INK, lineHeight: 1.1, wordBreak: 'break-word', textShadow: accent ? '0 0 16px rgba(229,72,77,0.35)' : 'none' }}>{value}</div>
+      <div style={{ fontFamily: DISPLAY, fontVariantNumeric: 'tabular-nums', fontSize: small ? 16 : 26, fontWeight: 700, letterSpacing: '0.03em', color: accent ? GOLD_HI : INK, lineHeight: 1.1, wordBreak: 'break-word', textShadow: accent ? '0 0 16px rgba(212,163,51,0.35)' : 'none' }}>{value}</div>
       <div style={{ fontFamily: MONO, color: INK_DIM, fontSize: 10, letterSpacing: '0.2em', textTransform: 'uppercase', fontWeight: 600, marginTop: 6 }}>{label}</div>
     </div>
   )
@@ -437,14 +446,14 @@ function ServiceTab() {
     <Section>
       <div style={{ ...card, padding: '16px 18px' }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', gap: 10 }}>
-          <div style={sectionLabel}>The red line · {data.group.name}</div>
+          <div style={sectionLabel}>The loop · {data.group.name}</div>
           <span style={{ color: FAINT, fontSize: 12 }}>{data.group.event_date || ''}</span>
         </div>
         <div style={{ display: 'grid', gap: 10, marginTop: 12 }}>
           {(data.schedule || []).map((s, i) => (
             <div key={i} style={{ display: 'grid', gap: 8, padding: '12px 12px', borderRadius: 10, background: 'rgba(255,255,255,0.04)', border: `1px solid ${LINE}` }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                <span style={{ color: OLIVE_HI, fontWeight: 800, fontSize: 13, width: 20 }}>{i + 1}</span>
+                <span style={{ color: GOLD_HI, fontWeight: 800, fontSize: 13, width: 20 }}>{i + 1}</span>
                 <input value={s.name || ''} onChange={e => updateStop(i, { name: e.target.value })} placeholder="Stop name" style={{ ...input, flex: 1 }} />
                 <button type="button" onClick={() => removeStop(i)} style={{ ...mini, color: '#ff8585' }}>✕</button>
               </div>
@@ -482,7 +491,7 @@ function ServiceTab() {
         {saved && <span style={{ color: '#7fc88a', fontSize: 13, fontWeight: 700 }}>Saved ✓</span>}
       </div>
       <div style={{ color: FAINT, fontSize: 12 }}>
-        Lat/lng place the stop on the live map and feed the red-line drawing. Leave blank for a stop with no pin.
+        Lat/lng place the stop on the live map and feed the loop drawing. Leave blank for a stop with no pin.
       </div>
     </Section>
   )
@@ -491,7 +500,7 @@ function ServiceTab() {
 function RiderCard({ r, acting, onApprove, onReject, onFlag, onNote, mode }) {
   const meta = [r.rank, r.unit, r.branch].filter(Boolean).join(' · ')
   return (
-    <div style={{ ...card, padding: '14px 16px', borderColor: r.flagged ? 'rgba(255,176,90,0.5)' : LINE }}>
+    <div style={{ ...card, padding: '14px 16px', borderColor: r.flagged ? 'rgba(255,176,90,0.5)' : CARD_BORDER }}>
       <div style={{ display: 'flex', justifyContent: 'space-between', gap: 12, alignItems: 'flex-start' }}>
         <div style={{ minWidth: 0 }}>
           <div style={{ fontSize: 16, fontWeight: 700 }}>
@@ -500,7 +509,7 @@ function RiderCard({ r, acting, onApprove, onReject, onFlag, onNote, mode }) {
           <div style={{ color: INK_DIM, fontSize: 13, marginTop: 2 }}>{meta || 'Rider'}</div>
           <div style={{ color: INK_DIM, fontSize: 13, marginTop: 2 }}>{r.email || r.phone || 'no contact'}</div>
           {r.note && <div style={{ color: INK_DIM, fontSize: 12.5, marginTop: 6, fontStyle: 'italic' }}>“{r.note}”</div>}
-          {r.admin_note && <div style={{ color: SAND, fontSize: 12.5, marginTop: 6 }}>Note: {r.admin_note}</div>}
+          {r.admin_note && <div style={{ color: GOLD, fontSize: 12.5, marginTop: 6 }}>Note: {r.admin_note}</div>}
           <div style={{ color: FAINT, fontSize: 11, marginTop: 6 }}>
             Requested {fmt(r.created_at)}{r.reviewed_at ? ` · reviewed ${fmt(r.reviewed_at)}` : ''}
           </div>
@@ -522,9 +531,9 @@ function RiderCard({ r, acting, onApprove, onReject, onFlag, onNote, mode }) {
 function Stat({ label, value, sub, accent }) {
   return (
     <div style={{ ...card, padding: '14px 14px' }}>
-      <div style={{ fontFamily: DISPLAY, fontVariantNumeric: 'tabular-nums', fontSize: 28, fontWeight: 700, letterSpacing: '0.04em', color: accent ? OLIVE_HI : INK, lineHeight: 1, textShadow: accent ? '0 0 18px rgba(229,72,77,0.35)' : 'none' }}>{value}</div>
+      <div style={{ fontFamily: DISPLAY, fontVariantNumeric: 'tabular-nums', fontSize: 28, fontWeight: 700, letterSpacing: '0.04em', color: accent ? GOLD_HI : INK, lineHeight: 1, textShadow: accent ? '0 0 18px rgba(212,163,51,0.35)' : 'none' }}>{value}</div>
       <div style={{ fontFamily: MONO, color: INK_DIM, fontSize: 10, letterSpacing: '0.22em', textTransform: 'uppercase', fontWeight: 600, marginTop: 8 }}>{label}</div>
-      {sub && <div style={{ color: SAND, fontSize: 12, marginTop: 3 }}>{sub}</div>}
+      {sub && <div style={{ color: GOLD, fontSize: 12, marginTop: 3 }}>{sub}</div>}
     </div>
   )
 }
@@ -542,17 +551,18 @@ function formatCents(cents) {
   return `$${d.toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}`
 }
 
+// Flat solid panel with a crisp gold edge — mirrors the Brew admin's flat
+// surface+border cards instead of the old gradient look.
 const card = {
   borderRadius: 12,
-  background: 'linear-gradient(180deg, rgba(229,72,77,0.03), transparent 40%), linear-gradient(180deg, #1a2027, #14181c)',
-  border: `1px solid ${LINE}`,
-  boxShadow: '0 1px 0 rgba(255,255,255,0.02) inset, 0 8px 24px rgba(0,0,0,0.35)',
+  background: SURFACE,
+  border: `1px solid ${CARD_BORDER}`,
 }
-const sectionLabel = { fontFamily: MONO, fontSize: 10, color: OLIVE, letterSpacing: '0.28em', textTransform: 'uppercase', fontWeight: 700 }
+const sectionLabel = { fontFamily: MONO, fontSize: 10, color: GOLD, letterSpacing: '0.28em', textTransform: 'uppercase', fontWeight: 700 }
 const chip = { fontFamily: MONO, padding: '7px 12px', borderRadius: 6, background: 'rgba(255,255,255,0.03)', border: `1px solid ${LINE}`, color: INK_DIM, fontSize: 11, fontWeight: 700, letterSpacing: '0.12em', textTransform: 'uppercase', cursor: 'pointer' }
-const chipActive = { background: `linear-gradient(180deg, ${OLIVE_HI}, ${OLIVE})`, borderColor: 'rgba(0,0,0,0.35)', color: '#fff', boxShadow: '0 0 18px rgba(229,72,77,0.4)' }
+const chipActive = { background: `linear-gradient(180deg, ${GOLD_HI}, ${GOLD})`, borderColor: 'rgba(0,0,0,0.35)', color: '#0a0a0b', boxShadow: '0 0 18px rgba(212,163,51,0.4)' }
 const ghost = { padding: '8px 14px', borderRadius: 999, background: 'transparent', border: `1px solid ${LINE}`, color: INK, fontSize: 13, fontWeight: 600, cursor: 'pointer' }
-const approve = { padding: '9px 18px', borderRadius: 10, background: `linear-gradient(180deg, ${OLIVE_HI}, ${OLIVE})`, color: '#fff', fontWeight: 800, fontSize: 14, border: 'none', cursor: 'pointer' }
+const approve = { padding: '9px 18px', borderRadius: 10, background: `linear-gradient(180deg, ${GOLD_HI}, ${GOLD})`, color: '#0a0a0b', fontWeight: 800, fontSize: 14, border: 'none', cursor: 'pointer' }
 const reject = { padding: '9px 14px', borderRadius: 10, background: 'transparent', border: `1px solid ${LINE}`, color: INK_DIM, fontWeight: 600, fontSize: 14, cursor: 'pointer' }
 const input = { padding: '9px 10px', borderRadius: 8, background: 'rgba(255,255,255,0.05)', border: `1px solid ${LINE}`, color: INK, fontSize: 14, outline: 'none', boxSizing: 'border-box', width: '100%' }
 const mini = { padding: '6px 10px', borderRadius: 8, background: 'transparent', border: `1px solid ${LINE}`, fontSize: 14, fontWeight: 700, cursor: 'pointer' }

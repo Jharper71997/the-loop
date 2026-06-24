@@ -8,7 +8,7 @@ export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
 
 // The Loop (Marines) boarding pass. A fork of (external)/tickets/[code] with
-// the Brew Loop chrome stripped: red theme, no waiver, no security chat. Same
+// the Brew Loop chrome stripped: gold theme, no waiver, no security chat. Same
 // qr_codes(kind='checkin') -> order_item lookup, so the SAME code the door
 // scanner reads is what shows here. Scoped to kind='marines' events — a Brew
 // code 404s here (it belongs on /tickets/<code>).

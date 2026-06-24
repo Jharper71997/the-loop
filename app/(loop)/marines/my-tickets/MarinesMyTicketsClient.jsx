@@ -5,7 +5,7 @@ import { C, card, sectionLabel, primaryCta, ghostCta } from '../../_theme'
 
 const GREEN = '#5fc97a'
 
-// Phone-lookup for The Loop passes — red-themed fork of Brew Loop's
+// Phone-lookup for The Loop passes — gold-themed fork of Brew Loop's
 // MyTicketsClient. POSTs the phone to /api/marines/my-tickets, then lists each
 // order with its event date and every rider's pass (name, type chip, QR
 // thumbnail, and a link to the full pass at /marines/tickets/<code>). No waiver
@@ -102,7 +102,7 @@ export default function MarinesMyTicketsClient() {
       </label>
 
       {error && (
-        <div style={{ color: C.RED_HI, fontSize: 13, padding: '8px 12px', background: 'rgba(229,72,77,0.1)', borderRadius: 8, border: `1px solid rgba(229,72,77,0.3)` }}>
+        <div style={{ color: C.GOLD_HI, fontSize: 13, padding: '8px 12px', background: 'rgba(212,163,51,0.1)', borderRadius: 8, border: `1px solid rgba(212,163,51,0.3)` }}>
           {error}
         </div>
       )}
@@ -139,7 +139,7 @@ function OrderCard({ order }) {
     <div style={{ ...card, borderRadius: 16, boxShadow: '0 16px 34px rgba(0,0,0,0.26)', padding: '18px 18px' }}>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 12, marginBottom: 12 }}>
         <div style={{ minWidth: 0 }}>
-          <div style={{ color: C.RED, fontSize: 11, letterSpacing: '0.18em', textTransform: 'uppercase', fontWeight: 700 }}>
+          <div style={{ color: C.GOLD, fontSize: 11, letterSpacing: '0.18em', textTransform: 'uppercase', fontWeight: 700 }}>
             {eventDate || 'The Loop'}
             {pickupTime ? ` · ${pickupTime}` : ''}
           </div>
@@ -155,9 +155,9 @@ function OrderCard({ order }) {
             fontWeight: 700,
             letterSpacing: '0.1em',
             textTransform: 'uppercase',
-            color: order.status === 'paid' ? GREEN : C.RED_HI,
-            background: order.status === 'paid' ? 'rgba(95,201,122,0.12)' : 'rgba(229,72,77,0.12)',
-            border: `1px solid ${order.status === 'paid' ? 'rgba(95,201,122,0.32)' : 'rgba(229,72,77,0.4)'}`,
+            color: order.status === 'paid' ? GREEN : C.GOLD_HI,
+            background: order.status === 'paid' ? 'rgba(95,201,122,0.12)' : 'rgba(212,163,51,0.12)',
+            border: `1px solid ${order.status === 'paid' ? 'rgba(95,201,122,0.32)' : 'rgba(212,163,51,0.4)'}`,
             whiteSpace: 'nowrap',
           }}
         >
@@ -202,7 +202,7 @@ function RiderRow({ rider: r }) {
           {r.pass_type && (
             <span style={{
               padding: '3px 10px', borderRadius: 999,
-              background: 'rgba(229,72,77,0.14)', border: `1px solid ${C.RED}`, color: C.RED_HI,
+              background: 'rgba(212,163,51,0.14)', border: `1px solid ${C.GOLD}`, color: C.GOLD_HI,
               fontSize: 11, fontWeight: 800, letterSpacing: '0.04em',
             }}>
               {r.pass_type}
@@ -245,7 +245,7 @@ function RiderRow({ rider: r }) {
             alignItems: 'center',
             gap: 6,
             textDecoration: 'none',
-            boxShadow: '0 0 0 1px rgba(229,72,77,0.4)',
+            boxShadow: '0 0 0 1px rgba(212,163,51,0.4)',
           }}
         >
           <img

@@ -1,4 +1,4 @@
-// The Loop — phone-lookup for your passes. A red-themed fork of Brew Loop's
+// The Loop — phone-lookup for your passes. A gold-themed fork of Brew Loop's
 // /my-tickets, scoped to The Loop (Marines) orders only. No waiver, no security
 // chat, no bar/alcohol cues. Boarding-pass links point at /marines/tickets/<code>.
 

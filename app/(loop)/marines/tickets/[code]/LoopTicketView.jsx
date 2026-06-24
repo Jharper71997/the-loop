@@ -5,7 +5,7 @@ import { C } from '../../../_theme'
 
 const GREEN = '#5fc97a'
 
-// The Loop boarding pass — red-themed fork of the Brew Loop TicketView. No
+// The Loop boarding pass — gold-themed fork of the Brew Loop TicketView. No
 // waiver, no security chat. Keeps the screen awake + share so the rider can
 // flash the QR to the driver at the gate.
 export default function LoopTicketView({
@@ -94,7 +94,7 @@ export default function LoopTicketView({
       display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
       <div style={{ maxWidth: 460, width: '100%', display: 'grid', gap: 18 }}>
         <header style={{ textAlign: 'center', paddingTop: 8 }}>
-          <div style={{ color: C.RED, fontSize: 11, letterSpacing: '0.22em', textTransform: 'uppercase', fontWeight: 700 }}>
+          <div style={{ color: C.GOLD, fontSize: 11, letterSpacing: '0.22em', textTransform: 'uppercase', fontWeight: 700 }}>
             The Loop · Boarding pass
           </div>
           <h1 style={{ color: C.INK, fontSize: 24, fontWeight: 700, margin: '8px 0 0', letterSpacing: '-0.015em' }}>{riderName}</h1>
@@ -103,7 +103,7 @@ export default function LoopTicketView({
           </div>
           {passType && (
             <div style={{ display: 'inline-block', marginTop: 10, padding: '4px 12px', borderRadius: 999,
-              background: 'rgba(229,72,77,0.14)', border: `1px solid ${C.RED}`, color: C.RED_HI,
+              background: 'rgba(212,163,51,0.14)', border: `1px solid ${C.GOLD}`, color: C.GOLD_HI,
               fontSize: 12, fontWeight: 800, letterSpacing: '0.04em' }}>
               {passType}
             </div>
@@ -111,9 +111,9 @@ export default function LoopTicketView({
         </header>
 
         {(pickupSpot || timeLabel) && (
-          <div style={{ background: 'rgba(229,72,77,0.08)', border: `1px solid rgba(229,72,77,0.35)`,
+          <div style={{ background: 'rgba(212,163,51,0.08)', border: `1px solid rgba(212,163,51,0.35)`,
             borderRadius: 14, padding: '14px 16px', display: 'grid', gap: 4 }}>
-            <div style={{ color: C.RED, fontSize: 11, letterSpacing: '0.18em', textTransform: 'uppercase', fontWeight: 700 }}>
+            <div style={{ color: C.GOLD, fontSize: 11, letterSpacing: '0.18em', textTransform: 'uppercase', fontWeight: 700 }}>
               Board at
             </div>
             <div style={{ color: C.INK, fontSize: 18, fontWeight: 700 }}>{pickupSpot || 'Gate pickup'}</div>
@@ -126,7 +126,7 @@ export default function LoopTicketView({
         {/* White QR card so the camera reads it cleanly at low brightness. */}
         <div style={{ background: '#ffffff', borderRadius: 22, padding: 18, display: 'flex',
           flexDirection: 'column', alignItems: 'center',
-          boxShadow: '0 30px 60px rgba(0,0,0,0.45), 0 0 0 1px rgba(229,72,77,0.4)' }}>
+          boxShadow: '0 30px 60px rgba(0,0,0,0.45), 0 0 0 1px rgba(212,163,51,0.4)' }}>
           <img src={qrDataUrl} alt="Pass QR code" style={{ width: '100%', maxWidth: 320, height: 'auto', display: 'block' }} />
           <div style={{ marginTop: 10, fontFamily: 'ui-monospace, SFMono-Regular, Menlo, monospace',
             fontSize: 12, letterSpacing: '0.2em', color: '#3a3a44', textTransform: 'uppercase' }}>
@@ -168,10 +168,10 @@ export default function LoopTicketView({
 function StatusPill({ ok, label, sub }) {
   return (
     <div style={{ display: 'flex', gap: 12, alignItems: 'center', padding: '12px 14px', borderRadius: 12,
-      background: ok ? 'rgba(95,201,122,0.08)' : 'rgba(229,72,77,0.1)',
-      border: `1px solid ${ok ? 'rgba(95,201,122,0.32)' : 'rgba(229,72,77,0.4)'}` }}>
+      background: ok ? 'rgba(95,201,122,0.08)' : 'rgba(212,163,51,0.1)',
+      border: `1px solid ${ok ? 'rgba(95,201,122,0.32)' : 'rgba(212,163,51,0.4)'}` }}>
       <span style={{ width: 26, height: 26, borderRadius: 999, display: 'inline-flex', alignItems: 'center',
-        justifyContent: 'center', background: ok ? GREEN : C.RED_HI, color: '#0a0a0b', fontWeight: 800,
+        justifyContent: 'center', background: ok ? GREEN : C.GOLD_HI, color: '#0a0a0b', fontWeight: 800,
         fontSize: 14, flexShrink: 0 }}>
         {ok ? '✓' : '!'}
       </span>
@@ -186,8 +186,8 @@ function StatusPill({ ok, label, sub }) {
 const primaryBtn = {
   padding: '14px 20px',
   borderRadius: 12,
-  background: `linear-gradient(180deg, ${C.RED_HI}, ${C.RED})`,
-  color: '#fff',
+  background: `linear-gradient(180deg, ${C.GOLD_HI}, ${C.GOLD})`,
+  color: '#0a0a0b',
   border: 0,
   fontWeight: 800,
   fontSize: 15,
@@ -196,7 +196,7 @@ const primaryBtn = {
   textDecoration: 'none',
   textAlign: 'center',
   display: 'block',
-  boxShadow: '0 10px 30px rgba(229,72,77,0.25)',
+  boxShadow: '0 10px 30px rgba(212,163,51,0.25)',
 }
 
 function formatDate(iso) {

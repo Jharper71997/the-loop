@@ -117,12 +117,12 @@ export default function BuyClient({ eventId, ticketTypes = [], stops = [] }) {
                 style={{
                   display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12,
                   padding: '14px 14px', borderRadius: 11, cursor: 'pointer', textAlign: 'left',
-                  background: active ? 'rgba(229,72,77,0.10)' : 'rgba(255,255,255,0.04)',
-                  border: `1px solid ${active ? 'rgba(229,72,77,0.6)' : C.LINE}`,
+                  background: active ? 'rgba(212,163,51,0.10)' : 'rgba(255,255,255,0.04)',
+                  border: `1px solid ${active ? 'rgba(212,163,51,0.6)' : C.LINE}`,
                   color: C.INK,
                 }}
               >
-                <span style={{ fontSize: 15, fontWeight: 800, color: active ? C.RED_HI : C.INK }}>{t.name}</span>
+                <span style={{ fontSize: 15, fontWeight: 800, color: active ? C.GOLD_HI : C.INK }}>{t.name}</span>
                 <span style={{ fontSize: 18, fontWeight: 800, color: C.WARM }}>{money(t.price_cents)}</span>
               </button>
             )
@@ -169,8 +169,8 @@ export default function BuyClient({ eventId, ticketTypes = [], stops = [] }) {
       </label>
 
       {needsVerify && (
-        <div style={{ padding: '12px 14px', borderRadius: 10, background: 'rgba(229,72,77,0.10)', border: '1px solid rgba(229,72,77,0.45)' }}>
-          <div style={{ color: C.RED_HI, fontSize: 13.5, fontWeight: 800 }}>One quick step first</div>
+        <div style={{ padding: '12px 14px', borderRadius: 10, background: 'rgba(212,163,51,0.10)', border: '1px solid rgba(212,163,51,0.45)' }}>
+          <div style={{ color: C.GOLD_HI, fontSize: 13.5, fontWeight: 800 }}>One quick step first</div>
           <div style={{ color: C.INK_DIM, fontSize: 13, marginTop: 3, lineHeight: 1.45 }}>
             We don{"'"}t have you cleared to ride yet. Verify your ID once and come right back to buy.
           </div>
@@ -211,4 +211,4 @@ function prettyError(code) {
 const card = { borderRadius: 14, background: C.SURFACE, border: `1px solid ${C.LINE}` }
 const fieldLabel = { color: C.INK_DIM, fontSize: 12, fontWeight: 600 }
 const input = { width: '100%', padding: '11px 12px', borderRadius: 9, background: 'rgba(255,255,255,0.05)', border: `1px solid ${C.LINE}`, color: C.INK, fontSize: 15, outline: 'none' }
-const primaryCta = { padding: '13px 22px', borderRadius: 10, background: `linear-gradient(180deg, ${C.RED_HI}, ${C.RED})`, color: '#fff', fontWeight: 800, fontSize: 15, textDecoration: 'none' }
+const primaryCta = { padding: '13px 22px', borderRadius: 10, background: `linear-gradient(180deg, ${C.GOLD_HI}, ${C.GOLD})`, color: '#0a0a0b', fontWeight: 800, fontSize: 15, textDecoration: 'none' }

@@ -65,7 +65,7 @@ export default function LoopDriverClient({
     return () => clearInterval(t)
   }, [groupId, refreshManifest])
 
-  // Boot the Leaflet map once — red line + stops + driver marker.
+  // Boot the Leaflet map once — the loop line + stops + driver marker.
   useEffect(() => {
     let cancelled = false
     let map
@@ -79,7 +79,7 @@ export default function LoopDriverClient({
       L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 19 }).addTo(map)
       L.control.attribution({ prefix: false }).addAttribution('&copy; OpenStreetMap').addTo(map)
 
-      if (fit.length > 1) L.polyline(fit, { color: C.RED, weight: 4, opacity: 0.85 }).addTo(map)
+      if (fit.length > 1) L.polyline(fit, { color: C.GOLD, weight: 4, opacity: 0.85 }).addTo(map)
 
       stops.filter(s => Number.isFinite(s.lat) && Number.isFinite(s.lng)).forEach(s => {
         const icon = L.divIcon({ className: 'loop-stop-pin', html: stopPinHtml(s.index + 1, s.onBase), iconSize: [28, 28], iconAnchor: [14, 14] })
@@ -223,7 +223,7 @@ export default function LoopDriverClient({
     <div style={{ minHeight: '100dvh', background: '#0d1014', color: C.INK, padding: '20px 16px 32px' }}>
       <div style={{ maxWidth: 520, margin: '0 auto', display: 'grid', gap: 16 }}>
         <header>
-          <div style={{ color: C.RED, fontSize: 11, letterSpacing: '0.22em', textTransform: 'uppercase', fontWeight: 700 }}>The Loop · Driver</div>
+          <div style={{ color: C.GOLD, fontSize: 11, letterSpacing: '0.22em', textTransform: 'uppercase', fontWeight: 700 }}>The Loop · Driver</div>
           <h1 style={{ color: C.INK, fontSize: 26, fontWeight: 800, margin: '4px 0 0' }}>{running ? 'Live' : 'Off duty'}</h1>
           {loopName && (
             <div style={{ color: C.INK_DIM, fontSize: 13, marginTop: 4 }}>
@@ -252,11 +252,11 @@ export default function LoopDriverClient({
           {position && stops.length > 0 && <NextStopCard position={position} stops={stops} eventDate={eventDate} />}
 
           {error && (
-            <div style={{ color: '#ff8585', fontSize: 12, padding: '8px 12px', background: 'rgba(229,72,77,0.08)', borderRadius: 8, marginBottom: 12 }}>{error}</div>
+            <div style={{ color: '#ff8585', fontSize: 12, padding: '8px 12px', background: 'rgba(212,163,51,0.08)', borderRadius: 8, marginBottom: 12 }}>{error}</div>
           )}
 
           {running ? (
-            <button type="button" onClick={stop} style={{ ...primaryBtn, background: 'transparent', color: C.INK, border: `1.5px solid ${C.RED}` }}>End route</button>
+            <button type="button" onClick={stop} style={{ ...primaryBtn, background: 'transparent', color: C.INK, border: `1.5px solid ${C.GOLD}` }}>End route</button>
           ) : (
             <button type="button" onClick={start} style={primaryBtn}>Start route</button>
           )}
@@ -265,7 +265,7 @@ export default function LoopDriverClient({
         {/* Manifest */}
         <div style={{ padding: '14px 14px 12px', borderRadius: 18, background: C.SURFACE, border: `1.5px solid ${C.LINE}` }}>
           <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', marginBottom: 10, padding: '0 2px' }}>
-            <div style={{ color: C.RED, fontSize: 11, letterSpacing: '0.22em', textTransform: 'uppercase', fontWeight: 700 }}>Manifest</div>
+            <div style={{ color: C.GOLD, fontSize: 11, letterSpacing: '0.22em', textTransform: 'uppercase', fontWeight: 700 }}>Manifest</div>
             <div style={{ color: C.INK_DIM, fontSize: 12, fontVariantNumeric: 'tabular-nums' }}>{onboard.length} on board · {riders.length} sold</div>
           </div>
 
@@ -322,10 +322,10 @@ export default function LoopDriverClient({
       <style>{`
         .loop-stop-pin > div { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; }
         .leaflet-container { background: #0d0d10; }
-        .leaflet-popup-content-wrapper { background: #1a2027; color: #f5f5f7; border: 1px solid rgba(255,255,255,0.10); border-radius: 10px; }
-        .leaflet-popup-tip { background: #1a2027; }
+        .leaflet-popup-content-wrapper { background: #121216; color: #f5f5f7; border: 1px solid rgba(255,255,255,0.10); border-radius: 10px; }
+        .leaflet-popup-tip { background: #121216; }
         .leaflet-control-attribution { background: rgba(10,10,11,0.6) !important; color: #9c9ca3 !important; }
-        .leaflet-control-attribution a { color: ${C.RED} !important; }
+        .leaflet-control-attribution a { color: ${C.GOLD} !important; }
       `}</style>
     </div>
   )
@@ -348,7 +348,7 @@ function RiderRow({ r, busy, onBoard, actionLabel, actionVariant }) {
           flex: '0 0 auto', padding: '10px 16px', borderRadius: 10, fontWeight: 800, fontSize: 14, cursor: busy ? 'default' : 'pointer',
           opacity: busy ? 0.6 : 1,
           ...(actionVariant === 'solid'
-            ? { background: `linear-gradient(180deg, ${C.RED_HI}, ${C.RED})`, color: '#fff', border: 'none' }
+            ? { background: `linear-gradient(180deg, ${C.GOLD_HI}, ${C.GOLD})`, color: '#0a0a0b', border: 'none' }
             : { background: 'transparent', color: C.INK, border: `1px solid ${C.LINE}` }),
         }}
       >
@@ -365,9 +365,9 @@ function PassBadge({ r }) {
     <span style={{
       fontSize: 10.5, letterSpacing: '0.06em', textTransform: 'uppercase', fontWeight: 800,
       padding: '3px 8px', borderRadius: 999,
-      background: dayPass ? 'rgba(111,191,127,0.14)' : 'rgba(229,72,77,0.12)',
-      border: `1px solid ${dayPass ? 'rgba(111,191,127,0.45)' : 'rgba(229,72,77,0.4)'}`,
-      color: dayPass ? GREEN : C.RED_HI,
+      background: dayPass ? 'rgba(111,191,127,0.14)' : 'rgba(212,163,51,0.12)',
+      border: `1px solid ${dayPass ? 'rgba(111,191,127,0.45)' : 'rgba(212,163,51,0.4)'}`,
+      color: dayPass ? GREEN : C.GOLD_HI,
     }}>
       {label}
     </span>
@@ -404,15 +404,15 @@ function NextStopCard({ position, stops, eventDate }) {
   const etaMin = arrived ? null : Math.max(1, Math.round((distanceMi / speedForEta) * 60))
 
   return (
-    <div style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '12px 14px', background: 'linear-gradient(180deg, rgba(229,72,77,0.14), rgba(229,72,77,0.05))', border: `1px solid rgba(229,72,77,0.45)`, borderRadius: 12, marginBottom: 14 }}>
-      <span aria-hidden style={{ width: 32, height: 32, borderRadius: '50%', background: 'rgba(229,72,77,0.18)', border: `1px solid ${C.RED}`, color: C.RED_HI, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', fontSize: 16, fontWeight: 800, flex: '0 0 auto' }}>→</span>
+    <div style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '12px 14px', background: 'linear-gradient(180deg, rgba(212,163,51,0.14), rgba(212,163,51,0.05))', border: `1px solid rgba(212,163,51,0.45)`, borderRadius: 12, marginBottom: 14 }}>
+      <span aria-hidden style={{ width: 32, height: 32, borderRadius: '50%', background: 'rgba(212,163,51,0.18)', border: `1px solid ${C.GOLD}`, color: C.GOLD_HI, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', fontSize: 16, fontWeight: 800, flex: '0 0 auto' }}>→</span>
       <div style={{ flex: 1, minWidth: 0 }}>
-        <div style={{ color: C.RED, fontSize: 10, letterSpacing: '0.22em', textTransform: 'uppercase', fontWeight: 700 }}>{arrived ? 'At stop' : `Next stop · #${dest.index + 1}`}</div>
+        <div style={{ color: C.GOLD, fontSize: 10, letterSpacing: '0.22em', textTransform: 'uppercase', fontWeight: 700 }}>{arrived ? 'At stop' : `Next stop · #${dest.index + 1}`}</div>
         <div style={{ color: C.INK, fontSize: 16, fontWeight: 800, marginTop: 2, lineHeight: 1.15 }}>{dest.name}</div>
       </div>
       <div style={{ textAlign: 'right', flex: '0 0 auto' }}>
         {arrived ? (
-          <div style={{ color: C.RED_HI, fontSize: 13, fontWeight: 800 }}>Arrived</div>
+          <div style={{ color: C.GOLD_HI, fontSize: 13, fontWeight: 800 }}>Arrived</div>
         ) : (
           <>
             <div style={{ color: C.INK_DIM, fontSize: 10, letterSpacing: '0.18em', textTransform: 'uppercase', fontWeight: 700 }}>{moving ? 'ETA' : 'ETA · est'}</div>
@@ -450,12 +450,12 @@ function todayLocalISO(d) {
 }
 
 function stopPinHtml(n, onBase) {
-  const border = onBase ? '#fff' : C.RED
-  return `<div style="width:28px;height:28px;border-radius:50%;background:#1a2027;border:2px solid ${border};color:${C.RED_HI};font-size:12px;font-weight:800;display:flex;align-items:center;justify-content:center;box-shadow:0 4px 14px rgba(0,0,0,0.55);">${n}</div>`
+  const border = onBase ? '#fff' : C.GOLD
+  return `<div style="width:28px;height:28px;border-radius:50%;background:#121216;border:2px solid ${border};color:${C.GOLD_HI};font-size:12px;font-weight:800;display:flex;align-items:center;justify-content:center;box-shadow:0 4px 14px rgba(0,0,0,0.55);">${n}</div>`
 }
 
 function driverIconHtml() {
-  return `<div style="width:40px;height:40px;border-radius:50%;background:radial-gradient(circle at 35% 30%, ${C.RED_HI}, ${C.RED});border:2px solid #0a0a0b;box-shadow:0 0 0 4px rgba(229,72,77,0.35), 0 8px 22px rgba(0,0,0,0.5);"></div>`
+  return `<div style="width:40px;height:40px;border-radius:50%;background:radial-gradient(circle at 35% 30%, ${C.GOLD_HI}, ${C.GOLD});border:2px solid #0a0a0b;box-shadow:0 0 0 4px rgba(212,163,51,0.35), 0 8px 22px rgba(0,0,0,0.5);"></div>`
 }
 
 function escapeHtml(s) {
@@ -481,8 +481,8 @@ function formatTime(hhmm) {
 }
 
 const primaryBtn = {
-  padding: '16px 22px', borderRadius: 12, background: `linear-gradient(180deg, ${C.RED_HI}, ${C.RED})`,
-  color: '#fff', border: 0, fontWeight: 800, fontSize: 16, cursor: 'pointer', width: '100%',
-  boxShadow: '0 10px 30px rgba(229,72,77,0.25)',
+  padding: '16px 22px', borderRadius: 12, background: `linear-gradient(180deg, ${C.GOLD_HI}, ${C.GOLD})`,
+  color: '#0a0a0b', border: 0, fontWeight: 800, fontSize: 16, cursor: 'pointer', width: '100%',
+  boxShadow: '0 10px 30px rgba(212,163,51,0.25)',
 }
 const sectionHdr = { color: C.WARM, fontSize: 11, letterSpacing: '0.16em', textTransform: 'uppercase', fontWeight: 700, margin: '0 2px 8px' }

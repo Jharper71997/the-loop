@@ -12,7 +12,7 @@ const POLL_MS = 8000
 //     to /api/loop-security/checkin/<code>; big ADMIT / reject card + tally.
 //   - "Door list": polls /api/loop-security/roster every 8s, searchable, with a
 //     manual "Check in" button per rider that hits the same endpoint.
-// Red theme. No waiver UI anywhere.
+// Gold theme. No waiver UI anywhere.
 export default function MarinesSecurityClient({ eventName = 'The Loop' }) {
   const [view, setView] = useState('scan') // 'scan' | 'list'
 
@@ -54,7 +54,7 @@ export default function MarinesSecurityClient({ eventName = 'The Loop' }) {
           </div>
           <div style={{ textAlign: 'right' }}>
             <Counter label="Admitted" value={tally.admitted} color={GREEN} />
-            <Counter label="Rejected" value={tally.rejected} color={C.RED} />
+            <Counter label="Rejected" value={tally.rejected} color={C.GOLD} />
           </div>
         </header>
 
@@ -72,7 +72,7 @@ export default function MarinesSecurityClient({ eventName = 'The Loop' }) {
             />
             <ResultCard last={last} />
             <p style={{ color: C.INK_DIM, fontSize: 12, textAlign: 'center', margin: 0 }}>
-              Green = admit. Red = stop. Continuous scan: hold the camera on the next rider.
+              Green = admit. Gold = stop. Continuous scan: hold the camera on the next rider.
             </p>
           </>
         ) : (
@@ -161,12 +161,12 @@ function DoorList() {
 
   return (
     <div style={{ display: 'grid', gap: 14 }}>
-      {error && <div style={{ ...card, padding: '14px 16px', color: C.RED, fontSize: 14 }}>{error}</div>}
+      {error && <div style={{ ...card, padding: '14px 16px', color: C.GOLD, fontSize: 14 }}>{error}</div>}
 
       {data && (
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
           <Tally label="Boarded" value={data.boarded} total={data.total} color={GREEN} />
-          <Tally label="Still missing" value={data.missing} total={data.total} color={C.RED_HI} />
+          <Tally label="Still missing" value={data.missing} total={data.total} color={C.GOLD_HI} />
         </div>
       )}
 
@@ -237,9 +237,9 @@ function TabButton({ active, onClick, label }) {
       onClick={onClick}
       style={{
         flex: 1, padding: '10px 12px', borderRadius: 10,
-        border: `1px solid ${active ? C.RED : C.LINE}`,
-        background: active ? 'rgba(229,72,77,0.14)' : C.SURFACE,
-        color: active ? C.RED_HI : C.INK_DIM,
+        border: `1px solid ${active ? C.GOLD : C.LINE}`,
+        background: active ? 'rgba(212,163,51,0.14)' : C.SURFACE,
+        color: active ? C.GOLD_HI : C.INK_DIM,
         fontSize: 13, fontWeight: 700, cursor: 'pointer',
       }}
     >
@@ -273,7 +273,7 @@ function ResultCard({ last }) {
   const admit = !!last.ok
   const palette = admit
     ? { bg: 'rgba(95,191,127,0.12)', border: 'rgba(95,191,127,0.45)', accent: GREEN }
-    : { bg: 'rgba(229,72,77,0.12)', border: 'rgba(229,72,77,0.45)', accent: C.RED_HI }
+    : { bg: 'rgba(212,163,51,0.12)', border: 'rgba(212,163,51,0.45)', accent: C.GOLD_HI }
 
   const headline = admit ? 'ADMIT' : reasonHeadline(last.reason)
   const sub = admit
@@ -379,7 +379,7 @@ function RiderRow({ rider, busy, flash, onCheckIn }) {
           {rider.unclaimed && 'Friend hasn\'t claimed their seat yet'}
         </div>
         {flash && (
-          <div style={{ marginTop: 4, fontSize: 12, fontWeight: 700, color: flash.kind === 'ok' ? GREEN : flash.kind === 'warn' ? C.WARM : C.RED }}>
+          <div style={{ marginTop: 4, fontSize: 12, fontWeight: 700, color: flash.kind === 'ok' ? GREEN : flash.kind === 'warn' ? C.WARM : C.GOLD }}>
             {flash.msg}
           </div>
         )}
@@ -391,8 +391,8 @@ function RiderRow({ rider, busy, flash, onCheckIn }) {
           disabled={busy}
           style={{
             padding: '10px 14px', borderRadius: 10,
-            background: `linear-gradient(180deg, ${C.RED_HI}, ${C.RED})`,
-            color: '#fff', border: 0, fontWeight: 800, fontSize: 12,
+            background: `linear-gradient(180deg, ${C.GOLD_HI}, ${C.GOLD})`,
+            color: '#0a0a0b', border: 0, fontWeight: 800, fontSize: 12,
             cursor: busy ? 'wait' : 'pointer', opacity: busy ? 0.6 : 1, whiteSpace: 'nowrap',
           }}
         >
