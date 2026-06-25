@@ -1,6 +1,8 @@
 'use client'
 
 import { useEffect, useState } from 'react'
+import { brandFor } from '@/lib/businessConfig'
+import { useRiderBusiness } from '@/lib/useBusiness'
 
 const GOLD = '#d4a333'
 const GOLD_HI = '#f0c24a'
@@ -13,6 +15,9 @@ const INK = '#0a0a0b'
 //  3. iOS Safari has no install prompt event — instead we show a one-time
 //     hint card the first session.
 export default function PwaShell() {
+  const kind = useRiderBusiness()
+  const cfg = brandFor(kind)
+  const dismissKey = `${kind}-install-dismissed`
   const [chromiumPrompt, setChromiumPrompt] = useState(null)
   const [iosHint, setIosHint] = useState(false)
   const [dismissed, setDismissed] = useState(true)
@@ -23,7 +28,7 @@ export default function PwaShell() {
     }
 
     const seen = (() => {
-      try { return localStorage.getItem('bl-install-dismissed') === '1' } catch { return false }
+      try { return localStorage.getItem(dismissKey) === '1' } catch { return false }
     })()
     setDismissed(seen)
 
@@ -44,13 +49,14 @@ export default function PwaShell() {
     }
 
     return () => window.removeEventListener('beforeinstallprompt', onPrompt)
-  }, [])
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [dismissKey])
 
   function dismiss() {
     setDismissed(true)
     setIosHint(false)
     setChromiumPrompt(null)
-    try { localStorage.setItem('bl-install-dismissed', '1') } catch {}
+    try { localStorage.setItem(dismissKey, '1') } catch {}
   }
 
   async function install() {
@@ -85,7 +91,7 @@ export default function PwaShell() {
     >
       <div style={{ flex: 1, minWidth: 0 }}>
         <div style={{ color: GOLD, fontSize: 11, fontWeight: 700, letterSpacing: '0.18em', textTransform: 'uppercase' }}>
-          Install Brew Loop
+          Install {cfg.shortBrand}
         </div>
         <div style={{ color: '#f5f5f7', fontSize: 13, marginTop: 2 }}>
           {chromiumPrompt

@@ -2,12 +2,16 @@
 
 import { useEffect, useState } from 'react'
 import Link from 'next/link'
+import { brandFor, prefixLink } from '@/lib/businessConfig'
+import { useRiderBusiness } from '@/lib/useBusiness'
 
 const GOLD = '#d4a333'
 const INK = '#f5f5f7'
 const LINE = 'rgba(255,255,255,0.08)'
 
 export default function TopBar() {
+  const kind = useRiderBusiness()
+  const cfg = brandFor(kind)
   const [scrolled, setScrolled] = useState(false)
 
   useEffect(() => {
@@ -44,8 +48,8 @@ export default function TopBar() {
         }}
       >
         <Link
-          href="/"
-          aria-label="Jville Brew Loop home"
+          href={prefixLink('/', kind)}
+          aria-label={`${cfg.brand} home`}
           style={{ display: 'inline-flex', alignItems: 'center', gap: 10, textDecoration: 'none' }}
         >
           <span
@@ -65,7 +69,7 @@ export default function TopBar() {
               background: 'radial-gradient(60% 60% at 50% 40%, rgba(212,163,51,0.18), transparent 70%)',
             }}
           >
-            JBL
+            {cfg.badge}
           </span>
           <span style={{
             color: INK,
@@ -73,7 +77,7 @@ export default function TopBar() {
             fontWeight: 700,
             letterSpacing: '0.04em',
           }}>
-            Jville Brew Loop
+            {cfg.brand}
           </span>
         </Link>
       </nav>

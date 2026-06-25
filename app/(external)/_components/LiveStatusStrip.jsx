@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react'
 import { usePathname } from 'next/navigation'
+import { businessFromPath, prefixLink } from '@/lib/businessConfig'
 
 const GOLD = '#d4a333'
 const GOLD_HI = '#f0c24a'
@@ -11,9 +12,14 @@ const GOLD_HI = '#f0c24a'
 // by the home hero, the Track tab, and the /events page.
 export default function LiveStatusStrip() {
   const pathname = usePathname() || '/'
+  const kind = businessFromPath(pathname)
+  const rel = kind === 'surf' ? (pathname.replace(/^\/surfcity/, '') || '/') : pathname
   const [shuttle, setShuttle] = useState(null)
 
   useEffect(() => {
+    // Shared feed = the Brew shuttle; don't show a brew live ribbon on Surf
+    // (surf GPS broadcasting isn't wired yet).
+    if (kind !== 'brew') return
     let cancelled = false
     let timer
 
@@ -29,16 +35,16 @@ export default function LiveStatusStrip() {
     poll()
     timer = setInterval(poll, 20_000)
     return () => { cancelled = true; clearInterval(timer) }
-  }, [])
+  }, [kind])
 
   const live = !!shuttle?.is_active
   if (!live) return null
   // No need to nag users who are already on /track.
-  if (pathname.startsWith('/track')) return null
+  if (rel.startsWith('/track')) return null
 
   return (
     <a
-      href="/track"
+      href={prefixLink('/track', kind)}
       style={{
         display: 'flex',
         alignItems: 'center',

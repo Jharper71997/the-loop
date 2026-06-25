@@ -1,9 +1,9 @@
-// Shared shell for the standalone (loop) products — Marines "The Loop" and
-// Surf City Loop. Deliberately NOT inside the (external) Brew Loop layout: no
-// Brew Loop top bar / tab bar. Dark base + gold accent (the gold design system
-// comes from .loop-shell in globals.css). Per-business branding + header +
-// staff nav live in the nested layouts: marines/layout.js and
-// surfcity/layout.js. This parent only provides the shell + the accent line.
+// Shared shell for the standalone (loop) product — Marines "The Loop".
+// Deliberately NOT inside the (external) Brew Loop layout: no Brew Loop top bar
+// / tab bar. Dark base + gold accent (the gold design system comes from
+// .loop-shell in globals.css). Per-business branding + header + staff nav live
+// in the nested marines/layout.js. This parent only provides the shell + the
+// accent line. (Surf City moved to the Brew (external) chrome at /surfcity.)
 
 const BG = '#0a0a0b'
 const INK = '#e8e8ea'

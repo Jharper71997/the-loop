@@ -4,21 +4,25 @@ import { usePathname } from 'next/navigation'
 import { useEffect, useRef, useState } from 'react'
 import { supabase } from '@/lib/supabase'
 import { isLeadership, isSecurity, isDriver } from '@/lib/roles'
+import { useBusiness } from './BusinessProvider'
 
 const LINKS = [
   { href: '/admin', label: 'Schedule' },
   { href: '/admin/groups', label: 'Loops' },
+  { href: '/admin/builder', label: 'Build', leadership: true, surfOnly: true },
   { href: '/admin/schedule', label: 'Crew' },
   { href: '/admin/contacts', label: 'Contacts' },
   { href: '/admin/security', label: 'Security', security: true },
   { href: '/admin/driver', label: 'Driver', driver: true },
 ]
 
-function visibleLinks({ isLeader, isSec, isDrv }) {
+function visibleLinks({ isLeader, isSec, isDrv, business }) {
   return LINKS
     .filter(l => isLeader || !l.leadership)
     .filter(l => isSec || !l.security)
     .filter(l => isDrv || !l.driver)
+    // The Surf route builder only makes sense in Surf mode (it builds surf loops).
+    .filter(l => !l.surfOnly || business === 'surf')
 }
 
 function linkActive(pathname, href) {
@@ -29,6 +33,7 @@ function linkActive(pathname, href) {
 
 export default function NavBar() {
   const pathname = usePathname()
+  const { business, setBusiness } = useBusiness()
   const [email, setEmail] = useState(null)
   const isLeader = isLeadership(email)
   const isSec = isSecurity(email)
@@ -82,7 +87,7 @@ export default function NavBar() {
     window.location.replace('/login')
   }
 
-  const links = visibleLinks({ isLeader, isSec, isDrv })
+  const links = visibleLinks({ isLeader, isSec, isDrv, business })
 
   return (
     <nav className="admin-nav" style={{
@@ -119,6 +124,9 @@ export default function NavBar() {
         <span className="admin-nav-divider" style={{
           width: 1, height: 18, background: '#2a2a31', flexShrink: 0,
         }} />
+
+        {/* Brew↔Surf switcher — scopes every /admin page. Visible on all sizes. */}
+        <BusinessToggle business={business} setBusiness={setBusiness} />
 
         {/* Tabs — inline on desktop, hidden on mobile (moved into hamburger menu) */}
         <div className="admin-nav-tabs-desktop" style={{ display: 'flex', gap: 6, alignItems: 'center', overflowX: 'auto' }}>
@@ -437,6 +445,57 @@ function AdminMobileMenu({ pathname, links, email, search, setSearch, results, o
           Sign out
         </button>
       </div>
+    </div>
+  )
+}
+
+function BusinessToggle({ business, setBusiness, block }) {
+  const opts = [
+    { value: 'brew', label: 'Brew' },
+    { value: 'surf', label: 'Surf' },
+  ]
+  return (
+    <div
+      role="group"
+      aria-label="Active business"
+      style={{
+        display: block ? 'grid' : 'inline-flex',
+        gridTemplateColumns: block ? '1fr 1fr' : undefined,
+        gap: 3,
+        padding: 3,
+        background: 'linear-gradient(180deg, #121216, #0d0d10)',
+        border: '1px solid #2a2a31',
+        borderRadius: 8,
+        flexShrink: 0,
+      }}
+    >
+      {opts.map(o => {
+        const active = business === o.value
+        return (
+          <button
+            key={o.value}
+            onClick={() => setBusiness(o.value)}
+            aria-pressed={active}
+            style={{
+              color: active ? '#0a0a0b' : '#c8c8cc',
+              background: active ? 'linear-gradient(180deg, #f0c24a, #d4a333)' : 'transparent',
+              border: 'none',
+              fontFamily: "'JetBrains Mono', ui-monospace, monospace",
+              fontSize: block ? '13px' : '11px',
+              fontWeight: 700,
+              letterSpacing: '0.16em',
+              textTransform: 'uppercase',
+              padding: block ? '10px 0' : '5px 10px',
+              borderRadius: 5,
+              cursor: 'pointer',
+              boxShadow: active ? '0 0 16px rgba(212,163,51,0.4)' : 'none',
+              transition: 'color 0.15s, background 0.15s',
+            }}
+          >
+            {o.label}
+          </button>
+        )
+      })}
     </div>
   )
 }

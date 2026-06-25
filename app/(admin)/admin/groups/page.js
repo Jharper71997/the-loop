@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState } from 'react'
 import { supabase } from '@/lib/supabase'
+import { useBusiness } from '../../_components/BusinessProvider'
 import { personalize } from '@/lib/personalize'
 import {
   currentStopIndex,
@@ -21,6 +22,7 @@ const DAY_TABS = [
 ]
 
 export default function Groups() {
+  const { business } = useBusiness()
   const [groups, setGroups] = useState([])
   const [groupHasEvent, setGroupHasEvent] = useState({})
   const [ticketsByGroup, setTicketsByGroup] = useState({})
@@ -38,7 +40,8 @@ export default function Groups() {
     fetchGroups()
     const t = setInterval(() => setNow(nowInTZ()), 60000)
     return () => clearInterval(t)
-  }, [])
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [business])
 
   async function fetchGroups() {
     const { data } = await supabase
@@ -51,7 +54,7 @@ export default function Groups() {
           contacts ( id, first_name, last_name, phone )
         )
       `)
-      .eq('kind', 'brew')   // Brew Loop groups admin; Marines is managed at /marines/admin
+      .eq('kind', business)   // active business groups (Brew/Surf); Marines is managed at /marines/admin
       .order('event_date')
     const groupRows = data || []
     setGroups(groupRows)
@@ -61,7 +64,7 @@ export default function Groups() {
     // and counts fall back to contact rows (a 4-ticket group buy → "1 rider").
     // seatsByContact already credits unnamed group-buy seats to the buyer.
     try {
-      const res = await fetch('/api/admin/loop-tickets')
+      const res = await fetch(`/api/admin/loop-tickets?business=${business}`)
       const j = res.ok ? await res.json() : {}
       setGroupHasEvent(j.groupHasEvent || {})
       setTicketsByGroup(j.ticketsByGroup || {})

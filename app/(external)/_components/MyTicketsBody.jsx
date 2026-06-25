@@ -1,0 +1,63 @@
+import { brandFor } from '@/lib/businessConfig'
+import MyTicketsClient from '../my-tickets/MyTicketsClient'
+
+// Shared "My tickets & messages" body for Brew ('/my-tickets') and Surf City
+// ('/surfcity/my-tickets'). The client does the lookup against the right
+// per-business endpoint and prefixes its links via the `business` prop.
+
+const GOLD = '#d4a333'
+const INK = '#f5f5f7'
+
+export default function MyTicketsBody({ business = 'brew' }) {
+  const cfg = brandFor(business)
+  return (
+    <main style={{ padding: '16px 16px 24px' }}>
+      <div style={{ maxWidth: 520, margin: '0 auto', display: 'grid', gap: 14 }}>
+        <header style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+          <span
+            aria-hidden
+            style={{
+              flex: '0 0 auto',
+              display: 'inline-flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              width: 44,
+              height: 44,
+              borderRadius: '50%',
+              border: `1.5px solid ${GOLD}`,
+              color: GOLD,
+              fontSize: 14,
+              fontWeight: 800,
+              letterSpacing: '0.04em',
+              background: 'radial-gradient(60% 60% at 50% 40%, rgba(212,163,51,0.18), transparent 70%)',
+            }}
+          >
+            {cfg.badge}
+          </span>
+          <div style={{ minWidth: 0 }}>
+            <div
+              style={{
+                color: GOLD,
+                fontSize: 11,
+                letterSpacing: '0.22em',
+                textTransform: 'uppercase',
+                fontWeight: 700,
+              }}
+            >
+              Tickets &amp; messaging
+            </div>
+            <h1 style={{ color: INK, fontSize: 22, fontWeight: 800, margin: '2px 0 0', lineHeight: 1.15 }}>
+              Your ride &amp; security chat.
+            </h1>
+          </div>
+        </header>
+
+        <p style={{ color: '#b8b8bf', fontSize: 14, margin: 0 }}>
+          Enter the phone you booked with. We&rsquo;ll pull up your tickets, waiver, and a direct line to security.
+        </p>
+
+        <MyTicketsClient business={business} />
+      </div>
+    </main>
+  )
+}

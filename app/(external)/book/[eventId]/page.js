@@ -1,6 +1,7 @@
 import { notFound } from 'next/navigation'
 import { supabaseAdmin } from '@/lib/supabaseAdmin'
 import { getCurrentWaiverVersion } from '@/lib/waiver'
+import { brandFor, prefixLink } from '@/lib/businessConfig'
 import BookingForm from './BookingForm'
 
 export const dynamic = 'force-dynamic'
@@ -42,7 +43,7 @@ export default async function EventBookingPage({ params }) {
   try {
     const r = await supabase
       .from('events')
-      .select('id, name, event_date, pickup_time, description, status, cover_image_url, group_id')
+      .select('id, name, event_date, pickup_time, description, status, cover_image_url, group_id, kind')
       .eq('id', eventId)
       .maybeSingle()
     event = r.data
@@ -52,6 +53,13 @@ export default async function EventBookingPage({ params }) {
   }
   if (eventErr) console.error('[book/eventId] event lookup error', eventErr)
   if (!event || event.status !== 'on_sale') notFound()
+
+  // Branding is data-driven from the loaded event, so this page renders correctly
+  // whether it's hit at /book/<id> or /surfcity/book/<id>. Back-link: Brew goes to
+  // its /book index; prefixed businesses (Surf) have no /book index, so send them
+  // to their events list instead.
+  const cfg = brandFor(event.kind)
+  const backHref = cfg.basePath ? prefixLink('/events', event.kind) : '/book'
 
   // Pull the linked group's schedule so each ticket type can display the
   // bar's actual pickup time at checkout (e.g. "Shirley V's — 7:45 PM — $20").
@@ -170,9 +178,9 @@ export default async function EventBookingPage({ params }) {
         alignItems: 'center',
         justifyContent: 'space-between',
       }}>
-        <a href="/book" style={{ color: '#d4a333', textDecoration: 'none', fontSize: 13 }}>← All loops</a>
+        <a href={backHref} style={{ color: '#d4a333', textDecoration: 'none', fontSize: 13 }}>← All loops</a>
         <span style={{ color: '#d4a333', fontSize: 14, fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase' }}>
-          Jville Brew Loop
+          {cfg.brand}
         </span>
         <span style={{ width: 70 }} />
       </header>

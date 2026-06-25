@@ -20,6 +20,8 @@ export default function TicketView({
   ticketUrl,
   riderName,
   eventName,
+  brand = 'Brew Loop',
+  eventsHref = '/events',
   eventDate,
   pickupTime,
   pickupSpot,
@@ -73,10 +75,10 @@ export default function TicketView({
   }, [])
 
   async function onShare() {
-    const text = `${riderName} — Brew Loop ticket\n${ticketUrl}`
+    const text = `${riderName} — ${brand} ticket\n${ticketUrl}`
     if (navigator.share) {
       try {
-        await navigator.share({ title: 'Brew Loop ticket', text, url: ticketUrl })
+        await navigator.share({ title: `${brand} ticket`, text, url: ticketUrl })
       } catch {}
     } else if (navigator.clipboard) {
       try {
@@ -116,7 +118,7 @@ export default function TicketView({
             </a>
             .
           </p>
-          <a href="/events" style={primaryBtn}>Browse upcoming Loops</a>
+          <a href={eventsHref} style={primaryBtn}>Browse upcoming Loops</a>
         </div>
       </div>
     )
@@ -145,7 +147,7 @@ export default function TicketView({
               fontWeight: 700,
             }}
           >
-            Brew Loop · Boarding pass
+            {brand} · Boarding pass
           </div>
           <h1 style={{ color: INK, fontSize: 22, fontWeight: 700, margin: '6px 0 0' }}>
             {riderName}

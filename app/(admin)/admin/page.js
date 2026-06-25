@@ -1,12 +1,14 @@
 import { supabaseAdmin } from '@/lib/supabaseAdmin'
 import { serverNow } from '@/lib/serverNow'
 import { operationalDateInTZ, nowInTZ, currentStopIndex, formatStopTime } from '@/lib/schedule'
+import { getActiveBusiness } from '@/lib/businessServer'
 import TonightClient from './TonightClient'
 
 export const dynamic = 'force-dynamic'
 
 export default async function TonightPage() {
   const supabase = supabaseAdmin()
+  const business = await getActiveBusiness()
   const renderedAt = await serverNow()
   const today = operationalDateInTZ()
   const now = nowInTZ()
@@ -22,7 +24,7 @@ export default async function TonightPage() {
         contacts ( id, first_name, last_name, phone, has_signed_waiver )
       )
     `)
-    .eq('kind', 'brew')   // Brew Loop admin "Tonight"; Marines runs at /marines/admin
+    .eq('kind', business)   // active business "Tonight" (Brew/Surf); Marines runs at /marines/admin
     .is('closed_out_at', null)
     .order('event_date', { ascending: true })
     .limit(12)

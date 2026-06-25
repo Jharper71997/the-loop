@@ -3,6 +3,7 @@ import QRCode from 'qrcode'
 import { supabaseAdmin } from '@/lib/supabaseAdmin'
 import { contactHasSignedCurrent } from '@/lib/waiver'
 import { appUrl } from '@/lib/stripe'
+import { brandFor, prefixLink } from '@/lib/businessConfig'
 import TicketView from './TicketView'
 
 export const runtime = 'nodejs'
@@ -33,7 +34,7 @@ export default async function TicketPage({ params }) {
       voided_at,
       claim_token,
       claimed_at,
-      order:orders ( id, status, event:events ( id, name, event_date, pickup_time, group:groups ( id, schedule ) ) )
+      order:orders ( id, status, event:events ( id, name, event_date, pickup_time, kind, group:groups ( id, schedule ) ) )
     `)
     .eq('id', qr.order_item_id)
     .maybeSingle()
@@ -51,6 +52,10 @@ export default async function TicketPage({ params }) {
   const event = item.order?.event || null
   const isPaid = item.order?.status === 'paid'
   const isVoided = !!item.voided_at
+
+  // Branding is data-driven from the loaded event's kind, so a Surf ticket reads
+  // "Surf City" whether opened at /tickets/<code> or /surfcity/tickets/<code>.
+  const cfg = brandFor(event?.kind)
 
   // First stop on the route is the pickup location. groups.schedule shape:
   // [{ name, start_time }]. Empty/missing schedule → fall back to whatever
@@ -88,7 +93,9 @@ export default async function TicketPage({ params }) {
       qrDataUrl={qrDataUrl}
       ticketUrl={ticketUrl}
       riderName={riderName}
-      eventName={event?.name || 'Brew Loop'}
+      eventName={event?.name || cfg.brand}
+      brand={cfg.shortBrand}
+      eventsHref={prefixLink('/events', event?.kind)}
       eventDate={event?.event_date || null}
       pickupTime={pickupTimeFromStop || event?.pickup_time || null}
       pickupSpot={pickupSpot}

@@ -59,7 +59,7 @@ export async function POST(req) {
   // events (incl. kind + the first stop on the route for the pickup spot) and
   // each item's ticket_type so we can label the pass.
   const orderSelect = `
-    id, status, buyer_phone, buyer_name, party_size, created_at,
+    id, status, buyer_phone, buyer_name, party_size, total_cents, created_at,
     event:events ( id, name, event_date, pickup_time, kind, group:groups ( id, schedule ) ),
     order_items ( id, rider_first_name, rider_last_name, rider_phone, voided_at, claim_token, claimed_at, ticket_type:ticket_types ( name ) )
   `
@@ -143,6 +143,8 @@ export async function POST(req) {
     return {
       id: o.id,
       status: o.status,
+      party_size: o.party_size,
+      total_cents: o.total_cents,
       event: o.event ? {
         name: o.event.name,
         event_date: o.event.event_date,

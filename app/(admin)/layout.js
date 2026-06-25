@@ -1,4 +1,5 @@
 import NavBar from './_components/NavBar'
+import { BusinessProvider } from './_components/BusinessProvider'
 
 export const metadata = {
   title: { default: 'Brew Loop Admin', template: '%s · Brew Loop Admin' },
@@ -20,8 +21,10 @@ export const metadata = {
 export default function AdminLayout({ children }) {
   return (
     <div className="hud-shell">
-      <NavBar />
-      {children}
+      <BusinessProvider>
+        <NavBar />
+        {children}
+      </BusinessProvider>
     </div>
   )
 }

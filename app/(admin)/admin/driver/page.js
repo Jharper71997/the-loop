@@ -3,14 +3,16 @@ import { getActiveAdminLoop } from '@/lib/upcomingLoops'
 import { supabaseAdmin } from '@/lib/supabaseAdmin'
 import { lookupBarsByNames } from '@/lib/barsServer'
 import { generateStopsForEvent } from '@/lib/routeStopLogs'
+import { getActiveBusiness } from '@/lib/businessServer'
 
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
 
 export default async function DriverPage() {
+  const business = await getActiveBusiness()
   let nextLoop = null
   try {
-    nextLoop = await getActiveAdminLoop()
+    nextLoop = await getActiveAdminLoop(business)
   } catch {}
 
   // Pull the schedule for the next loop so the map can show route stops.
@@ -27,7 +29,7 @@ export default async function DriverPage() {
         .eq('id', nextLoop.groupId)
         .maybeSingle()
       const schedule = Array.isArray(g?.schedule) ? g.schedule : []
-      const barLookup = await lookupBarsByNames(sb, schedule.map(s => s?.name).filter(Boolean))
+      const barLookup = await lookupBarsByNames(sb, schedule.map(s => s?.name).filter(Boolean), { business })
       stops = schedule.map((s, i) => {
         const bar = s?.name ? barLookup.get(s.name) : null
         return {

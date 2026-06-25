@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState } from 'react'
 import { supabase } from '@/lib/supabase'
+import { useBusiness } from '../../_components/BusinessProvider'
 import SmsButton from '../../_components/SmsButton'
 import BroadcastModal from './_components/BroadcastModal'
 import ContactDetail from './_components/ContactDetail'
@@ -10,6 +11,7 @@ import LoopFilterChips from './_components/LoopFilterChips'
 import { formatEventDate } from './_components/util'
 
 export default function Contacts() {
+  const { business } = useBusiness()
   const [contacts, setContacts] = useState([])
   const [groups, setGroups] = useState([])
   const [members, setMembers] = useState([])
@@ -22,7 +24,8 @@ export default function Contacts() {
 
   useEffect(() => {
     refresh()
-  }, [])
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [business])
 
   // Deep-link support: /admin/contacts?id=<uuid> auto-opens that contact's
   // detail panel. Lets the StopCard rider names on /admin Schedule click
@@ -42,8 +45,8 @@ export default function Contacts() {
   async function refresh() {
     const [c, g, m] = await Promise.all([
       supabase.from('contacts').select('*').order('last_name'),
-      // Brew Loop admin only — exclude Marines/Surf groups from the assign dropdown.
-      supabase.from('groups').select('*').eq('kind', 'brew'),
+      // Scope the assign dropdown to the active business (Brew/Surf); exclude other surfaces.
+      supabase.from('groups').select('*').eq('kind', business),
       supabase.from('group_members').select('id, group_id, contact_id'),
     ])
     setContacts(c.data || [])

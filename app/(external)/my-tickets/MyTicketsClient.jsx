@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import SecurityChat from '../_components/SecurityChat'
+import { brandFor, prefixLink } from '@/lib/businessConfig'
 
 const GOLD = '#d4a333'
 const GOLD_HI = '#f0c24a'
@@ -12,11 +13,14 @@ const LINE = 'rgba(255,255,255,0.08)'
 const RED = '#e07a7a'
 const GREEN = '#6fbf7f'
 
-// Remember the phone the rider looked up with so they land straight on their
-// tickets next visit instead of re-typing it every time.
-const STORAGE_KEY = 'brewloop:mytickets:phone'
-
-export default function MyTicketsClient() {
+export default function MyTicketsClient({ business = 'brew' }) {
+  const cfg = brandFor(business)
+  // Surf tickets live behind a separate lookup endpoint that scopes to kind='surf'
+  // and returns /surfcity-prefixed links.
+  const apiPath = business === 'surf' ? '/api/surf/my-tickets' : '/api/my-tickets'
+  // Remember the phone the rider looked up with, per business, so they land
+  // straight on their tickets next visit instead of re-typing it.
+  const STORAGE_KEY = business === 'surf' ? 'surfloop:mytickets:phone' : 'brewloop:mytickets:phone'
   const [phone, setPhone] = useState('')
   const [submitting, setSubmitting] = useState(false)
   const [searched, setSearched] = useState(false)
@@ -31,7 +35,7 @@ export default function MyTicketsClient() {
     setSubmitting(true)
     setError(null)
     try {
-      const res = await fetch('/api/my-tickets', {
+      const res = await fetch(apiPath, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ phone: p }),
@@ -112,9 +116,9 @@ export default function MyTicketsClient() {
           </Card>
         )}
 
-        {orders.map(o => <OrderCard key={o.id} order={o} phone={phone} />)}
+        {orders.map(o => <OrderCard key={o.id} order={o} phone={phone} business={business} />)}
 
-        {referral && <ReferralCard referral={referral} />}
+        {referral && <ReferralCard referral={referral} business={business} />}
 
         <button
           type="button"
@@ -190,7 +194,8 @@ export default function MyTicketsClient() {
   )
 }
 
-function OrderCard({ order, phone }) {
+function OrderCard({ order, phone, business = 'brew' }) {
+  const cfg = brandFor(business)
   const ev = order.event
   const eventDate = ev?.event_date ? formatDate(ev.event_date) : null
   const pickupTime = ev?.pickup_time ? formatTime(ev.pickup_time) : null
@@ -244,7 +249,7 @@ function OrderCard({ order, phone }) {
             {pickupTime ? ` · ${pickupTime}` : ''}
           </div>
           <h3 style={{ color: INK, fontSize: 18, fontWeight: 600, margin: '4px 0 0' }}>
-            {ev?.name || 'Brew Loop'}
+            {ev?.name || cfg.brand}
           </h3>
         </div>
         <span
@@ -266,7 +271,10 @@ function OrderCard({ order, phone }) {
       </div>
 
       <div style={{ display: 'flex', gap: 16, flexWrap: 'wrap', color: INK_DIM, fontSize: 14, marginBottom: 12 }}>
-        <span>{order.party_size} seat{order.party_size === 1 ? '' : 's'}</span>
+        {(() => {
+          const seats = order.party_size ?? order.riders?.length ?? 1
+          return <span>{seats} seat{seats === 1 ? '' : 's'}</span>
+        })()}
         {order.total_cents != null && <span>${(order.total_cents / 100).toFixed(2)} total</span>}
       </div>
 
@@ -302,6 +310,7 @@ function OrderCard({ order, phone }) {
         </div>
       )}
 
+      {business === 'brew' && (
       <div
         style={{
           padding: '12px 14px',
@@ -344,6 +353,7 @@ function OrderCard({ order, phone }) {
           </a>
         )}
       </div>
+      )}
 
       {order.riders?.length > 0 && (
         <div style={{ marginTop: 14, display: 'grid', gap: 8 }}>
@@ -359,7 +369,7 @@ function OrderCard({ order, phone }) {
             Riders
           </div>
           {order.riders.map((r, i) => (
-            <RiderRow key={i} rider={r} />
+            <RiderRow key={i} rider={r} business={business} />
           ))}
           {order.status !== 'paid' && !order.riders.some(r => r.ticket_code) && (
             <div style={{ color: INK_MUTED, fontSize: 11, lineHeight: 1.4 }}>
@@ -369,7 +379,7 @@ function OrderCard({ order, phone }) {
         </div>
       )}
 
-      {order.status === 'paid' && (
+      {business === 'brew' && order.status === 'paid' && (
         <div style={{ marginTop: 14, paddingTop: 12, borderTop: `1px solid ${LINE}` }}>
           <button
             type="button"
@@ -405,7 +415,9 @@ function OrderCard({ order, phone }) {
   )
 }
 
-function RiderRow({ rider: r }) {
+function RiderRow({ rider: r, business = 'brew' }) {
+  const cfg = brandFor(business)
+  const ticketHref = r.ticket_code ? prefixLink(`/tickets/${r.ticket_code}`, business) : null
   const claimUrl = r.claim_token
     ? (typeof window !== 'undefined'
         ? `${window.location.origin}/c/${r.claim_token}`
@@ -416,10 +428,10 @@ function RiderRow({ rider: r }) {
 
   async function onShareClaim() {
     if (!claimUrl) return
-    const text = `You've got a seat on the Brew Loop. Tap to fill in your info and sign the waiver: ${claimUrl}`
+    const text = `You've got a seat on ${cfg.rideName}. Tap to fill in your info and sign the waiver: ${claimUrl}`
     if (typeof navigator !== 'undefined' && navigator.share) {
       try {
-        await navigator.share({ title: 'Brew Loop ticket', text, url: claimUrl })
+        await navigator.share({ title: `${cfg.shortBrand} ticket`, text, url: claimUrl })
         return
       } catch {}
     }
@@ -459,7 +471,7 @@ function RiderRow({ rider: r }) {
         </div>
         {r.ticket_code && !r.unclaimed && (
           <a
-            href={`/tickets/${r.ticket_code}`}
+            href={ticketHref}
             target="_blank"
             rel="noreferrer"
             style={{
@@ -481,7 +493,7 @@ function RiderRow({ rider: r }) {
 
       {r.ticket_qr_data_url && !r.unclaimed && (
         <a
-          href={`/tickets/${r.ticket_code}`}
+          href={ticketHref}
           target="_blank"
           rel="noreferrer"
           style={{
@@ -543,14 +555,15 @@ function RiderRow({ rider: r }) {
   )
 }
 
-function ReferralCard({ referral }) {
+function ReferralCard({ referral, business = 'brew' }) {
+  const cfg = brandFor(business)
   const [msg, setMsg] = useState(null)
 
   async function onShare() {
-    const text = `Come ride the Brew Loop with me. Book here: ${referral.url}`
+    const text = `Come ride ${cfg.rideName} with me. Book here: ${referral.url}`
     if (typeof navigator !== 'undefined' && navigator.share) {
       try {
-        await navigator.share({ title: 'Brew Loop', text, url: referral.url })
+        await navigator.share({ title: cfg.shortBrand, text, url: referral.url })
         return
       } catch {}
     }
