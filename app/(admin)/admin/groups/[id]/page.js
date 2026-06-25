@@ -1,5 +1,7 @@
 import { notFound } from 'next/navigation'
 import { supabaseAdmin } from '@/lib/supabaseAdmin'
+import { getActiveBusiness } from '@/lib/businessServer'
+import { adminBase } from '@/lib/adminBase'
 import EventShell from './EventShell'
 import WaiversPanel from './WaiversPanel'
 import SmsBroadcast from '../../../_components/SmsBroadcast'
@@ -9,6 +11,7 @@ export const dynamic = 'force-dynamic'
 
 export default async function ManageLoopPage({ params }) {
   const { id } = await params
+  const base = adminBase(await getActiveBusiness())
   const supabase = supabaseAdmin()
 
   const { data: group } = await supabase
@@ -103,6 +106,7 @@ export default async function ManageLoopPage({ params }) {
         orders={orders}
         orderItems={orderItems}
         waiverSigs={waiverSigs}
+        basePath={`${base}/groups`}
       />
 
       {(members || []).length > 0 && (

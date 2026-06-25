@@ -6,6 +6,9 @@ import Scanner from '@/app/_components/Scanner'
 import SecurityMessages from './SecurityMessages'
 import EnableSecurityAlerts from './EnableSecurityAlerts'
 import ApproachAlert from '../../_components/ApproachAlert'
+import { useBusiness } from '../../_components/BusinessProvider'
+import { adminBase } from '@/lib/adminBase'
+import { brandFor } from '@/lib/businessConfig'
 
 const GOLD = '#d4a333'
 const GOLD_HI = '#f0c24a'
@@ -18,6 +21,8 @@ const GREEN = '#6fbf7f'
 const RED = '#e07a7a'
 
 export default function SecurityClient({ eventId = null }) {
+  const { business } = useBusiness()
+  const base = adminBase(business)
   const [busy, setBusy] = useState(false)
   const [last, setLast] = useState(null)
   const [tally, setTally] = useState({ admitted: 0, rejected: 0 })
@@ -80,7 +85,7 @@ export default function SecurityClient({ eventId = null }) {
                 fontWeight: 700,
               }}
             >
-              Brew Loop · Security
+              {brandFor(business).shortBrand} · Security
             </div>
             <h1 style={{ color: INK, fontSize: 22, fontWeight: 700, margin: '4px 0 0' }}>
               Door scanner
@@ -102,7 +107,7 @@ export default function SecurityClient({ eventId = null }) {
             <ApproachAlert eventId={eventId} />
 
             <Link
-              href="/admin/security/door-list"
+              href={`${base}/security/door-list`}
               style={{
                 padding: '12px 14px',
                 borderRadius: 10,

@@ -118,6 +118,14 @@ function legacyRedirect(pathname) {
 export async function middleware(req) {
   const { pathname } = req.nextUrl
 
+  // Tag the request with the active staff console's business so server pages can
+  // read it via getActiveBusiness(). Brew console = /admin, Surf console = /surf.
+  // NOTE: this does NOT match the rider site /surfcity (it isn't '/surf' and
+  // doesn't start with '/surf/'); rider pages don't read this header anyway.
+  const surfAdmin = pathname === '/surf' || pathname.startsWith('/surf/')
+  const requestHeaders = new Headers(req.headers)
+  requestHeaders.set('x-business', surfAdmin ? 'surf' : 'brew')
+
   if (isRemoved(pathname)) {
     if (pathname.startsWith('/api/')) {
       return NextResponse.json({ error: 'gone' }, { status: 410 })
@@ -138,7 +146,7 @@ export async function middleware(req) {
     return NextResponse.next()
   }
 
-  let res = NextResponse.next()
+  let res = NextResponse.next({ request: { headers: requestHeaders } })
 
   const supabase = createServerClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL,

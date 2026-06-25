@@ -2,6 +2,9 @@
 
 import { useCallback, useEffect, useRef, useState } from 'react'
 import Link from 'next/link'
+import { useBusiness } from '../../../../_components/BusinessProvider'
+import { adminBase } from '@/lib/adminBase'
+import { brandFor } from '@/lib/businessConfig'
 
 const GOLD = '#d4a333'
 const GOLD_HI = '#f0c24a'
@@ -17,6 +20,8 @@ const RED = '#e07a7a'
 const POLL_MS = 8000
 
 export default function RosterClient({ eventId }) {
+  const { business } = useBusiness()
+  const base = adminBase(business)
   const [data, setData] = useState(null)
   const [error, setError] = useState(null)
   const [filter, setFilter] = useState('') // search-by-name
@@ -103,7 +108,7 @@ export default function RosterClient({ eventId }) {
               textTransform: 'uppercase', fontWeight: 700,
             }}
           >
-            Brew Loop · Door list
+            {brandFor(business).shortBrand} · Door list
           </div>
           {event ? (
             <>
@@ -122,8 +127,8 @@ export default function RosterClient({ eventId }) {
         </header>
 
         <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-          <Link href="/admin/security/door-list" style={ghostBtn}>← All events</Link>
-          <Link href="/admin/security" style={ghostBtn}>Camera scanner</Link>
+          <Link href={`${base}/security/door-list`} style={ghostBtn}>← All events</Link>
+          <Link href={`${base}/security`} style={ghostBtn}>Camera scanner</Link>
           <button type="button" onClick={load} style={ghostBtn}>Refresh</button>
         </div>
 

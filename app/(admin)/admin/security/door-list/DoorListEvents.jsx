@@ -2,6 +2,9 @@
 
 import { useEffect, useState } from 'react'
 import Link from 'next/link'
+import { useBusiness } from '../../../_components/BusinessProvider'
+import { adminBase } from '@/lib/adminBase'
+import { brandFor } from '@/lib/businessConfig'
 
 const GOLD = '#d4a333'
 const INK = '#f5f5f7'
@@ -13,6 +16,8 @@ const LINE = 'rgba(255,255,255,0.08)'
 const GREEN = '#6fbf7f'
 
 export default function DoorListEvents() {
+  const { business } = useBusiness()
+  const base = adminBase(business)
   const [events, setEvents] = useState(null)
   const [error, setError] = useState(null)
 
@@ -49,7 +54,7 @@ export default function DoorListEvents() {
               fontWeight: 700,
             }}
           >
-            Brew Loop · Security
+            {brandFor(business).shortBrand} · Security
           </div>
           <h1 style={{ color: INK, fontSize: 22, fontWeight: 700, margin: '4px 0 0' }}>
             Door list
@@ -61,7 +66,7 @@ export default function DoorListEvents() {
 
         <div style={{ display: 'flex', gap: 8 }}>
           <Link
-            href="/admin/security"
+            href={`${base}/security`}
             style={{
               padding: '8px 14px',
               borderRadius: 8,
@@ -103,7 +108,7 @@ export default function DoorListEvents() {
         {events && events.map(ev => (
           <Link
             key={ev.id}
-            href={`/admin/security/door-list/${ev.id}`}
+            href={`${base}/security/door-list/${ev.id}`}
             style={{
               display: 'block',
               padding: '16px 18px',

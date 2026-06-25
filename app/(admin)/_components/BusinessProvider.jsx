@@ -1,39 +1,18 @@
 'use client'
 
-// Shares the active staff business (Brew vs Surf City) across the /admin HUD.
-//
-// Server pages read the `business` cookie directly via lib/businessServer; the
-// two top-level 'use client' pages (contacts, finance) and the NavBar toggle
-// read it here. Initial state is 'brew' to match SSR (the cookie is read after
-// mount), so there's no hydration mismatch; toggling writes the cookie and
-// router.refresh()es so server pages re-render with the new scope.
+// Shares the active console's business (Brew vs Surf City) with client pages in
+// the staff HUD. The two consoles are separate URL trees (/admin = Brew, /surf =
+// Surf), each layout fixes the value, so this is a constant per console — no
+// toggle, no cookie. Server pages read the same business from the x-business
+// header (see lib/businessServer).
 
-import { createContext, useContext, useEffect, useState } from 'react'
-import { useRouter } from 'next/navigation'
-import { readBusinessCookie, setBusinessCookie } from '@/lib/business'
+import { createContext, useContext } from 'react'
 
-const BusinessContext = createContext({ business: 'brew', setBusiness: () => {} })
+const BusinessContext = createContext({ business: 'brew' })
 
-export function BusinessProvider({ children }) {
-  const router = useRouter()
-  const [business, setBusinessState] = useState('brew')
-
-  // Read the real cookie after mount (SSR rendered 'brew').
-  useEffect(() => {
-    const v = readBusinessCookie()
-    if (v !== business) setBusinessState(v)
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [])
-
-  function setBusiness(value) {
-    const v = value === 'surf' ? 'surf' : 'brew'
-    setBusinessCookie(v)
-    setBusinessState(v)
-    router.refresh()
-  }
-
+export function BusinessProvider({ value = 'brew', children }) {
   return (
-    <BusinessContext.Provider value={{ business, setBusiness }}>
+    <BusinessContext.Provider value={{ business: value === 'surf' ? 'surf' : 'brew' }}>
       {children}
     </BusinessContext.Provider>
   )

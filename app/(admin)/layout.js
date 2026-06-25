@@ -21,7 +21,7 @@ export const metadata = {
 export default function AdminLayout({ children }) {
   return (
     <div className="hud-shell">
-      <BusinessProvider>
+      <BusinessProvider value="brew">
         <NavBar />
         {children}
       </BusinessProvider>

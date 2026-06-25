@@ -5,15 +5,18 @@ import { useEffect, useRef, useState } from 'react'
 import { supabase } from '@/lib/supabase'
 import { isLeadership, isSecurity, isDriver } from '@/lib/roles'
 import { useBusiness } from './BusinessProvider'
+import { adminBase } from '@/lib/adminBase'
 
+// Links are console-relative: `path` is appended to the console base (/admin for
+// Brew, /surf for Surf), so one NavBar serves both consoles.
 const LINKS = [
-  { href: '/admin', label: 'Schedule' },
-  { href: '/admin/groups', label: 'Loops' },
-  { href: '/admin/builder', label: 'Build', leadership: true, surfOnly: true },
-  { href: '/admin/schedule', label: 'Crew' },
-  { href: '/admin/contacts', label: 'Contacts' },
-  { href: '/admin/security', label: 'Security', security: true },
-  { href: '/admin/driver', label: 'Driver', driver: true },
+  { path: '', label: 'Schedule' },
+  { path: '/groups', label: 'Loops' },
+  { path: '/builder', label: 'Build', leadership: true, surfOnly: true },
+  { path: '/schedule', label: 'Crew' },
+  { path: '/contacts', label: 'Contacts' },
+  { path: '/security', label: 'Security', security: true },
+  { path: '/driver', label: 'Driver', driver: true },
 ]
 
 function visibleLinks({ isLeader, isSec, isDrv, business }) {
@@ -21,19 +24,20 @@ function visibleLinks({ isLeader, isSec, isDrv, business }) {
     .filter(l => isLeader || !l.leadership)
     .filter(l => isSec || !l.security)
     .filter(l => isDrv || !l.driver)
-    // The Surf route builder only makes sense in Surf mode (it builds surf loops).
+    // The route builder only makes sense in the Surf console (it builds surf loops).
     .filter(l => !l.surfOnly || business === 'surf')
 }
 
-function linkActive(pathname, href) {
-  return href === '/admin'
-    ? pathname === '/admin'
+function linkActive(pathname, href, base) {
+  return href === base
+    ? pathname === base
     : pathname === href || pathname.startsWith(href + '/')
 }
 
 export default function NavBar() {
   const pathname = usePathname()
-  const { business, setBusiness } = useBusiness()
+  const { business } = useBusiness()
+  const base = adminBase(business)
   const [email, setEmail] = useState(null)
   const isLeader = isLeadership(email)
   const isSec = isSecurity(email)
@@ -87,7 +91,11 @@ export default function NavBar() {
     window.location.replace('/login')
   }
 
-  const links = visibleLinks({ isLeader, isSec, isDrv, business })
+  const links = visibleLinks({ isLeader, isSec, isDrv, business }).map(l => ({ ...l, href: base + l.path }))
+  const wordmark = business === 'surf' ? 'SURF CITY' : 'THE LOOP'
+  // Leadership-only jump to the other console (plain navigation, not a toggle).
+  const otherBase = business === 'surf' ? '/admin' : '/surf'
+  const otherLabel = business === 'surf' ? 'Brew ops' : 'Surf ops'
 
   return (
     <nav className="admin-nav" style={{
@@ -107,7 +115,7 @@ export default function NavBar() {
         paddingLeft: 'max(14px, env(safe-area-inset-left))',
         paddingRight: 'max(14px, env(safe-area-inset-right))',
       }}>
-        <a href="/admin" style={{
+        <a href={base} style={{
           color: '#d4a333',
           fontFamily: "'Orbitron', system-ui, sans-serif",
           fontWeight: 900,
@@ -118,19 +126,16 @@ export default function NavBar() {
           textTransform: 'uppercase',
           textShadow: '0 0 14px rgba(212,163,51,0.45)',
         }}>
-          THE&nbsp;LOOP
+          {wordmark}
         </a>
 
         <span className="admin-nav-divider" style={{
           width: 1, height: 18, background: '#2a2a31', flexShrink: 0,
         }} />
 
-        {/* Brew↔Surf switcher — scopes every /admin page. Visible on all sizes. */}
-        <BusinessToggle business={business} setBusiness={setBusiness} />
-
         {/* Tabs — inline on desktop, hidden on mobile (moved into hamburger menu) */}
         <div className="admin-nav-tabs-desktop" style={{ display: 'flex', gap: 6, alignItems: 'center', overflowX: 'auto' }}>
-          <Tabs pathname={pathname} links={links} />
+          <Tabs pathname={pathname} links={links} base={base} />
         </div>
 
         <div ref={boxRef} className="admin-nav-right" style={{ marginLeft: 'auto', position: 'relative', display: 'flex', alignItems: 'center', gap: 10 }}>
@@ -170,7 +175,7 @@ export default function NavBar() {
               {results.map(r => (
                 <a
                   key={r.id}
-                  href={`/admin/contacts?focus=${r.id}`}
+                  href={`${base}/contacts?focus=${r.id}`}
                   onClick={() => setOpen(false)}
                   style={{
                     display: 'block',
@@ -200,6 +205,24 @@ export default function NavBar() {
                 </a>
               ))}
             </div>
+          )}
+
+          {isLeader && (
+            <a className="admin-nav-cross" href={otherBase} style={{
+              color: '#9c9ca3',
+              fontFamily: "'JetBrains Mono', ui-monospace, monospace",
+              fontSize: '10px',
+              fontWeight: 700,
+              letterSpacing: '0.16em',
+              textTransform: 'uppercase',
+              textDecoration: 'none',
+              whiteSpace: 'nowrap',
+              border: '1px solid #2a2a31',
+              borderRadius: 6,
+              padding: '6px 9px',
+            }}>
+              {otherLabel} &rsaquo;
+            </a>
           )}
 
           {email && (
@@ -266,10 +289,14 @@ export default function NavBar() {
         <AdminMobileMenu
           pathname={pathname}
           links={links}
+          base={base}
           email={email}
           search={search}
           setSearch={setSearch}
           results={results}
+          isLeader={isLeader}
+          otherBase={otherBase}
+          otherLabel={otherLabel}
           onClose={() => setMenuOpen(false)}
           onSignOut={signOut}
         />
@@ -280,6 +307,7 @@ export default function NavBar() {
           .admin-nav-divider { display: none; }
           .admin-nav-tabs-desktop { display: none !important; }
           .admin-nav-search { display: none !important; }
+          .admin-nav-cross { display: none !important; }
           .admin-nav-email { display: none !important; }
           .admin-nav-signout-desktop { display: none !important; }
           .admin-hamburger { display: inline-flex !important; }
@@ -309,7 +337,7 @@ function HamburgerIcon({ open }) {
   )
 }
 
-function AdminMobileMenu({ pathname, links, email, search, setSearch, results, onClose, onSignOut }) {
+function AdminMobileMenu({ pathname, links, base, email, search, setSearch, results, isLeader, otherBase, otherLabel, onClose, onSignOut }) {
   return (
     <div
       style={{
@@ -353,7 +381,7 @@ function AdminMobileMenu({ pathname, links, email, search, setSearch, results, o
             {results.map(r => (
               <a
                 key={r.id}
-                href={`/admin/contacts?focus=${r.id}`}
+                href={`${base}/contacts?focus=${r.id}`}
                 onClick={onClose}
                 style={{
                   display: 'block',
@@ -379,7 +407,7 @@ function AdminMobileMenu({ pathname, links, email, search, setSearch, results, o
       </div>
 
       {links.map(link => {
-        const active = linkActive(pathname, link.href)
+        const active = linkActive(pathname, link.href, base)
         return (
           <a
             key={link.href}
@@ -410,6 +438,32 @@ function AdminMobileMenu({ pathname, links, email, search, setSearch, results, o
           </a>
         )
       })}
+
+      {isLeader && (
+        <a
+          href={otherBase}
+          onClick={onClose}
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            padding: '15px 22px',
+            paddingLeft: 'max(22px, env(safe-area-inset-left))',
+            paddingRight: 'max(22px, env(safe-area-inset-right))',
+            textDecoration: 'none',
+            color: '#9c9ca3',
+            fontFamily: "'Orbitron', system-ui, sans-serif",
+            fontSize: 14,
+            fontWeight: 700,
+            letterSpacing: '0.18em',
+            textTransform: 'uppercase',
+            borderBottom: '1px solid #16161c',
+          }}
+        >
+          {otherLabel}
+          <span style={{ color: '#d4a333' }}>&rsaquo;</span>
+        </a>
+      )}
 
       <div style={{
         display: 'flex',
@@ -449,62 +503,11 @@ function AdminMobileMenu({ pathname, links, email, search, setSearch, results, o
   )
 }
 
-function BusinessToggle({ business, setBusiness, block }) {
-  const opts = [
-    { value: 'brew', label: 'Brew' },
-    { value: 'surf', label: 'Surf' },
-  ]
-  return (
-    <div
-      role="group"
-      aria-label="Active business"
-      style={{
-        display: block ? 'grid' : 'inline-flex',
-        gridTemplateColumns: block ? '1fr 1fr' : undefined,
-        gap: 3,
-        padding: 3,
-        background: 'linear-gradient(180deg, #121216, #0d0d10)',
-        border: '1px solid #2a2a31',
-        borderRadius: 8,
-        flexShrink: 0,
-      }}
-    >
-      {opts.map(o => {
-        const active = business === o.value
-        return (
-          <button
-            key={o.value}
-            onClick={() => setBusiness(o.value)}
-            aria-pressed={active}
-            style={{
-              color: active ? '#0a0a0b' : '#c8c8cc',
-              background: active ? 'linear-gradient(180deg, #f0c24a, #d4a333)' : 'transparent',
-              border: 'none',
-              fontFamily: "'JetBrains Mono', ui-monospace, monospace",
-              fontSize: block ? '13px' : '11px',
-              fontWeight: 700,
-              letterSpacing: '0.16em',
-              textTransform: 'uppercase',
-              padding: block ? '10px 0' : '5px 10px',
-              borderRadius: 5,
-              cursor: 'pointer',
-              boxShadow: active ? '0 0 16px rgba(212,163,51,0.4)' : 'none',
-              transition: 'color 0.15s, background 0.15s',
-            }}
-          >
-            {o.label}
-          </button>
-        )
-      })}
-    </div>
-  )
-}
-
-function Tabs({ pathname, links }) {
+function Tabs({ pathname, links, base }) {
   return (
     <>
       {links.map(l => {
-        const active = linkActive(pathname, l.href)
+        const active = linkActive(pathname, l.href, base)
         return (
           <a
             key={l.href}
