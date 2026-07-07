@@ -35,8 +35,19 @@ export default function TabBar() {
       } catch {}
     }
     poll()
-    const t = setInterval(poll, 20_000)
-    return () => { cancelled = true; clearInterval(t) }
+    // Only poll while the tab is on screen — a pocketed phone with the page
+    // open shouldn't keep hitting /api/shuttle/current every 20s. Resume +
+    // refresh the moment the rider comes back.
+    const t = setInterval(() => {
+      if (document.visibilityState === 'visible') poll()
+    }, 30_000)
+    const onVis = () => { if (document.visibilityState === 'visible') poll() }
+    document.addEventListener('visibilitychange', onVis)
+    return () => {
+      cancelled = true
+      clearInterval(t)
+      document.removeEventListener('visibilitychange', onVis)
+    }
   }, [])
 
   if (HIDDEN_ON.some(re => re.test(pathname))) return null

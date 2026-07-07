@@ -36,8 +36,17 @@ export default function CohortRoll() {
     }
 
     poll()
-    timer = setInterval(poll, POLL_MS)
-    return () => { cancelled = true; clearInterval(timer) }
+    // Skip the poll while the tab is hidden; refresh immediately on return.
+    timer = setInterval(() => {
+      if (document.visibilityState === 'visible') poll()
+    }, POLL_MS)
+    const onVis = () => { if (document.visibilityState === 'visible') poll() }
+    document.addEventListener('visibilitychange', onVis)
+    return () => {
+      cancelled = true
+      clearInterval(timer)
+      document.removeEventListener('visibilitychange', onVis)
+    }
   }, [])
 
   if (!snapshot || errored) return null

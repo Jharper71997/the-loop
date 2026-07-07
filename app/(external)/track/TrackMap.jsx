@@ -104,8 +104,18 @@ export default function TrackMap({ stops = [], eventDate = null, fallbackCenter 
     }
 
     poll()
-    timer = setInterval(poll, 10_000)
-    return () => { cancelled = true; clearInterval(timer) }
+    // Only poll the live position while the map is on screen; resume + refresh
+    // when the rider returns to the tab.
+    timer = setInterval(() => {
+      if (document.visibilityState === 'visible') poll()
+    }, 10_000)
+    const onVis = () => { if (document.visibilityState === 'visible') poll() }
+    document.addEventListener('visibilitychange', onVis)
+    return () => {
+      cancelled = true
+      clearInterval(timer)
+      document.removeEventListener('visibilitychange', onVis)
+    }
   }, [])
 
   // Drop / update the shuttle marker as positions come in.
