@@ -27,8 +27,18 @@ export default function LiveStatusStrip() {
     }
 
     poll()
-    timer = setInterval(poll, 20_000)
-    return () => { cancelled = true; clearInterval(timer) }
+    // Pause polling when the tab is hidden (locked phone / background); resume
+    // and refresh on return. Keeps idle/backgrounded pages off the API.
+    timer = setInterval(() => {
+      if (document.visibilityState === 'visible') poll()
+    }, 30_000)
+    const onVis = () => { if (document.visibilityState === 'visible') poll() }
+    document.addEventListener('visibilitychange', onVis)
+    return () => {
+      cancelled = true
+      clearInterval(timer)
+      document.removeEventListener('visibilitychange', onVis)
+    }
   }, [])
 
   const live = !!shuttle?.is_active
