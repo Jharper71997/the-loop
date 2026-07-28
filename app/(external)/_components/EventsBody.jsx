@@ -12,7 +12,22 @@ const INK_DIM = '#b8b8bf'
 const SUBTITLE = {
   brew: '$20 a seat covers your whole night. Shuttle runs about 7:30 PM to 1:30 AM, back to your pickup.',
   surf: 'Hop the Surf City Loop. Book your seat below.',
-  marines: 'Hop The Loop around Camp Lejeune. Book your seat below.',
+  // The Loop runs Saturday and Sunday DAYTIME from the base gate. Never frame
+  // it as a night out or around bars — its riders are largely under 21.
+  marines: 'Board at the gate and ride the loop around town. $10 a ride, or $20 all day.',
+}
+
+const HEADING = {
+  brew: 'Pick a night.',
+  surf: 'Pick a night.',
+  marines: 'Pick a day.',
+}
+
+// Label over the stop chips on each loop card.
+const STOPS_LABEL = {
+  brew: 'Tonight’s bars',
+  surf: 'Tonight’s bars',
+  marines: 'Stops on this loop',
 }
 
 export default function EventsBody({ loops = [], renderError = null, business = 'brew' }) {
@@ -52,7 +67,7 @@ export default function EventsBody({ loops = [], renderError = null, business = 
             >
               Upcoming loops
             </div>
-            <h1 style={{ color: INK, fontSize: 'clamp(22px, 6vw, 28px)', margin: '6px 0 4px' }}>Pick a night.</h1>
+            <h1 style={{ color: INK, fontSize: 'clamp(22px, 6vw, 28px)', margin: '6px 0 4px' }}>{HEADING[business] || HEADING.brew}</h1>
             <p style={{ marginTop: 4, fontSize: 14, color: INK_DIM }}>
               {SUBTITLE[business] || SUBTITLE.brew}
             </p>
@@ -174,7 +189,7 @@ function LoopCard({ loop, business }) {
         </div>
 
         <div style={{ marginTop: 16 }}>
-          <BarChips stops={loop.stops} />
+          <BarChips stops={loop.stops} business={business} />
         </div>
 
         {loop.pickupTime && (
@@ -240,7 +255,7 @@ function LoopCard({ loop, business }) {
   )
 }
 
-function BarChips({ stops }) {
+function BarChips({ stops, business = 'brew' }) {
   const hasStops = Array.isArray(stops) && stops.length > 0
   if (!hasStops) {
     return (
@@ -270,8 +285,12 @@ function BarChips({ stops }) {
           ◐
         </span>
         <div style={{ display: 'flex', flexDirection: 'column' }}>
-          <span style={{ color: INK, fontSize: 14, fontWeight: 600 }}>Route drops Friday afternoon</span>
-          <span style={{ color: INK_DIM, fontSize: 12 }}>Hand-picked weekly</span>
+          <span style={{ color: INK, fontSize: 14, fontWeight: 600 }}>
+            {business === 'marines' ? 'Stops posted before the weekend' : 'Route drops Friday afternoon'}
+          </span>
+          <span style={{ color: INK_DIM, fontSize: 12 }}>
+            {business === 'marines' ? 'Same loop, all day' : 'Hand-picked weekly'}
+          </span>
         </div>
       </div>
     )
@@ -288,7 +307,7 @@ function BarChips({ stops }) {
           fontWeight: 700,
         }}
       >
-        Tonight&rsquo;s bars
+        {STOPS_LABEL[business] || STOPS_LABEL.brew}
       </span>
       <div
         style={{
