@@ -97,6 +97,13 @@ export default function Contacts() {
         const upcoming = rides.filter(r => !r.closed_out_at)
         return { ...c, rides, past, upcoming }
       })
+      // `contacts` is one shared table across all businesses (no business
+      // column). On the Surf/Marines consoles, only show riders who've actually
+      // ridden THAT business so staff don't see the other loops' riders. Brew
+      // stays the full directory (it's the origin business + holds manually
+      // added leads that have no ride yet). `rides` is already business-scoped
+      // via `groups`. Real cross-business isolation belongs in Supabase RLS.
+      .filter(c => business === 'brew' || c.rides.length > 0)
       .filter(c => !loopFilter || c.rides.some(r => r.id === loopFilter))
       .sort((a, b) => {
         const aLast = a.past[0]?.event_date || ''
@@ -106,7 +113,7 @@ export default function Contacts() {
         if (bLast) return 1
         return (a.last_name || '').localeCompare(b.last_name || '')
       })
-  }, [contacts, groups, members, search, today, loopFilter])
+  }, [contacts, groups, members, search, today, loopFilter, business])
 
   const loopOptions = useMemo(() => {
     return groups

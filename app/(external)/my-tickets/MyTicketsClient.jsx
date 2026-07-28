@@ -17,10 +17,10 @@ export default function MyTicketsClient({ business = 'brew' }) {
   const cfg = brandFor(business)
   // Surf tickets live behind a separate lookup endpoint that scopes to kind='surf'
   // and returns /surfcity-prefixed links.
-  const apiPath = business === 'surf' ? '/api/surf/my-tickets' : '/api/my-tickets'
+  const apiPath = business === 'surf' ? '/api/surf/my-tickets' : business === 'marines' ? '/api/marines/my-tickets' : '/api/my-tickets'
   // Remember the phone the rider looked up with, per business, so they land
   // straight on their tickets next visit instead of re-typing it.
-  const STORAGE_KEY = business === 'surf' ? 'surfloop:mytickets:phone' : 'brewloop:mytickets:phone'
+  const STORAGE_KEY = business === 'surf' ? 'surfloop:mytickets:phone' : business === 'marines' ? 'theloop:mytickets:phone' : 'brewloop:mytickets:phone'
   const [phone, setPhone] = useState('')
   const [submitting, setSubmitting] = useState(false)
   const [searched, setSearched] = useState(false)
@@ -108,8 +108,8 @@ export default function MyTicketsClient({ business = 'brew' }) {
             </div>
             <p style={{ color: INK_DIM, margin: 0, fontSize: 14 }}>
               Double-check the phone number you booked with. If it still doesn’t match, text us at{' '}
-              <a href="sms:+16362661801" style={{ color: GOLD, textDecoration: 'none', fontWeight: 600 }}>
-                (636) 266-1801
+              <a href={`sms:${cfg.contactPhone}`} style={{ color: GOLD, textDecoration: 'none', fontWeight: 600 }}>
+                {cfg.contactPhoneDisplay}
               </a>{' '}
               and we’ll track it down.
             </p>

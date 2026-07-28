@@ -1,7 +1,9 @@
-import { notFound } from 'next/navigation'
+import { notFound, redirect } from 'next/navigation'
+import { cookies } from 'next/headers'
 import { supabaseAdmin } from '@/lib/supabaseAdmin'
 import { getCurrentWaiverVersion } from '@/lib/waiver'
 import { brandFor, prefixLink } from '@/lib/businessConfig'
+import { MARINES_VERIFIED_COOKIE } from '@/lib/marines'
 import BookingForm from './BookingForm'
 
 export const dynamic = 'force-dynamic'
@@ -53,6 +55,21 @@ export default async function EventBookingPage({ params }) {
   }
   if (eventErr) console.error('[book/eventId] event lookup error', eventErr)
   if (!event || event.status !== 'on_sale') notFound()
+
+  // The Loop (Marines): the buy form is Marines-only. Bounce anyone who hasn't
+  // cleared DoD-ID verification to /marines/verify (the API enforces this too;
+  // this is the friendly redirect so they never see a form they can't submit).
+  if (event.kind === 'marines') {
+    let verifiedContactId = null
+    try { verifiedContactId = (await cookies()).get(MARINES_VERIFIED_COOKIE)?.value || null } catch {}
+    let cleared = false
+    if (verifiedContactId) {
+      const { data: vc } = await supabase
+        .from('contacts').select('military_verified').eq('id', verifiedContactId).maybeSingle()
+      cleared = !!vc?.military_verified
+    }
+    if (!cleared) redirect('/marines/verify')
+  }
 
   // Branding is data-driven from the loaded event, so this page renders correctly
   // whether it's hit at /book/<id> or /surfcity/book/<id>. Back-link: Brew goes to

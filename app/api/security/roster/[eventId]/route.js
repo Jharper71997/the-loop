@@ -70,6 +70,16 @@ export async function GET(req, ctx) {
     waiverByContact[cid] = await contactHasSignedCurrent(admin, cid)
   }
 
+  // Marine-verification status per contact — the Loop door list shows a badge so
+  // the driver can see who cleared DoD-ID verify (they still eyeball the physical
+  // card at the door). Guarded: if the column isn't present, skip silently.
+  const militaryByContact = {}
+  if (contactIds.length) {
+    const { data: vcs, error: vErr } = await admin
+      .from('contacts').select('id, military_verified').in('id', contactIds)
+    if (!vErr) for (const c of vcs || []) militaryByContact[c.id] = !!c.military_verified
+  }
+
   const riders = (items || []).map(i => {
     const unclaimed = !!(i.claim_token && !i.claimed_at)
     const fullName = unclaimed
@@ -83,6 +93,7 @@ export async function GET(req, ctx) {
       buyer_name: i.order?.buyer_name || null,
       buyer_phone: i.order?.buyer_phone || null,
       waiver_signed: i.contact_id ? !!waiverByContact[i.contact_id] : false,
+      military_verified: i.contact_id ? !!militaryByContact[i.contact_id] : false,
       checked_in_at: i.checked_in_at,
       checked_in_via: i.checked_in_via,
       ticket_code: codeByItem[i.id] || null,

@@ -30,6 +30,8 @@ export default function TicketView({
   waiverSigned,
   contactId,
   checkedInAt,
+  supportPhone = '+16362661801',
+  supportPhoneDisplay = '(636) 266-1801',
 }) {
   const wakeLockRef = useRef(null)
   const [shareSupported, setShareSupported] = useState(false)
@@ -113,8 +115,8 @@ export default function TicketView({
           </h1>
           <p style={{ color: INK_DIM, fontSize: 14, lineHeight: 1.5, margin: 0 }}>
             It&apos;s no longer valid for boarding. If you think this was a mistake, text us at{' '}
-            <a href="sms:+16362661801" style={{ color: GOLD, textDecoration: 'none' }}>
-              (636) 266-1801
+            <a href={`sms:${supportPhone}`} style={{ color: GOLD, textDecoration: 'none' }}>
+              {supportPhoneDisplay}
             </a>
             .
           </p>

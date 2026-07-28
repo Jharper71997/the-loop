@@ -64,7 +64,7 @@ export async function POST(req) {
   const orderSelect = `
     id, status, total_cents, buyer_phone, buyer_name, party_size,
     paid_at, created_at, contact_id,
-    event:events ( id, name, event_date, pickup_time, status, group:groups ( id, schedule ) ),
+    event:events ( id, name, event_date, pickup_time, status, kind, group:groups ( id, schedule ) ),
     order_items ( id, rider_first_name, rider_last_name, contact_id, rider_phone, voided_at, claim_token, claimed_at )
   `
   const [{ data: byBuyer }, { data: byRider }] = await Promise.all([
@@ -94,7 +94,12 @@ export async function POST(req) {
     extraOrders = data || []
   }
 
+  // This is the BREW ticket lookup. A rider's Marines/Surf passes have their own
+  // lookups (/marines/my-tickets, /surfcity/my-tickets) and must never surface
+  // in the Brew chrome here. Brew events are kind='brew' (legacy rows may be
+  // null); drop anything tagged for another business.
   const all = [...(byBuyer || []), ...extraOrders]
+    .filter(o => { const k = o.event?.kind; return k == null || k === 'brew' })
     .sort((a, b) => (b.created_at || '').localeCompare(a.created_at || ''))
 
   // Resolve waiver status per distinct contact (across buyer + active items).

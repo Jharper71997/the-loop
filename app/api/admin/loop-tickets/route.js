@@ -25,9 +25,10 @@ export async function GET(req) {
 
   const supabase = supabaseAdmin()
 
-  // Scope to the active business (Brew/Surf) so the Loops page counts match the
-  // toggled surface. Defaults to brew when the param is absent.
-  const business = new URL(req.url).searchParams.get('business') === 'surf' ? 'surf' : 'brew'
+  // Scope to the active business (Brew/Surf/Marines) so the Loops page counts
+  // match the active console. Defaults to brew when the param is absent.
+  const param = new URL(req.url).searchParams.get('business')
+  const business = param === 'surf' ? 'surf' : param === 'marines' ? 'marines' : 'brew'
 
   const { data: groups } = await supabase
     .from('groups')

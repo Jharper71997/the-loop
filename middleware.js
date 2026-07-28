@@ -7,6 +7,8 @@ import {
   isDriver,
   isDriverPath,
   canCheckIn,
+  isStaff,
+  isConsolePath,
 } from '@/lib/roles'
 
 const PUBLIC_PREFIXES = [
@@ -18,6 +20,11 @@ const PUBLIC_PREFIXES = [
   '/events',
   '/bars',
   '/about',
+  // Brew marketing-website pages absorbed from the old Squarespace site.
+  '/merch',
+  '/cart',
+  '/sponsors',
+  '/api/merch/',
   '/my-tickets',
   '/tickets/',
   '/r/',
@@ -29,11 +36,6 @@ const PUBLIC_PREFIXES = [
   '/widget',
   '/marines',
   '/api/marines/',
-  '/api/loop-admin',
-  '/api/loop-driver',
-  // The Loop door scanner pings with the loop_admin cookie (no Supabase
-  // session); the route gates itself via isLoopAdmin().
-  '/api/loop-security',
   // Surf City Loop — second bar-shuttle business (kind='surf'). The rider
   // surface is public at /surfcity (Brew (external) chrome, business-aware).
   // Staff use the shared /admin console + the leadership-gated route builder at
@@ -118,13 +120,24 @@ function legacyRedirect(pathname) {
 export async function middleware(req) {
   const { pathname } = req.nextUrl
 
+  // Static assets in /public (logos, icons, manifests, fonts) — never gate these
+  // behind auth, or <img>/manifest/font requests 302 to /login and render broken.
+  // The route matcher already excludes /_next/static and favicon.ico; this covers
+  // everything else served from /public plus generated files (sitemap/robots).
+  if (/\.(png|jpe?g|gif|svg|webp|avif|ico|css|js|mjs|json|txt|xml|woff2?|ttf|otf|map|webmanifest)$/i.test(pathname)) {
+    return NextResponse.next()
+  }
+
   // Tag the request with the active staff console's business so server pages can
-  // read it via getActiveBusiness(). Brew console = /admin, Surf console = /surf.
-  // NOTE: this does NOT match the rider site /surfcity (it isn't '/surf' and
-  // doesn't start with '/surf/'); rider pages don't read this header anyway.
+  // read it via getActiveBusiness(). Brew console = /admin, Surf console = /surf,
+  // Marines ("The Loop") console = /loop.
+  // NOTE: this does NOT match the rider sites /surfcity or /marines (they aren't
+  // '/surf'|'/loop' and don't start with '/surf/'|'/loop/'); rider pages don't
+  // read this header anyway.
   const surfAdmin = pathname === '/surf' || pathname.startsWith('/surf/')
+  const loopAdmin = pathname === '/loop' || pathname.startsWith('/loop/')
   const requestHeaders = new Headers(req.headers)
-  requestHeaders.set('x-business', surfAdmin ? 'surf' : 'brew')
+  requestHeaders.set('x-business', surfAdmin ? 'surf' : loopAdmin ? 'marines' : 'brew')
 
   if (isRemoved(pathname)) {
     if (pathname.startsWith('/api/')) {
@@ -171,6 +184,17 @@ export async function middleware(req) {
     loginUrl.pathname = '/login'
     loginUrl.searchParams.set('next', pathname)
     return NextResponse.redirect(loginUrl)
+  }
+
+  // The staff consoles (/admin, /surf, /loop) require a known staff login, not
+  // just any authenticated user — signup is public, so a rider could create an
+  // account. A logged-in non-staff user is sent to the matching rider home
+  // (not /login, which would loop them since they ARE logged in).
+  if (isConsolePath(pathname) && !isStaff(user.email)) {
+    const url = req.nextUrl.clone()
+    url.pathname = surfAdmin ? '/surfcity' : loopAdmin ? '/marines' : '/'
+    url.search = ''
+    return NextResponse.redirect(url)
   }
 
   if (isLeadershipOnlyPath(pathname) && !isLeadership(user.email)) {

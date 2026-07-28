@@ -104,6 +104,8 @@ export default async function TicketPage({ params }) {
       waiverSigned={waiverSigned}
       contactId={item.contact_id || null}
       checkedInAt={item.checked_in_at || null}
+      supportPhone={cfg.contactPhone}
+      supportPhoneDisplay={cfg.contactPhoneDisplay}
     />
   )
 }

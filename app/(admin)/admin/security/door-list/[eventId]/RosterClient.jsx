@@ -22,6 +22,7 @@ const POLL_MS = 8000
 export default function RosterClient({ eventId }) {
   const { business } = useBusiness()
   const base = adminBase(business)
+  const isMarines = business === 'marines'
   const [data, setData] = useState(null)
   const [error, setError] = useState(null)
   const [filter, setFilter] = useState('') // search-by-name
@@ -180,6 +181,7 @@ export default function RosterClient({ eventId }) {
                 rider={r}
                 busy={busyItem === r.order_item_id}
                 flash={flash?.itemId === r.order_item_id ? flash : null}
+                showMilitary={isMarines}
                 onCheckIn={() => manualCheckIn(r)}
               />
             ))}
@@ -194,6 +196,7 @@ export default function RosterClient({ eventId }) {
                 rider={r}
                 busy={false}
                 flash={flash?.itemId === r.order_item_id ? flash : null}
+                showMilitary={isMarines}
                 onCheckIn={null}
               />
             ))}
@@ -239,7 +242,7 @@ function Tally({ label, value, total, color }) {
   )
 }
 
-function RiderRow({ rider, busy, flash, onCheckIn }) {
+function RiderRow({ rider, busy, flash, onCheckIn, showMilitary }) {
   const checkedIn = !!rider.checked_in_at
   return (
     <div
@@ -259,6 +262,9 @@ function RiderRow({ rider, busy, flash, onCheckIn }) {
           {rider.waiver_signed
             ? <span style={{ color: GREEN, fontSize: 11, fontWeight: 700 }}>✓ waiver</span>
             : <span style={{ color: RED, fontSize: 11, fontWeight: 700 }}>! waiver</span>}
+          {showMilitary && (rider.military_verified
+            ? <span style={{ color: GREEN, fontSize: 11, fontWeight: 700 }}>✓ Marine</span>
+            : <span style={{ color: GOLD_HI, fontSize: 11, fontWeight: 700 }}>check ID at door</span>)}
         </div>
         <div style={{ color: INK_MUTED, fontSize: 12, marginTop: 2 }}>
           {rider.buyer_name && rider.buyer_name !== rider.full_name

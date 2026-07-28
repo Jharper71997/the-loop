@@ -6,17 +6,26 @@ import { supabase } from '@/lib/supabase'
 import { isLeadership, isSecurity, isDriver } from '@/lib/roles'
 import { useBusiness } from './BusinessProvider'
 import { adminBase } from '@/lib/adminBase'
+import { brandFor } from '@/lib/businessConfig'
 
 // Links are console-relative: `path` is appended to the console base (/admin for
-// Brew, /surf for Surf), so one NavBar serves both consoles.
+// Brew, /surf for Surf, /loop for Marines), so one NavBar serves every console.
 const LINKS = [
   { path: '', label: 'Schedule' },
   { path: '/groups', label: 'Loops' },
-  { path: '/builder', label: 'Build', leadership: true, surfOnly: true },
+  { path: '/builder', label: 'Build', leadership: true, builderConsole: true },
   { path: '/schedule', label: 'Crew' },
   { path: '/contacts', label: 'Contacts' },
   { path: '/security', label: 'Security', security: true },
   { path: '/driver', label: 'Driver', driver: true },
+]
+
+// The three staff consoles. Used for the leadership-only "jump to another
+// console" links so Jacob can hop directly between Brew, Surf, and The Loop.
+const CONSOLES = [
+  { business: 'brew', base: '/admin', label: 'Brew ops' },
+  { business: 'surf', base: '/surf', label: 'Surf ops' },
+  { business: 'marines', base: '/loop', label: 'The Loop ops' },
 ]
 
 function visibleLinks({ isLeader, isSec, isDrv, business }) {
@@ -24,8 +33,9 @@ function visibleLinks({ isLeader, isSec, isDrv, business }) {
     .filter(l => isLeader || !l.leadership)
     .filter(l => isSec || !l.security)
     .filter(l => isDrv || !l.driver)
-    // The route builder only makes sense in the Surf console (it builds surf loops).
-    .filter(l => !l.surfOnly || business === 'surf')
+    // The in-app route builder lives in the Surf + Marines consoles; Brew loops
+    // are built under /leadership, so hide it on the Brew console.
+    .filter(l => !l.builderConsole || business !== 'brew')
 }
 
 function linkActive(pathname, href, base) {
@@ -92,10 +102,9 @@ export default function NavBar() {
   }
 
   const links = visibleLinks({ isLeader, isSec, isDrv, business }).map(l => ({ ...l, href: base + l.path }))
-  const wordmark = business === 'surf' ? 'SURF CITY' : 'THE LOOP'
-  // Leadership-only jump to the other console (plain navigation, not a toggle).
-  const otherBase = business === 'surf' ? '/admin' : '/surf'
-  const otherLabel = business === 'surf' ? 'Brew ops' : 'Surf ops'
+  const wordmark = brandFor(business).shortBrand.toUpperCase()
+  // Leadership-only jumps to the OTHER two consoles (plain navigation).
+  const otherConsoles = CONSOLES.filter(c => c.business !== business)
 
   return (
     <nav className="admin-nav" style={{
@@ -207,8 +216,8 @@ export default function NavBar() {
             </div>
           )}
 
-          {isLeader && (
-            <a className="admin-nav-cross" href={otherBase} style={{
+          {isLeader && otherConsoles.map(c => (
+            <a key={c.base} className="admin-nav-cross" href={c.base} style={{
               color: '#9c9ca3',
               fontFamily: "'JetBrains Mono', ui-monospace, monospace",
               fontSize: '10px',
@@ -221,9 +230,9 @@ export default function NavBar() {
               borderRadius: 6,
               padding: '6px 9px',
             }}>
-              {otherLabel} &rsaquo;
+              {c.label} &rsaquo;
             </a>
-          )}
+          ))}
 
           {email && (
             <span className="admin-nav-email" style={{
@@ -295,8 +304,7 @@ export default function NavBar() {
           setSearch={setSearch}
           results={results}
           isLeader={isLeader}
-          otherBase={otherBase}
-          otherLabel={otherLabel}
+          otherConsoles={otherConsoles}
           onClose={() => setMenuOpen(false)}
           onSignOut={signOut}
         />
@@ -337,7 +345,7 @@ function HamburgerIcon({ open }) {
   )
 }
 
-function AdminMobileMenu({ pathname, links, base, email, search, setSearch, results, isLeader, otherBase, otherLabel, onClose, onSignOut }) {
+function AdminMobileMenu({ pathname, links, base, email, search, setSearch, results, isLeader, otherConsoles, onClose, onSignOut }) {
   return (
     <div
       style={{
@@ -439,9 +447,10 @@ function AdminMobileMenu({ pathname, links, base, email, search, setSearch, resu
         )
       })}
 
-      {isLeader && (
+      {isLeader && otherConsoles.map(c => (
         <a
-          href={otherBase}
+          key={c.base}
+          href={c.base}
           onClick={onClose}
           style={{
             display: 'flex',
@@ -460,10 +469,10 @@ function AdminMobileMenu({ pathname, links, base, email, search, setSearch, resu
             borderBottom: '1px solid #16161c',
           }}
         >
-          {otherLabel}
+          {c.label}
           <span style={{ color: '#d4a333' }}>&rsaquo;</span>
         </a>
-      )}
+      ))}
 
       <div style={{
         display: 'flex',

@@ -17,7 +17,7 @@ export default async function ManageLoopsListPage() {
     supabase
       .from('groups')
       .select('id, name, event_date, pickup_time')
-      .eq('kind', 'brew')   // Brew Loop "Manage Loops" list; Marines is managed at /marines/admin
+      .eq('kind', 'brew')   // Brew Loop "Manage Loops" list; Surf builds at /surf, Marines at /loop
       .gte('event_date', today)
       .order('event_date', { ascending: true }),
     supabase

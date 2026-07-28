@@ -180,6 +180,12 @@ async function resolvePromoCode(session) {
 }
 
 async function handleCheckoutCompleted(supabase, session) {
+  // Merch store orders live in their own tables (kind:'merch') — settle them
+  // before any ride/pass logic runs, and never touch `orders`.
+  if (session.metadata?.kind === 'merch') {
+    return handleMerchCheckout(supabase, session)
+  }
+
   // Loop Pass purchases come through Checkout too, but in subscription mode and
   // with no order_id — route them to the pass handler before the order lookup.
   if (session.mode === 'subscription' || session.metadata?.kind === 'loop_pass') {
@@ -346,6 +352,43 @@ async function handleCheckoutCompleted(supabase, session) {
   }
 }
 
+// Merch store checkout — settle the separate merch_orders row. Captures the
+// Stripe-collected shipping address so leadership can fulfill. Idempotent.
+async function handleMerchCheckout(supabase, session) {
+  const merchOrderId = session.metadata?.merch_order_id
+  if (!merchOrderId) return
+  const { data: order } = await supabase
+    .from('merch_orders')
+    .select('id, status')
+    .eq('id', merchOrderId)
+    .maybeSingle()
+  if (!order) throw new Error(`merch order ${merchOrderId} not found`)
+  if (order.status === 'paid' || order.status === 'fulfilled') return
+
+  const cust = session.customer_details || null
+  // Stripe renamed session.shipping_details → collected_information.shipping_details
+  // across API versions; read whichever this version provides.
+  const ship = session.shipping_details
+    || session.collected_information?.shipping_details
+    || session.shipping
+    || null
+
+  await supabase
+    .from('merch_orders')
+    .update({
+      status: 'paid',
+      paid_at: new Date().toISOString(),
+      stripe_payment_intent_id: session.payment_intent || null,
+      total_cents: Number.isInteger(session.amount_total) ? session.amount_total : null,
+      shipping_cents: session.shipping_cost?.amount_total ?? session.total_details?.amount_shipping ?? null,
+      buyer_email: cust?.email || null,
+      buyer_name: (ship?.name || cust?.name) || null,
+      buyer_phone: cust?.phone || null,
+      shipping_address: (ship?.address || cust?.address) || null,
+    })
+    .eq('id', order.id)
+}
+
 async function handleRefund(supabase, obj) {
   const paymentIntent = obj.payment_intent
   if (!paymentIntent) return
@@ -354,7 +397,21 @@ async function handleRefund(supabase, obj) {
     .select('id, event_id, status, buyer_phone, buyer_name, total_cents')
     .eq('stripe_payment_intent_id', paymentIntent)
     .maybeSingle()
-  if (!order) return
+  if (!order) {
+    // Might be a merch order (separate table) — refund that instead.
+    const { data: merchOrder } = await supabase
+      .from('merch_orders')
+      .select('id, status')
+      .eq('stripe_payment_intent_id', paymentIntent)
+      .maybeSingle()
+    if (merchOrder && merchOrder.status !== 'refunded') {
+      await supabase
+        .from('merch_orders')
+        .update({ status: 'refunded', refunded_at: new Date().toISOString() })
+        .eq('id', merchOrder.id)
+    }
+    return
+  }
   // Idempotent: charge.refunded + refund.created can both fire for the same
   // refund; only the first should run side effects.
   if (order.status === 'refunded') return

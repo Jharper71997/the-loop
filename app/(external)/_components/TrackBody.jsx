@@ -1,4 +1,4 @@
-import { BARS, SURF_BARS } from '@/lib/bars'
+import { BARS, SURF_BARS, MARINES_BARS } from '@/lib/bars'
 import { prefixLink } from '@/lib/businessConfig'
 import TrackMap from '../track/TrackMap'
 import CohortRoll from '../track/CohortRoll'
@@ -16,6 +16,7 @@ const LINE = 'rgba(255,255,255,0.08)'
 const CENTERS = {
   brew: { lat: 34.7541, lng: -77.4302 },  // Jacksonville, NC
   surf: { lat: 34.4277, lng: -77.5466 },  // Surf City, NC
+  marines: { lat: 34.6935, lng: -77.3464 },  // Camp Lejeune / New River, NC
 }
 
 export default function TrackBody({ data, business = 'brew' }) {
@@ -46,7 +47,7 @@ export default function TrackBody({ data, business = 'brew' }) {
 }
 
 function PartnerBars({ business }) {
-  const bars = business === 'surf' ? SURF_BARS : BARS
+  const bars = business === 'surf' ? SURF_BARS : business === 'marines' ? MARINES_BARS : BARS
   return (
     <section
       style={{

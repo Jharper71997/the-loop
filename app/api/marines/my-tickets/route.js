@@ -158,6 +158,11 @@ export async function POST(req) {
           ticket_code: code,
           ticket_qr_data_url: unclaimed ? null : (qrByItem[i.id] || null),
           ticket_url: code ? `${base}/marines/tickets/${code}` : null,
+          // Surface the claim-link state so the rider can text a friend their
+          // seat — without these the "Send claim link" button never renders and
+          // the seat is a dead end in My Tickets.
+          unclaimed,
+          claim_token: unclaimed ? i.claim_token : null,
         }
       }),
     }

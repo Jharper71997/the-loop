@@ -1,7 +1,5 @@
 import PwaShell from './_components/PwaShell'
-import TabBar from './_components/TabBar'
-import TopBar from './_components/TopBar'
-import LiveStatusStrip from './_components/LiveStatusStrip'
+import RiderChrome from './_components/site/RiderChrome'
 
 export const metadata = {
   title: { default: 'Brew Loop', template: '%s · Brew Loop' },
@@ -31,6 +29,10 @@ export const viewport = {
 }
 
 export default function ExternalLayout({ children }) {
+  // RiderChrome switches between the Brew marketing-website chrome (top nav +
+  // footer) and the app chrome (TopBar + bottom TabBar) by path + business. The
+  // bottom padding that clears the fixed TabBar now lives inside RiderChrome's
+  // app branch, so marketing pages don't get a dead gap under the footer.
   return (
     <div
       className="external-shell"
@@ -38,14 +40,15 @@ export default function ExternalLayout({ children }) {
         minHeight: '100dvh',
         background: '#0a0a0b',
         color: '#f5f5f7',
-        paddingBottom: 'calc(72px + env(safe-area-inset-bottom))',
+        // Guard the rider surface against any horizontal overflow (long headings,
+        // wide grids) shifting/clipping content on narrow phones. `clip` (not
+        // `hidden`) so it doesn't become a scroll container and break the sticky
+        // header.
+        overflowX: 'clip',
       }}
     >
       <PwaShell />
-      <TopBar />
-      <LiveStatusStrip />
-      {children}
-      <TabBar />
+      <RiderChrome>{children}</RiderChrome>
     </div>
   )
 }

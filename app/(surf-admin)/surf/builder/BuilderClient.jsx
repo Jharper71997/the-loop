@@ -1,6 +1,7 @@
 'use client'
 
 import { useEffect, useState } from 'react'
+import { brandFor } from '@/lib/businessConfig'
 
 // Flexible Surf City route builder (re-homed into the /admin HUD). A weekend can
 // hold MANY loops (Fri night; Sat day + transition + night; Sun day), each its
@@ -39,7 +40,7 @@ const dollarsToCents = d => {
   return Number.isFinite(n) ? Math.round(n * 100) : 0
 }
 
-export default function BuilderClient({ bars = [] }) {
+export default function BuilderClient({ bars = [], business = 'surf' }) {
   const [loops, setLoops] = useState([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
@@ -48,7 +49,7 @@ export default function BuilderClient({ bars = [] }) {
   async function load() {
     setLoading(true); setError(null)
     try {
-      const res = await fetch('/api/admin/loops')
+      const res = await fetch(`/api/admin/loops?business=${encodeURIComponent(business)}`)
       const data = await res.json().catch(() => ({}))
       if (!res.ok) throw new Error(data?.error || `Failed (${res.status})`)
       const fromApi = (data.loops || []).map(l => ({
@@ -123,12 +124,12 @@ export default function BuilderClient({ bars = [] }) {
       const payload = toPayload(l)
       let res
       if (l.groupId) {
-        res = await fetch(`/api/admin/loops?group_id=${encodeURIComponent(l.groupId)}`, {
-          method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ loop: payload }),
+        res = await fetch(`/api/admin/loops?group_id=${encodeURIComponent(l.groupId)}&business=${encodeURIComponent(business)}`, {
+          method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ loop: payload, business }),
         })
       } else {
         res = await fetch('/api/admin/loops', {
-          method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ loops: [payload] }),
+          method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ loops: [payload], business }),
         })
       }
       const data = await res.json().catch(() => ({}))
@@ -144,7 +145,7 @@ export default function BuilderClient({ bars = [] }) {
     if (!confirm(`Delete "${l.name}"? This removes the loop, its event, and its tickets.`)) return
     setSavingIdx(i); setError(null)
     try {
-      const res = await fetch(`/api/admin/loops?group_id=${encodeURIComponent(l.groupId)}`, { method: 'DELETE' })
+      const res = await fetch(`/api/admin/loops?group_id=${encodeURIComponent(l.groupId)}&business=${encodeURIComponent(business)}`, { method: 'DELETE' })
       const data = await res.json().catch(() => ({}))
       if (!res.ok) throw new Error(data?.error || `Delete failed (${res.status})`)
       await load()
@@ -156,7 +157,7 @@ export default function BuilderClient({ bars = [] }) {
     <main style={{ maxWidth: 820, margin: '0 auto', padding: '24px 16px 80px', display: 'grid', gap: 16 }}>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
         <div>
-          <div style={{ color: GOLD, fontSize: 11, letterSpacing: '0.22em', textTransform: 'uppercase', fontWeight: 700 }}>Surf City · Route builder</div>
+          <div style={{ color: GOLD, fontSize: 11, letterSpacing: '0.22em', textTransform: 'uppercase', fontWeight: 700 }}>{brandFor(business).shortBrand} · Route builder</div>
           <h1 style={{ margin: '6px 0 0', fontSize: 24, fontWeight: 800, color: C.INK }}>Build the weekend</h1>
         </div>
         <button onClick={addLoop} style={btn(true)}>+ New loop</button>

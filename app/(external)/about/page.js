@@ -22,26 +22,12 @@ export default function AboutPage() {
   return (
     <main>
         <section style={{ padding: '20px 20px 16px', maxWidth: 760, margin: '0 auto', textAlign: 'center' }}>
-          <span
-            aria-hidden
-            style={{
-              display: 'inline-flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              width: 72,
-              height: 72,
-              borderRadius: '50%',
-              border: `2px solid ${GOLD}`,
-              color: GOLD,
-              fontSize: 22,
-              fontWeight: 800,
-              letterSpacing: '0.04em',
-              marginBottom: 8,
-              background: 'radial-gradient(60% 60% at 50% 40%, rgba(212,163,51,0.18), transparent 70%)',
-            }}
-          >
-            JBL
-          </span>
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img
+            src="/brand/badge-gold.png"
+            alt="Jville Brew Loop"
+            style={{ width: 84, height: 84, objectFit: 'contain', display: 'inline-block', marginBottom: 8 }}
+          />
           <div
             style={{
               color: GOLD,
@@ -92,14 +78,15 @@ function Mission() {
           Why we built it
         </div>
         <h2 style={{ color: INK }}>
-          Jacksonville deserved a better ride home.
+          Jacksonville deserved a better night out.
         </h2>
         <p style={{ marginTop: 16, fontSize: 17 }}>
           Rideshare after a few drinks is expensive and unpredictable. Driving after a few drinks is a line nobody should
-          cross. The Brew Loop is a flat-rate, scheduled shuttle that takes the decision off the table.
+          cross. The Brew Loop is a flat-rate, scheduled shuttle that loops the best bars all night, so nobody in your
+          group ever has to be the one who drives.
         </p>
         <p style={{ marginTop: 14, fontSize: 17 }}>
-          Book once, ride all night, get home safe.
+          Book once, ride all night, and never touch your keys between bars.
         </p>
       </div>
     </section>
@@ -115,13 +102,13 @@ function HowItWorksFull() {
     },
     {
       n: '02',
-      title: 'Meet the shuttle',
-      body: 'Pickups start around 7:30 PM. You&apos;ll get an SMS with the exact time and spot.',
+      title: 'Get to the first bar',
+      body: 'Leave the car at home. Grab an Uber or a partnered taxi to your pickup spot. Pickups start around 7:30 PM and we text you the exact time and place.',
     },
     {
       n: '03',
       title: 'Ride the route',
-      body: '~1 hour 15 minutes at each bar. A text lands 10 minutes before we roll, so you can close your tab.',
+      body: '~1 hour 15 minutes at each bar. A text lands 10 minutes before we roll, and the Loop brings you right back to your original pickup at the end.',
     },
     {
       n: '04',
@@ -210,6 +197,10 @@ function Faq() {
     {
       q: 'What time does it run?',
       a: 'First pickup is around 7:30 PM and we wrap up around 1:30 AM.',
+    },
+    {
+      q: 'How do I get to and from the Loop?',
+      a: 'Leave your car at home. Take an Uber or one of our partnered taxi services to your pickup spot, ride the Loop all night, and it brings you back to that same spot at the end. Grab a ride home from there.',
     },
     {
       q: 'Do I have to be 21?',
@@ -306,10 +297,10 @@ function SponsorStrip() {
           Partners &amp; sponsors
         </div>
         <h3 style={{ color: INK, fontSize: 22, fontWeight: 600, margin: 0 }}>
-          Want your brand on the shuttle every weekend?
+          Want your brand in front of a full shuttle every weekend?
         </h3>
         <p style={{ color: INK_DIM, maxWidth: 560, margin: 0 }}>
-          Bars, breweries, and local businesses ride with us. Sponsor a weekend, host a pickup, or get on the shuttle wrap.
+          Bars, breweries, and local businesses ride with us. Sponsor a weekend, host a pickup, or become a featured partner.
         </p>
         <a
           href="mailto:richard@jvillebrewloop.com"

@@ -29,8 +29,17 @@ export default function LeaderboardClient() {
     }
 
     load()
-    const iv = setInterval(load, 60_000)
-    return () => { cancelled = true; clearInterval(iv) }
+    // Don't refresh a backgrounded leaderboard tab; reload on return.
+    const iv = setInterval(() => {
+      if (document.visibilityState === 'visible') load()
+    }, 60_000)
+    const onVis = () => { if (document.visibilityState === 'visible') load() }
+    document.addEventListener('visibilitychange', onVis)
+    return () => {
+      cancelled = true
+      clearInterval(iv)
+      document.removeEventListener('visibilitychange', onVis)
+    }
   }, [])
 
   if (error && !data) {

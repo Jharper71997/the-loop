@@ -248,7 +248,12 @@ export default function BookingForm({ eventId, eventName, ticketTypes, addons = 
         } else if (json.error === 'in_flight_retry') {
           message = 'Hang on — finalizing your previous attempt. Try again in a few seconds.'
         } else if (json.error === 'pickup_required') {
-          message = 'Please choose a pickup bar for your walk-on ticket.'
+          message = 'Please choose a pickup stop for your walk-on ticket.'
+        } else if (json.error === 'verification_required') {
+          // The Loop (Marines): not cleared, or the verify cookie expired. Send
+          // them to verify with their DoD ID, then back to buying.
+          window.location.href = '/marines/verify'
+          return
         } else if (json.error) {
           console.error('[checkout] server error:', json.error, json)
         }

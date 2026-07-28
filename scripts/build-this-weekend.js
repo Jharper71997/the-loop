@@ -1,5 +1,5 @@
-// Clone last weekend's Loop (Jun 5 Fri / Jun 6 Sat) into this weekend
-// (Jun 12 Fri / Jun 13 Sat) and link the new Ticket Tailor events.
+// Clone this weekend's Loop (Jul 24 Fri / Jul 25 Sat) into next weekend
+// (Jul 31 Fri / Aug 1 Sat) and link the new Ticket Tailor events.
 //
 // Dry-run by default — prints the rows it WOULD insert. Pass --apply to write.
 //
@@ -20,12 +20,16 @@ const APPLY = process.argv.includes('--apply')
 // source date -> { dest date, new TT event id, date label for names, optional
 // schedule override (Friday's stored schedule had empty stop times — repair it
 // to the standard cadence that matches its live TT ticket types). }
+// Weekend of Jul 31 / Aug 1 2026. Clones this weekend's Jul 24 (Fri) / Jul 25
+// (Sat) brew nights with the identical route. ttEventId holds the freshly-created
+// Ticket Tailor occurrence (ev_) ids for next weekend (published + on sale), so
+// the app links to TT and sells through both channels.
+//   Fri Jul 31 -> ev_8757477 (series es_2327376)
+//   Sat Aug 1  -> ev_8757478 (series es_2327377)
 const PLAN = [
   {
-    from: '2026-06-05', to: '2026-06-12', ttEventId: 'ev_8464460',
-    label: 'Fri, Jun 12',
-    // Align stop names to this weekend's TT ticket-type names ("Archies Pub",
-    // "Hideaway Lounge") so the tt-sync inventory bridge matches by name.
+    from: '2026-07-24', to: '2026-07-31', ttEventId: 'ev_8757477',
+    label: 'Fri, Jul 31',
     schedule: [
       { name: 'Angry Ginger', start_time: '19:30' },
       { name: "Shirley V's", start_time: '19:45' },
@@ -35,12 +39,12 @@ const PLAN = [
     ],
   },
   {
-    from: '2026-06-06', to: '2026-06-13', ttEventId: 'ev_8464461',
-    label: 'Sat, Jun 13',
+    from: '2026-07-25', to: '2026-08-01', ttEventId: 'ev_8757478',
+    label: 'Sat, Aug 1',
     schedule: [
       { name: 'Angry Ginger', start_time: '19:30' },
       { name: 'Twin Ravens', start_time: '19:45' },
-      { name: 'Unhinged', start_time: '20:00' },
+      { name: 'Archies Pub', start_time: '20:00' },
       { name: 'Black Rose', start_time: '20:15' },
       { name: 'Hideaway Lounge', start_time: '20:35' },
     ],
@@ -99,7 +103,7 @@ function clean(row, overrides = {}) {
     // Guard: bail if this weekend's date already has a group with a paired
     // event. If there are only EVENTLESS groups (leftovers from a failed run),
     // delete them so we don't accumulate duplicate orphans.
-    const { data: destGroups } = await sb.from('groups').select('id').eq('event_date', step.to)
+    const { data: destGroups } = await sb.from('groups').select('id').eq('event_date', step.to).eq('kind', 'brew')
     const destIds = (destGroups || []).map(g => g.id)
     if (destIds.length) {
       const { data: destEvents } = await sb.from('events').select('id, group_id').in('group_id', destIds)
@@ -115,7 +119,7 @@ function clean(row, overrides = {}) {
     }
 
     // Find the SOURCE group for last week that actually has a paired event.
-    const { data: srcGroups } = await sb.from('groups').select('*').eq('event_date', step.from)
+    const { data: srcGroups } = await sb.from('groups').select('*').eq('event_date', step.from).eq('kind', 'brew')
     let srcGroup = null
     let srcEvents = []
     for (const g of srcGroups || []) {

@@ -31,6 +31,7 @@ export default async function RidershipPage() {
     .select('unit_price_cents, tt_ticket_id, ticket_types ( name ), orders!inner ( status, buyer_name, total_cents )')
     .is('voided_at', null)
     .eq('orders.status', 'paid')
+    .is('orders.metadata->>kind', null)   // Brew only — exclude Marines/Surf riders
     .limit(20000)
 
   // bar -> { riders, revenue, tt, native }

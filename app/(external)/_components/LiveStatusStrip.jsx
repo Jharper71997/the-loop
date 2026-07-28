@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react'
 import { usePathname } from 'next/navigation'
-import { businessFromPath, prefixLink } from '@/lib/businessConfig'
+import { brandFor, businessFromPath, prefixLink } from '@/lib/businessConfig'
 
 const GOLD = '#d4a333'
 const GOLD_HI = '#f0c24a'
@@ -13,7 +13,8 @@ const GOLD_HI = '#f0c24a'
 export default function LiveStatusStrip() {
   const pathname = usePathname() || '/'
   const kind = businessFromPath(pathname)
-  const rel = kind === 'surf' ? (pathname.replace(/^\/surfcity/, '') || '/') : pathname
+  const base = brandFor(kind).basePath
+  const rel = base ? (pathname.replace(new RegExp('^' + base), '') || '/') : pathname
   const [shuttle, setShuttle] = useState(null)
 
   useEffect(() => {
@@ -33,8 +34,18 @@ export default function LiveStatusStrip() {
     }
 
     poll()
-    timer = setInterval(poll, 20_000)
-    return () => { cancelled = true; clearInterval(timer) }
+    // Pause polling when the tab is hidden (locked phone / background); resume
+    // and refresh on return. Keeps idle/backgrounded pages off the API.
+    timer = setInterval(() => {
+      if (document.visibilityState === 'visible') poll()
+    }, 30_000)
+    const onVis = () => { if (document.visibilityState === 'visible') poll() }
+    document.addEventListener('visibilitychange', onVis)
+    return () => {
+      cancelled = true
+      clearInterval(timer)
+      document.removeEventListener('visibilitychange', onVis)
+    }
   }, [kind])
 
   const live = !!shuttle?.is_active

@@ -5,7 +5,6 @@ import SmsBroadcast from '../_components/SmsBroadcast'
 import PickedUpToggle from '../_components/PickedUpToggle'
 import SmsButton from '../_components/SmsButton'
 import TtBackfillButton from '../_components/TtBackfillButton'
-import CloseOutButton from '../_components/CloseOutButton'
 import Link from 'next/link'
 import LiveStamp from '@/app/(leadership)/_components/LiveStamp'
 import ShowMore from '@/app/(leadership)/_components/ShowMore'
@@ -147,7 +146,6 @@ function EventQuickPanel({ group, totalTickets, isLeader = false }) {
           Open settings
         </a>
       )}
-      <CloseOutButton groupId={group.id} />
     </section>
   )
 }

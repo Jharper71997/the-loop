@@ -1,53 +1,102 @@
-// Build a weekend of "The Loop" (Marines) — a kind='marines' group + on-sale
-// event + the two fixed fares ($10 Single Ride / $20 Day Pass), with the red
-// line's stops stored INLINE (name + start_time + lat/lng + on_base) in
-// groups.schedule. The Loop is native-only — NO Ticket Tailor.
+// Build a weekend of "The Loop" (Marines / Camp Lejeune NC). Rider + admin are a
+// Surf-style clone of Brew/Surf, but the FARE MODEL is flat: every Marines loop
+// sells the same two walk-on fares (Single Ride $10 / All-Day Pass $20) from
+// MARINES_FARES in lib/surfBuild — NOT one ticket per stop like Surf/Brew. Each
+// loop is its own groups row (kind='marines') + paired events row + those two
+// ticket_types. PLAN below is an ARRAY OF LOOPS. Native ticketing ONLY (no TT).
+// Riders must clear DoD-ID verification (/marines/verify) before checkout.
 //
-// New route every weekend: edit PLAN below (dates + stops), then run.
+// Per-stop shaping is handled by lib/surfBuild (shared with Surf), passing
+// kind='marines'. This is the same engine the in-app builder at /loop/builder
+// uses, so the two paths produce identical rows — the builder is preferred for
+// day-to-day; this script is for bulk/scripted seeding.
+//
+// New weekend: edit PLAN below (dates + loops + stops), then run.
 // Dry-run by default; pass --apply to write.
 //
 //   set -a && source /c/Users/jacob/the-loop/.env.local && set +a
-//   node scripts/build-marines-weekend.js            # dry run
+//   node scripts/build-marines-weekend.js            # dry run (prints, no writes)
 //   node scripts/build-marines-weekend.js --apply    # actually insert
 //
 // Requires: NEXT_PUBLIC_SUPABASE_URL, SUPABASE_SERVICE_KEY (service role).
-// Prereq: migration 043 (adds groups/events.kind + loop_boardings) is applied.
+// Prereq: migrations 043 (kind='marines') + 045 (marines partner bars) applied.
 
 const fs = require('fs')
 const path = require('path')
 const { createClient } = require('@supabase/supabase-js')
+const { previewLoop, insertLoop, loopExists } = require('../lib/surfBuild')
 
 loadDotEnvIfMissing(path.resolve(__dirname, '..', '.env.local'))
 
 const APPLY = process.argv.includes('--apply')
+const KIND = 'marines'
 
-// The two fares, every weekend. stop_index null routes the rider through the
-// existing walk-on pickup picker; capacity null = no per-stop seat cap (the
-// driver manages the physical ~13 seats from the manifest).
-const FARES = [
-  { name: 'Single Ride', price_cents: 1000, stop_index: null, capacity: null, sort_order: 0 },
-  { name: 'Day Pass',    price_cents: 2000, stop_index: null, capacity: null, sort_order: 1 },
-]
+// ---------------------------------------------------------------------------
+// EDIT EACH WEEKEND. One entry per LOOP (not per day). Each loop:
+//   { name, event_date, pickup_time, status, stops: [...] }
+// and each stop:
+//   { name, bar_slug, lat, lng, start_time, price_cents, capacity }
+//
+// bar_slug must match a MARINES_BARS slug in lib/bars.js (PLACEHOLDERS today):
+//   dragon-brew, good-times  (confirm the real Camp Lejeune stop list)
+//
+// COORDS: lat/lng are UNKNOWN right now and left undefined below.
+//   >>> ACTION: fill REAL coords per stop (or set them later in the /loop route
+//   builder, which rewrites groups.schedule live) before the live map will pin.
+//
+// PRICING: price_cents is a PLACEHOLDER ($20.00 = 2000) on every stop.
+//   >>> ACTION: confirm the real per-stop fare before going on sale.
+//
+// STATUS: every loop is 'draft' so it's STAGED (not publicly buyable) until
+//   reviewed. Flip to 'on_sale' here (fresh date) or in the /loop console.
+// ---------------------------------------------------------------------------
 
-// EDIT EACH WEEKEND. One entry per service day. `schedule` is the red line in
-// order — the FIRST stop is the on-base gate (on_base: true). Fill real lat/lng
-// for every stop you want pinned on the live map + drawn on the red line; a
-// stop with null lat/lng simply has no pin.
-const PLAN = [
-  {
-    date: '2026-07-04',
-    label: 'Sat, Jul 4',
+const PRICE_CENTS = 2000 // PLACEHOLDER per-stop fare ($20) — confirm before on_sale.
+
+// Build a stop from a partner-bar slug. lat/lng/capacity are left UNDEFINED (not
+// null) so shapeLoop in lib/surfBuild drops the pin/cap rather than coercing
+// null -> 0 and pinning every stop at (0,0). Set opts.lat/opts.lng once real
+// Camp Lejeune coords are known.
+function stop(barSlug, name, startTime, opts) {
+  return {
+    name,
+    bar_slug: barSlug,
+    lat: opts && opts.lat,
+    lng: opts && opts.lng,
+    start_time: startTime,
+    on_base: !!(opts && opts.on_base), // base gate = the pickup stop
+    // price_cents/capacity are IGNORED for Marines — the flat $10/$20 fares come
+    // from MARINES_FARES in lib/surfBuild. Kept here only for shape parity.
+    price_cents: (opts && opts.price_cents) || PRICE_CENTS,
+    capacity: opts && opts.capacity,
+  }
+}
+
+// New River constant loop (~1hr). Stop 0 = the on-base gate (pickup); the rest
+// are town destinations, ranked food/barber/entertainment/tattoo. Coords are the
+// geocoded reals from scripts/fix-marines-coords.js. PROVISIONAL — confirm the
+// final stop list + exact base pickup with Stephen before flipping to on_sale.
+function newRiverLoop(name, date) {
+  return {
+    name,
+    event_date: date,
     pickup_time: '09:30',
-    status: 'on_sale',
-    name: 'The Loop — Sat, Jul 4',
-    schedule: [
-      { name: 'Main Gate', start_time: '09:30', lat: 34.6447, lng: -77.3389, on_base: true },
-      { name: 'Downtown', start_time: '10:15', lat: 34.7541, lng: -77.4302, on_base: false },
-      { name: 'Mall', start_time: '11:00', lat: 34.7766, lng: -77.3870, on_base: false },
-      { name: 'Beach', start_time: '12:00', lat: 34.6260, lng: -77.3870, on_base: false },
+    status: 'draft', // STAGED — flip to 'on_sale' here or in the /loop console
+    stops: [
+      stop('new-river-gate',  'New River Gate',  '09:30', { lat: 34.7286409, lng: -77.4701155, on_base: true }),
+      stop('dragon-brew',     "Dragon's Brew",   '09:42', { lat: 34.7623492, lng: -77.4857645 }),
+      stop('mario-co',        'Mario & Co',      '09:54', { lat: 34.7458360, lng: -77.3792252 }),
+      stop('good-times',      'Good Times',      '10:06', { lat: 34.7435232, lng: -77.3825875 }),
+      stop('angry-ginger',    'Angry Ginger',    '10:18', { lat: 34.7794209, lng: -77.4162900 }),
+      stop('crush-nutrition', 'Crush Nutrition', '10:30', { lat: 34.7539334, lng: -77.4641163 }),
+      stop('cozy-co',         'Cozy Co',         '10:42', { lat: 34.7496607, lng: -77.4324215 }),
     ],
-  },
-  // Duplicate the block above for Sunday (and any holiday), adjusting date/label.
+  }
+}
+
+const PLAN = [
+  newRiverLoop('The Loop — Sat Jul 25', '2026-07-25'),
+  newRiverLoop('The Loop — Sun Jul 26', '2026-07-26'),
 ]
 
 ;(async () => {
@@ -62,62 +111,32 @@ const PLAN = [
 
   console.log(APPLY ? '*** APPLY MODE — writing rows ***' : '--- DRY RUN (no writes) — pass --apply to insert ---')
 
-  for (const step of PLAN) {
-    console.log(`\n================ The Loop · ${step.date} (${step.label}) ================`)
+  for (const loop of PLAN) {
+    console.log(`\n================ ${loop.name} (${loop.event_date}) ================`)
 
-    // Guard: skip if this date already has a Marines group with a paired event.
-    // Clean up eventless Marines groups left by a prior failed run.
-    const { data: destGroups } = await sb.from('groups')
-      .select('id').eq('event_date', step.date).eq('kind', 'marines')
-    const destIds = (destGroups || []).map(g => g.id)
-    if (destIds.length) {
-      const { data: destEvents } = await sb.from('events').select('id').in('group_id', destIds)
-      if ((destEvents || []).length) {
-        console.log(`SKIP — ${step.date} already has a Marines group+event. Not duplicating.`)
-        continue
-      }
-      if (APPLY) {
-        const { error: delErr } = await sb.from('groups').delete().in('id', destIds)
-        if (delErr) { console.error('failed to clean eventless groups', delErr); continue }
-        console.log(`cleaned ${destIds.length} eventless Marines group(s) from a prior run`)
-      }
+    // Idempotency: skip if this date already has a marines group+event with this name.
+    const exists = await loopExists(sb, loop.event_date, loop.name, KIND)
+    if (exists) {
+      console.log(`SKIP — a Loop named "${loop.name}" already exists on ${loop.event_date}. Not duplicating.`)
+      continue
     }
 
-    const groupRow = {
-      name: step.name,
-      event_date: step.date,
-      pickup_time: step.pickup_time || null,
-      kind: 'marines',
-      schedule: step.schedule || [],
-    }
-    const eventRow = {
-      name: step.name,
-      event_date: step.date,
-      pickup_time: step.pickup_time || null,
-      status: step.status || 'on_sale',
-      kind: 'marines',
-      // group_id filled after insert
-    }
-
+    const { groupRow, eventRow, fares } = previewLoop(loop, KIND)
     console.log('GROUP ->', JSON.stringify(groupRow))
     console.log('  EVENT ->', JSON.stringify({ ...eventRow, group_id: '(new group id)' }))
-    for (const f of FARES) console.log('    FARE ->', JSON.stringify({ ...f, event_id: '(new event id)' }))
+    for (const f of fares) console.log('    FARE ->', JSON.stringify({ ...f, event_id: '(new event id)' }))
 
     if (!APPLY) continue
 
-    const { data: insGroup, error: gErr } = await sb.from('groups').insert(groupRow).select().single()
-    if (gErr) { console.error('group insert failed', gErr); continue }
-    console.log('inserted group', insGroup.id)
-
-    const { data: insEvent, error: eErr } = await sb.from('events')
-      .insert({ ...eventRow, group_id: insGroup.id }).select().single()
-    if (eErr) { console.error('event insert failed', eErr); continue }
-    console.log('  inserted event', insEvent.id)
-
-    const fareRows = FARES.map(f => ({ ...f, event_id: insEvent.id, active: true }))
-    const { data: insFares, error: fErr } = await sb.from('ticket_types').insert(fareRows).select()
-    if (fErr) console.error('ticket_types insert failed', fErr)
-    else console.log(`    inserted ${insFares.length} fares`)
+    try {
+      const { groupId, eventId, fareCount } = await insertLoop(sb, loop, KIND)
+      console.log('inserted group', groupId)
+      console.log('  inserted event', eventId)
+      console.log(`    inserted ${fareCount} per-stop fares`)
+    } catch (err) {
+      console.error('insert failed:', err.message)
+      continue
+    }
   }
   console.log('\nDone.')
 })()

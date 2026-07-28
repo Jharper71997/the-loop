@@ -15,6 +15,19 @@ const TABS = [
   { href: '/my-tickets', label: 'Tickets', kind: 'tickets', match: p => p.startsWith('/my-tickets') || p.startsWith('/tickets') },
 ]
 
+// The Loop (Marines) is a verified-rider shuttle, not a bar-loop booking. Its
+// second tab is "Ride" (verify → pay), and passes live under "Pass".
+const MARINES_TABS = [
+  { href: '/', label: 'Home', kind: 'home', match: p => p === '/' },
+  { href: '/ride', label: 'Ride', kind: 'book', match: p => p.startsWith('/ride') || p.startsWith('/verify') },
+  { href: '/track', label: 'Track', kind: 'track', match: p => p.startsWith('/track') || p.startsWith('/bars') },
+  { href: '/my-tickets', label: 'Pass', kind: 'tickets', match: p => p.startsWith('/my-tickets') || p.startsWith('/tickets') },
+]
+
+function tabsFor(kind) {
+  return kind === 'marines' ? MARINES_TABS : TABS
+}
+
 const HIDDEN_ON = [
   /^\/tickets\/[^/]+/,
   /^\/waiver\/[^/]+/,
@@ -26,8 +39,11 @@ export default function TabBar() {
   const kind = businessFromPath(pathname)
   const badge = brandFor(kind).badge
   // Match/hide logic runs on the path with the business prefix stripped, so the
-  // shared TABS definitions work for both '/' (brew) and '/surfcity' (surf).
-  const rel = kind === 'surf' ? (pathname.replace(/^\/surfcity/, '') || '/') : pathname
+  // shared TABS definitions work for brew ('/'), surf ('/surfcity') and marines
+  // ('/marines') alike.
+  const base = brandFor(kind).basePath
+  const rel = base ? (pathname.replace(new RegExp('^' + base), '') || '/') : pathname
+  const tabs = tabsFor(kind)
   const [shuttleLive, setShuttleLive] = useState(false)
 
   useEffect(() => {
@@ -44,8 +60,19 @@ export default function TabBar() {
       } catch {}
     }
     poll()
-    const t = setInterval(poll, 20_000)
-    return () => { cancelled = true; clearInterval(t) }
+    // Only poll while the tab is actually on screen — a pocketed phone with the
+    // page open shouldn't keep hitting /api/shuttle/current every 20s. Resume +
+    // refresh the moment the rider comes back.
+    const t = setInterval(() => {
+      if (document.visibilityState === 'visible') poll()
+    }, 30_000)
+    const onVis = () => { if (document.visibilityState === 'visible') poll() }
+    document.addEventListener('visibilitychange', onVis)
+    return () => {
+      cancelled = true
+      clearInterval(t)
+      document.removeEventListener('visibilitychange', onVis)
+    }
   }, [kind])
 
   if (HIDDEN_ON.some(re => re.test(rel))) return null
@@ -69,13 +96,13 @@ export default function TabBar() {
       <div
         style={{
           display: 'grid',
-          gridTemplateColumns: `repeat(${TABS.length}, 1fr)`,
+          gridTemplateColumns: `repeat(${tabs.length}, 1fr)`,
           padding: '6px 8px 8px',
           maxWidth: 560,
           margin: '0 auto',
         }}
       >
-        {TABS.map(t => {
+        {tabs.map(t => {
           const active = t.match(rel)
           const showLiveDot = t.kind === 'track' && shuttleLive
           return (

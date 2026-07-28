@@ -14,24 +14,40 @@ export const dynamic = 'force-dynamic'
 // day can hold many loops.
 //
 // Staff-auth: /api/admin/* is leadership-only via middleware; denyIfNotLeadership
-// is belt-and-suspenders. Builds Surf loops only (kind='surf' everywhere) — the
-// active-business cookie does not change that; it never touches a brew/marines row.
+// is belt-and-suspenders. Builds Surf OR Marines loops (the two in-app builder
+// businesses), scoped by ?business=/body.business; it never touches a brew row
+// (Brew is built via /api/events).
 
 async function guard() {
   return await denyIfNotLeadership()
 }
 
+// Which business this builder request targets. Surf + Marines ("The Loop") both
+// use this builder; Brew is rejected (returns null -> caller 400s). Resolved
+// from ?business= (GET/PUT/DELETE) or the POST body; absent defaults to 'surf'
+// for back-compat with the original Surf-only builder.
+function resolveBusiness(req, body) {
+  let param = null
+  try { param = new URL(req.url).searchParams.get('business') } catch {}
+  if (!param && body && body.business) param = body.business
+  if (param == null || param === '') return 'surf'
+  if (param === 'surf' || param === 'marines') return param
+  return null
+}
+
 // GET — list all Surf loops (each = group + paired event + per-stop fares),
 // shaped so the builder can load + edit them.
-export async function GET() {
+export async function GET(req) {
   const denied = await guard()
   if (denied) return denied
+  const business = resolveBusiness(req, null)
+  if (!business) return Response.json({ error: 'invalid business' }, { status: 400 })
   const sb = supabaseAdmin()
 
   const { data: groups, error } = await sb
     .from('groups')
     .select('id, name, event_date, pickup_time, schedule, closed_out_at')
-    .eq('kind', 'surf')
+    .eq('kind', business)
     .order('event_date', { ascending: false })
     .order('pickup_time', { ascending: true })
   if (error) return Response.json({ error: error.message }, { status: 500 })
@@ -81,7 +97,7 @@ export async function GET() {
     return {
       groupId: g.id,
       eventId: ev?.id || null,
-      name: ev?.name || g.name || 'Surf City Loop',
+      name: ev?.name || g.name || 'Loop',
       event_date: g.event_date || null,
       pickup_time: g.pickup_time || ev?.pickup_time || null,
       status: ev?.status || 'draft',
@@ -102,6 +118,8 @@ export async function POST(req) {
   const sb = supabaseAdmin()
 
   const body = await req.json().catch(() => null)
+  const business = resolveBusiness(req, body)
+  if (!business) return Response.json({ error: 'invalid business' }, { status: 400 })
   const loops = Array.isArray(body?.loops) ? body.loops : (body?.loop ? [body.loop] : [])
   if (!loops.length) return Response.json({ error: 'loops required' }, { status: 400 })
 
@@ -111,7 +129,7 @@ export async function POST(req) {
       return Response.json({ error: 'each loop needs name + event_date' }, { status: 400 })
     }
     try {
-      created.push(await insertLoop(sb, loop))
+      created.push(await insertLoop(sb, loop, business))
     } catch (e) {
       return Response.json({ error: String(e?.message || e), created }, { status: 500 })
     }
@@ -133,17 +151,19 @@ export async function PUT(req) {
   if (!groupId) return Response.json({ error: 'group_id required' }, { status: 400 })
 
   const body = await req.json().catch(() => null)
+  const business = resolveBusiness(req, body)
+  if (!business) return Response.json({ error: 'invalid business' }, { status: 400 })
   const loop = body?.loop
   if (!loop) return Response.json({ error: 'loop required' }, { status: 400 })
 
-  // Confirm the group is a surf loop (never touch a brew/marines group).
+  // Confirm the group belongs to this business (never touch another business's group).
   const { data: group } = await sb
     .from('groups').select('id, kind').eq('id', groupId).maybeSingle()
-  if (!group || group.kind !== 'surf') {
-    return Response.json({ error: 'surf loop not found' }, { status: 404 })
+  if (!group || group.kind !== business) {
+    return Response.json({ error: 'loop not found' }, { status: 404 })
   }
 
-  const { schedule, fares } = shapeLoop(loop)
+  const { schedule, fares } = shapeLoop(loop, business)
   const eventDate = loop.event_date || loop.date || null
   const pickupTime = loop.pickup_time || (schedule[0] && schedule[0].start_time) || null
 
@@ -158,7 +178,7 @@ export async function PUT(req) {
   if (!ev) {
     const { data: insEv, error: eErr } = await sb.from('events').insert({
       name: loop.name, event_date: eventDate, pickup_time: pickupTime,
-      status: loop.status || 'draft', kind: 'surf', group_id: groupId,
+      status: loop.status || 'draft', kind: business, group_id: groupId,
     }).select('id').single()
     if (eErr) return Response.json({ error: `event_insert: ${eErr.message}` }, { status: 500 })
     ev = insEv
@@ -170,28 +190,33 @@ export async function PUT(req) {
     if (eErr) return Response.json({ error: `event_update: ${eErr.message}` }, { status: 500 })
   }
 
-  // Sync ticket_types by stop_index.
-  const { data: existing } = await sb
-    .from('ticket_types').select('id, stop_index').eq('event_id', ev.id)
-  const byIndex = new Map((existing || []).filter(t => t.stop_index != null).map(t => [t.stop_index, t.id]))
+  // Sync ticket_types by stop_index — for the per-stop model (Surf/Brew) only.
+  // The Loop (Marines) uses flat walk-on fares (stop_index null) that don't map
+  // to stops, so editing a Marines route here only updates its schedule/status;
+  // its two fixed fares are left untouched (they're set once at loop creation).
+  if (business !== 'marines') {
+    const { data: existing } = await sb
+      .from('ticket_types').select('id, stop_index').eq('event_id', ev.id)
+    const byIndex = new Map((existing || []).filter(t => t.stop_index != null).map(t => [t.stop_index, t.id]))
 
-  for (const f of fares) {
-    const id = byIndex.get(f.stop_index)
-    if (id) {
-      const { error } = await sb.from('ticket_types').update({
-        name: f.name, price_cents: f.price_cents, capacity: f.capacity,
-        sort_order: f.sort_order, active: true,
-      }).eq('id', id)
-      if (error) return Response.json({ error: `tt_update: ${error.message}` }, { status: 500 })
-      byIndex.delete(f.stop_index)
-    } else {
-      const { error } = await sb.from('ticket_types').insert({ ...f, event_id: ev.id })
-      if (error) return Response.json({ error: `tt_insert: ${error.message}` }, { status: 500 })
+    for (const f of fares) {
+      const id = byIndex.get(f.stop_index)
+      if (id) {
+        const { error } = await sb.from('ticket_types').update({
+          name: f.name, price_cents: f.price_cents, capacity: f.capacity,
+          sort_order: f.sort_order, active: true,
+        }).eq('id', id)
+        if (error) return Response.json({ error: `tt_update: ${error.message}` }, { status: 500 })
+        byIndex.delete(f.stop_index)
+      } else {
+        const { error } = await sb.from('ticket_types').insert({ ...f, event_id: ev.id })
+        if (error) return Response.json({ error: `tt_insert: ${error.message}` }, { status: 500 })
+      }
     }
-  }
-  // Retire any leftover stops beyond the new stop list.
-  for (const id of byIndex.values()) {
-    await sb.from('ticket_types').update({ active: false }).eq('id', id)
+    // Retire any leftover stops beyond the new stop list.
+    for (const id of byIndex.values()) {
+      await sb.from('ticket_types').update({ active: false }).eq('id', id)
+    }
   }
 
   return Response.json({ ok: true, group_id: groupId, event_id: ev.id })
@@ -210,10 +235,13 @@ export async function DELETE(req) {
   const force = url.searchParams.get('force') === '1'
   if (!groupId) return Response.json({ error: 'group_id required' }, { status: 400 })
 
+  const business = resolveBusiness(req, null)
+  if (!business) return Response.json({ error: 'invalid business' }, { status: 400 })
+
   const { data: group } = await sb
     .from('groups').select('id, kind').eq('id', groupId).maybeSingle()
-  if (!group || group.kind !== 'surf') {
-    return Response.json({ error: 'surf loop not found' }, { status: 404 })
+  if (!group || group.kind !== business) {
+    return Response.json({ error: 'loop not found' }, { status: 404 })
   }
 
   const { data: ev } = await sb

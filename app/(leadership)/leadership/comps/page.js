@@ -38,6 +38,7 @@ export default async function CompsPage() {
     .from('orders')
     .select('id, buyer_name, buyer_email, party_size, total_cents, paid_at, metadata, events ( event_date, name )')
     .eq('status', 'paid')
+    .is('metadata->>kind', null)   // Brew only — exclude Marines/Surf comps
     .order('paid_at', { ascending: false })
     .limit(1000)
 

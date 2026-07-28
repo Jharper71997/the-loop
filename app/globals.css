@@ -80,6 +80,16 @@ main {
   z-index: 1;
 }
 
+/* Marketing website pages (landing, bars, sponsors, merch, cart) fill the
+   screen and manage their own section widths — the narrow 640px app-page `main`
+   cap above does not apply to them. */
+main.site-main {
+  max-width: none;
+  margin: 0;
+  padding: 0;
+  width: 100%;
+}
+
 /* ============================================================
    Typography
    ============================================================ */

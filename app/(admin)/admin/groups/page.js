@@ -56,7 +56,7 @@ export default function Groups() {
           contacts ( id, first_name, last_name, phone )
         )
       `)
-      .eq('kind', business)   // active business groups (Brew/Surf); Marines is managed at /marines/admin
+      .eq('kind', business)   // active console's business (Brew /admin, Surf /surf, Marines /loop)
       .order('event_date')
     const groupRows = data || []
     setGroups(groupRows)

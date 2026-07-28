@@ -51,6 +51,7 @@ export default async function IncomePage() {
         .eq('status', 'paid')
         .is('refunded_at', null)
         .not('stripe_checkout_session_id', 'is', null)
+        .is('metadata->>kind', null)   // Brew only — exclude Marines/Surf ticket revenue
         .gte('paid_at', since),
       supabase.from('sponsor_payments')
         .select('amount_cents')
@@ -163,6 +164,7 @@ export default async function IncomePage() {
     .eq('status', 'paid')
     .is('refunded_at', null)
     .not('stripe_checkout_session_id', 'is', null)
+    .is('metadata->>kind', null)   // Brew only
     .order('paid_at', { ascending: false })
     .limit(10)
 

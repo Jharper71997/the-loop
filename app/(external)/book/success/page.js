@@ -1,14 +1,32 @@
 import { supabaseAdmin } from '@/lib/supabaseAdmin'
-import { contactHasSignedCurrent } from '@/lib/waiver'
+import { brandFor, prefixLink } from '@/lib/businessConfig'
 
-export const metadata = { title: 'Booked — Jville Brew Loop' }
 export const dynamic = 'force-dynamic'
 
 const GOLD = '#d4a333'
 const GOLD_HI = '#f0c24a'
 const INK = '#f5f5f7'
-const INK_DIM = '#b8b8bf'
-const INK_MUTED = '#8a8a90'
+
+// Resolve the order (+ its business `kind`) from either a Stripe session or a
+// free-order id. Used by both the page and generateMetadata so a Marines/Surf
+// rider never lands on a Brew-branded confirmation.
+async function loadOrder(sessionId, orderId) {
+  if (!sessionId && !orderId) return null
+  const sb = supabaseAdmin()
+  const sel = 'contact_id, contacts ( id, first_name ), event:events ( kind )'
+  const { data: order } = await (sessionId
+    ? sb.from('orders').select(sel).eq('stripe_checkout_session_id', sessionId)
+    : sb.from('orders').select(sel).eq('id', orderId)
+  ).maybeSingle()
+  return order || null
+}
+
+export async function generateMetadata({ searchParams }) {
+  const params = await searchParams
+  const order = await loadOrder(params?.session_id, params?.order_id)
+  const kind = order?.event?.kind || 'brew'
+  return { title: `Booked — ${brandFor(kind).brand}` }
+}
 
 export default async function BookingSuccess({ searchParams }) {
   const params = await searchParams
@@ -17,25 +35,24 @@ export default async function BookingSuccess({ searchParams }) {
   // with ?order_id= instead of ?session_id=.
   const orderId = params?.order_id
 
-  // Look up the order to find the contact + waiver status.
-  // If nothing returns (webhook hasn't landed yet, or direct hit on this page),
-  // fall back to the generic "check your email for the waiver link" copy.
-  let contactId = null
-  let waiverSigned = false
+  // Look up the order to find the contact + which business this booking belongs
+  // to. If nothing returns (webhook hasn't landed yet, or a direct hit on this
+  // page), fall back to Brew.
   let firstName = null
+  let kind = 'brew'
 
-  if (sessionId || orderId) {
-    const sb = supabaseAdmin()
-    const { data: order } = await (sessionId
-      ? sb.from('orders').select('contact_id, contacts ( id, first_name )').eq('stripe_checkout_session_id', sessionId)
-      : sb.from('orders').select('contact_id, contacts ( id, first_name )').eq('id', orderId)
-    ).maybeSingle()
-    if (order?.contact_id) {
-      contactId = order.contact_id
-      firstName = order.contacts?.first_name || null
-      waiverSigned = await contactHasSignedCurrent(sb, contactId)
-    }
+  const order = await loadOrder(sessionId, orderId)
+  if (order) {
+    kind = order.event?.kind || 'brew'
+    firstName = order.contacts?.first_name || null
   }
+
+  // Business-aware brand + links so the confirmation matches the loop the rider
+  // actually booked (The Loop / Surf City / Brew), not always Brew.
+  const cfg = brandFor(kind)
+  const ride = kind === 'brew' ? 'the Loop' : cfg.rideName
+  const myTicketsHref = prefixLink('/my-tickets', kind)
+  const eventsHref = prefixLink('/events', kind)
 
   return (
     <main>
@@ -59,89 +76,16 @@ export default async function BookingSuccess({ searchParams }) {
               &#10003;
             </div>
             <h1 style={{ color: INK }}>
-              You&apos;re on the Loop{firstName ? `, ${firstName}` : ''}.
+              You&apos;re on {ride}{firstName ? `, ${firstName}` : ''}.
             </h1>
             <p style={{ marginTop: 14, fontSize: 17 }}>
               Your ticket is on its way to your inbox. Check your email for the QR code, or open My Tickets anytime.
             </p>
           </div>
 
-          {!waiverSigned && (
-            <div
-              style={{
-                marginTop: 32,
-                padding: '24px 24px 26px',
-                borderRadius: 16,
-                border: `1px solid ${GOLD}`,
-                background: 'linear-gradient(180deg, rgba(212,163,51,0.12), rgba(212,163,51,0.04))',
-                boxShadow: '0 20px 50px rgba(212,163,51,0.12)',
-              }}
-            >
-              <div
-                style={{
-                  color: GOLD,
-                  fontSize: 11,
-                  letterSpacing: '0.2em',
-                  textTransform: 'uppercase',
-                  fontWeight: 700,
-                  marginBottom: 10,
-                }}
-              >
-                One more thing &mdash; 30 seconds
-              </div>
-              <h2 style={{ color: INK, fontSize: 22, margin: '0 0 8px' }}>Sign your liability waiver.</h2>
-              <p style={{ color: INK_DIM, margin: '0 0 18px', fontSize: 15 }}>
-                Every Loop rider signs one before pickup. Get it out of the way now so the driver can wave you on.
-              </p>
-              <a
-                href={contactId ? `/waiver/${contactId}` : '/waiver'}
-                style={{
-                  display: 'block',
-                  padding: '16px 24px',
-                  borderRadius: 12,
-                  background: `linear-gradient(180deg, ${GOLD_HI}, ${GOLD})`,
-                  color: '#0a0a0b',
-                  fontWeight: 700,
-                  fontSize: 16,
-                  textDecoration: 'none',
-                  textAlign: 'center',
-                  boxShadow: '0 10px 30px rgba(212,163,51,0.3)',
-                }}
-              >
-                Sign the waiver &rarr;
-              </a>
-              {!contactId && (
-                <p style={{ color: INK_MUTED, fontSize: 12, marginTop: 12, margin: '12px 0 0', textAlign: 'center' }}>
-                  Can&apos;t find your waiver link? Check your confirmation email &mdash; we send it there too.
-                </p>
-              )}
-            </div>
-          )}
-
-          {waiverSigned && (
-            <div
-              style={{
-                marginTop: 32,
-                padding: '20px 24px',
-                borderRadius: 14,
-                border: '1px solid rgba(111,191,127,0.3)',
-                background: 'rgba(111,191,127,0.06)',
-                display: 'flex',
-                alignItems: 'center',
-                gap: 14,
-              }}
-            >
-              <span style={{ fontSize: 22, color: '#6fbf7f' }}>&#10003;</span>
-              <div>
-                <div style={{ color: INK, fontWeight: 600 }}>Waiver already signed.</div>
-                <div style={{ color: INK_DIM, fontSize: 14 }}>You&apos;re fully set. See you at pickup.</div>
-              </div>
-            </div>
-          )}
-
           <div style={{ marginTop: 40, display: 'flex', gap: 12, justifyContent: 'center', flexWrap: 'wrap' }}>
-            <a href="/my-tickets" style={ghostCta}>My tickets</a>
-            <a href="/events" style={ghostCta}>Browse more loops</a>
+            <a href={myTicketsHref} style={ghostCta}>My tickets</a>
+            <a href={eventsHref} style={ghostCta}>Browse more loops</a>
           </div>
         </section>
     </main>

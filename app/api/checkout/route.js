@@ -2,13 +2,14 @@ import { randomBytes } from 'crypto'
 import { cookies } from 'next/headers'
 import { supabaseAdmin } from '@/lib/supabaseAdmin'
 import { createBookingCheckoutSession } from '@/lib/stripe'
+import { brandFor } from '@/lib/businessConfig'
 import { upsertContactByPhoneOrEmail, normalizeEmail } from '@/lib/contacts'
 import { normalizePhone } from '@/lib/phone'
 import { getCurrentWaiverVersion, contactHasSignedCurrent, recordSignature } from '@/lib/waiver'
 import { syncTtForEvent } from '@/lib/ticketTailorSync'
 import { getActivePass } from '@/lib/loopPass'
-import { isContactVerified } from '@/lib/marinesVerify'
 import { finalizeBooking } from '@/lib/booking'
+import { MARINES_VERIFIED_COOKIE } from '@/lib/marines'
 
 function mintClaimToken() {
   // 24 bytes => 32 url-safe base64 chars. Long enough that brute-forcing
@@ -105,14 +106,21 @@ async function handleCheckout(req) {
     return Response.json({ error: `event_not_on_sale_${event.status}` }, { status: 400 })
   }
 
-  // The Loop (Marines) is ID-gated: the buyer must be military_verified before
-  // they can purchase. This is the authoritative server gate (the buy page also
-  // soft-checks); the driver re-checks an ID at the door. Fully behind the
-  // kind check, so the Brew Loop path is untouched.
-  const isMarines = event.kind === 'marines'
-  if (isMarines) {
-    const verified = await isContactVerified(supabase, { phone: buyer.phone, email: buyer.email })
-    if (!verified) {
+  // The Loop (Marines): only a rider who has cleared DoD-ID verification can buy.
+  // The verify flow drops a cookie holding the verified contact id; re-check the
+  // military_verified flag server-side so a stale or forged cookie can't get
+  // through. This gates the BUYER only — guests still ride (the driver checks a
+  // base visitor pass at the door). Brew/Surf are untouched.
+  if (event.kind === 'marines') {
+    let verifiedContactId = null
+    try { verifiedContactId = (await cookies()).get(MARINES_VERIFIED_COOKIE)?.value || null } catch {}
+    let cleared = false
+    if (verifiedContactId) {
+      const { data: vc } = await supabase
+        .from('contacts').select('military_verified').eq('id', verifiedContactId).maybeSingle()
+      cleared = !!vc?.military_verified
+    }
+    if (!cleared) {
       return Response.json({ error: 'verification_required' }, { status: 403 })
     }
   }
@@ -139,7 +147,8 @@ async function handleCheckout(req) {
   if (event.group_id) {
     const { data: g } = await supabase
       .from('groups').select('schedule').eq('id', event.group_id).maybeSingle()
-    scheduleLen = Array.isArray(g?.schedule) ? g.schedule.length : 0
+    const sched = Array.isArray(g?.schedule) ? g.schedule : []
+    scheduleLen = sched.length
   }
   function pickupIndexFor(r) {
     const tt = ttById.get(r.ticket_type_id)
@@ -149,6 +158,7 @@ async function handleCheckout(req) {
   }
   for (const r of riders) {
     const tt = ttById.get(r.ticket_type_id)
+    // Walk-ons must choose a pickup bar when the night has a schedule.
     if (tt && tt.stop_index == null && scheduleLen > 0 && pickupIndexFor(r) == null) {
       return Response.json({ error: 'pickup_required' }, { status: 400 })
     }
@@ -271,10 +281,6 @@ async function handleCheckout(req) {
 
   const waiverQueue = []
   for (const rc of riderContacts) {
-    // The Loop (Marines) doesn't carry the Brew Loop liability waiver — its
-    // riders just buy a shuttle fare. Leave the queue empty so checkout never
-    // demands a signature for a Marines order.
-    if (isMarines) break
     if (rc.claim) continue // friend will sign at /c/<token>
     const alreadySigned = await contactHasSignedCurrent(supabase, rc.contact.id)
     if (alreadySigned) continue
@@ -596,7 +602,7 @@ async function handleCheckout(req) {
       console.error('[checkout] free-order tt sync threw', err)
     }
 
-    return Response.json({ checkout_url: `/book/success?order_id=${order.id}`, order_id: order.id, free: true })
+    return Response.json({ checkout_url: `${brandFor(event.kind).basePath}/book/success?order_id=${order.id}`, order_id: order.id, free: true })
   }
 
   let session

@@ -24,7 +24,7 @@ export default async function TonightPage() {
         contacts ( id, first_name, last_name, phone, has_signed_waiver )
       )
     `)
-    .eq('kind', business)   // active business "Tonight" (Brew/Surf); Marines runs at /marines/admin
+    .eq('kind', business)   // active console's business (Brew /admin, Surf /surf, Marines /loop)
     .is('closed_out_at', null)
     .order('event_date', { ascending: true })
     .limit(12)
@@ -124,11 +124,18 @@ export default async function TonightPage() {
     }
   }
 
-  const { data: ordersToday } = await supabase
+  // Scope "Orders today" to THIS console's business so Marines/Surf paid orders
+  // never appear on Brew /admin (and vice-versa). Brew orders are untagged
+  // (metadata->>kind null); Marines/Surf carry metadata.kind.
+  let ordersTodayQuery = supabase
     .from('orders')
     .select('id, buyer_name, buyer_phone, contact_id, event_id, total_cents, party_size, status, paid_at, metadata')
     .eq('status', 'paid')
     .gte('paid_at', `${today}T00:00:00`)
+  ordersTodayQuery = business === 'brew'
+    ? ordersTodayQuery.is('metadata->>kind', null)
+    : ordersTodayQuery.eq('metadata->>kind', business)
+  const { data: ordersToday } = await ordersTodayQuery
     .order('paid_at', { ascending: false })
     .limit(5)
 

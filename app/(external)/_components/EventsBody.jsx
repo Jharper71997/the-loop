@@ -10,8 +10,9 @@ const INK = '#f5f5f7'
 const INK_DIM = '#b8b8bf'
 
 const SUBTITLE = {
-  brew: '$20 a seat. Shuttle runs 7:30 PM to 1:30 AM.',
+  brew: '$20 a seat covers your whole night. Shuttle runs about 7:30 PM to 1:30 AM, back to your pickup.',
   surf: 'Hop the Surf City Loop. Book your seat below.',
+  marines: 'Hop The Loop around Camp Lejeune. Book your seat below.',
 }
 
 export default function EventsBody({ loops = [], renderError = null, business = 'brew' }) {
