@@ -10,6 +10,7 @@ import {
   isStaff,
   isConsolePath,
 } from '@/lib/roles'
+import { isLoopSite } from '@/lib/site'
 
 const PUBLIC_PREFIXES = [
   '/login',
@@ -99,6 +100,83 @@ function isPublic(pathname) {
   })
 }
 
+// ---------------------------------------------------------------------------
+// Standalone The Loop site (NEXT_PUBLIC_SITE=marines, its own Vercel project +
+// domain). Everything below is inert on the combined Brew deployment.
+//
+// The page files stay where they are — /marines for riders, /loop for staff —
+// and the public URLs are mapped onto them. So on the Loop domain:
+//
+//   /            -> /marines           (rider home)
+//   /events      -> /marines/events
+//   /book/abc    -> /marines/book/abc
+//   /admin/...   -> /loop/...          (staff console)
+//
+// Auth and role checks run against the INTERNAL path so /admin/builder is
+// still recognized as the leadership-only /loop/builder.
+// ---------------------------------------------------------------------------
+
+// Rider routes that exist under /marines and should answer at the root.
+const LOOP_RIDER_ROOTS = [
+  '/events', '/book', '/track', '/my-tickets', '/tickets',
+  '/bars', '/waiver', '/verify', '/ride',
+]
+
+// Brew- and Surf-only surfaces. The Loop carries no alcohol association (its
+// riders are largely under 21), so the bar directory, merch store, sponsor
+// pages and Loop Pass must not be reachable on this domain at all.
+const LOOP_HIDDEN_PREFIXES = [
+  '/surfcity', '/surf', '/leadership', '/merch', '/cart', '/sponsors',
+  '/leaderboard', '/pass', '/about', '/bartender-signup', '/r', '/invite',
+  '/widget',
+  // Their APIs go too, so a cached bundle on this domain can't reach into
+  // another business's data.
+  '/api/merch', '/api/surf', '/api/loop-pass', '/api/leaderboard',
+  '/api/bartender-signup',
+]
+
+// Public URL -> the path the app actually serves.
+function loopInternalPath(pathname) {
+  if (pathname === '/') return '/marines'
+  if (pathname === '/admin' || pathname.startsWith('/admin/')) {
+    return '/loop' + pathname.slice('/admin'.length)
+  }
+  for (const root of LOOP_RIDER_ROOTS) {
+    if (pathname === root || pathname.startsWith(root + '/')) {
+      return '/marines' + pathname
+    }
+  }
+  return pathname
+}
+
+// Inverse of loopInternalPath, for redirect targets. Code elsewhere computes
+// redirects in internal terms ('/marines', '/loop/security'); riders and staff
+// must land on the public spelling.
+function loopPublicPath(internal) {
+  if (internal === '/marines') return '/'
+  if (internal.startsWith('/marines/')) return internal.slice('/marines'.length)
+  if (internal === '/loop') return '/admin'
+  if (internal.startsWith('/loop/')) return '/admin' + internal.slice('/loop'.length)
+  return internal
+}
+
+// The prefixed spellings still resolve, but 308 to the canonical root URL so
+// existing QR codes and texted links keep working without splitting the site
+// into two addresses for the same page.
+function loopCanonicalRedirect(pathname) {
+  if (pathname === '/marines' || pathname.startsWith('/marines/')) {
+    return loopPublicPath(pathname) || '/'
+  }
+  if (pathname === '/loop' || pathname.startsWith('/loop/')) {
+    return loopPublicPath(pathname)
+  }
+  return null
+}
+
+function isLoopHidden(pathname) {
+  return LOOP_HIDDEN_PREFIXES.some(p => pathname === p || pathname.startsWith(p + '/'))
+}
+
 function isRemoved(pathname) {
   return REMOVED_PREFIXES.some(p => pathname === p || pathname.startsWith(p + '/'))
 }
@@ -128,38 +206,81 @@ export async function middleware(req) {
     return NextResponse.next()
   }
 
+  // Send a redirect to a path expressed in internal terms, translating it to
+  // the public spelling first when this is the standalone Loop site.
+  const goTo = (internal, status) => {
+    const url = req.nextUrl.clone()
+    url.pathname = isLoopSite ? loopPublicPath(internal) : internal
+    return NextResponse.redirect(url, status)
+  }
+
+  // On the standalone Loop site, resolve the public URL to the path the app
+  // actually serves; every check below runs against that. On the combined Brew
+  // deployment `path` is just `pathname` and nothing changes.
+  let path = pathname
+  if (isLoopSite) {
+    const canonical = loopCanonicalRedirect(pathname)
+    if (canonical) {
+      const url = req.nextUrl.clone()
+      url.pathname = canonical
+      return NextResponse.redirect(url, 308)
+    }
+    // Brew/Surf surfaces do not exist on this domain. Pages send the visitor
+    // home; APIs 404 instead so a stray fetch fails loudly rather than getting
+    // an HTML page back where JSON was expected.
+    if (isLoopHidden(pathname)) {
+      if (pathname.startsWith('/api/')) {
+        return NextResponse.json({ error: 'not_found' }, { status: 404 })
+      }
+      const url = req.nextUrl.clone()
+      url.pathname = '/'
+      url.search = ''
+      return NextResponse.redirect(url, 307)
+    }
+    path = loopInternalPath(pathname)
+  }
+
   // Tag the request with the active staff console's business so server pages can
   // read it via getActiveBusiness(). Brew console = /admin, Surf console = /surf,
   // Marines ("The Loop") console = /loop.
   // NOTE: this does NOT match the rider sites /surfcity or /marines (they aren't
   // '/surf'|'/loop' and don't start with '/surf/'|'/loop/'); rider pages don't
   // read this header anyway.
-  const surfAdmin = pathname === '/surf' || pathname.startsWith('/surf/')
-  const loopAdmin = pathname === '/loop' || pathname.startsWith('/loop/')
+  const surfAdmin = path === '/surf' || path.startsWith('/surf/')
+  const loopAdmin = path === '/loop' || path.startsWith('/loop/')
   const requestHeaders = new Headers(req.headers)
-  requestHeaders.set('x-business', surfAdmin ? 'surf' : loopAdmin ? 'marines' : 'brew')
+  requestHeaders.set(
+    'x-business',
+    surfAdmin ? 'surf' : loopAdmin || isLoopSite ? 'marines' : 'brew'
+  )
 
-  if (isRemoved(pathname)) {
-    if (pathname.startsWith('/api/')) {
-      return NextResponse.json({ error: 'gone' }, { status: 410 })
+  // Serve `path`, rewriting only when it differs from the URL the visitor typed.
+  const proceed = () => {
+    if (path === pathname) {
+      return NextResponse.next({ request: { headers: requestHeaders } })
     }
     const url = req.nextUrl.clone()
-    url.pathname = '/admin'
-    return NextResponse.redirect(url, 302)
+    url.pathname = path
+    return NextResponse.rewrite(url, { request: { headers: requestHeaders } })
   }
 
-  const redirectTo = legacyRedirect(pathname)
+  if (isRemoved(path)) {
+    if (path.startsWith('/api/')) {
+      return NextResponse.json({ error: 'gone' }, { status: 410 })
+    }
+    return goTo('/admin', 302)
+  }
+
+  const redirectTo = legacyRedirect(path)
   if (redirectTo) {
-    const url = req.nextUrl.clone()
-    url.pathname = redirectTo
-    return NextResponse.redirect(url, 308)
+    return goTo(redirectTo, 308)
   }
 
-  if (isPublic(pathname)) {
-    return NextResponse.next()
+  if (isPublic(path)) {
+    return proceed()
   }
 
-  let res = NextResponse.next({ request: { headers: requestHeaders } })
+  let res = proceed()
 
   const supabase = createServerClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL,
@@ -190,29 +311,26 @@ export async function middleware(req) {
   // just any authenticated user — signup is public, so a rider could create an
   // account. A logged-in non-staff user is sent to the matching rider home
   // (not /login, which would loop them since they ARE logged in).
-  if (isConsolePath(pathname) && !isStaff(user.email)) {
+  if (isConsolePath(path) && !isStaff(user.email)) {
+    const home = surfAdmin ? '/surfcity' : loopAdmin ? '/marines' : '/'
     const url = req.nextUrl.clone()
-    url.pathname = surfAdmin ? '/surfcity' : loopAdmin ? '/marines' : '/'
+    url.pathname = isLoopSite ? loopPublicPath(home) : home
     url.search = ''
     return NextResponse.redirect(url)
   }
 
-  if (isLeadershipOnlyPath(pathname) && !isLeadership(user.email)) {
-    const url = req.nextUrl.clone()
-    url.pathname = '/admin'
-    return NextResponse.redirect(url)
+  // Bounce targets below are the console home, which is /loop on the Loop site
+  // and therefore /admin once translated.
+  if (isLeadershipOnlyPath(path) && !isLeadership(user.email)) {
+    return goTo('/admin')
   }
 
-  if (isSecurityPath(pathname) && !canCheckIn(user.email)) {
-    const url = req.nextUrl.clone()
-    url.pathname = '/admin'
-    return NextResponse.redirect(url)
+  if (isSecurityPath(path) && !canCheckIn(user.email)) {
+    return goTo('/admin')
   }
 
-  if (isDriverPath(pathname) && !isDriver(user.email)) {
-    const url = req.nextUrl.clone()
-    url.pathname = '/admin'
-    return NextResponse.redirect(url)
+  if (isDriverPath(path) && !isDriver(user.email)) {
+    return goTo('/admin')
   }
 
   return res

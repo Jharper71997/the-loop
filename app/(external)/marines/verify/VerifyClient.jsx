@@ -1,6 +1,7 @@
 'use client'
 
 import { useState } from 'react'
+import { prefixLink } from '@/lib/businessConfig'
 
 const GOLD = '#d4a333'
 const GOLD_HI = '#f0c24a'
@@ -75,8 +76,8 @@ export default function VerifyClient() {
             </div>
           </div>
 
-          <a href="/marines/events" style={primaryCta}>Get a ride &rarr;</a>
-          <a href="/marines/track" style={{ color: GOLD, fontSize: 13, textDecoration: 'none' }}>Or see the shuttle live &rarr;</a>
+          <a href={prefixLink('/events', 'marines')} style={primaryCta}>Get a ride &rarr;</a>
+          <a href={prefixLink('/track', 'marines')} style={{ color: GOLD, fontSize: 13, textDecoration: 'none' }}>Or see the shuttle live &rarr;</a>
         </div>
       </main>
     )

@@ -15,11 +15,13 @@ const TABS = [
   { href: '/my-tickets', label: 'Tickets', kind: 'tickets', match: p => p.startsWith('/my-tickets') || p.startsWith('/tickets') },
 ]
 
-// The Loop (Marines) is a verified-rider shuttle, not a bar-loop booking. Its
-// second tab is "Ride" (verify → pay), and passes live under "Pass".
+// The Loop (Marines) is a verified-rider shuttle, not a bar-loop booking, so
+// the second tab reads "Ride" and passes live under "Pass". It points at
+// /events like the others — the old /ride fare page was retired and now just
+// redirects, so linking it here cost every rider an extra hop.
 const MARINES_TABS = [
   { href: '/', label: 'Home', kind: 'home', match: p => p === '/' },
-  { href: '/ride', label: 'Ride', kind: 'book', match: p => p.startsWith('/ride') || p.startsWith('/verify') },
+  { href: '/events', label: 'Ride', kind: 'book', match: p => p.startsWith('/events') || p.startsWith('/book') || p.startsWith('/ride') || p.startsWith('/verify') },
   { href: '/track', label: 'Track', kind: 'track', match: p => p.startsWith('/track') || p.startsWith('/bars') },
   { href: '/my-tickets', label: 'Pass', kind: 'tickets', match: p => p.startsWith('/my-tickets') || p.startsWith('/tickets') },
 ]
@@ -79,7 +81,7 @@ export default function TabBar() {
 
   return (
     <nav
-      aria-label="Brew Loop"
+      aria-label={brandFor(kind).brand}
       style={{
         position: 'fixed',
         bottom: 0,

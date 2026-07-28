@@ -6,6 +6,8 @@
 //   Success     = cheap, easy way around Jacksonville and back to base.
 // This is a SHUTTLE for Marines, NOT a bar crawl — no drinking framing.
 
+import { prefixLink } from '@/lib/businessConfig'
+
 const GOLD = '#d4a333'
 const GOLD_HI = '#f0c24a'
 const INK = '#f5f5f7'
@@ -14,10 +16,15 @@ const LINE = 'rgba(255,255,255,0.08)'
 const SURFACE = '#15151a'
 const BG_GLOW = 'radial-gradient(120% 80% at 50% 0%, rgba(212,163,51,0.20), transparent 60%), #121216'
 
+// Rider links go through prefixLink so they render /marines/... on the combined
+// Brew host and /... on the standalone Loop site.
+const EVENTS = prefixLink('/events', 'marines')
+const TRACK = prefixLink('/track', 'marines')
+
 export const metadata = {
   title: { absolute: 'The Loop — a shuttle for Marines' },
   description: 'The Loop is a shuttle for Marines at Camp Lejeune. Board at the gate, ride the loop around town. $10 a ride or a $20 day pass. Verify once with your DoD ID.',
-  alternates: { canonical: '/marines' },
+  alternates: { canonical: prefixLink('/', 'marines') },
 }
 
 export const dynamic = 'force-dynamic'
@@ -53,8 +60,8 @@ export default function MarinesLanding() {
             around Jacksonville, and hop off where you need to be. Ten bucks a ride, or a $20 day pass.
           </p>
           <div style={{ position: 'relative', display: 'flex', gap: 10, alignItems: 'center', flexWrap: 'wrap', marginTop: 18 }}>
-            <a href="/marines/events" style={primaryCta}>Get a ride</a>
-            <a href="/marines/track" style={ghostCta}>See it live</a>
+            <a href={EVENTS} style={primaryCta}>Get a ride</a>
+            <a href={TRACK} style={ghostCta}>See it live</a>
           </div>
           <div style={{ position: 'relative', color: INK_DIM, fontSize: 12, marginTop: 12 }}>
             Marines only. You verify once with your DoD ID, and the driver checks your card at the door.
@@ -102,7 +109,7 @@ export default function MarinesLanding() {
             live map for this weekend&rsquo;s stops and where the shuttle is right now.
           </p>
           <div style={{ marginTop: 12 }}>
-            <a href="/marines/track" style={ghostCta}>See the live map</a>
+            <a href={TRACK} style={ghostCta}>See the live map</a>
           </div>
         </section>
 
@@ -112,7 +119,7 @@ export default function MarinesLanding() {
           <div style={{ color: INK_DIM, fontSize: 13.5, margin: '6px 0 14px' }}>
             Grab the next loop. Verify once with your DoD ID and you&rsquo;re cleared for every ride.
           </div>
-          <a href="/marines/events" style={primaryCta}>Get a ride</a>
+          <a href={EVENTS} style={primaryCta}>Get a ride</a>
         </section>
 
       </div>

@@ -68,7 +68,7 @@ export default async function EventBookingPage({ params }) {
         .from('contacts').select('military_verified').eq('id', verifiedContactId).maybeSingle()
       cleared = !!vc?.military_verified
     }
-    if (!cleared) redirect('/marines/verify')
+    if (!cleared) redirect(prefixLink('/verify', 'marines'))
   }
 
   // Branding is data-driven from the loaded event, so this page renders correctly

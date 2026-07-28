@@ -1,4 +1,5 @@
 import { redirect } from 'next/navigation'
+import { prefixLink } from '@/lib/businessConfig'
 
 export const dynamic = 'force-dynamic'
 
@@ -8,5 +9,5 @@ export const dynamic = 'force-dynamic'
 // just forwards to it. File kept only because deletion was blocked here; it's
 // safe to `git rm` this whole /marines/ride tree + /api/marines/ride-checkout.
 export default function MarinesRideRedirect() {
-  redirect('/marines/events')
+  redirect(prefixLink('/events', 'marines'))
 }

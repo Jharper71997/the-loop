@@ -1,6 +1,7 @@
 'use client'
 
 import { useEffect, useMemo, useState } from 'react'
+import { prefixLink } from '@/lib/businessConfig'
 
 const ACCENT = '#d4a333'
 const SURFACE = '#15151a'
@@ -252,7 +253,7 @@ export default function BookingForm({ eventId, eventName, ticketTypes, addons = 
         } else if (json.error === 'verification_required') {
           // The Loop (Marines): not cleared, or the verify cookie expired. Send
           // them to verify with their DoD ID, then back to buying.
-          window.location.href = '/marines/verify'
+          window.location.href = prefixLink('/verify', 'marines')
           return
         } else if (json.error) {
           console.error('[checkout] server error:', json.error, json)
