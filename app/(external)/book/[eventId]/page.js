@@ -1,6 +1,7 @@
 import { notFound } from 'next/navigation'
 import { supabaseAdmin } from '@/lib/supabaseAdmin'
 import { getCurrentWaiverVersion } from '@/lib/waiver'
+import { capacityForTicketType } from '@/lib/capacity'
 import BookingForm from './BookingForm'
 
 export const dynamic = 'force-dynamic'
@@ -94,7 +95,8 @@ export default async function EventBookingPage({ params }) {
   const pendingCutoff = new Date(Date.now() - 15 * 60 * 1000).toISOString()
   ticketTypes = await Promise.all(
     ticketTypes.map(async t => {
-      if (t.capacity == null) return { ...t, remaining: null }
+      const cap = capacityForTicketType(t)
+      if (cap == null) return { ...t, remaining: null }
       try {
         const baseSelect = 'id, orders!inner(id, event_id, status, created_at)'
         let paidQuery = supabase
@@ -119,7 +121,7 @@ export default async function EventBookingPage({ params }) {
         }
         const [{ count: paidCount }, { count: pendingCount }] = await Promise.all([paidQuery, pendingQuery])
         const taken = (paidCount || 0) + (pendingCount || 0)
-        return { ...t, remaining: Math.max(0, t.capacity - taken) }
+        return { ...t, remaining: Math.max(0, cap - taken) }
       } catch (err) {
         console.error('[book/eventId] remaining count failed', t.id, err)
         return { ...t, remaining: null }
