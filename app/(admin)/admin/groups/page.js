@@ -103,6 +103,7 @@ export default function Groups() {
         })
           .then(async res => {
             const json = await res.json().catch(() => ({}))
+            if (json.unreachable) return { success: false, unreachable: true }
             if (!res.ok || !json.success) {
               return { success: false, error: json.error || `http_${res.status}`, detail: json.detail }
             }
@@ -112,15 +113,28 @@ export default function Groups() {
       )
     )
     setSending(s => ({ ...s, [key]: false }))
-    const failed = results.filter(r => !r.success).length
-    if (failed === 0) {
+    // Unreachable numbers are counted apart from real failures — a rider whose
+    // number the carrier rejects isn't an outage, and shouldn't read like one
+    // mid-route.
+    const unreachable = results.filter(r => r.unreachable).length
+    const failed = results.filter(r => !r.success && !r.unreachable).length
+    const sent = withPhones.length - failed - unreachable
+
+    if (failed === 0 && unreachable === 0) {
       alert(`Sent to ${withPhones.length}!`)
       setStopMessage(m => ({ ...m, [key]: '' }))
-    } else {
-      const first = results.find(r => !r.success)
-      const reason = first ? (first.detail || first.error) : 'unknown'
-      alert(`Sent ${withPhones.length - failed} of ${withPhones.length}. ${failed} failed (${reason}).`)
+      return
     }
+
+    let msg = `Sent ${sent} of ${withPhones.length}.`
+    if (unreachable) msg += ` ${unreachable} unreachable (bad number) — reach them another way.`
+    if (failed) {
+      const first = results.find(r => !r.success && !r.unreachable)
+      msg += ` ${failed} failed (${first?.detail || first?.error || 'unknown'}).`
+    }
+    alert(msg)
+    // Nothing actually broke, so clear the box rather than make them retype it.
+    if (failed === 0) setStopMessage(m => ({ ...m, [key]: '' }))
   }
 
   const filtered = useMemo(() => {
