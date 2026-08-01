@@ -43,6 +43,7 @@ export default function SmsBroadcast({ recipients = [], stops = null, title = 'T
         })
           .then(async res => {
             const json = await res.json().catch(() => ({}))
+            if (json.unreachable) return { success: false, unreachable: true }
             if (!res.ok || !json.success) {
               return { success: false, error: json.error || `http_${res.status}`, detail: json.detail }
             }
@@ -51,12 +52,16 @@ export default function SmsBroadcast({ recipients = [], stops = null, title = 'T
           .catch(e => ({ success: false, error: 'network', detail: e.message }))
       )
     )
-    const failed = results.filter(r => !r.success).length
+    // Carrier-rejected numbers are their own bucket, not failures — see
+    // lib/sms.js UNREACHABLE_CODES.
+    const unreachable = results.filter(r => r.unreachable).length
+    const failed = results.filter(r => !r.success && !r.unreachable).length
     setSending(false)
-    const firstFailure = results.find(r => !r.success)
+    const firstFailure = results.find(r => !r.success && !r.unreachable)
     setResult({
-      sent: targets.length - failed,
+      sent: targets.length - failed - unreachable,
       failed,
+      unreachable,
       reason: firstFailure ? (firstFailure.detail || firstFailure.error) : null,
     })
     if (failed === 0) setMessage('')
@@ -113,7 +118,9 @@ export default function SmsBroadcast({ recipients = [], stops = null, title = 'T
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 10 }}>
             {result ? (
               <span style={{ color: result.failed === 0 ? '#10b981' : '#facc15', fontSize: 13 }}>
-                Sent {result.sent}{result.failed > 0 ? ` · ${result.failed} failed` : ''}
+                Sent {result.sent}
+                {result.unreachable > 0 ? ` · ${result.unreachable} unreachable` : ''}
+                {result.failed > 0 ? ` · ${result.failed} failed` : ''}
                 {result.failed > 0 && result.reason ? ` · ${result.reason}` : ''}
               </span>
             ) : <span />}
