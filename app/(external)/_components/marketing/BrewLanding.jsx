@@ -1,497 +1,441 @@
-// Jville Brew Loop — public marketing landing, built on the StoryBrand
-// BrandScript, laid out like the Loop Network front page: left-aligned copy, a
-// 2-column hero with a pure-CSS product mockup on the right, left-aligned
-// section intros, multi-column grids. Server-renderable (no hooks).
+// Jville Brew Loop — public landing page.
 //
-//   Hero (character) = a group going out who don't want anyone to be the drunk
-//                      driver stop to stop.  Villain = "I'm fine to drive."
-//   Guide            = the Brew Loop (flat $20, tracked, back to your pickup).
-//   Plan             = book → get to the first bar (Uber/partnered taxi) → hop
-//                      the Loop all night, back to your pickup.
+// Rebuilt 2026-08-05 against two pieces of feedback: "too blocky, the black
+// looks boring" and "still confusing". Both had the same root cause — eight
+// sections that were all `eyebrow + heading + row of identical bordered
+// rectangles` on one flat black fill. Nothing looked more important than
+// anything else, so nothing guided you anywhere.
 //
-// ACCURACY: the Loop is a bar-hop shuttle that returns riders to their ORIGINAL
-// PICKUP — NOT a ride home. Never say "ride home."
+// Now FOUR sections, each with a genuinely different texture and job:
+//
+//   1. HERO       photograph + scrim + grain           → what this is, book it
+//   2. THE NIGHT  asymmetric timeline + shuttle render → how it works
+//   3. THE BARS   photo mosaic of real bar signage     → where it goes (colour)
+//   4. THE GEAR   merch photography + closing CTA      → wear it / book it
+//
+// One CTA wording throughout: "Book a seat". Not "Buy Tickets" here and "Book"
+// there. Depth comes from lib/atmosphere.js, copy from lib/riderInfo.js.
+//
+// ACCURACY: the Loop returns riders to their ORIGINAL PICKUP. Never "ride home."
 
 import Link from 'next/link'
-import { BARS } from '@/lib/bars'
+import { PUBLIC_PARTNER_BARS, PARTNER_BAR_COUNT } from '@/lib/bars'
 import { SPONSORS } from '@/lib/sponsors'
+import { STEPS, FAQ, LANDING_FAQ_COUNT } from '@/lib/riderInfo'
 import {
-  GOLD, GOLD_HI, INK, INK_DIM, INK_MUTE, LINE, LINE_HI, SURFACE, BG, MAX_W,
-  primaryCta, primaryCtaLg, ghostCta, eyebrow, softCard, stepNum, pulseDot, HERO_GLOW, GOLD_WASH,
+  GOLD, GOLD_HI, INK, INK_DIM, INK_MUTE, LINE, LINE_HI, MAX_W,
+  primaryCtaLg, ghostCta, eyebrow, pulseDot,
 } from '@/lib/marketingTheme'
+import {
+  TONES, grainOverlay, lightPool, photoScrim,
+  litCard, litCardInner, fadeRule,
+} from '@/lib/atmosphere'
+import BarTiles from './BarTiles'
+import Faq from './Faq'
 
-const PROBLEM = [
-  { title: 'Someone always has to drive', sub: 'Bar-hopping means a buzzed drive between every stop, or a designated driver who sits the whole night out. Neither is a good night.' },
-  { title: 'Rideshare roulette', sub: 'Surge pricing, no-show drivers, and the group splitting into three cars that never end up at the same bar.' },
-  { title: 'The parking-lot decision', sub: 'Circling for a spot at every bar, then the worst call of the night waiting for you in the lot: “I’m fine to drive.”' },
+const LANDING_FAQ = FAQ.slice(0, LANDING_FAQ_COUNT)
+
+// Bar tiles are uniform on purpose. Two attempts at an uneven bento left dead
+// black space under the short tiles (row heights get driven by the tallest
+// cell, and a contained logo doesn't fill a tall box). The variety comes from
+// the ARTWORK — seven signs in seven different colours — not from the frames.
+// A consistent frame around inconsistent art reads as a collection; the
+// reverse reads as a bug. See ./BarTiles.jsx.
+
+const MERCH_SHOTS = [
+  { src: '/brand/merch/hoodie-4.png', label: 'Hoodie', price: '$55' },
+  { src: '/brand/merch/tshirt-5.png', label: 'Tee', price: '$35' },
+  { src: '/brand/merch/hoodie-1.png', label: 'Hoodie', price: '$55' },
+  { src: '/brand/merch/patches.png', label: 'Patch', price: '$10' },
 ]
-
-const WHY = [
-  { icon: 'price', title: 'One flat price', sub: '$20 covers your whole night on the Loop. No surge, no per-ride math, no surprises.' },
-  { icon: 'route', title: 'The best bars, handled', sub: 'A tracked, scheduled route through Jacksonville’s favorite spots — about an hour and 15 at each.' },
-  { icon: 'nodrive', title: 'Nobody drives drunk', sub: 'You never touch your keys between bars. That’s the entire point of the Loop.' },
-  { icon: 'track', title: 'Track it live', sub: 'See exactly where the shuttle is all night. Never wonder when it’s coming back around.' },
-]
-
-const STEPS = [
-  { n: '01', title: 'Book your seat', sub: '$20 covers your whole night. Sign the waiver inline, pay, done — takes a minute.' },
-  { n: '02', title: 'Get to the first bar', sub: 'Leave the car at home. Grab an Uber or one of our partnered taxis to your pickup spot. We text you the exact time and place.' },
-  { n: '03', title: 'Hop the Loop all night', sub: 'Ride bar to bar with your friends, track the shuttle live, and end the night right back where you started.' },
-]
-
-const FAQ = [
-  { q: 'How much is a ticket?', a: '$20 per seat. One ticket covers your whole night on the Loop.' },
-  { q: 'How long are we at each bar?', a: 'About an hour and 15 minutes per stop. It’s a tracked, scheduled route — not hop-on / hop-off.' },
-  { q: 'How do I get to and from the Loop?', a: 'Leave your car at home. Take an Uber or one of our partnered taxi services to your pickup spot, ride the Loop all night, and it brings you back to that same spot at the end. Grab a ride home from there.' },
-  { q: 'How will I know when the shuttle is leaving?', a: 'You’ll get a text about 10 minutes before we roll, so you can close your tab and finish your drink.' },
-  { q: 'What time does it run?', a: 'First pickup is around 7:30 PM and we wrap up around 1:30 AM.' },
-  { q: 'Do I have to be 21?', a: 'Yes. The Loop is strictly 21+.' },
-  { q: 'Which bars are on the route?', a: 'Eight partner bars around Jacksonville rotate weekend to weekend, and Friday’s route can differ from Saturday’s. Check the event you’re booking for that night’s exact stops.' },
-]
-
-const PARTNER_BARS = BARS.filter(b => b.address && b.slug !== 'partner-8')
 
 export default function BrewLanding({ loops = [] }) {
   const next = loops[0] || null
   return (
-    <main className="site-main">
+    <main className="site-main" style={{ background: TONES.base }}>
       <Hero next={next} />
-      <Problem />
-      <Why />
-      <Plan />
-      <PartnerBars />
-      <SuccessBand />
-      <PriceFaq />
-      <SponsorStrip />
-      <HeroStyles />
+      <TheNight />
+      <TheBars />
+      <TheGear />
+      <Closer />
+      <LandingStyles />
     </main>
   )
 }
 
-/* ---------------------------------- Hero --------------------------------- */
+/* =============================== 1. HERO ================================= */
+/* A photograph, not a black box. Copy sits in the dark side of the scrim.   */
 
 function Hero({ next }) {
   return (
-    <section style={{ position: 'relative', padding: 'clamp(48px, 7vw, 104px) 24px clamp(44px, 6vw, 84px)' }}>
-      <div aria-hidden style={{ position: 'absolute', inset: 0, background: HERO_GLOW, pointerEvents: 'none' }} />
-      <div className="bl-hero" style={{ position: 'relative', maxWidth: MAX_W, margin: '0 auto', display: 'grid', gap: 'clamp(32px, 5vw, 72px)', alignItems: 'center' }}>
-        {/* Copy — left */}
-        <div className="bl-hero-copy">
+    <section style={{ position: 'relative', overflow: 'hidden', background: TONES.void }}>
+      {/* Real footage of the shuttle. The poster paints instantly (and is the
+          whole story on reduced-motion / slow connections), the video fades in
+          over it once it can play. Muted + playsInline are REQUIRED for autoplay
+          to be allowed on iOS and Chrome. */}
+      <div
+        aria-hidden
+        className="bl-hero-media"
+        style={{ backgroundImage: 'url(/brand/photos/hero-poster.jpg)' }}
+      >
+        <video
+          className="bl-hero-video"
+          autoPlay
+          muted
+          loop
+          playsInline
+          preload="metadata"
+          poster="/brand/photos/hero-poster.jpg"
+        >
+          <source src="/brand/video/hero-loop-720.mp4" type="video/mp4" media="(max-width: 900px)" />
+          <source src="/brand/video/hero-loop.mp4" type="video/mp4" />
+        </video>
+      </div>
+      <div aria-hidden style={{ position: 'absolute', inset: 0, background: photoScrim }} />
+      <div aria-hidden style={grainOverlay} />
+
+      <div style={{ position: 'relative', maxWidth: MAX_W, margin: '0 auto', padding: 'clamp(72px, 12vw, 148px) 24px clamp(56px, 8vw, 104px)' }}>
+        <div style={{ maxWidth: 720 }}>
           <span style={heroPill}>
             <span style={pulseDot} /> Jacksonville&rsquo;s weekend bar-hop shuttle
           </span>
-          <h1 style={{ color: INK, fontWeight: 800, letterSpacing: '-0.02em', lineHeight: 1.02, fontSize: 'clamp(40px, 5vw, 76px)', margin: '20px 0 0' }}>
-            Hit every bar.<br /><span style={{ color: GOLD_HI }}>Never touch your keys.</span>
-          </h1>
-          <p style={{ color: INK_DIM, fontSize: 'clamp(16px, 1.5vw, 20px)', lineHeight: 1.55, margin: '20px 0 0', maxWidth: 540 }}>
-            The Brew Loop is a shuttle that loops the best bars in Jacksonville all night, so nobody in your
-            group has to be the one who drives. $20 flat, tracked live, and back to your pickup at the end.
-          </p>
-          <div className="bl-hero-cta" style={{ display: 'flex', gap: 12, flexWrap: 'wrap', marginTop: 28 }}>
-            <Link href="/events" style={primaryCtaLg}>Book a seat</Link>
-            <Link href="/track" style={{ ...ghostCta, padding: '15px 24px', fontSize: 15 }}>Find my bus</Link>
-          </div>
-          <div className="bl-hero-chips" style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginTop: 22 }}>
-            {['$20 flat', '8 partner bars', 'Tracked live', '21+'].map(c => (
-              <span key={c} style={trustChip}><Check /> {c}</span>
-            ))}
-          </div>
-        </div>
 
-        {/* Visual — right */}
-        <div className="bl-hero-visual">
-          <HeroMockup next={next} />
+          <h1 className="bl-h1" style={{
+            color: INK, fontWeight: 800, letterSpacing: '-0.03em', lineHeight: 0.98,
+            fontSize: 'clamp(44px, 8vw, 92px)', margin: '22px 0 0',
+            textShadow: '0 4px 40px rgba(0,0,0,0.6)',
+          }}>
+            Hit every bar.<br />
+            <span style={{ color: GOLD_HI }}>Never touch your keys.</span>
+          </h1>
+
+          <p style={{
+            color: '#d9d9de', fontSize: 'clamp(16px, 1.7vw, 21px)', lineHeight: 1.5,
+            margin: '22px 0 0', maxWidth: 540, textShadow: '0 2px 20px rgba(0,0,0,0.7)',
+          }}>
+            One shuttle, looping the best bars in town all night, so nobody in your group
+            has to be the one who drives.
+          </p>
+
+          <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap', marginTop: 32, alignItems: 'center' }}>
+            <Link href="/events" style={{ ...primaryCtaLg, padding: '17px 32px', fontSize: 17 }}>
+              Book a seat &middot; $20
+            </Link>
+            {next && <NextLoopChip next={next} />}
+          </div>
+
+          <div style={{ display: 'flex', gap: 20, flexWrap: 'wrap', marginTop: 30, color: INK_MUTE, fontSize: 13.5, fontWeight: 600 }}>
+            <span>{PARTNER_BAR_COUNT} partner bars</span>
+            <span aria-hidden style={{ opacity: 0.4 }}>/</span>
+            <span>Tracked live all night</span>
+            <span aria-hidden style={{ opacity: 0.4 }}>/</span>
+            <span>Strictly 21+</span>
+          </div>
         </div>
       </div>
     </section>
   )
 }
 
-// Pure-CSS "tonight's loop" boarding-pass / live-route card — the Brew analog of
-// Loop Network's TvMockup. Uses the next loop's real stops when available.
-function HeroMockup({ next }) {
-  const stopNames = (next?.stops?.length ? next.stops.map(s => s.name) : PARTNER_BARS.map(b => b.name)).slice(0, 4)
-  const liveIdx = Math.min(1, stopNames.length - 1)
-  const dateLabel = next
-    ? `${formatDate(next.eventDate)}${next.pickupTime ? ` · ${formatTime(next.pickupTime)}` : ''}`
-    : 'Every Fri & Sat night'
-
+function NextLoopChip({ next }) {
   return (
-    <div style={{ maxWidth: 440, margin: '0 auto', width: '100%' }}>
-      <div style={{ ...softCard, padding: 20, position: 'relative', overflow: 'hidden', boxShadow: '0 40px 80px rgba(0,0,0,0.5)', background: `radial-gradient(120% 70% at 50% 0%, rgba(212,163,51,0.12), transparent 60%), ${SURFACE}` }}>
-        <div aria-hidden style={{ position: 'absolute', right: -30, top: -30, width: 150, height: 150, borderRadius: '50%', background: 'radial-gradient(50% 50% at 50% 50%, rgba(212,163,51,0.16), transparent 70%)' }} />
-        {/* header */}
-        <div style={{ position: 'relative', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-          <span style={{ ...eyebrow, display: 'inline-flex', alignItems: 'center', gap: 8, fontSize: 10.5 }}>
-            <span style={pulseDot} /> Live on the Loop
-          </span>
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src="/brand/badge-gold.png" alt="" style={{ width: 30, height: 30, objectFit: 'contain', display: 'block' }} />
-        </div>
-        <div style={{ position: 'relative', color: INK, fontSize: 19, fontWeight: 800, margin: '14px 0 2px', letterSpacing: '-0.01em' }}>{dateLabel}</div>
-        <div style={{ color: INK_MUTE, fontSize: 12, marginBottom: 16 }}>Tonight&rsquo;s route</div>
-
-        {/* route */}
-        <div style={{ position: 'relative' }}>
-          {stopNames.map((s, i) => {
-            const live = i === liveIdx
-            const last = i === stopNames.length - 1
-            return (
-              <div key={i} style={{ display: 'flex', gap: 12, alignItems: 'stretch' }}>
-                <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
-                  <span aria-hidden style={live ? routeDotLive : routeDot} />
-                  {!last && <span aria-hidden style={{ width: 2, flex: 1, minHeight: 22, background: LINE_HI }} />}
-                </div>
-                <div style={{ paddingBottom: last ? 0 : 16 }}>
-                  <div style={{ color: live ? INK : INK_DIM, fontSize: 14, fontWeight: live ? 800 : 600 }}>{s}</div>
-                  {live && <span style={shuttleChip}>Shuttle here</span>}
-                </div>
-              </div>
-            )
-          })}
-        </div>
-
-        {/* footer */}
-        <div style={{ position: 'relative', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, marginTop: 18, paddingTop: 16, borderTop: `1px solid ${LINE}` }}>
-          <div>
-            <div style={{ color: GOLD_HI, fontSize: 22, fontWeight: 800, lineHeight: 1 }}>$20</div>
-            <div style={{ color: INK_MUTE, fontSize: 11.5, marginTop: 3 }}>all night · one seat</div>
-          </div>
-          <FauxQr />
-        </div>
-      </div>
-    </div>
+    <Link href="/events" style={{
+      display: 'inline-flex', alignItems: 'center', gap: 10, textDecoration: 'none',
+      padding: '13px 18px', borderRadius: 999,
+      background: 'rgba(10,10,11,0.55)', border: `1px solid ${LINE_HI}`,
+      backdropFilter: 'blur(8px)', WebkitBackdropFilter: 'blur(8px)',
+    }}>
+      <span style={pulseDot} />
+      <span style={{ color: INK, fontSize: 14, fontWeight: 700 }}>
+        Next loop {formatDate(next.eventDate)}
+      </span>
+      {next.pickupTime && (
+        <span style={{ color: INK_MUTE, fontSize: 13 }}>{formatTime(next.pickupTime)}</span>
+      )}
+    </Link>
   )
 }
 
-function FauxQr() {
-  // Fixed pattern so it never changes between renders.
-  const cells = [1,0,1,1,0,1, 0,1,0,1,1,0, 1,1,1,0,1,1, 0,0,1,1,0,1, 1,0,1,0,1,0, 0,1,1,0,1,1]
+/* ============================= 2. THE NIGHT ============================== */
+/* Asymmetric: a vertical timeline on the left, the shuttle floating right.  */
+/* Deliberately NOT three matching cards in a row.                           */
+
+function TheNight() {
   return (
-    <div aria-hidden style={{ width: 54, height: 54, borderRadius: 8, background: 'rgba(255,255,255,0.92)', padding: 5, display: 'grid', gridTemplateColumns: 'repeat(6, 1fr)', gap: 1.5 }}>
-      {cells.map((c, i) => <span key={i} style={{ background: c ? BG : 'transparent', borderRadius: 1 }} />)}
-    </div>
-  )
-}
+    <section style={{ position: 'relative', background: TONES.raised, overflow: 'hidden' }}>
+      <div aria-hidden style={{ position: 'absolute', inset: 0, background: lightPool('top-right', 0.15) }} />
+      <div aria-hidden style={grainOverlay} />
 
-/* -------------------------------- Problem -------------------------------- */
-
-function Problem() {
-  return (
-    <Section band>
-      <Header
-        eyebrow="Bad nights start with &ldquo;I&rsquo;m fine to drive.&rdquo;"
-        title="A great night out shouldn&rsquo;t come with a bad decision."
-        sub="Bar-hopping in Jacksonville usually means someone ends up behind the wheel they shouldn&rsquo;t. It doesn&rsquo;t have to."
-      />
-      <Grid min={260} style={{ marginTop: 34 }}>
-        {PROBLEM.map(p => (
-          <div key={p.title} style={{ ...softCard, padding: '22px 20px' }}>
-            <div style={{ color: INK, fontSize: 17, fontWeight: 800 }}>{p.title}</div>
-            <p style={{ color: INK_DIM, fontSize: 14.5, lineHeight: 1.55, margin: '8px 0 0' }}>{p.sub}</p>
-          </div>
-        ))}
-      </Grid>
-    </Section>
-  )
-}
-
-/* ---------------------------------- Why ---------------------------------- */
-
-function Why() {
-  return (
-    <Section>
-      <Header
-        eyebrow="Why the Loop"
-        title="One flat fare. Every bar. Nobody driving."
-        sub="We built the Brew Loop so a full night out doesn&rsquo;t hinge on who&rsquo;s sober enough to drive between stops."
-      />
-      <Grid min={230} style={{ marginTop: 34 }}>
-        {WHY.map(w => (
-          <div key={w.title} style={{ padding: '4px 2px' }}>
-            <div style={iconDot} aria-hidden><WhyIcon kind={w.icon} /></div>
-            <div style={{ color: INK, fontSize: 16, fontWeight: 800, marginTop: 14 }}>{w.title}</div>
-            <p style={{ color: INK_DIM, fontSize: 14, lineHeight: 1.55, margin: '6px 0 0' }}>{w.sub}</p>
-          </div>
-        ))}
-      </Grid>
-    </Section>
-  )
-}
-
-/* --------------------------------- Plan ---------------------------------- */
-
-function Plan() {
-  return (
-    <Section band id="how">
-      <Header eyebrow="How a night runs" title="Three steps to a night nobody has to sober-drive." />
-      <Grid min={260} style={{ marginTop: 34 }}>
-        {STEPS.map(s => (
-          <div key={s.n} style={{ ...softCard, padding: '24px 22px' }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-              <span style={stepNum}>{s.n}</span>
-              <span style={{ color: GOLD, fontSize: 12, letterSpacing: '0.16em', textTransform: 'uppercase', fontWeight: 700 }}>Step</span>
-            </div>
-            <div style={{ color: INK, fontSize: 18, fontWeight: 800, marginTop: 16 }}>{s.title}</div>
-            <p style={{ color: INK_DIM, fontSize: 14.5, lineHeight: 1.55, margin: '8px 0 0' }}>{s.sub}</p>
-          </div>
-        ))}
-      </Grid>
-      <div style={{ marginTop: 30 }}>
-        <Link href="/events" style={primaryCta}>Book a seat</Link>
-      </div>
-    </Section>
-  )
-}
-
-/* ------------------------------ Partner bars ----------------------------- */
-
-function PartnerBars() {
-  return (
-    <Section>
-      <Header
-        eyebrow="Partner bars"
-        title="The best spots in Jacksonville, on one route."
-        sub="Eight partner bars rotate through the Loop weekend to weekend. Here&rsquo;s who rides with us."
-      />
-      <Grid min={220} style={{ marginTop: 30 }}>
-        {PARTNER_BARS.map(b => (
-          <Link key={b.slug} href={`/bars/${b.slug}`} style={{ ...softCard, padding: '18px 18px', textDecoration: 'none', display: 'block' }}>
-            <div style={{ color: INK, fontSize: 16, fontWeight: 800 }}>{b.name}</div>
-            {b.neighborhood && (
-              <div style={{ color: GOLD, fontSize: 11.5, letterSpacing: '0.06em', textTransform: 'uppercase', fontWeight: 700, marginTop: 4 }}>{b.neighborhood}</div>
-            )}
-            {b.blurb && <p style={{ color: INK_DIM, fontSize: 13.5, lineHeight: 1.5, margin: '10px 0 0' }}>{b.blurb}</p>}
-          </Link>
-        ))}
-      </Grid>
-      <div style={{ marginTop: 30 }}>
-        <Link href="/bars" style={ghostCta}>See all partner bars</Link>
-      </div>
-    </Section>
-  )
-}
-
-/* ------------------------------ Success band ----------------------------- */
-
-function SuccessBand() {
-  return (
-    <Section>
-      <div style={{
-        ...softCard, padding: 'clamp(30px, 5vw, 48px)',
-        background: `linear-gradient(120deg, ${GOLD_WASH}, transparent 70%)`, border: `1px solid rgba(212,163,51,0.28)`,
-        display: 'flex', flexWrap: 'wrap', gap: 24, alignItems: 'center', justifyContent: 'space-between',
-      }}>
-        <div style={{ maxWidth: 560 }}>
-          <div style={{ ...eyebrow, marginBottom: 12 }}>Out together, nobody behind the wheel</div>
-          <h2 style={{ color: INK, fontSize: 'clamp(24px, 4vw, 36px)', fontWeight: 800, letterSpacing: '-0.01em', margin: 0, lineHeight: 1.12 }}>
-            The whole night handled.
+      <div className="bl-night" style={{ position: 'relative', maxWidth: MAX_W, margin: '0 auto', padding: 'clamp(64px, 9vw, 112px) 24px' }}>
+        <div>
+          <div style={eyebrow}>How a night runs</div>
+          <h2 className="bl-h2" style={sectionH2}>
+            Three steps, then<br />the night is handled.
           </h2>
-          <p style={{ color: INK_DIM, fontSize: 'clamp(15px, 2vw, 17px)', lineHeight: 1.55, margin: '12px 0 0' }}>
-            Everyone hits every bar, nobody&rsquo;s the designated driver, and the night ends back at your pickup.
-            Grab an Uber or a partnered taxi home from there.
-          </p>
-        </div>
-        <Link href="/events" style={{ ...primaryCtaLg, flex: '0 0 auto' }}>Book a seat</Link>
-      </div>
-    </Section>
-  )
-}
 
-/* ------------------------------- Price + FAQ ----------------------------- */
-
-function PriceFaq() {
-  return (
-    <Section band>
-      <div style={{ display: 'grid', gap: 'clamp(24px, 4vw, 48px)', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', alignItems: 'start' }}>
-        {/* Price */}
-        <div>
-          <div style={{ ...eyebrow, marginBottom: 12 }}>Simple pricing</div>
-          <div style={{ ...softCard, padding: '30px 26px', border: `1px solid rgba(212,163,51,0.3)`, background: `linear-gradient(180deg, ${GOLD_WASH}, ${SURFACE})` }}>
-            <div style={{ display: 'flex', alignItems: 'baseline', gap: 8 }}>
-              <span style={{ color: GOLD_HI, fontSize: 'clamp(44px, 8vw, 60px)', fontWeight: 800, letterSpacing: '-0.02em' }}>$20</span>
-              <span style={{ color: INK_DIM, fontSize: 16, fontWeight: 600 }}>/ seat</span>
-            </div>
-            <p style={{ color: INK, fontSize: 15.5, lineHeight: 1.55, margin: '10px 0 18px' }}>
-              One flat price covers your whole night on the Loop. No surge, no per-ride math.
-            </p>
-            <ul style={{ listStyle: 'none', margin: '0 0 22px', padding: 0, display: 'grid', gap: 10 }}>
-              {['Ride all night, bar to bar', 'Live shuttle tracking', 'Back to your original pickup', 'Groups of 5+ can request a custom pickup'].map(t => (
-                <li key={t} style={{ display: 'flex', gap: 10, alignItems: 'flex-start', color: INK_DIM, fontSize: 14.5 }}>
-                  <span style={{ color: GOLD, flex: '0 0 auto', marginTop: 1 }}><Check /></span> {t}
+          {/* Timeline — one continuous gold line threading the steps */}
+          <ol style={{ listStyle: 'none', margin: '40px 0 0', padding: 0, position: 'relative' }}>
+            {STEPS.map((s, i) => {
+              const last = i === STEPS.length - 1
+              return (
+                <li key={s.n} style={{ display: 'flex', gap: 20, alignItems: 'stretch' }}>
+                  <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', flex: '0 0 auto' }}>
+                    <span style={timelineNum}>{s.n}</span>
+                    {!last && <span aria-hidden style={{ width: 2, flex: 1, minHeight: 30, background: `linear-gradient(180deg, ${GOLD}, rgba(212,163,51,0.12))` }} />}
+                  </div>
+                  <div style={{ paddingBottom: last ? 0 : 34, maxWidth: 460 }}>
+                    <h3 style={{ color: INK, fontSize: 'clamp(19px, 2.4vw, 23px)', fontWeight: 800, margin: 0, letterSpacing: '-0.01em' }}>{s.title}</h3>
+                    <p style={{ color: INK_DIM, fontSize: 15.5, lineHeight: 1.6, margin: '9px 0 0' }}>{s.sub}</p>
+                  </div>
                 </li>
-              ))}
-            </ul>
-            <Link href="/events" style={{ ...primaryCta, width: '100%' }}>Book a seat</Link>
+              )
+            })}
+          </ol>
+
+          <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap', marginTop: 40 }}>
+            <Link href="/events" style={{ ...primaryCtaLg, padding: '15px 26px' }}>Book a seat</Link>
+            <Link href="/about" style={{ ...ghostCta, padding: '15px 24px' }}>Read the full rundown</Link>
           </div>
         </div>
 
-        {/* FAQ */}
-        <div>
-          <div style={{ ...eyebrow, marginBottom: 12 }}>Questions riders ask</div>
-          <div style={{ display: 'grid', gap: 10 }}>
-            {FAQ.map((it, i) => (
-              <details key={i} style={{ ...softCard, padding: '16px 18px' }}>
-                <summary style={{ cursor: 'pointer', listStyle: 'none', color: INK, fontWeight: 700, fontSize: 15.5, display: 'flex', justifyContent: 'space-between', gap: 14, alignItems: 'center' }}>
-                  <span>{it.q}</span>
-                  <span aria-hidden style={{ color: GOLD, fontSize: 20, lineHeight: 1, flex: '0 0 auto' }}>+</span>
-                </summary>
-                <p style={{ color: INK_DIM, fontSize: 14.5, lineHeight: 1.6, margin: '12px 0 0' }}>{it.a}</p>
-              </details>
-            ))}
+        {/* Shuttle + price, floating */}
+        <div className="bl-night-aside">
+          <div style={{ position: 'relative' }}>
+            <div aria-hidden style={{
+              position: 'absolute', inset: '-8% -6%', borderRadius: '50%',
+              background: 'radial-gradient(50% 50% at 50% 50%, rgba(212,163,51,0.22), transparent 70%)',
+              filter: 'blur(8px)',
+            }} />
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img
+              src="/brand/photos/shuttle.jpg"
+              alt="The Jville Brew Loop shuttle"
+              style={{ position: 'relative', width: '100%', display: 'block', mixBlendMode: 'screen' }}
+            />
+          </div>
+
+          <div style={{ ...litCard({ radius: 20 }), marginTop: 8 }}>
+            <div style={litCardInner({ radius: 19, pad: 26 })}>
+              <div style={{ display: 'flex', alignItems: 'baseline', gap: 9 }}>
+                <span style={{ color: GOLD_HI, fontSize: 'clamp(40px, 6vw, 54px)', fontWeight: 800, letterSpacing: '-0.03em', lineHeight: 1 }}>$20</span>
+                <span style={{ color: INK_DIM, fontSize: 16, fontWeight: 600 }}>a seat</span>
+              </div>
+              <p style={{ color: INK_DIM, fontSize: 14.5, lineHeight: 1.55, margin: '12px 0 0' }}>
+                Covers your whole night. No surge, no per-ride math, and it brings you back
+                to the same spot you started.
+              </p>
+            </div>
           </div>
         </div>
       </div>
-    </Section>
+    </section>
   )
 }
 
-/* ------------------------------ Sponsor strip ---------------------------- */
+/* ============================== 3. THE BARS ============================== */
+/* The colour moment. Real signage, uneven tiles, no text cards.             */
 
-function SponsorStrip() {
+function TheBars() {
   return (
-    <Section band>
-      <div style={{ maxWidth: 620 }}>
-        <div style={eyebrow}>Partners &amp; sponsors</div>
-        <h2 style={{ color: INK, fontSize: 'clamp(22px, 3.6vw, 32px)', fontWeight: 800, letterSpacing: '-0.01em', margin: '12px 0 0' }}>
-          Backed by Jacksonville businesses.
-        </h2>
-        <p style={{ color: INK_DIM, fontSize: 15.5, lineHeight: 1.55, margin: '12px 0 0' }}>
-          Local shops, spots, and services ride with the Loop every weekend.
+    <section style={{ position: 'relative', background: TONES.void, overflow: 'hidden' }}>
+      <hr style={fadeRule} />
+      <div aria-hidden style={{ position: 'absolute', inset: 0, background: lightPool('top-left', 0.1) }} />
+
+      <div style={{ position: 'relative', maxWidth: MAX_W, margin: '0 auto', padding: 'clamp(64px, 9vw, 112px) 24px' }}>
+        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 20, alignItems: 'flex-end', justifyContent: 'space-between' }}>
+          <div style={{ maxWidth: 560 }}>
+            <div style={eyebrow}>Where it goes</div>
+            <h2 className="bl-h2" style={sectionH2}>The best spots in town, on one route.</h2>
+          </div>
+          <Link href="/bars" style={{ ...ghostCta, padding: '13px 22px' }}>All {PARTNER_BAR_COUNT} bars</Link>
+        </div>
+
+        <BarTiles bars={PUBLIC_PARTNER_BARS} />
+
+        <p style={{ color: INK_MUTE, fontSize: 14, lineHeight: 1.6, margin: '22px 0 0', maxWidth: 620 }}>
+          The route rotates weekend to weekend, and Friday can differ from Saturday. The night
+          you book always lists its exact stops.
         </p>
       </div>
-
-      {/* Logo strip — small logo coins on the dark theme, name beside each */}
-      <div style={{ display: 'grid', gap: 10, gridTemplateColumns: 'repeat(auto-fill, minmax(210px, 1fr))', marginTop: 26 }}>
-        {SPONSORS.map(s => (
-          <a key={s.name} href={s.url} target="_blank" rel="noopener noreferrer" title={s.name}
-            style={{ ...softCard, display: 'flex', alignItems: 'center', gap: 11, padding: '10px 12px', textDecoration: 'none' }}>
-            <span style={{ flex: '0 0 auto', width: 40, height: 40, borderRadius: 9, background: '#f4f2ec', display: 'grid', placeItems: 'center', padding: 5, overflow: 'hidden', boxShadow: 'inset 0 0 0 1px rgba(0,0,0,0.06)' }}>
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img src={s.logo} alt={s.name} loading="lazy" style={{ maxWidth: '100%', maxHeight: '100%', objectFit: 'contain' }} />
-            </span>
-            <span style={{ color: INK, fontSize: 13, fontWeight: 700, lineHeight: 1.25, letterSpacing: '-0.01em', overflow: 'hidden' }}>{s.name}</span>
-          </a>
-        ))}
-      </div>
-
-      {/* CTA */}
-      <div style={{ ...softCard, marginTop: 22, padding: 'clamp(24px, 4vw, 36px)', display: 'flex', flexWrap: 'wrap', gap: 18, alignItems: 'center', justifyContent: 'space-between', border: `1px solid rgba(212,163,51,0.28)`, background: `linear-gradient(120deg, ${GOLD_WASH}, transparent 70%)` }}>
-        <div style={{ maxWidth: 560 }}>
-          <h3 style={{ color: INK, fontSize: 'clamp(19px, 3vw, 24px)', fontWeight: 800, margin: 0 }}>
-            Want your brand in front of a full shuttle every weekend?
-          </h3>
-          <p style={{ color: INK_DIM, fontSize: 14.5, lineHeight: 1.5, margin: '8px 0 0' }}>
-            Sponsor a weekend, host a pickup, or become a featured partner.
-          </p>
-        </div>
-        <Link href="/sponsors" style={{ ...primaryCta, flex: '0 0 auto' }}>Become a partner</Link>
-      </div>
-    </Section>
-  )
-}
-
-/* ------------------------------- Primitives ------------------------------ */
-
-function Section({ children, band, id }) {
-  return (
-    <section
-      id={id}
-      style={{
-        padding: 'clamp(52px, 8vw, 96px) 24px',
-        borderTop: band ? `1px solid ${LINE}` : undefined,
-        borderBottom: band ? `1px solid ${LINE}` : undefined,
-        background: band ? 'rgba(255,255,255,0.015)' : undefined,
-        scrollMarginTop: 72,
-      }}
-    >
-      <div style={{ maxWidth: MAX_W, margin: '0 auto' }}>{children}</div>
     </section>
   )
 }
 
-// Left-aligned section header (Loop Network style).
-function Header({ eyebrow: eb, title, sub }) {
+/* ============================== 4. THE GEAR ============================== */
+/* Merch as real photography, plus the questions people still have.          */
+
+function TheGear() {
   return (
-    <div style={{ maxWidth: 640 }}>
-      <div style={eyebrow} dangerouslySetInnerHTML={{ __html: eb }} />
-      <h2
-        style={{ color: INK, fontSize: 'clamp(24px, 4.2vw, 38px)', fontWeight: 800, letterSpacing: '-0.015em', lineHeight: 1.12, margin: '12px 0 0' }}
-        dangerouslySetInnerHTML={{ __html: title }}
-      />
-      {sub && (
-        <p style={{ color: INK_DIM, fontSize: 'clamp(15px, 2vw, 17px)', lineHeight: 1.55, margin: '14px 0 0' }} dangerouslySetInnerHTML={{ __html: sub }} />
-      )}
-    </div>
+    <section style={{ position: 'relative', background: TONES.panel, overflow: 'hidden' }}>
+      <hr style={fadeRule} />
+      <div aria-hidden style={{ position: 'absolute', inset: 0, background: lightPool('right', 0.12) }} />
+      <div aria-hidden style={grainOverlay} />
+
+      <div style={{ position: 'relative', maxWidth: MAX_W, margin: '0 auto', padding: 'clamp(64px, 9vw, 112px) 24px' }}>
+        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 20, alignItems: 'flex-end', justifyContent: 'space-between' }}>
+          <div style={{ maxWidth: 560 }}>
+            <div style={eyebrow}>Merch</div>
+            <h2 className="bl-h2" style={sectionH2}>Wear the gold badge.</h2>
+            <p style={{ color: INK_DIM, fontSize: 'clamp(15px, 2vw, 17px)', lineHeight: 1.55, margin: '14px 0 0' }}>
+              Black-and-gold Brew Loop gear. Ships to your door, or grab it on the shuttle.
+            </p>
+          </div>
+          <Link href="/merch" style={{ ...ghostCta, padding: '13px 22px' }}>Shop merch</Link>
+        </div>
+
+        <div className="bl-merch">
+          {MERCH_SHOTS.map((m, i) => (
+            <Link key={i} href="/merch" className="bl-merch-tile">
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img src={m.src} alt={m.label} loading="lazy" />
+              <span className="bl-merch-meta">
+                <span style={{ color: INK, fontSize: 14.5, fontWeight: 700 }}>{m.label}</span>
+                <span style={{ color: GOLD_HI, fontSize: 14.5, fontWeight: 800 }}>{m.price}</span>
+              </span>
+            </Link>
+          ))}
+        </div>
+
+        {/* Remaining questions — compact, two columns, not a stack of fat cards */}
+        <div style={{ marginTop: 'clamp(48px, 7vw, 80px)' }}>
+          <div style={eyebrow}>Before you book</div>
+          <Faq items={LANDING_FAQ} />
+          <p style={{ margin: '18px 0 0' }}>
+            <Link href="/about#faq" style={{ color: GOLD_HI, fontWeight: 700, fontSize: 14.5, textDecoration: 'none' }}>
+              All {FAQ.length}{' '}questions &rarr;
+            </Link>
+          </p>
+        </div>
+      </div>
+    </section>
   )
 }
 
-function Grid({ children, min = 240, style }) {
+/* =============================== CLOSER ================================== */
+
+function Closer() {
   return (
-    <div style={{ display: 'grid', gap: 14, gridTemplateColumns: `repeat(auto-fit, minmax(${min}px, 1fr))`, ...style }}>
-      {children}
-    </div>
+    <section style={{ position: 'relative', background: TONES.void, overflow: 'hidden' }}>
+      <div aria-hidden style={{ position: 'absolute', inset: 0, background: lightPool('bottom', 0.2) }} />
+      <div aria-hidden style={grainOverlay} />
+
+      <div style={{ position: 'relative', maxWidth: MAX_W, margin: '0 auto', padding: 'clamp(64px, 9vw, 108px) 24px', textAlign: 'center' }}>
+        <h2 className="bl-h2" style={{ ...sectionH2, margin: '0 auto' }}>
+          Nobody has to be<br /><span style={{ color: GOLD_HI }}>the designated driver.</span>
+        </h2>
+        <p style={{ color: INK_DIM, fontSize: 'clamp(15px, 2vw, 18px)', lineHeight: 1.55, margin: '18px auto 0', maxWidth: 520 }}>
+          Grab a seat for this weekend. $20, the whole night, back to where you started.
+        </p>
+        <div style={{ marginTop: 30 }}>
+          <Link href="/events" style={{ ...primaryCtaLg, padding: '17px 34px', fontSize: 17 }}>Book a seat</Link>
+        </div>
+
+        {/* Sponsor strip — quiet, at the very bottom where a B2B ask belongs */}
+        <div style={{ marginTop: 'clamp(56px, 8vw, 92px)' }}>
+          <div style={{ color: INK_MUTE, fontSize: 11, letterSpacing: '0.2em', textTransform: 'uppercase', fontWeight: 700 }}>
+            Backed by Jacksonville businesses
+          </div>
+          <div className="bl-sponsors">
+            {SPONSORS.map(s => (
+              <a key={s.name} href={s.url} target="_blank" rel="noopener noreferrer" title={s.name} className="bl-sponsor">
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img src={s.logo} alt={s.name} loading="lazy" />
+              </a>
+            ))}
+          </div>
+          <Link href="/sponsors" style={{ color: INK_DIM, fontSize: 13.5, fontWeight: 600, textDecoration: 'none' }}>
+            Put your brand on the Loop &rarr;
+          </Link>
+        </div>
+      </div>
+    </section>
   )
 }
 
-function Check() {
-  return (
-    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={3} strokeLinecap="round" strokeLinejoin="round" style={{ flex: '0 0 auto' }}>
-      <path d="M20 6L9 17l-5-5" />
-    </svg>
-  )
-}
+/* ============================== Primitives =============================== */
 
-function WhyIcon({ kind }) {
-  const p = { width: 20, height: 20, viewBox: '0 0 24 24', fill: 'none', stroke: GOLD_HI, strokeWidth: 1.8, strokeLinecap: 'round', strokeLinejoin: 'round' }
-  if (kind === 'price') return (<svg {...p}><circle cx="12" cy="12" r="9" /><path d="M12 7v10M9.5 9.2A2.2 2.2 0 0 1 12 8.2c1.2 0 2.2.8 2.2 1.7 0 2.4-4.4 1.3-4.4 3.7 0 .9 1 1.7 2.2 1.7 1 0 1.9-.5 2.2-1.2" /></svg>)
-  if (kind === 'route') return (<svg {...p}><circle cx="6" cy="18" r="2" /><circle cx="18" cy="6" r="2" /><path d="M8 18h6a4 4 0 0 0 4-4V8" /></svg>)
-  if (kind === 'nodrive') return (<svg {...p}><path d="M12 3l8 4v5c0 4.5-3 7.5-8 9-5-1.5-8-4.5-8-9V7l8-4z" /><path d="M9 12l2 2 4-4" /></svg>)
-  if (kind === 'track') return (<svg {...p}><circle cx="12" cy="11" r="2.5" /><path d="M12 2a8 8 0 0 0-8 8c0 5.5 8 12 8 12s8-6.5 8-12a8 8 0 0 0-8-8z" /></svg>)
-  return null
-}
-
-function HeroStyles() {
-  return (
-    <style>{`
-      .bl-hero { grid-template-columns: 1fr; text-align: center; }
-      .bl-hero-copy p { margin-left: auto; margin-right: auto; }
-      .bl-hero-cta, .bl-hero-chips { justify-content: center; }
-      .bl-hero-pill { justify-content: center; }
-      @media (min-width: 900px) {
-        .bl-hero { grid-template-columns: 1.05fr 0.95fr; text-align: left; }
-        .bl-hero-copy p { margin-left: 0; margin-right: 0; }
-        .bl-hero-cta, .bl-hero-chips { justify-content: flex-start; }
-        .bl-hero-pill { justify-content: flex-start; }
-      }
-    `}</style>
-  )
+const sectionH2 = {
+  color: INK, fontSize: 'clamp(28px, 4.6vw, 48px)', fontWeight: 800,
+  letterSpacing: '-0.025em', lineHeight: 1.05, margin: '14px 0 0', maxWidth: 620,
 }
 
 const heroPill = {
   display: 'inline-flex', alignItems: 'center', gap: 9,
-  padding: '7px 14px', borderRadius: 999, border: `1px solid ${LINE_HI}`,
-  background: 'rgba(212,163,51,0.06)', color: GOLD, fontSize: 11.5, fontWeight: 700,
+  padding: '8px 15px', borderRadius: 999, border: `1px solid rgba(212,163,51,0.35)`,
+  background: 'rgba(10,10,11,0.5)', backdropFilter: 'blur(8px)', WebkitBackdropFilter: 'blur(8px)',
+  color: GOLD_HI, fontSize: 11.5, fontWeight: 700,
   letterSpacing: '0.14em', textTransform: 'uppercase',
 }
-const trustChip = {
-  display: 'inline-flex', alignItems: 'center', gap: 7, padding: '8px 13px', borderRadius: 999,
-  background: 'rgba(255,255,255,0.04)', border: `1px solid ${LINE}`, color: INK_DIM, fontSize: 13, fontWeight: 600,
+
+const timelineNum = {
+  flex: '0 0 auto', width: 44, height: 44, borderRadius: 13,
+  border: `1px solid rgba(212,163,51,0.45)`,
+  background: 'linear-gradient(160deg, rgba(212,163,51,0.18), rgba(212,163,51,0.04))',
+  color: GOLD_HI, fontSize: 15, fontWeight: 800,
+  display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
 }
-const iconDot = {
-  width: 40, height: 40, borderRadius: 11, background: 'rgba(212,163,51,0.12)',
-  border: `1px solid rgba(212,163,51,0.32)`, display: 'grid', placeItems: 'center',
-}
-const routeDot = {
-  width: 12, height: 12, borderRadius: '50%', border: `2px solid ${GOLD}`, background: 'transparent', flex: '0 0 auto', marginTop: 2,
-}
-const routeDotLive = {
-  width: 16, height: 16, borderRadius: '50%', background: GOLD, boxShadow: `0 0 0 4px rgba(212,163,51,0.2)`, flex: '0 0 auto', marginTop: 1,
-}
-const shuttleChip = {
-  display: 'inline-block', marginTop: 6, padding: '3px 9px', borderRadius: 999,
-  background: 'rgba(212,163,51,0.14)', border: `1px solid rgba(212,163,51,0.4)`,
-  color: GOLD_HI, fontSize: 10.5, fontWeight: 800, letterSpacing: '0.08em', textTransform: 'uppercase',
+
+function LandingStyles() {
+  return (
+    <style>{`
+      /* --- hero footage --- */
+      .bl-hero-media {
+        position: absolute; inset: 0; overflow: hidden;
+        background-size: cover; background-position: center 45%;
+      }
+      .bl-hero-video {
+        width: 100%; height: 100%; object-fit: cover; display: block;
+        /* Slight lift so the footage doesn't fight the headline for contrast. */
+        filter: saturate(1.05) contrast(1.02);
+      }
+      /* Someone who asked their OS for less motion gets the still frame. */
+      @media (prefers-reduced-motion: reduce) {
+        .bl-hero-video { display: none; }
+      }
+
+      /* --- section 2: asymmetric split --- */
+      .bl-night { display: grid; grid-template-columns: 1fr; gap: 48px; }
+      .bl-night-aside { display: grid; gap: 16px; align-content: start; }
+      @media (min-width: 940px) {
+        .bl-night { grid-template-columns: 1.15fr 0.85fr; gap: 72px; align-items: center; }
+      }
+
+      /* Bar tiles live in ./BarTiles.jsx — shared with /bars and /about. */
+
+      /* --- section 4: merch --- */
+      .bl-merch {
+        display: grid; grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
+        gap: 14px; margin-top: 38px;
+      }
+      .bl-merch-tile {
+        position: relative; display: block; border-radius: 16px; overflow: hidden;
+        background: linear-gradient(180deg, #17171c, #0f0f12);
+        border: 1px solid rgba(255,255,255,0.07); text-decoration: none;
+        transition: transform .35s cubic-bezier(.2,.7,.3,1), border-color .35s;
+      }
+      .bl-merch-tile:hover { transform: translateY(-4px); border-color: rgba(212,163,51,0.45); }
+      .bl-merch-tile img { width: 100%; height: 250px; object-fit: cover; display: block; }
+      .bl-merch-meta {
+        display: flex; align-items: center; justify-content: space-between;
+        padding: 13px 16px; border-top: 1px solid rgba(255,255,255,0.06);
+      }
+
+      /* FAQ styling lives in ./Faq.jsx — shared with /about. */
+
+      /* --- sponsor strip --- */
+      .bl-sponsors {
+        display: flex; flex-wrap: wrap; gap: 10px; justify-content: center;
+        margin: 20px auto 22px; max-width: 900px;
+      }
+      .bl-sponsor {
+        width: 62px; height: 62px; border-radius: 12px; background: #f4f2ec;
+        display: grid; place-items: center; padding: 8px; overflow: hidden;
+        opacity: .72; transition: opacity .3s, transform .3s;
+      }
+      .bl-sponsor:hover { opacity: 1; transform: translateY(-3px); }
+      .bl-sponsor img { max-width: 100%; max-height: 100%; object-fit: contain; }
+    `}</style>
+  )
 }
 
 function formatDate(iso) {

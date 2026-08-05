@@ -10,8 +10,8 @@ import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { brandFor } from '@/lib/businessConfig'
 import { useCart } from '../merch/CartProvider'
-import { NAV_LINKS, PRIMARY_CTA } from './nav'
-import { GOLD, GOLD_HI, INK, INK_DIM, LINE, LINE_HI, BG, primaryCta } from '@/lib/marketingTheme'
+import { NAV_LINKS, PRIMARY_CTA, UTILITY_LINK } from './nav'
+import { GOLD, GOLD_HI, INK, INK_DIM, INK_MUTE, LINE, LINE_HI, BG, primaryCta } from '@/lib/marketingTheme'
 
 const cfg = brandFor('brew')
 
@@ -92,6 +92,19 @@ export default function SiteHeader() {
               {l.label}
             </Link>
           ))}
+          {/* Utility, not a headline destination — visually quieter and set off
+              from the browse links so a first-timer doesn't read it as step one. */}
+          <Link
+            href={UTILITY_LINK.href}
+            style={{
+              padding: '9px 12px', marginLeft: 8, borderRadius: 9,
+              color: isActive(UTILITY_LINK.href) ? GOLD_HI : INK_MUTE,
+              fontSize: 13.5, fontWeight: 600, textDecoration: 'none', whiteSpace: 'nowrap',
+              borderLeft: `1px solid ${LINE}`, paddingLeft: 18,
+            }}
+          >
+            {UTILITY_LINK.label}
+          </Link>
           <Link href={PRIMARY_CTA.href} style={{ ...primaryCta, padding: '10px 18px', fontSize: 14, marginLeft: 6 }}>
             {PRIMARY_CTA.label}
           </Link>
@@ -130,7 +143,7 @@ export default function SiteHeader() {
                 </svg>
               </button>
             </div>
-            {NAV_LINKS.map(l => (
+            {[...NAV_LINKS, UTILITY_LINK].map(l => (
               <Link key={l.href} href={l.href} onClick={() => setOpen(false)} style={drawerLink(isActive(l.href))}>
                 {l.label}
               </Link>

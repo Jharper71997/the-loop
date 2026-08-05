@@ -1,12 +1,15 @@
 import Link from 'next/link'
-import { BARS } from '@/lib/bars'
-import {
-  GOLD, GOLD_HI, INK, INK_DIM, LINE, MAX_W,
-  primaryCta, ghostCta, eyebrow, softCard, pulseDot, HERO_GLOW,
-} from '@/lib/marketingTheme'
+import { PUBLIC_PARTNER_BARS, PARTNER_BAR_COUNT } from '@/lib/bars'
+import { PageHero, Band, Head, Closer } from '../_components/marketing/PageShell'
+import BarTiles from '../_components/marketing/BarTiles'
+import { GOLD_HI, INK, INK_DIM, INK_MUTE, primaryCtaLg, ghostCta } from '@/lib/marketingTheme'
+import { litCard, litCardInner } from '@/lib/atmosphere'
 
 // Brew partner-bar index. (Surf/Marines keep their own /surfcity/bars +
 // /marines/bars redirects — only Brew gets this page.)
+//
+// Same tiles as the homepage via BarTiles, so "All 7 bars" doesn't drop you
+// somewhere that looks like a different website.
 
 export const metadata = {
   title: 'Partner Bars',
@@ -20,74 +23,75 @@ export const metadata = {
   },
 }
 
-const PARTNER_BARS = BARS.filter(b => b.address && b.slug !== 'partner-8')
-
-// Initials for the fallback badge on bars without a logo (drops "The", punctuation).
-function barInitials(name) {
-  const words = String(name).replace(/^the\s+/i, '').replace(/[^\w\s]/g, '').trim().split(/\s+/)
-  if (words.length >= 2) return (words[0][0] + words[1][0]).toUpperCase()
-  return words[0].slice(0, 1).toUpperCase()
-}
+const ROUTE_NOTES = [
+  {
+    t: 'The route rotates',
+    d: 'Not every bar runs every weekend, and Friday can differ from Saturday. The night you book always lists its exact stops.',
+  },
+  {
+    t: 'About an hour and 15 at each stop',
+    d: 'Long enough to actually sit down. You get a text roughly 10 minutes before the shuttle rolls so you can close your tab.',
+  },
+  {
+    t: 'You end where you started',
+    d: 'The Loop runs between the bars and brings you back to your original pickup. Get there, and home from there, however you like — just not behind your own wheel.',
+  },
+]
 
 export default function BarsIndex() {
   return (
     <main className="site-main">
-      {/* Hero */}
-      <section style={{ position: 'relative', padding: 'clamp(44px, 8vw, 76px) 16px clamp(28px, 5vw, 44px)' }}>
-        <div aria-hidden style={{ position: 'absolute', inset: 0, background: HERO_GLOW, pointerEvents: 'none' }} />
-        <div style={{ position: 'relative', maxWidth: MAX_W, margin: '0 auto' }}>
-          <div style={{ ...eyebrow, display: 'inline-flex', alignItems: 'center', gap: 9 }}>
-            <span style={pulseDot} /> Partner bars
-          </div>
-          <h1 style={{ color: INK, fontSize: 'clamp(30px, 6vw, 50px)', fontWeight: 800, letterSpacing: '-0.02em', lineHeight: 1.06, margin: '14px 0 0' }}>
-            The best spots in Jacksonville,<br /><span style={{ color: GOLD_HI }}>on one route.</span>
-          </h1>
-          <p style={{ color: INK_DIM, fontSize: 'clamp(15px, 2.2vw, 18px)', lineHeight: 1.55, margin: '16px 0 0', maxWidth: 580 }}>
-            These are the partner bars that ride with the Loop. The route rotates weekend to weekend, so the exact stops for
-            any given night live on that night&rsquo;s event. Here&rsquo;s the full lineup.
-          </p>
-        </div>
-      </section>
+      <PageHero
+        image="/brand/photos/bars-hero.jpg"
+        position="center 38%"
+        kicker="Partner bars"
+        title={<>The best spots in town,<br /><span style={{ color: GOLD_HI }}>on one route.</span></>}
+        sub="These are the bars that ride with the Loop. One seat gets you all of them, and nobody in your group has to drive between stops."
+        actions={
+          <>
+            <Link href="/events" style={{ ...primaryCtaLg, padding: '17px 32px', fontSize: 17 }}>Book a seat &middot; $20</Link>
+            <Link href="/track" style={{ ...ghostCta, padding: '16px 24px', fontSize: 15 }}>Find my bus</Link>
+          </>
+        }
+        facts={[`${PARTNER_BAR_COUNT} partner bars`, 'Friday + Saturday', 'Strictly 21+']}
+      />
 
-      {/* Grid */}
-      <section style={{ maxWidth: MAX_W, margin: '0 auto', padding: '8px 16px clamp(40px, 6vw, 64px)' }}>
-        <div style={{ display: 'grid', gap: 14, gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))' }}>
-          {PARTNER_BARS.map(b => (
-            <Link key={b.slug} href={`/bars/${b.slug}`} style={{ ...softCard, padding: '20px 20px', textDecoration: 'none', display: 'flex', flexDirection: 'column' }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-                <span
-                  aria-hidden
-                  style={b.logo
-                    ? { width: 46, height: 46, borderRadius: 11, flex: '0 0 auto', border: `1px solid ${LINE}`, background: `url(${b.logo}) center/cover` }
-                    : { width: 46, height: 46, borderRadius: 11, flex: '0 0 auto', display: 'grid', placeItems: 'center', border: '1px solid rgba(212,163,51,0.28)', background: 'rgba(212,163,51,0.12)', color: GOLD_HI, fontWeight: 800, fontSize: 15, letterSpacing: '0.02em' }}
-                >
-                  {b.logo ? '' : barInitials(b.name)}
-                </span>
-                {b.neighborhood && b.neighborhood !== 'TBD' && (
-                  <span style={{ color: GOLD, fontSize: 11, letterSpacing: '0.14em', textTransform: 'uppercase', fontWeight: 700 }}>{b.neighborhood}</span>
-                )}
+      {/* The lineup */}
+      <Band tone="base" light="top-left" strength={0.11} grain>
+        <Head
+          kicker="The lineup"
+          title="Where the shuttle stops."
+          aside={<Link href="/events" style={{ ...ghostCta, padding: '13px 22px' }}>See this weekend</Link>}
+        />
+        <BarTiles bars={PUBLIC_PARTNER_BARS} showBlurb min={250} />
+      </Band>
+
+      {/* How the route actually behaves — the questions the grid raises */}
+      <Band tone="raised" light="right" strength={0.12} rule>
+        <Head kicker="About the route" title="Three things worth knowing." />
+        <div style={{ display: 'grid', gap: 14, gridTemplateColumns: 'repeat(auto-fit, minmax(270px, 1fr))', marginTop: 36 }}>
+          {ROUTE_NOTES.map(n => (
+            <div key={n.t} style={litCard({ radius: 18 })}>
+              <div style={litCardInner({ radius: 17, pad: 24 })}>
+                <div style={{ color: INK, fontSize: 17.5, fontWeight: 800, letterSpacing: '-0.01em' }}>{n.t}</div>
+                <p style={{ color: INK_DIM, fontSize: 14.5, lineHeight: 1.62, margin: '10px 0 0' }}>{n.d}</p>
               </div>
-              <div style={{ color: INK, fontSize: 19, fontWeight: 800, margin: '12px 0 0' }}>{b.name}</div>
-              {b.blurb && <p style={{ color: INK_DIM, fontSize: 14, lineHeight: 1.55, margin: '10px 0 16px' }}>{b.blurb}</p>}
-              <span style={{ marginTop: 'auto', color: GOLD_HI, fontSize: 13.5, fontWeight: 700, display: 'inline-flex', alignItems: 'center', gap: 6 }}>
-                View details <span aria-hidden>&rarr;</span>
-              </span>
-            </Link>
+            </div>
           ))}
         </div>
+        <p style={{ color: INK_MUTE, fontSize: 14, lineHeight: 1.6, margin: '26px 0 0', maxWidth: 640 }}>
+          Run a bar in Jacksonville and want on the route?{' '}
+          <Link href="/contact?topic=bar" style={{ color: GOLD_HI, fontWeight: 700, textDecoration: 'none' }}>
+            Tell us about your spot &rarr;
+          </Link>
+        </p>
+      </Band>
 
-        {/* CTA band */}
-        <div style={{ ...softCard, marginTop: 28, padding: 'clamp(28px, 5vw, 44px) 24px', textAlign: 'center', border: `1px solid rgba(212,163,51,0.28)`, background: 'linear-gradient(180deg, rgba(212,163,51,0.08), transparent)' }}>
-          <h2 style={{ color: INK, fontSize: 'clamp(20px, 3.4vw, 28px)', fontWeight: 800, margin: 0 }}>See this weekend&rsquo;s route</h2>
-          <p style={{ color: INK_DIM, fontSize: 15, lineHeight: 1.55, margin: '10px auto 0', maxWidth: 520 }}>
-            Routes rotate, and Friday can differ from Saturday. The event you book always shows that night&rsquo;s exact stops.
-          </p>
-          <div style={{ display: 'flex', gap: 12, justifyContent: 'center', flexWrap: 'wrap', marginTop: 22 }}>
-            <Link href="/events" style={primaryCta}>Browse upcoming loops</Link>
-            <Link href="/track" style={ghostCta}>Find my bus</Link>
-          </div>
-        </div>
-      </section>
+      <Closer
+        title={<>See this weekend&rsquo;s<br /><span style={{ color: GOLD_HI }}>exact stops.</span></>}
+        sub="Routes rotate, and Friday can differ from Saturday. The event you book always shows that night’s lineup."
+        secondary={<Link href="/about" style={{ ...ghostCta, padding: '17px 26px', fontSize: 15 }}>How it works</Link>}
+      />
     </main>
   )
 }

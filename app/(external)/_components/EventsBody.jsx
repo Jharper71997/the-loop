@@ -31,8 +31,15 @@ const STOPS_LABEL = {
 }
 
 export default function EventsBody({ loops = [], renderError = null, business = 'brew' }) {
+  // /events is where "Buy Tickets" lands, so on Brew it has to look like the
+  // rest of the website: same 1320px measure, same left-aligned hero, same type
+  // scale. Surf and Marines keep the original narrow centered app layout
+  // untouched — only the Brew branch differs.
+  const isBrew = business === 'brew'
+  const shellWidth = isBrew ? 1320 : 1100
+
   return (
-    <main>
+    <main className={isBrew ? 'site-main' : undefined}>
       {renderError && (
         <div style={{
           background: '#3a1a1a',
@@ -50,31 +57,43 @@ export default function EventsBody({ loops = [], renderError = null, business = 
       )}
         <section
           style={{
-            padding: '20px 16px 16px',
-            textAlign: 'center',
-            background: 'radial-gradient(700px 240px at 50% 0%, rgba(212,163,51,0.10), transparent 70%)',
+            padding: isBrew ? 'clamp(36px, 6vw, 64px) 24px clamp(20px, 3vw, 28px)' : '20px 16px 16px',
+            textAlign: isBrew ? 'left' : 'center',
+            background: isBrew
+              ? 'radial-gradient(1000px 400px at 50% -10%, rgba(212,163,51,0.14), transparent 60%)'
+              : 'radial-gradient(700px 240px at 50% 0%, rgba(212,163,51,0.10), transparent 70%)',
           }}
         >
-          <div style={{ maxWidth: 720, margin: '0 auto' }}>
+          <div style={{ maxWidth: isBrew ? shellWidth : 720, margin: '0 auto' }}>
             <div
               style={{
                 color: GOLD,
                 fontSize: 11,
-                letterSpacing: '0.22em',
+                letterSpacing: isBrew ? '0.2em' : '0.22em',
                 textTransform: 'uppercase',
                 fontWeight: 700,
               }}
             >
               Upcoming loops
             </div>
-            <h1 style={{ color: INK, fontSize: 'clamp(22px, 6vw, 28px)', margin: '6px 0 4px' }}>{HEADING[business] || HEADING.brew}</h1>
-            <p style={{ marginTop: 4, fontSize: 14, color: INK_DIM }}>
+            <h1 style={
+              isBrew
+                ? { color: INK, fontSize: 'clamp(30px, 5vw, 48px)', fontWeight: 800, letterSpacing: '-0.02em', lineHeight: 1.06, margin: '12px 0 0' }
+                : { color: INK, fontSize: 'clamp(22px, 6vw, 28px)', margin: '6px 0 4px' }
+            }>
+              {HEADING[business] || HEADING.brew}
+            </h1>
+            <p style={
+              isBrew
+                ? { marginTop: 14, fontSize: 'clamp(15px, 2vw, 17px)', lineHeight: 1.55, color: INK_DIM, maxWidth: 560 }
+                : { marginTop: 4, fontSize: 14, color: INK_DIM }
+            }>
               {SUBTITLE[business] || SUBTITLE.brew}
             </p>
           </div>
         </section>
 
-        <section style={{ maxWidth: 1100, margin: '0 auto', padding: '16px 16px 32px' }}>
+        <section style={{ maxWidth: shellWidth, margin: '0 auto', padding: isBrew ? '20px 24px clamp(48px, 7vw, 72px)' : '16px 16px 32px' }}>
           {!loops.length ? (
             <EmptyState business={business} />
           ) : (
@@ -244,7 +263,10 @@ function LoopCard({ loop, business }) {
             }}
           >
             {isBookable ? (
-              <>Book <span style={{ color: GOLD }}>&rarr;</span></>
+              // "Book a seat" everywhere — same words as the nav button that
+              // sent them here, so it reads as finishing one action, not
+              // starting a second one.
+              <>Book a seat <span style={{ color: GOLD }}>&rarr;</span></>
             ) : (
               <span style={{ color: INK_DIM }}>Not on sale</span>
             )}

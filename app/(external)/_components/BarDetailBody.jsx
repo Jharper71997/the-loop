@@ -1,173 +1,173 @@
+import Link from 'next/link'
 import { brandFor, prefixLink } from '@/lib/businessConfig'
+import { PUBLIC_PARTNER_BARS } from '@/lib/bars'
 import PlaceholderArt from './PlaceholderArt'
+import { Band, Head } from './marketing/PageShell'
+import BarTiles from './marketing/BarTiles'
+import { litCard, litCardInner, lightPool, grainOverlay } from '@/lib/atmosphere'
+import { GOLD, GOLD_HI, INK, INK_DIM, INK_MUTE, MAX_W, primaryCtaLg, ghostCta } from '@/lib/marketingTheme'
 
 // Shared partner-bar detail body for Brew ('/bars/[slug]') and Surf City
 // ('/surfcity/bars/[slug]'). Takes the resolved bar + business so links are
 // prefixed and copy reads with the right brand.
-
-const GOLD = '#d4a333'
-const GOLD_HI = '#f0c24a'
-const INK = '#f5f5f7'
-const INK_DIM = '#b8b8bf'
+//
+// Rebuilt 2026-08-05. The old version printed the bar name and a "Back to
+// Track" link directly ON TOP of the bar's logo — these are SIGNS, not scenery,
+// so as a full-bleed background they were both unreadable and defaced the
+// artwork. It also sat in a 960px column while the rest of the site runs 1320,
+// which made every tile click feel like leaving the website.
+//
+// Now: the sign gets its own lit plate beside the copy, the page uses the same
+// bands as / and /bars, and the back link goes back to the bar index you came
+// from rather than to the live tracker.
 
 export default function BarDetailBody({ bar, business = 'brew' }) {
   const cfg = brandFor(business)
+  const isBrew = business === 'brew'
+  const others = isBrew ? PUBLIC_PARTNER_BARS.filter(b => b.slug !== bar.slug) : []
+
   return (
-    <main>
-        <section
-          style={{
-            position: 'relative',
-            minHeight: 320,
-            overflow: 'hidden',
-            borderBottom: '1px solid rgba(255,255,255,0.06)',
-          }}
-        >
-          {bar.heroImage ? (
-            <div
-              aria-hidden
-              style={{
-                position: 'absolute',
-                inset: 0,
-                background: `url(${bar.heroImage}) center/cover`,
-              }}
-            />
-          ) : (
-            <PlaceholderArt label={bar.name} variant="hero" />
-          )}
-          <div
-            style={{
-              position: 'absolute',
-              inset: 0,
-              background: 'linear-gradient(180deg, rgba(10,10,11,0.3), rgba(10,10,11,0.85))',
-            }}
-          />
-          <div
-            style={{
-              position: 'relative',
-              maxWidth: 960,
-              margin: '0 auto',
-              padding: '56px 20px 40px',
-              zIndex: 1,
-            }}
-          >
-            <a
-              href={prefixLink('/track', business)}
-              style={{
-                color: GOLD,
-                fontSize: 13,
-                textDecoration: 'none',
-                fontWeight: 600,
-                display: 'inline-block',
-                marginBottom: 16,
-              }}
-            >
-              &larr; Back to Track
-            </a>
+    <main className="site-main">
+      {/* Hero — sign on a plate, copy beside it. Never text over the logo. */}
+      <section style={{ position: 'relative', overflow: 'hidden', background: '#08080a' }}>
+        <div aria-hidden style={{ position: 'absolute', inset: 0, background: lightPool('top-right', 0.16) }} />
+        <div aria-hidden style={grainOverlay} />
+
+        <div className="bd-hero" style={{ position: 'relative', maxWidth: MAX_W, margin: '0 auto', padding: 'clamp(28px, 5vw, 56px) 24px clamp(44px, 6vw, 72px)' }}>
+          <div>
+            <Link href={prefixLink('/bars', business)} style={backLink}>
+              &larr; All partner bars
+            </Link>
+
             {bar.neighborhood && bar.neighborhood !== 'TBD' && (
-              <div
-                style={{
-                  color: GOLD,
-                  fontSize: 11,
-                  letterSpacing: '0.2em',
-                  textTransform: 'uppercase',
-                  fontWeight: 700,
-                  marginBottom: 8,
-                }}
-              >
+              <div style={{ color: GOLD, fontSize: 11, letterSpacing: '0.2em', textTransform: 'uppercase', fontWeight: 700, marginTop: 22 }}>
                 {bar.neighborhood}
               </div>
             )}
-            <h1 style={{ color: INK, margin: 0 }}>{bar.name}</h1>
-            <p style={{ marginTop: 14, maxWidth: 640, fontSize: 17 }}>{bar.blurb}</p>
-          </div>
-        </section>
 
-        <section style={{ maxWidth: 960, margin: '0 auto', padding: '48px 20px 32px' }}>
-          <div
-            style={{
-              display: 'grid',
-              gap: 18,
-              gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))',
-            }}
-          >
-            <InfoCard eyebrow="On the Loop" title="A rotating partner">
-              {bar.name} is one of the {cfg.brand} partner bars. Whether we&apos;re stopping here on a given
-              night depends on the weekend&apos;s route. Check upcoming events for the exact stops.
-            </InfoCard>
+            <h1 style={{
+              color: INK, fontSize: 'clamp(34px, 5.6vw, 60px)', fontWeight: 800,
+              letterSpacing: '-0.03em', lineHeight: 1.03, margin: '12px 0 0',
+            }}>
+              {bar.name}
+            </h1>
 
-            {bar.address && (
-              <InfoCard eyebrow="Find it" title="Address">
-                {bar.address}
-              </InfoCard>
+            {bar.blurb && (
+              <p style={{ color: INK_DIM, fontSize: 'clamp(15px, 2vw, 19px)', lineHeight: 1.55, margin: '18px 0 0', maxWidth: 520 }}>
+                {bar.blurb}
+              </p>
             )}
 
-            <InfoCard eyebrow="How long?" title="~1 hour 15 min per stop">
-              You&apos;ll get a text 10 minutes before the shuttle leaves, so you can close your tab and finish your drink.
-            </InfoCard>
+            <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap', marginTop: 30 }}>
+              <Link href={prefixLink('/events', business)} style={{ ...primaryCtaLg, padding: '16px 28px' }}>
+                Book a seat
+              </Link>
+              {bar.address && (
+                <a
+                  href={`https://maps.google.com/?q=${encodeURIComponent(`${bar.name} ${bar.address}`)}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  style={{ ...ghostCta, padding: '16px 24px', fontSize: 15 }}
+                >
+                  Open in Maps
+                </a>
+              )}
+            </div>
           </div>
 
-          <div
-            style={{
-              marginTop: 40,
-              padding: '28px 24px',
-              borderRadius: 16,
-              border: `1px solid ${GOLD}`,
-              background: 'linear-gradient(180deg, rgba(212,163,51,0.1), rgba(212,163,51,0.03))',
-              textAlign: 'center',
-            }}
-          >
-            <h2 style={{ color: INK, fontSize: 22, fontWeight: 600, margin: '0 0 8px' }}>
-              See this weekend&apos;s route
-            </h2>
-            <p style={{ color: INK_DIM, margin: '0 0 18px' }}>
-              Routes rotate. The event listing always has the exact stops for each night.
-            </p>
-            <a
-              href={prefixLink('/events', business)}
-              style={{
-                display: 'inline-block',
-                padding: '14px 26px',
-                borderRadius: 999,
-                background: `linear-gradient(180deg, ${GOLD_HI}, ${GOLD})`,
-                color: '#0a0a0b',
-                fontWeight: 700,
-                fontSize: 15,
-                textDecoration: 'none',
-                boxShadow: '0 10px 30px rgba(212,163,51,0.25)',
-              }}
-            >
-              Browse upcoming loops
-            </a>
+          {/* The sign, on its own plate — contained, lit, never cropped. */}
+          <div style={litCard({ radius: 22 })}>
+            <div style={{ ...litCardInner({ radius: 21, pad: 0 }), display: 'grid', placeItems: 'center', aspectRatio: '4 / 3' }}>
+              {bar.heroImage ? (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img
+                  src={bar.heroImage}
+                  alt={`${bar.name} sign`}
+                  style={{ width: '100%', height: '100%', objectFit: 'contain', padding: 26, boxSizing: 'border-box', display: 'block' }}
+                />
+              ) : (
+                <PlaceholderArt label={bar.name} variant="hero" />
+              )}
+            </div>
           </div>
-        </section>
+        </div>
+        <style>{`
+          .bd-hero { display: grid; gap: 34px; align-items: center; }
+          @media (min-width: 900px) {
+            .bd-hero { grid-template-columns: 1.05fr 0.95fr; gap: 56px; }
+          }
+        `}</style>
+      </section>
+
+      {/* What a stop here is actually like */}
+      <Band tone="raised" light="left" strength={0.12} rule>
+        <Head kicker="Stopping here" title="What to expect." />
+        <div style={{ display: 'grid', gap: 14, gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))', marginTop: 36 }}>
+          <InfoCard eyebrow="On the route" title="A rotating partner">
+            {bar.name} is one of the {cfg.brand}{' '}partner bars. Whether we&apos;re stopping here on a given night
+            depends on that weekend&apos;s route, so check the event you&apos;re booking for its exact stops.
+          </InfoCard>
+
+          {bar.address && (
+            <InfoCard eyebrow="Find it" title="Address">
+              {bar.address}
+            </InfoCard>
+          )}
+
+          <InfoCard eyebrow="How long" title="~1 hour 15 min per stop">
+            You&apos;ll get a text about 10 minutes before the shuttle leaves, so you can close your tab and finish
+            your drink.
+          </InfoCard>
+        </div>
+      </Band>
+
+      {/* The rest of the route (Brew only — BarTiles links to /bars/[slug]) */}
+      {others.length > 0 && (
+        <Band tone="base" light="top-left" strength={0.1} grain rule>
+          <Head
+            kicker="The rest of the route"
+            title="Where else the shuttle stops."
+            aside={<Link href="/bars" style={{ ...ghostCta, padding: '13px 22px' }}>All partner bars</Link>}
+          />
+          <BarTiles bars={others} min={200} />
+        </Band>
+      )}
+
+      {/* Closer */}
+      <Band tone="void" light="bottom" strength={0.2} grain rule>
+        <div style={{ textAlign: 'center' }}>
+          <h2 style={{ color: INK, fontSize: 'clamp(26px, 4.2vw, 42px)', fontWeight: 800, letterSpacing: '-0.025em', lineHeight: 1.06, margin: '0 auto', maxWidth: 620 }}>
+            See this weekend&rsquo;s <span style={{ color: GOLD_HI }}>exact stops.</span>
+          </h2>
+          <p style={{ color: INK_DIM, fontSize: 'clamp(15px, 2vw, 18px)', lineHeight: 1.55, margin: '18px auto 0', maxWidth: 500 }}>
+            Routes rotate, and Friday can differ from Saturday. The event listing always has the lineup for that night.
+          </p>
+          <div style={{ marginTop: 30 }}>
+            <Link href={prefixLink('/events', business)} style={{ ...primaryCtaLg, padding: '17px 34px', fontSize: 17 }}>
+              Book a seat
+            </Link>
+          </div>
+        </div>
+      </Band>
     </main>
   )
 }
 
 function InfoCard({ eyebrow, title, children }) {
   return (
-    <div
-      style={{
-        padding: '22px 22px 20px',
-        borderRadius: 14,
-        background: 'rgba(255,255,255,0.02)',
-        border: '1px solid rgba(255,255,255,0.07)',
-      }}
-    >
-      <div
-        style={{
-          color: GOLD,
-          fontSize: 10,
-          letterSpacing: '0.2em',
-          textTransform: 'uppercase',
-          fontWeight: 700,
-          marginBottom: 8,
-        }}
-      >
-        {eyebrow}
+    <div style={litCard({ radius: 18 })}>
+      <div style={litCardInner({ radius: 17, pad: 24 })}>
+        <div style={{ color: GOLD, fontSize: 10.5, letterSpacing: '0.2em', textTransform: 'uppercase', fontWeight: 700 }}>
+          {eyebrow}
+        </div>
+        <h3 style={{ color: INK, fontSize: 17.5, fontWeight: 800, letterSpacing: '-0.01em', margin: '10px 0 0' }}>{title}</h3>
+        <p style={{ color: INK_DIM, fontSize: 14.5, lineHeight: 1.62, margin: '10px 0 0' }}>{children}</p>
       </div>
-      <h3 style={{ color: INK, fontSize: 17, fontWeight: 600, margin: '0 0 10px' }}>{title}</h3>
-      <p style={{ color: INK_DIM, fontSize: 14, lineHeight: 1.6, margin: 0 }}>{children}</p>
     </div>
   )
+}
+
+const backLink = {
+  color: INK_MUTE, fontSize: 13.5, fontWeight: 600,
+  textDecoration: 'none', display: 'inline-block',
 }

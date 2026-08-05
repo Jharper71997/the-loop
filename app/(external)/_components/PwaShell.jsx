@@ -1,8 +1,10 @@
 'use client'
 
 import { useEffect, useState } from 'react'
+import { usePathname } from 'next/navigation'
 import { brandFor } from '@/lib/businessConfig'
 import { useRiderBusiness } from '@/lib/useBusiness'
+import { isMarketingPath } from './site/nav'
 
 const GOLD = '#d4a333'
 const GOLD_HI = '#f0c24a'
@@ -16,6 +18,7 @@ const INK = '#0a0a0b'
 //     hint card the first session.
 export default function PwaShell() {
   const kind = useRiderBusiness()
+  const pathname = usePathname() || '/'
   const cfg = brandFor(kind)
   const dismissKey = `${kind}-install-dismissed`
   const [chromiumPrompt, setChromiumPrompt] = useState(null)
@@ -67,6 +70,10 @@ export default function PwaShell() {
     dismiss()
   }
 
+  // Never on the Brew website pages — the service worker still registers above,
+  // but a first-time visitor reading the homepage shouldn't be pitched an app
+  // install before they've booked anything. App pages still prompt.
+  if (kind === 'brew' && isMarketingPath(pathname)) return null
   if (dismissed) return null
   if (!chromiumPrompt && !iosHint) return null
 

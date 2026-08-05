@@ -1,324 +1,174 @@
+import Link from 'next/link'
+import { PUBLIC_PARTNER_BARS, PARTNER_BAR_COUNT, PARTNER_BAR_COUNT_WORD } from '@/lib/bars'
+import { STEPS, FAQ } from '@/lib/riderInfo'
+import { CONTACT } from '../_components/site/nav'
+import { PageHero, Band, Head, Closer, h2, kickerStyle } from '../_components/marketing/PageShell'
+import BarTiles from '../_components/marketing/BarTiles'
+import Faq from '../_components/marketing/Faq'
+import {
+  GOLD, GOLD_HI, INK, INK_DIM, INK_MUTE,
+  primaryCtaLg, ghostCta,
+} from '@/lib/marketingTheme'
+import { litCard, litCardInner } from '@/lib/atmosphere'
+
+// The full "how it works" reference. The landing page pitches and shows the top
+// questions; this page is where a rider who wants the whole picture lands. Both
+// read from lib/riderInfo.js so the two can't tell different stories, and both
+// use the same hero/band/tile/FAQ shapes so they can't LOOK like two sites.
+//
+// ACCURACY: the Loop returns riders to their ORIGINAL PICKUP. Never "ride home."
+
 export const metadata = {
-  title: 'About',
-  description: 'Why we built the Jville Brew Loop, how a night runs, and how to partner with us.',
+  title: 'How It Works',
+  description:
+    'How a night on the Jville Brew Loop actually runs: book a seat, get to your first bar, then hop the shuttle between Jacksonville’s best spots all night without anyone driving.',
   alternates: { canonical: '/about' },
   openGraph: {
-    title: 'About the Jville Brew Loop',
-    description: 'Why we built the Loop, how a night runs, and how to partner with us.',
+    title: 'How the Jville Brew Loop works',
+    description: 'Book a seat, get to your first bar, hop the shuttle all night. Nobody drives between stops.',
     url: '/about',
   },
   twitter: {
-    title: 'About the Jville Brew Loop',
-    description: 'Why we built the Loop, how a night runs, and how to partner with us.',
+    title: 'How the Jville Brew Loop works',
+    description: 'Book a seat, get to your first bar, hop the shuttle all night. Nobody drives between stops.',
   },
 }
 
-const GOLD = '#d4a333'
-const GOLD_HI = '#f0c24a'
-const INK = '#f5f5f7'
-const INK_DIM = '#b8b8bf'
+const FACTS = [
+  { k: '$20', v: 'Flat, per seat, all night' },
+  { k: String(PARTNER_BAR_COUNT), v: 'Partner bars on a rotating route' },
+  { k: '~1h15', v: 'At each stop' },
+  { k: '21+', v: 'Every rider, no exceptions' },
+]
 
 export default function AboutPage() {
   return (
-    <main>
-        <section style={{ padding: '20px 20px 16px', maxWidth: 760, margin: '0 auto', textAlign: 'center' }}>
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img
-            src="/brand/badge-gold.png"
-            alt="Jville Brew Loop"
-            style={{ width: 84, height: 84, objectFit: 'contain', display: 'inline-block', marginBottom: 8 }}
-          />
-          <div
-            style={{
-              color: GOLD,
-              fontSize: 11,
-              letterSpacing: '0.22em',
-              textTransform: 'uppercase',
-              fontWeight: 700,
-              marginBottom: 6,
-            }}
-          >
-            About
-          </div>
-          <h1 style={{ color: INK, fontSize: 'clamp(22px, 6vw, 28px)', margin: '4px 0 4px' }}>The Brew Loop.</h1>
-          <p style={{ marginTop: 4, fontSize: 14, color: INK_DIM }}>
-            Why we built it, how a night runs, and how to get on board.
-          </p>
-        </section>
+    <main className="site-main">
+      <PageHero
+        image="/brand/photos/about-hero.jpg"
+        position="center 42%"
+        kicker="How it works"
+        title={<>A whole night out,<br /><span style={{ color: GOLD_HI }}>nobody behind the wheel.</span></>}
+        sub="The Brew Loop is a flat-rate shuttle running a scheduled route between Jacksonville’s best bars every Friday and Saturday night. Book one seat, ride it as many times as you want, and never touch your keys between stops."
+        actions={
+          <>
+            <Link href="/events" style={{ ...primaryCtaLg, padding: '17px 32px', fontSize: 17 }}>Book a seat &middot; $20</Link>
+            <Link href="/track" style={{ ...ghostCta, padding: '16px 24px', fontSize: 15 }}>Find my bus</Link>
+          </>
+        }
+      />
 
-        <Mission />
-        <HowItWorksFull />
-        <Faq />
-        <SponsorStrip />
+      {/* Facts — a thin strip, not four boxes */}
+      <Band tone="raised" tight>
+        <div style={{ display: 'grid', gap: 'clamp(18px, 3vw, 40px)', gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))' }}>
+          {FACTS.map(f => (
+            <div key={f.k}>
+              <div style={{ color: GOLD_HI, fontSize: 'clamp(26px, 4vw, 36px)', fontWeight: 800, letterSpacing: '-0.03em', lineHeight: 1 }}>{f.k}</div>
+              <div style={{ color: INK_DIM, fontSize: 13.5, lineHeight: 1.45, marginTop: 9 }}>{f.v}</div>
+            </div>
+          ))}
+        </div>
+      </Band>
+
+      {/* The three steps — same timeline the landing page uses, plus the detail
+          paragraph that only lives here. */}
+      <Band tone="base" light="top-right" strength={0.14} grain rule>
+        <Head
+          kicker="How a night runs"
+          title="Three steps, then the night is handled."
+          sub="It's a tracked, scheduled route — not hop-on / hop-off — with your bar-hopping built into the timetable."
+        />
+
+        <ol style={{ listStyle: 'none', margin: '44px 0 0', padding: 0 }}>
+          {STEPS.map((s, i) => {
+            const last = i === STEPS.length - 1
+            return (
+              <li key={s.n} style={{ display: 'flex', gap: 20, alignItems: 'stretch' }}>
+                <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', flex: '0 0 auto' }}>
+                  <span style={timelineNum}>{s.n}</span>
+                  {!last && <span aria-hidden style={{ width: 2, flex: 1, minHeight: 30, background: `linear-gradient(180deg, ${GOLD}, rgba(212,163,51,0.12))` }} />}
+                </div>
+                <div style={{ paddingBottom: last ? 0 : 38, display: 'grid', gap: 'clamp(6px, 3vw, 40px)', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', alignItems: 'start', flex: 1 }}>
+                  <div>
+                    <h3 style={{ color: INK, fontSize: 'clamp(19px, 2.4vw, 23px)', fontWeight: 800, margin: 0, letterSpacing: '-0.01em' }}>{s.title}</h3>
+                    <p style={{ color: INK_DIM, fontSize: 15.5, lineHeight: 1.6, margin: '9px 0 0', maxWidth: 460 }}>{s.sub}</p>
+                  </div>
+                  <p style={{ color: INK_MUTE, fontSize: 14.5, lineHeight: 1.7, margin: 0, paddingTop: 3, maxWidth: 480 }}>{s.detail}</p>
+                </div>
+              </li>
+            )
+          })}
+        </ol>
+      </Band>
+
+      {/* Why — prose against a lit card, so it reads as a note rather than a box */}
+      <Band tone="void" light="left" strength={0.12} rule>
+        <div className="ab-why">
+          <div>
+            <div style={kickerStyle}>Why we built it</div>
+            <h2 style={h2}>Jacksonville deserved a better night out.</h2>
+          </div>
+          <div style={litCard({ radius: 20 })}>
+            <div style={litCardInner({ radius: 19, pad: 'clamp(24px, 4vw, 34px)' })}>
+              <p style={prose}>
+                Bar-hopping here used to come with a tax. Either somebody drew the short straw and sat the night out
+                sober, or everybody piled into rideshares that surged, cancelled, and split the group across three bars.
+                Or &mdash; the one nobody says out loud &mdash; someone decided they were fine to drive.
+              </p>
+              <p style={{ ...prose, marginTop: 18 }}>
+                So we built the thing we wanted: a shuttle on a real schedule, looping the bars people actually go to,
+                for one flat price. Book once, ride all night, and the decision about who drives never has to get made.
+              </p>
+            </div>
+          </div>
+        </div>
+        <style>{`
+          .ab-why { display: grid; gap: 32px; }
+          @media (min-width: 940px) {
+            .ab-why { grid-template-columns: 0.85fr 1.15fr; gap: 56px; align-items: center; }
+          }
+        `}</style>
+      </Band>
+
+      {/* Where it goes — the same tiles the homepage uses */}
+      <Band tone="base" light="top-left" strength={0.1} rule>
+        <Head
+          kicker="Where it goes"
+          title={`${cap(PARTNER_BAR_COUNT_WORD)} partner bars, one rotating route.`}
+          sub="The lineup rotates weekend to weekend, and Friday can differ from Saturday. The night you book always lists its exact stops."
+          aside={<Link href="/bars" style={{ ...ghostCta, padding: '13px 22px' }}>All {PARTNER_BAR_COUNT} bars</Link>}
+        />
+        <BarTiles bars={PUBLIC_PARTNER_BARS} min={200} />
+      </Band>
+
+      {/* The canonical FAQ — the landing page shows the top few and links here */}
+      <Band tone="panel" light="right" strength={0.12} grain rule id="faq">
+        <Head kicker="FAQ" title="Questions riders ask." />
+        <Faq items={FAQ} />
+        <p style={{ color: INK_MUTE, fontSize: 14.5, lineHeight: 1.6, margin: '26px 0 0' }}>
+          Still stuck?{' '}
+          <Link href="/contact" style={{ color: GOLD_HI, fontWeight: 700, textDecoration: 'none' }}>Send us a message</Link>
+          {' '}or call <a href={`tel:${CONTACT.phone}`} style={{ color: GOLD_HI, fontWeight: 700, textDecoration: 'none' }}>{CONTACT.phoneDisplay}</a>.
+        </p>
+      </Band>
+
+      <Closer
+        title={<>Grab a seat for<br /><span style={{ color: GOLD_HI }}>this weekend.</span></>}
+        sub="$20, the whole night, and nobody in your group has to be the one who drives."
+        secondary={<Link href="/bars" style={{ ...ghostCta, padding: '17px 26px', fontSize: 15 }}>See the bars</Link>}
+      />
     </main>
   )
 }
 
-function Mission() {
-  return (
-    <section
-      style={{
-        padding: '56px 20px',
-        background: 'linear-gradient(180deg, transparent, rgba(212,163,51,0.03), transparent)',
-        borderTop: '1px solid rgba(255,255,255,0.05)',
-        borderBottom: '1px solid rgba(255,255,255,0.05)',
-      }}
-    >
-      <div style={{ maxWidth: 720, margin: '0 auto', textAlign: 'center' }}>
-        <div
-          style={{
-            color: GOLD,
-            fontSize: 11,
-            letterSpacing: '0.2em',
-            textTransform: 'uppercase',
-            fontWeight: 700,
-            marginBottom: 14,
-          }}
-        >
-          Why we built it
-        </div>
-        <h2 style={{ color: INK }}>
-          Jacksonville deserved a better night out.
-        </h2>
-        <p style={{ marginTop: 16, fontSize: 17 }}>
-          Rideshare after a few drinks is expensive and unpredictable. Driving after a few drinks is a line nobody should
-          cross. The Brew Loop is a flat-rate, scheduled shuttle that loops the best bars all night, so nobody in your
-          group ever has to be the one who drives.
-        </p>
-        <p style={{ marginTop: 14, fontSize: 17 }}>
-          Book once, ride all night, and never touch your keys between bars.
-        </p>
-      </div>
-    </section>
-  )
-}
+const cap = s => s.charAt(0).toUpperCase() + s.slice(1)
 
-function HowItWorksFull() {
-  const steps = [
-    {
-      n: '01',
-      title: 'Book your seat',
-      body: '$20 covers your whole night on the Loop. Sign your waiver inline, pay, done.',
-    },
-    {
-      n: '02',
-      title: 'Get to the first bar',
-      body: 'Leave the car at home. Grab an Uber or a partnered taxi to your pickup spot. Pickups start around 7:30 PM and we text you the exact time and place.',
-    },
-    {
-      n: '03',
-      title: 'Ride the route',
-      body: '~1 hour 15 minutes at each bar. A text lands 10 minutes before we roll, and the Loop brings you right back to your original pickup at the end.',
-    },
-    {
-      n: '04',
-      title: 'Track it live',
-      body: 'See the shuttle on the map all night. Never wonder when it&apos;s coming back.',
-    },
-  ]
+const prose = { color: INK_DIM, fontSize: 'clamp(15px, 2vw, 16.5px)', lineHeight: 1.7, margin: 0 }
 
-  return (
-    <section style={{ padding: '72px 20px', maxWidth: 1100, margin: '0 auto' }}>
-      <div style={{ textAlign: 'center', maxWidth: 640, margin: '0 auto' }}>
-        <div
-          style={{
-            color: GOLD,
-            fontSize: 11,
-            letterSpacing: '0.2em',
-            textTransform: 'uppercase',
-            fontWeight: 700,
-            marginBottom: 10,
-          }}
-        >
-          How a night runs
-        </div>
-        <h2 style={{ color: INK, textAlign: 'center' }}>A real plan for a safe night out.</h2>
-        <p style={{ marginTop: 12 }}>
-          Not hop-on / hop-off. A tracked, scheduled route with your bar-hopping built in.
-        </p>
-      </div>
-
-      <div
-        style={{
-          display: 'grid',
-          gap: 14,
-          gridTemplateColumns: 'repeat(auto-fit, minmax(230px, 1fr))',
-          marginTop: 32,
-        }}
-      >
-        {steps.map(s => (
-          <div
-            key={s.n}
-            style={{
-              padding: '22px 22px 20px',
-              background: 'linear-gradient(180deg, rgba(255,255,255,0.02), rgba(255,255,255,0.005))',
-              border: '1px solid rgba(255,255,255,0.07)',
-              borderRadius: 14,
-            }}
-          >
-            <div
-              style={{
-                fontFamily: 'ui-monospace, SFMono-Regular, Menlo, monospace',
-                fontSize: 12,
-                letterSpacing: '0.2em',
-                color: GOLD,
-                marginBottom: 12,
-                fontWeight: 600,
-              }}
-            >
-              {s.n}
-            </div>
-            <h3 style={{ color: INK, fontSize: 17, fontWeight: 600, marginBottom: 6 }}>{s.title}</h3>
-            <p
-              style={{ color: INK_DIM, fontSize: 14, lineHeight: 1.55, margin: 0 }}
-              dangerouslySetInnerHTML={{ __html: s.body }}
-            />
-          </div>
-        ))}
-      </div>
-    </section>
-  )
-}
-
-function Faq() {
-  const items = [
-    {
-      q: 'How much is a ticket?',
-      a: '$20 per seat. One ticket covers your whole night on the Loop.',
-    },
-    {
-      q: 'How long are we at each bar?',
-      a: 'About 1 hour 15 minutes per stop. It&rsquo;s a tracked, scheduled route, not hop-on / hop-off.',
-    },
-    {
-      q: 'How will I know when the shuttle is leaving?',
-      a: 'You&rsquo;ll get a text roughly 10 minutes before the shuttle rolls, so you can close your tab and finish your drink.',
-    },
-    {
-      q: 'What time does it run?',
-      a: 'First pickup is around 7:30 PM and we wrap up around 1:30 AM.',
-    },
-    {
-      q: 'How do I get to and from the Loop?',
-      a: 'Leave your car at home. Take an Uber or one of our partnered taxi services to your pickup spot, ride the Loop all night, and it brings you back to that same spot at the end. Grab a ride home from there.',
-    },
-    {
-      q: 'Do I have to be 21?',
-      a: 'Yes. The Loop is strictly 21+.',
-    },
-    {
-      q: 'We have a group of 5 or more, can you pick us up somewhere?',
-      a: 'On request, availability-dependent. <a href="mailto:hello@jvillebrewloop.com" style="color:#d4a333;text-decoration:none;font-weight:600">Email us</a> the date, party size, and where you&rsquo;re starting and we&rsquo;ll see if we can line it up.',
-    },
-    {
-      q: 'Which bars are on the route?',
-      a: 'Eight partner bars around Jacksonville rotate weekend to weekend, and Friday&rsquo;s route can differ from Saturday&rsquo;s. Check the <a href="/events" style="color:#d4a333;text-decoration:none;font-weight:600">event page</a> for exact stops on the night you book.',
-    },
-  ]
-
-  return (
-    <section style={{ padding: '56px 20px 72px', maxWidth: 820, margin: '0 auto', borderTop: '1px solid rgba(255,255,255,0.05)' }}>
-      <div style={{ textAlign: 'center', maxWidth: 640, margin: '0 auto' }}>
-        <div
-          style={{
-            color: GOLD,
-            fontSize: 11,
-            letterSpacing: '0.2em',
-            textTransform: 'uppercase',
-            fontWeight: 700,
-            marginBottom: 10,
-          }}
-        >
-          FAQ
-        </div>
-        <h2 style={{ color: INK, textAlign: 'center' }}>Questions riders ask.</h2>
-      </div>
-      <div style={{ marginTop: 28, display: 'grid', gap: 10 }}>
-        {items.map((it, i) => (
-          <details
-            key={i}
-            style={{
-              padding: '18px 20px',
-              borderRadius: 12,
-              background: 'rgba(255,255,255,0.02)',
-              border: '1px solid rgba(255,255,255,0.07)',
-            }}
-          >
-            <summary
-              style={{
-                cursor: 'pointer',
-                listStyle: 'none',
-                color: INK,
-                fontWeight: 600,
-                fontSize: 16,
-                display: 'flex',
-                justifyContent: 'space-between',
-                alignItems: 'center',
-                gap: 14,
-              }}
-              dangerouslySetInnerHTML={{ __html: `<span>${it.q}</span><span aria-hidden style="color:${GOLD};font-size:20px;line-height:1">+</span>` }}
-            />
-            <div
-              style={{ color: INK_DIM, fontSize: 15, lineHeight: 1.65, marginTop: 12 }}
-              dangerouslySetInnerHTML={{ __html: it.a }}
-            />
-          </details>
-        ))}
-      </div>
-    </section>
-  )
-}
-
-function SponsorStrip() {
-  return (
-    <section style={{ padding: '32px 20px 72px', maxWidth: 1100, margin: '0 auto' }}>
-      <div
-        style={{
-          display: 'flex',
-          flexDirection: 'column',
-          alignItems: 'center',
-          gap: 16,
-          padding: '36px 24px',
-          background: 'linear-gradient(180deg, rgba(212,163,51,0.05), transparent)',
-          border: '1px solid rgba(212,163,51,0.2)',
-          borderRadius: 18,
-          textAlign: 'center',
-        }}
-      >
-        <div
-          style={{
-            color: GOLD,
-            fontSize: 11,
-            letterSpacing: '0.2em',
-            textTransform: 'uppercase',
-            fontWeight: 700,
-          }}
-        >
-          Partners &amp; sponsors
-        </div>
-        <h3 style={{ color: INK, fontSize: 22, fontWeight: 600, margin: 0 }}>
-          Want your brand in front of a full shuttle every weekend?
-        </h3>
-        <p style={{ color: INK_DIM, maxWidth: 560, margin: 0 }}>
-          Bars, breweries, and local businesses ride with us. Sponsor a weekend, host a pickup, or become a featured partner.
-        </p>
-        <a
-          href="mailto:richard@jvillebrewloop.com"
-          style={{
-            display: 'inline-block',
-            padding: '14px 26px',
-            borderRadius: 999,
-            background: `linear-gradient(180deg, ${GOLD_HI}, ${GOLD})`,
-            color: '#0a0a0b',
-            fontWeight: 700,
-            textDecoration: 'none',
-            fontSize: 15,
-            boxShadow: '0 10px 30px rgba(212,163,51,0.3)',
-          }}
-        >
-          Get the partner pack
-        </a>
-      </div>
-    </section>
-  )
+const timelineNum = {
+  flex: '0 0 auto', width: 44, height: 44, borderRadius: 13,
+  border: '1px solid rgba(212,163,51,0.45)',
+  background: 'linear-gradient(160deg, rgba(212,163,51,0.18), rgba(212,163,51,0.04))',
+  color: GOLD_HI, fontSize: 15, fontWeight: 800,
+  display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
 }

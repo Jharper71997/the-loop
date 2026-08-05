@@ -1,4 +1,4 @@
-import { BARS } from '@/lib/bars'
+import { PUBLIC_PARTNER_BARS } from '@/lib/bars'
 import { isLoopSite } from '@/lib/site'
 
 // Public sitemap. Base URL mirrors app/layout.js metadataBase resolution so it
@@ -16,9 +16,9 @@ export default function sitemap() {
   const entries = isLoopSite
     ? ['', '/events', '/track']
     : (() => {
-        const marketing = ['', '/events', '/bars', '/merch', '/sponsors', '/about', '/track']
+        const marketing = ['', '/events', '/bars', '/merch', '/sponsors', '/about', '/contact', '/track']
         const otherLoops = ['/surfcity', '/marines']
-        const bars = BARS.filter(b => b.address && b.slug !== 'partner-8').map(b => `/bars/${b.slug}`)
+        const bars = PUBLIC_PARTNER_BARS.map(b => `/bars/${b.slug}`)
         return [...marketing, ...bars, ...otherLoops]
       })()
 

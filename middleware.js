@@ -25,6 +25,8 @@ const PUBLIC_PREFIXES = [
   '/merch',
   '/cart',
   '/sponsors',
+  '/contact',
+  '/api/contact',
   '/api/merch/',
   '/my-tickets',
   '/tickets/',
@@ -127,12 +129,12 @@ const LOOP_RIDER_ROOTS = [
 // pages and Loop Pass must not be reachable on this domain at all.
 const LOOP_HIDDEN_PREFIXES = [
   '/surfcity', '/surf', '/leadership', '/merch', '/cart', '/sponsors',
-  '/leaderboard', '/pass', '/about', '/bartender-signup', '/r', '/invite',
+  '/leaderboard', '/pass', '/about', '/contact', '/bartender-signup', '/r', '/invite',
   '/widget',
   // Their APIs go too, so a cached bundle on this domain can't reach into
   // another business's data.
   '/api/merch', '/api/surf', '/api/loop-pass', '/api/leaderboard',
-  '/api/bartender-signup',
+  '/api/bartender-signup', '/api/contact',
 ]
 
 // Public URL -> the path the app actually serves.
@@ -198,11 +200,16 @@ function legacyRedirect(pathname) {
 export async function middleware(req) {
   const { pathname } = req.nextUrl
 
-  // Static assets in /public (logos, icons, manifests, fonts) — never gate these
-  // behind auth, or <img>/manifest/font requests 302 to /login and render broken.
-  // The route matcher already excludes /_next/static and favicon.ico; this covers
-  // everything else served from /public plus generated files (sitemap/robots).
-  if (/\.(png|jpe?g|gif|svg|webp|avif|ico|css|js|mjs|json|txt|xml|woff2?|ttf|otf|map|webmanifest)$/i.test(pathname)) {
+  // Static assets in /public (logos, icons, manifests, fonts, video) — never gate
+  // these behind auth, or <img>/<video>/manifest/font requests 302 to /login and
+  // render broken. The route matcher already excludes /_next/static and
+  // favicon.ico; this covers everything else served from /public plus generated
+  // files (sitemap/robots).
+  //
+  // mp4/webm/mov are here because the landing-page hero plays real shuttle
+  // footage from /public/brand/video — without them the request 307s to /login
+  // and the hero silently falls back to its poster with no visible error.
+  if (/\.(png|jpe?g|gif|svg|webp|avif|ico|css|js|mjs|json|txt|xml|woff2?|ttf|otf|map|webmanifest|mp4|webm|mov|m4v)$/i.test(pathname)) {
     return NextResponse.next()
   }
 

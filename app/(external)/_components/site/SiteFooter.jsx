@@ -3,7 +3,7 @@
 
 import Link from 'next/link'
 import { brandFor } from '@/lib/businessConfig'
-import { NAV_LINKS, PRIMARY_CTA, SOCIALS, CONTACT } from './nav'
+import { PRIMARY_CTA, SOCIALS, CONTACT } from './nav'
 import { INK, INK_DIM, INK_MUTE, LINE } from '@/lib/marketingTheme'
 
 const cfg = brandFor('brew')
@@ -30,27 +30,35 @@ export default function SiteFooter() {
             </div>
           </div>
 
-          {/* Explore */}
-          <FooterCol title="Explore" links={[PRIMARY_CTA, ...NAV_LINKS]} />
+          {/* Two columns, no link in both: the website, then the app you use on
+              the night. Deriving one of these from NAV_LINKS put Find My Bus,
+              /events and /about in the footer twice. */}
+          <FooterCol
+            title="The Loop"
+            links={[
+              { href: '/about', label: 'How It Works' },
+              { href: '/bars', label: 'Partner Bars' },
+              { href: '/merch', label: 'Merch' },
+              { href: '/sponsors', label: 'Sponsors' },
+            ]}
+          />
 
-          {/* Ride */}
           <FooterCol
             title="Riders"
             links={[
-              { href: '/my-tickets', label: 'My Tickets' },
+              PRIMARY_CTA,
               { href: '/track', label: 'Find My Bus' },
-              { href: '/events', label: 'Upcoming Loops' },
-              { href: '/about', label: 'How It Works' },
+              { href: '/my-tickets', label: 'My Tickets' },
             ]}
           />
 
           {/* Contact */}
           <div>
             <div style={colTitle}>Get in touch</div>
-            <a href={`mailto:${CONTACT.generalEmail}`} style={footerLink}>{CONTACT.generalEmail}</a>
+            <Link href="/contact" style={footerLink}>Contact us</Link>
+            <a href={`mailto:${CONTACT.email}`} style={footerLink}>{CONTACT.email}</a>
             <a href={`tel:${CONTACT.phone}`} style={footerLink}>{CONTACT.phoneDisplay}</a>
-            <a href={`mailto:${CONTACT.partnerEmail}`} style={footerLink}>Partner with us</a>
-            <div style={{ color: INK_MUTE, fontSize: 12.5, marginTop: 10 }}>Jacksonville, NC · 21+</div>
+            <div style={{ color: INK_MUTE, fontSize: 12.5, marginTop: 10 }}>{CONTACT.city} · 21+</div>
           </div>
         </div>
 
