@@ -10,6 +10,7 @@ import { syncTtForEvent } from '@/lib/ticketTailorSync'
 import { getActivePass } from '@/lib/loopPass'
 import { finalizeBooking } from '@/lib/booking'
 import { MARINES_VERIFIED_COOKIE } from '@/lib/marines'
+import { capacityForTicketType } from '@/lib/capacity'
 
 function mintClaimToken() {
   // 24 bytes => 32 url-safe base64 chars. Long enough that brute-forcing
@@ -172,7 +173,15 @@ async function handleCheckout(req) {
   // which captures both channels. Falls back to ticket_type_id for ticket
   // types that have no stop_index set yet (legacy / non-stop tickets).
   // VOIDED items are excluded — voiding is meant to free a seat back up.
+  //
+  // A NULL capacity on a per-bar ticket type means UNCAPPED, which is how a
+  // stop with 12 of 13 seats sold could still sell 10 more. Fall back to the
+  // shuttle's physical cap so a stop is never uncapped by config drift. Only
+  // ticket types WITH a stop_index get the fallback — charter custom tickets
+  // and marines walk-on fares have stop_index null and are deliberately
+  // uncapped (the organizer / driver manages those).
   const pendingCutoff = new Date(Date.now() - 15 * 60 * 1000).toISOString()
+  const capacityFor = capacityForTicketType
 
   const requestedByStop = new Map()
   const stopMeta = new Map()
@@ -220,14 +229,15 @@ async function handleCheckout(req) {
 
   for (const [key, requested] of requestedByStop.entries()) {
     const tt = stopMeta.get(key)
-    if (tt.capacity == null) continue
+    const cap = capacityFor(tt)
+    if (cap == null) continue
     const taken = await countTakenForStop(tt)
-    if (taken + requested > tt.capacity) {
+    if (taken + requested > cap) {
       return Response.json({
         error: 'sold_out',
         ticket_type_id: tt.id,
         ticket_type_name: tt.name,
-        remaining: Math.max(0, tt.capacity - taken),
+        remaining: Math.max(0, cap - taken),
         requested,
       }, { status: 409 })
     }
@@ -501,9 +511,10 @@ async function handleCheckout(req) {
   // items are included.
   for (const [key, requested] of requestedByStop.entries()) {
     const tt = stopMeta.get(key)
-    if (tt.capacity == null) continue
+    const cap = capacityFor(tt)
+    if (cap == null) continue
     const taken = await countTakenForStop(tt)
-    if (taken > tt.capacity) {
+    if (taken > cap) {
       // Undo: cascade-deletes order_items, frees the slot back up.
       await supabase.from('orders').delete().eq('id', order.id)
       return Response.json({

@@ -18,18 +18,24 @@ loadDotEnvIfMissing(path.resolve(__dirname, '..', '.env.local'))
 const APPLY = process.argv.includes('--apply')
 
 // source date -> { dest date, new TT event id, date label for names, optional
-// schedule override (Friday's stored schedule had empty stop times — repair it
-// to the standard cadence that matches its live TT ticket types). }
-// Weekend of Jul 31 / Aug 1 2026. Clones this weekend's Jul 24 (Fri) / Jul 25
-// (Sat) brew nights with the identical route. ttEventId holds the freshly-created
-// Ticket Tailor occurrence (ev_) ids for next weekend (published + on sale), so
-// the app links to TT and sells through both channels.
-//   Fri Jul 31 -> ev_8757477 (series es_2327376)
-//   Sat Aug 1  -> ev_8757478 (series es_2327377)
+// schedule override, optional per-stop capacity. }
+// Weekend of Aug 7 / Aug 8 2026. Clones last weekend's Jul 31 (Fri) / Aug 1
+// (Sat) brew nights with the IDENTICAL route (Jacob, 2026-08-05). ttEventId
+// holds the already-created Ticket Tailor occurrence (ev_) ids for this
+// weekend. Jacob chose dual-channel on 2026-08-05, so both series get published
+// and linked. NOTE the known hole: a published TT event runs its OWN separate
+// 13-per-stop counter that is blind to native /book sales, so the two channels
+// can jointly oversell a stop (see project_the_loop_stop_capacity).
+//   Fri Aug 7 -> ev_8816400 (series es_2345303)
+//   Sat Aug 8 -> ev_8816401 (series es_2345304)
+// capacity: Friday's SOURCE rows (Jul 31) still have capacity NULL = UNCAPPED,
+// because set-stop-capacity.js only touched future events on 2026-08-01. Pin 13
+// explicitly so the clone can't inherit the oversell hole.
 const PLAN = [
   {
-    from: '2026-07-24', to: '2026-07-31', ttEventId: 'ev_8757477',
-    label: 'Fri, Jul 31',
+    from: '2026-07-31', to: '2026-08-07', ttEventId: 'ev_8816400',
+    label: 'Fri, Aug 7',
+    capacity: 13,
     schedule: [
       { name: 'Angry Ginger', start_time: '19:30' },
       { name: "Shirley V's", start_time: '19:45' },
@@ -39,8 +45,9 @@ const PLAN = [
     ],
   },
   {
-    from: '2026-07-25', to: '2026-08-01', ttEventId: 'ev_8757478',
-    label: 'Sat, Aug 1',
+    from: '2026-08-01', to: '2026-08-08', ttEventId: 'ev_8816401',
+    label: 'Sat, Aug 8',
+    capacity: 13,
     schedule: [
       { name: 'Angry Ginger', start_time: '19:30' },
       { name: 'Twin Ravens', start_time: '19:45' },
@@ -73,6 +80,10 @@ function ttOverrides(t, step, eventId) {
   if (step.schedule && t.stop_index != null && step.schedule[t.stop_index]?.name) {
     ov.name = step.schedule[t.stop_index].name
   }
+  // Pin the per-stop seat cap. NULL capacity means UNCAPPED, so a source row
+  // that was never backfilled would silently clone an oversellable stop.
+  // Only per-stop types get it — a null stop_index (charter/walk-on) stays uncapped.
+  if (step.capacity != null && t.stop_index != null) ov.capacity = step.capacity
   return ov
 }
 

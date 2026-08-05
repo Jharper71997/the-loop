@@ -15,7 +15,20 @@ export async function POST(req) {
 
   const { to, message } = await req.json()
   try {
-    await sendSms(to, message)
+    const result = await sendSms(to, message)
+    // Recipient-level dead end (number flagged undeliverable, or opted out).
+    // Not an error — reported separately so one bad number reads as "1
+    // unreachable" instead of a failed send with a raw API blob attached.
+    if (result?.skipped) {
+      return Response.json({
+        success: false,
+        unreachable: true,
+        error: 'unreachable',
+        detail: result.reason === 'INVALID_CONTACT'
+          ? 'This number is marked undeliverable by the carrier'
+          : 'This number is unsubscribed from Brew Loop texts',
+      })
+    }
     return Response.json({ success: true })
   } catch (error) {
     // Log the SimpleTexting failure body so Vercel runtime logs surface the
