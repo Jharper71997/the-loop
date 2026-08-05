@@ -88,6 +88,10 @@ main.site-main {
   margin: 0;
   padding: 0;
   width: 100%;
+  /* The marketing surface sits on lifted graphite, not the app shell's near
+     black (see lib/marketingTheme.js BG). Scoped to .site-main so /admin, the
+     staff console and the Surf/Marines rider app pages keep --bg. */
+  background: #17171a;
 }
 
 /* ============================================================

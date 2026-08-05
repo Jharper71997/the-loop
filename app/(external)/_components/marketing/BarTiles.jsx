@@ -46,7 +46,7 @@ export default function BarTiles({ bars = [], showBlurb = false, min = 210 }) {
         .bl-tile {
           position: relative; overflow: hidden; border-radius: 16px;
           text-decoration: none; display: flex; flex-direction: column;
-          background: linear-gradient(170deg, #17171d, #0d0d10);
+          background: linear-gradient(170deg, #232329, #191920);
           border: 1px solid rgba(255,255,255,0.07);
           transition: transform .35s cubic-bezier(.2,.7,.3,1), border-color .35s;
         }
@@ -58,7 +58,7 @@ export default function BarTiles({ bars = [], showBlurb = false, min = 210 }) {
           aspect-ratio: 16 / 10; overflow: hidden;
           background:
             radial-gradient(70% 70% at 50% 40%, rgba(212,163,51,0.10), transparent 70%),
-            #0f0f13;
+            #1b1b20;
         }
         .bl-tile-art img {
           width: 100%; height: 100%; display: block; padding: 12px;

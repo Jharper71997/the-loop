@@ -11,7 +11,7 @@ import { usePathname } from 'next/navigation'
 import { brandFor } from '@/lib/businessConfig'
 import { useCart } from '../merch/CartProvider'
 import { NAV_LINKS, PRIMARY_CTA, UTILITY_LINK } from './nav'
-import { GOLD, GOLD_HI, INK, INK_DIM, INK_MUTE, LINE, LINE_HI, BG, primaryCta } from '@/lib/marketingTheme'
+import { GOLD, GOLD_HI, INK, INK_DIM, INK_MUTE, LINE, LINE_HI, BG, ON_GOLD, primaryCta } from '@/lib/marketingTheme'
 
 const cfg = brandFor('brew')
 
@@ -46,7 +46,7 @@ export default function SiteHeader() {
         position: 'sticky',
         top: 0,
         zIndex: 60,
-        background: scrolled ? 'rgba(10,10,11,0.94)' : 'rgba(10,10,11,0.72)',
+        background: scrolled ? 'rgba(23,23,26,0.94)' : 'rgba(23,23,26,0.72)',
         backdropFilter: 'saturate(160%) blur(14px)',
         WebkitBackdropFilter: 'saturate(160%) blur(14px)',
         borderBottom: `1px solid ${scrolled ? LINE : 'transparent'}`,
@@ -197,7 +197,7 @@ const iconButton = {
 }
 const cartBadge = {
   position: 'absolute', top: -3, right: -3, minWidth: 17, height: 17, padding: '0 4px',
-  borderRadius: 999, background: GOLD, color: BG, fontSize: 10.5, fontWeight: 800,
+  borderRadius: 999, background: GOLD, color: ON_GOLD, fontSize: 10.5, fontWeight: 800,
   display: 'inline-flex', alignItems: 'center', justifyContent: 'center', border: `2px solid ${BG}`,
 }
 const overlay = {
@@ -206,7 +206,7 @@ const overlay = {
 }
 const drawer = {
   position: 'absolute', top: 0, right: 0, height: '100%', width: 'min(84vw, 320px)',
-  background: '#0d0d10', borderLeft: `1px solid ${LINE_HI}`,
+  background: '#1e1e22', borderLeft: `1px solid ${LINE_HI}`,
   padding: 'calc(16px + env(safe-area-inset-top)) 18px 24px',
   display: 'flex', flexDirection: 'column', gap: 2,
 }

@@ -11,7 +11,7 @@ const YEAR = 2026 // Date.* is unavailable in some build contexts; bump yearly.
 
 export default function SiteFooter() {
   return (
-    <footer style={{ borderTop: `1px solid ${LINE}`, background: '#0c0c0e', marginTop: 8 }}>
+    <footer style={{ borderTop: `1px solid ${LINE}`, background: '#131316', marginTop: 0 }}>
       <div style={{ maxWidth: 1320, margin: '0 auto', padding: '44px 24px 28px' }}>
         <div style={{ display: 'grid', gap: 28, gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))' }}>
           {/* Brand + socials */}

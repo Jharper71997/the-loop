@@ -142,7 +142,7 @@ function NextLoopChip({ next }) {
     <Link href="/events" style={{
       display: 'inline-flex', alignItems: 'center', gap: 10, textDecoration: 'none',
       padding: '13px 18px', borderRadius: 999,
-      background: 'rgba(10,10,11,0.55)', border: `1px solid ${LINE_HI}`,
+      background: 'rgba(18,18,21,0.55)', border: `1px solid ${LINE_HI}`,
       backdropFilter: 'blur(8px)', WebkitBackdropFilter: 'blur(8px)',
     }}>
       <span style={pulseDot} />
@@ -362,7 +362,7 @@ const sectionH2 = {
 const heroPill = {
   display: 'inline-flex', alignItems: 'center', gap: 9,
   padding: '8px 15px', borderRadius: 999, border: `1px solid rgba(212,163,51,0.35)`,
-  background: 'rgba(10,10,11,0.5)', backdropFilter: 'blur(8px)', WebkitBackdropFilter: 'blur(8px)',
+  background: 'rgba(18,18,21,0.5)', backdropFilter: 'blur(8px)', WebkitBackdropFilter: 'blur(8px)',
   color: GOLD_HI, fontSize: 11.5, fontWeight: 700,
   letterSpacing: '0.14em', textTransform: 'uppercase',
 }
@@ -409,7 +409,7 @@ function LandingStyles() {
       }
       .bl-merch-tile {
         position: relative; display: block; border-radius: 16px; overflow: hidden;
-        background: linear-gradient(180deg, #17171c, #0f0f12);
+        background: linear-gradient(180deg, #232329, #191920);
         border: 1px solid rgba(255,255,255,0.07); text-decoration: none;
         transition: transform .35s cubic-bezier(.2,.7,.3,1), border-color .35s;
       }

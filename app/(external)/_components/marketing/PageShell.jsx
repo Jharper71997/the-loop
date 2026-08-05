@@ -195,7 +195,7 @@ export const kickerStyle = {
 export const heroPill = {
   display: 'inline-flex', alignItems: 'center', gap: 9,
   padding: '8px 15px', borderRadius: 999, border: '1px solid rgba(212,163,51,0.35)',
-  background: 'rgba(10,10,11,0.5)', backdropFilter: 'blur(8px)', WebkitBackdropFilter: 'blur(8px)',
+  background: 'rgba(18,18,21,0.5)', backdropFilter: 'blur(8px)', WebkitBackdropFilter: 'blur(8px)',
   color: GOLD_HI, fontSize: 11.5, fontWeight: 700,
   letterSpacing: '0.14em', textTransform: 'uppercase',
 }
@@ -218,7 +218,7 @@ export function GlassChip({ children, href }) {
   const style = {
     display: 'inline-flex', alignItems: 'center', gap: 10, textDecoration: 'none',
     padding: '13px 18px', borderRadius: 999,
-    background: 'rgba(10,10,11,0.55)', border: `1px solid ${LINE_HI}`,
+    background: 'rgba(18,18,21,0.55)', border: `1px solid ${LINE_HI}`,
     color: INK, fontSize: 14, fontWeight: 700,
     backdropFilter: 'blur(8px)', WebkitBackdropFilter: 'blur(8px)',
   }
