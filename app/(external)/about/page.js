@@ -76,7 +76,7 @@ export default function AboutPage() {
         <Head
           kicker="How a night runs"
           title="Three steps, then the night is handled."
-          sub="It's a tracked, scheduled route — not hop-on / hop-off — with your bar-hopping built into the timetable."
+          sub="It’s a tracked, scheduled route — not hop-on / hop-off — with your bar-hopping built into the timetable."
         />
 
         <ol style={{ listStyle: 'none', margin: '44px 0 0', padding: 0 }}>
@@ -112,7 +112,7 @@ export default function AboutPage() {
             <div style={litCardInner({ radius: 19, pad: 'clamp(24px, 4vw, 34px)' })}>
               <p style={prose}>
                 Bar-hopping here used to come with a tax. Either somebody drew the short straw and sat the night out
-                sober, or everybody piled into rideshares that surged, cancelled, and split the group across three bars.
+                sober, or everybody piled into rideshares that surged, canceled, and split the group across three bars.
                 Or &mdash; the one nobody says out loud &mdash; someone decided they were fine to drive.
               </p>
               <p style={{ ...prose, marginTop: 18 }}>

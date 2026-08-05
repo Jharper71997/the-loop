@@ -80,7 +80,7 @@ export default function SponsorsPage() {
         <Head
           kicker="Ways to partner"
           title="Three ways to ride with the Loop."
-          sub="Pick the one that fits, or tell us what you're trying to reach and we'll point you at the right one."
+          sub="Pick the one that fits, or tell us what you’re trying to reach and we’ll point you at the right one."
         />
         <div style={{ display: 'grid', gap: 14, gridTemplateColumns: 'repeat(auto-fit, minmax(270px, 1fr))', marginTop: 38 }}>
           {WAYS.map(w => (

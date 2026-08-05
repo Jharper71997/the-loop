@@ -20,6 +20,7 @@ export const NAV_LINKS = [
   { href: '/about', label: 'How It Works' },
   { href: '/bars', label: 'Partner Bars' },
   { href: '/merch', label: 'Merch' },
+  { href: '/sponsors', label: 'Sponsors' },
 ]
 
 // ONE name for the one action, everywhere on the site: nav, hero, every card,
