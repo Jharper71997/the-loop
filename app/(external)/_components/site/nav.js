@@ -54,7 +54,10 @@ export const CONTACT = {
 // so app-only affordances stay off the website: someone who just landed from
 // Google shouldn't be asked to install a home-screen app before they know what
 // the Loop even is. Brew paths only; Surf and Marines never match.
-const MARKETING_EXACT = new Set(['/', '/about', '/bars', '/merch', '/cart', '/sponsors', '/contact'])
+// /events is in here too: it's where "Book a seat" lands, so a first-time
+// visitor is mid-purchase there. Pitching an app install before they've bought
+// anything is the wrong ask at the wrong moment.
+const MARKETING_EXACT = new Set(['/', '/about', '/bars', '/merch', '/cart', '/sponsors', '/contact', '/events'])
 const MARKETING_PREFIXES = ['/merch/', '/bars/']
 
 export function isMarketingPath(pathname) {
