@@ -31,6 +31,7 @@ const GROWTH_LINKS = [
   { href: '/leadership/leaderboard', label: 'Leaderboard' },
   { href: '/leadership/referrals',   label: 'Referrals' },
   { href: '/leadership/passes',      label: 'Loop Pass' },
+  { href: '/leadership/feedback',    label: 'Feedback' },
 ]
 const SETTINGS_LINKS = [
   { href: '/leadership/automations', label: 'Automations' },

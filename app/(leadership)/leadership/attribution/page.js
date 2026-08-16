@@ -174,7 +174,7 @@ export default async function AttributionPage({ searchParams }) {
       padding: '24px 16px calc(48px + env(safe-area-inset-bottom))',
       paddingLeft: 'max(16px, env(safe-area-inset-left))',
       paddingRight: 'max(16px, env(safe-area-inset-right))',
-      fontFamily: "'JetBrains Mono', ui-monospace, monospace",
+      fontFamily: 'inherit',
     }}>
       <div style={{ maxWidth: 1100, margin: '0 auto' }}>
         <div style={{
@@ -239,7 +239,7 @@ function MonthPicker({ label, value, prev, next }) {
         style={{
           background: '#0d0d10', color: '#e8e8ea',
           border: '1px solid #2a2a31', borderRadius: 6, padding: '6px 10px',
-          fontFamily: "'JetBrains Mono', ui-monospace, monospace", fontSize: 12,
+          fontFamily: 'inherit', fontSize: 12,
         }} />
       <button type="submit" style={{
         background: '#d4a333', color: '#0a0a0b', border: 'none', borderRadius: 6,

@@ -338,7 +338,7 @@ function CopyableLine({ label, path, addCode = false, addToken = false }) {
       <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
         <code style={{
           flex: '1 1 240px',
-          fontFamily: "'JetBrains Mono', ui-monospace, monospace",
+          fontFamily: 'inherit',
           fontSize: 12,
           color: '#e8e8ea',
           background: '#0d0d10',

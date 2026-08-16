@@ -252,7 +252,7 @@ export default async function IncomePage() {
       padding: '24px 16px calc(48px + env(safe-area-inset-bottom))',
       paddingLeft: 'max(16px, env(safe-area-inset-left))',
       paddingRight: 'max(16px, env(safe-area-inset-right))',
-      fontFamily: "'JetBrains Mono', ui-monospace, monospace",
+      fontFamily: 'inherit',
     }}>
       <div style={{ maxWidth: 1100, margin: '0 auto' }}>
         <a href="/leadership" style={{

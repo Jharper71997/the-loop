@@ -188,7 +188,7 @@ const mainStyle = {
   padding: '24px 16px calc(48px + env(safe-area-inset-bottom))',
   paddingLeft: 'max(16px, env(safe-area-inset-left))',
   paddingRight: 'max(16px, env(safe-area-inset-right))',
-  fontFamily: "'JetBrains Mono', ui-monospace, monospace",
+  fontFamily: 'inherit',
 }
 const backLink = {
   color: '#9c9ca3', fontSize: 11, letterSpacing: '0.18em', textTransform: 'uppercase',

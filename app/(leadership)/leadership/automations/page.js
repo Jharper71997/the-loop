@@ -35,6 +35,12 @@ const TOGGLEABLE = [
       { key: AUTOMATION_KEYS.WAIVER_NUDGE_CRON, name: 'Daily waiver-nudge cron', channel: 'SMS', trigger: 'Vercel cron (not yet scheduled)', where: 'app/api/cron/waiver-nudge', extra: 'Schedule still needs to be added to vercel.json. Toggle here gates the route either way.' },
     ],
   },
+  {
+    section: 'Feedback & reviews',
+    rows: [
+      { key: AUTOMATION_KEYS.RIDE_FEEDBACK_CRON, name: 'Morning-after feedback survey', channel: 'Both', trigger: 'Vercel cron, daily 10:30 AM ET', where: 'app/api/cron/ride-feedback', extra: 'One SMS + email to everyone who boarded last night, linking to /feedback/<token>. Three screens: overall rating, then driver/bars/timing + favorite stop + ride-again + open box, then an optional who-are-you screen. Google review ask on the thank-you. Only scanned riders get it when the driver scanned anyone; otherwise every paid seat. Results at /leadership/feedback.' },
+    ],
+  },
 ]
 
 // Read-only entries: nothing in the DB controls these — they're either
