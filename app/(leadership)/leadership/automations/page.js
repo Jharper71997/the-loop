@@ -38,6 +38,12 @@ const TOGGLEABLE = [
     ],
   },
   {
+    section: 'Pickup reminders',
+    rows: [
+      { key: AUTOMATION_KEYS.TICKET_REMINDER_CRON, name: '1-hour pickup reminder', channel: 'Both', trigger: 'pg_cron (Supabase), every 10 min', where: 'app/api/cron/ticket-reminder', extra: 'SMS + email about an hour before each rider’s own stop time, with their QR and the live track link. One send per seat (reminder_sent_at). Unclaimed guest seats are skipped. Not on vercel.json — the Hobby plan blocks sub-daily crons, so the schedule lives in Supabase (sql/048).' },
+    ],
+  },
+  {
     section: 'Feedback & reviews',
     rows: [
       { key: AUTOMATION_KEYS.RIDE_FEEDBACK_CRON, name: 'Morning-after feedback survey', channel: 'Both', trigger: 'Vercel cron, daily 10:30 AM ET', where: 'app/api/cron/ride-feedback', extra: 'One SMS + email to everyone who boarded last night, linking to /feedback/<token>. Three screens: overall rating, then driver/bars/timing + favorite stop + ride-again + open box, then an optional who-are-you screen. Google review ask on the thank-you. Only scanned riders get it when the driver scanned anyone; otherwise every paid seat. Results at /leadership/feedback.' },
@@ -62,7 +68,6 @@ const READ_ONLY = [
     rows: [
       { name: 'Cleanup pending orders',   channel: 'Job',   trigger: 'Daily 9:00 UTC',                       status: 'ON', where: '/api/cron/cleanup-pending' },
       { name: 'Alert on failures digest', channel: 'Email', trigger: 'Daily 9:00 UTC',                       status: 'ON', where: '/api/cron/alert-on-failures' },
-      { name: '1-hour pickup reminder',   channel: 'Both',  trigger: 'Every 10 min, 55–70 min before stop', status: 'ON', where: '/api/cron/ticket-reminder' },
     ],
   },
   {

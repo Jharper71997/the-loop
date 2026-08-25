@@ -7,11 +7,19 @@ import { appUrl } from '@/lib/stripe'
 import { recordAlert } from '@/lib/alerts'
 import { normalizePhone } from '@/lib/phone'
 import { normalizeEmail } from '@/lib/contacts'
+import { isAutomationEnabled, AUTOMATION_KEYS } from '@/lib/automationSettings'
 
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
+// Sends run in series, so a full stop needs more than the 10s default.
+export const maxDuration = 60
 
-// Fires every 10 min via vercel.json. Finds order_items whose stop pickup
+// Fires every 10 min from pg_cron inside Supabase — NOT vercel.json. The
+// Vercel Hobby plan only allows daily crons, and a sub-daily entry in
+// vercel.json fails every subsequent deploy silently. The schedule lives in
+// sql/048_ticket_reminder_cron.sql.
+//
+// Finds order_items whose stop pickup
 // time is roughly 60 min from now (window: 55-70 min) and sends each rider
 // an SMS + email reminder with their QR. reminder_sent_at stamps the
 // send so we don't double-fire across cron ticks.
@@ -19,20 +27,44 @@ export const dynamic = 'force-dynamic'
 // Window math: cron ticks every 10 min, so a [55, 70] minute window catches
 // every item exactly once even with clock skew or the cron firing late.
 //
-// Auth: CRON_SECRET (lib/cronAuth) — same pattern as cleanup-pending.
+// Auth: EXTERNAL_CRON_SECRET or CRON_SECRET (lib/cronAuth). pg_cron sends the
+// external one so rotating it never disturbs Vercel's own scheduled jobs.
+//
+// Gated by the ticket_reminder_cron toggle at /leadership/automations, which
+// defaults OFF — the schedule can exist before anyone wants riders texted.
 
 const REMINDER_LEAD_MIN = 60
 const WINDOW_LOWER_MIN = 55
 const WINDOW_UPPER_MIN = 70
 
-// Eastern time. Pickup_time is stored as HH:MM in event-local time. Hardcoding
-// EDT (-04:00) — valid March-November. Fall/winter we'd need to flip to -05:00
-// but Brew Loop runs are summer/fall.
-const EVENT_TZ_OFFSET = '-04:00'
+// Eastern time. pickup_time is stored as HH:MM in event-local time. Resolve
+// the real UTC offset for the event's own date rather than hardcoding EDT —
+// a hardcoded -04:00 sends the reminder an hour off every ride after DST
+// ends in November.
+function eventTzOffset(dateIso) {
+  try {
+    const name = new Intl.DateTimeFormat('en-US', {
+      timeZone: 'America/New_York',
+      timeZoneName: 'longOffset',
+    })
+      .formatToParts(new Date(`${dateIso}T12:00:00Z`))
+      .find(p => p.type === 'timeZoneName')?.value
+    const offset = (name || '').replace('GMT', '')
+    return /^[+-]\d{2}:\d{2}$/.test(offset) ? offset : '-04:00'
+  } catch {
+    return '-04:00'
+  }
+}
 
 export async function GET(req) {
   const denied = denyIfNotCron(req)
   if (denied) return denied
+
+  // Leadership kill switch. Defaults FALSE, so the pg_cron schedule can be
+  // installed and proven before a single rider gets a text.
+  if (!(await isAutomationEnabled(AUTOMATION_KEYS.TICKET_REMINDER_CRON))) {
+    return Response.json({ ok: true, skipped: 'disabled_in_leadership_ui' })
+  }
 
   const sb = supabaseAdmin()
   const now = Date.now()
@@ -205,7 +237,7 @@ export async function GET(req) {
 
 function parsePickupAt(dateIso, hhmm) {
   if (!dateIso || !hhmm) return NaN
-  const t = `${dateIso}T${hhmm.length === 5 ? hhmm + ':00' : hhmm}${EVENT_TZ_OFFSET}`
+  const t = `${dateIso}T${hhmm.length === 5 ? hhmm + ':00' : hhmm}${eventTzOffset(dateIso)}`
   const ms = Date.parse(t)
   return Number.isFinite(ms) ? ms : NaN
 }
