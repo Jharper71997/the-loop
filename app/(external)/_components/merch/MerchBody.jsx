@@ -1,6 +1,6 @@
 import Link from 'next/link'
-import { GOLD_HI, INK, INK_DIM, INK_MUTE, LINE, primaryCtaLg, ghostCta } from '@/lib/marketingTheme'
-import { litCard, litCardInner } from '@/lib/atmosphere'
+import { GOLD_HI, INK, INK_DIM, INK_MUTE, LINE, ON_PAPER, ON_PAPER_DIM, primaryCtaLg, ghostCta, ghostCtaPaper } from '@/lib/marketingTheme'
+import { litCard, litCardInner, paperCard } from '@/lib/atmosphere'
 import { PageHero, Band, Head, Closer } from '../marketing/PageShell'
 import MerchCard from './MerchCard'
 
@@ -38,27 +38,32 @@ export default function MerchBody({ products = [] }) {
         }
       />
 
-      <Band tone="panel" light="top-right" strength={0.13} grain id="shop" tight={!hasProducts}>
+      {/* Paper, not panel. See MerchCard: the product shots are cutouts of
+          people in black apparel and they disappear on a dark plate. A paper
+          band must also hand its children the ON_PAPER tokens — inline styles
+          beat a tone flip, so a flip alone renders white-on-cream. */}
+      <Band tone="paper" light="top-right" strength={0.13} grain id="shop" tight={!hasProducts}>
         {hasProducts ? (
           <>
             <Head
               kicker="The shop"
               title="Everything in stock."
-              aside={<Link href="/cart" style={{ ...ghostCta, padding: '13px 22px' }}>View cart</Link>}
+              tone="paper"
+              aside={<Link href="/cart" style={{ ...ghostCtaPaper, padding: '13px 22px' }}>View cart</Link>}
             />
             <div style={{ display: 'grid', gap: 16, gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', marginTop: 38 }}>
               {products.map(p => <MerchCard key={p.id} product={p} />)}
             </div>
           </>
         ) : (
-          <div style={{ ...litCard({ radius: 20 }), maxWidth: 560, margin: '0 auto' }}>
-            <div style={{ ...litCardInner({ radius: 19, pad: 'clamp(32px, 5vw, 48px)' }), textAlign: 'center' }}>
-              <div style={{ color: INK, fontWeight: 800, fontSize: 20, letterSpacing: '-0.01em' }}>Merch is dropping soon</div>
-              <p style={{ color: INK_DIM, fontSize: 14.5, lineHeight: 1.6, margin: '12px 0 22px' }}>
+          <div style={{ ...paperCard({ radius: 20 }), maxWidth: 560, margin: '0 auto', padding: 'clamp(32px, 5vw, 48px)' }}>
+            <div style={{ textAlign: 'center' }}>
+              <div style={{ color: ON_PAPER, fontWeight: 800, fontSize: 20, letterSpacing: '-0.01em' }}>Merch is dropping soon</div>
+              <p style={{ color: ON_PAPER_DIM, fontSize: 14.5, lineHeight: 1.6, margin: '12px 0 22px' }}>
                 We&rsquo;re stocking the shelves. Until then, the fastest way to get the badge is to be on the shuttle
                 when we hand it out.
               </p>
-              <Link href="/events" style={{ ...ghostCta, padding: '14px 22px' }}>See upcoming loops</Link>
+              <Link href="/events" style={{ ...ghostCtaPaper, padding: '14px 22px' }}>See upcoming loops</Link>
             </div>
           </div>
         )}
