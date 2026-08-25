@@ -16,17 +16,37 @@ const STATE = {
   wrapping:   { tone: '#8a5f0a', dot: '#d4a333', label: 'Wrapping up',  pulse: true },
 }
 
+// "Fri Aug 21 + Sat Aug 22" — a weekend reads as its nights, not as a range.
+function nightsLabel(dates) {
+  if (!dates || !dates.length) return ''
+  return dates.map(fmtDate).join(' + ')
+}
+
+// A balance nobody has updated since May is not "cash on hand", it is a number
+// from May. Say how old it is so it can't quietly pass for current.
+function cashHint({ cashCents, cashAsOf, cashAgeDays }) {
+  if (cashCents == null) return 'never recorded — add it in Money → Cash on hand'
+  if (cashAsOf == null) return 'date unknown'
+  const age = cashAgeDays == null ? '' : ` · ${cashAgeDays} days old`
+  return `as of ${fmtDate(cashAsOf)}${age}`
+}
+
 function fmtDate(iso) {
   if (!iso) return ''
   try {
-    return new Date(`${iso}T12:00:00-05:00`).toLocaleDateString('en-US', {
+    // Loop dates are bare YYYY-MM-DD and want noon ET so they can't slip a day.
+    // A bank balance is already a full timestamp — pinning noon onto it produced
+    // an invalid date, which the catch below quietly rendered as raw ISO.
+    const d = String(iso).length > 10 ? new Date(iso) : new Date(`${iso}T12:00:00-05:00`)
+    if (Number.isNaN(d.getTime())) return iso
+    return d.toLocaleDateString('en-US', {
       weekday: 'short', month: 'short', day: 'numeric', timeZone: 'America/Indiana/Indianapolis',
     })
   } catch { return iso }
 }
 
 export default async function LeadershipScoreboard() {
-  const { live, week } = await getLeadershipHome()
+  const { live, weekend } = await getLeadershipHome()
   const renderedAt = await serverNow()
 
   return (
@@ -49,12 +69,44 @@ export default async function LeadershipScoreboard() {
 
         <LiveTonight live={live} />
 
+        {/* Weekend-shaped, not calendar-shaped. The Loop runs Fri + Sat, so a
+            Mon-to-Sun window reads zero five days out of seven — which is what
+            made this page look broken on a Tuesday. */}
         <div className="lead-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 12, marginTop: live ? 24 : 0 }}>
-          <StatCard label="Revenue this week" value={formatCents(week.revenueCents)} tone="ok" mono />
-          <StatCard label="Riders this week" value={week.riders.toLocaleString('en-US')} tone="gold" mono />
-          <StatCard label="Cash on hand" value={formatCents(week.cashCents)} tone="ink" mono
-            hint={week.cashAsOf ? `as of ${fmtDate(week.cashAsOf)}` : 'add at /leadership/cash'} />
-          <StatCard label="Active bars" value={week.activeBars} tone="ink" mono />
+          <StatCard
+            label="Riders last weekend"
+            value={weekend.last.riders.toLocaleString('en-US')}
+            tone={weekend.last.riders ? 'gold' : 'dim'}
+            hint={nightsLabel(weekend.last.dates) || 'no loop on record'}
+            mono
+          />
+          <StatCard
+            label="Revenue last weekend"
+            value={formatCents(weekend.last.revenueCents)}
+            tone={weekend.last.revenueCents ? 'ok' : 'dim'}
+            hint="tickets only — bar and sponsor money is in Money"
+            mono
+          />
+          <StatCard
+            label="Sold this weekend"
+            value={weekend.coming.riders.toLocaleString('en-US')}
+            tone={weekend.coming.riders ? 'gold' : 'err'}
+            hint={
+              weekend.coming.dates.length
+                ? (weekend.coming.riders
+                    ? `${nightsLabel(weekend.coming.dates)} · ${formatCents(weekend.coming.revenueCents)}`
+                    : `nothing sold yet for ${nightsLabel(weekend.coming.dates)}`)
+                : 'no loop on the books — build one in Loops'
+            }
+            mono
+          />
+          <StatCard
+            label="Cash on hand"
+            value={formatCents(weekend.cashCents)}
+            tone={weekend.cashAgeDays != null && weekend.cashAgeDays > 45 ? 'err' : 'ink'}
+            hint={cashHint(weekend)}
+            mono
+          />
         </div>
 
         <Directory />
