@@ -42,9 +42,11 @@ const FRI_ROUTE = [
 ]
 // Saturday swapped Archies Pub -> Brassa Tacos & Taps at the 20:00 slot on
 // 2026-08-19 (Jacob). Archies keeps its Friday 20:15 stop, so it stays on the
-// Loop — it is only off Saturdays. Applied to the already-built Aug 22 and
-// Aug 29 groups by scripts/swap-saturday-brassa.js; this array carries it
-// forward to every Saturday built from here on.
+// Loop — it is only off Saturdays. The swap did not actually run until
+// 2026-08-25, and only against the Aug 29 group (Aug 22 had already been
+// ridden by then — see scripts/swap-saturday-brassa.js). This array carries
+// Brassa forward to every Saturday built from here on; put 'Archies Pub'
+// back here if Archies returns to the Saturday route.
 const SAT_ROUTE = [
   { name: 'Angry Ginger', start_time: '19:30' },
   { name: 'Twin Ravens', start_time: '19:45' },

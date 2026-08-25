@@ -271,15 +271,14 @@ export default async function EventBookingPage({ params }) {
                       <li key={`${st.index}-${st.name}`}>
                         <span className="bk-dot" aria-hidden />
                         <span className="bk-stop">
+                          <span className="bk-stop-num" aria-hidden>{i + 1}</span>
                           <span className="bk-stop-name">{st.display}</span>
-                          {st.start_time && <span className="bk-stop-time">{formatTime(st.start_time)}</span>}
                         </span>
-                        {/* "First stop", NOT "Pickup". This is a server-rendered
-                            summary of the route and it cannot know which bar the
-                            rider picked in the form - tagging index 0 as their
-                            pickup was a claim that goes wrong the moment they
-                            choose any other bar. First stop is true either way. */}
-                        {i === 0 && <span className="bk-tag">First stop</span>}
+                        {/* No time per stop. schedule[].start_time is the FIRST time the
+                            shuttle reaches that bar, not when it comes back for the people
+                            drinking there — the loop runs about every 1h15 all night. One
+                            time printed beside a bar read as a pickup promise, so the route
+                            shows order only and points riders at live tracking. */}
                       </li>
                     ))}
                   </ol>
@@ -287,6 +286,7 @@ export default async function EventBookingPage({ params }) {
 
                 <ul className="bk-facts">
                   <li>One seat covers the whole night</li>
+                  <li>Shuttle loops all night, back at every bar about every 1h15</li>
                   <li>Ends back at the stop you started from</li>
                   <li>Track the shuttle live all night</li>
                   <li>Strictly 21+, every rider</li>
@@ -321,12 +321,7 @@ export default async function EventBookingPage({ params }) {
         }
         .bk-stop { display: flex; flex-wrap: wrap; align-items: baseline; gap: 8px; flex: 1; min-width: 0; }
         .bk-stop-name { color: ${INK}; font-size: 14.5px; font-weight: 700; }
-        .bk-stop-time { color: ${INK_MUTE}; font-size: 12.5px; font-weight: 600; }
-        .bk-tag {
-          flex: 0 0 auto; color: ${GOLD_HI}; font-size: 10px; font-weight: 800;
-          letter-spacing: 0.14em; text-transform: uppercase;
-          border: 1px solid rgba(212,163,51,0.4); border-radius: 999px; padding: 3px 8px;
-        }
+        .bk-stop-num { color: ${INK_MUTE}; font-size: 12px; font-weight: 800; min-width: 14px; }
 
         .bk-facts {
           list-style: none; margin: 18px 0 0; padding: 16px 0 0;

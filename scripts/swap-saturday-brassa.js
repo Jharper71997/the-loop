@@ -33,7 +33,10 @@ const APPLY = process.argv.includes('--apply')
 const OLD_NAME = 'Archies Pub'
 const NEW_NAME = 'Brassa Tacos & Taps'
 const STOP_INDEX = 2
-const FROM_DATE = '2026-08-19' // today; only future Saturdays get touched
+const FROM_DATE = '2026-08-29' // Jacob 2026-08-25: THIS Saturday only.
+// Was '2026-08-19' on the first pass, which also caught the already-run
+// 2026-08-22 loop — rewriting a past night's route is rewriting history, so
+// the window starts on the night being changed.
 
 // Geocoded 2026-08-19 off the real street address (Nominatim), not guessed —
 // the live track map drops a pin from these and a wrong pin sends riders to
