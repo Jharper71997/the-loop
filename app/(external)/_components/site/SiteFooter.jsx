@@ -86,5 +86,5 @@ const colTitle = {
 }
 const footerLink = {
   display: 'block', color: INK_DIM, fontSize: 14, textDecoration: 'none',
-  padding: '6px 0', lineHeight: 1.3,
+  padding: '13px 0', lineHeight: 1.3,
 }

@@ -98,7 +98,7 @@ export default function ContactForm() {
               onClick={() => setTopic(t.key)}
               aria-pressed={on}
               style={{
-                padding: '9px 14px', borderRadius: 999, cursor: 'pointer', fontSize: 13.5, fontWeight: 700,
+                padding: '12px 16px', borderRadius: 999, cursor: 'pointer', fontSize: 13.5, fontWeight: 700,
                 background: on ? 'rgba(212,163,51,0.14)' : 'transparent',
                 border: `1px solid ${on ? GOLD : LINE_HI}`,
                 color: on ? GOLD_HI : INK_DIM,

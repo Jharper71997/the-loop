@@ -16,7 +16,7 @@ import {
   INK_DIM, GOLD_HI, GOLD_INK, LINE, ON_PAPER_DIM, PAPER_LINE_HI,
 } from '@/lib/marketingTheme'
 
-export default function SocialLinks({ tone = 'dark', size = 38 }) {
+export default function SocialLinks({ tone = 'dark', size = 44 }) {
   const paper = tone === 'paper'
   const cls = paper ? 'bl-social bl-social-paper' : 'bl-social'
   return (

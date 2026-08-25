@@ -97,7 +97,7 @@ export default function ContactPage() {
 
 function DirectRow({ icon, label, value, href }) {
   return (
-    <a href={href} style={{ display: 'flex', alignItems: 'center', gap: 13, textDecoration: 'none', padding: '9px 0' }}>
+    <a href={href} style={{ display: 'flex', alignItems: 'center', gap: 13, textDecoration: 'none', padding: '12px 0' }}>
       <span aria-hidden style={{ flex: '0 0 auto', width: 38, height: 38, borderRadius: 11, background: 'rgba(212,163,51,0.12)', border: '1px solid rgba(212,163,51,0.3)', display: 'grid', placeItems: 'center' }}>
         {icon === 'mail' ? (
           <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke={GOLD_HI} strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round">
@@ -123,6 +123,6 @@ const kicker = {
 }
 
 const socialPill = {
-  display: 'inline-flex', alignItems: 'center', padding: '9px 15px', borderRadius: 999,
+  display: 'inline-flex', alignItems: 'center', padding: '12px 16px', borderRadius: 999,
   border: `1px solid ${LINE}`, color: INK_DIM, fontSize: 13.5, fontWeight: 700, textDecoration: 'none',
 }
