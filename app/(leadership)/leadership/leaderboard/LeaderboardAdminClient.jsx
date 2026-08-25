@@ -118,12 +118,12 @@ export default function LeaderboardAdminClient({ bars = [] }) {
             <HeaderRow cells={['#', 'Name', 'Bar', 'Slug', 'Tickets', 'Status']} />
             {standings.map((row, idx) => (
               <div key={row.slug} className="row" style={rowStyle}>
-                <span className="mono" style={{ color: '#d4a333' }}>{idx + 1}</span>
+                <span className="mono" style={{ color: '#8a5f0a' }}>{idx + 1}</span>
                 <span>{row.name}</span>
                 <span className="muted">{row.bar || '—'}</span>
-                <span className="mono tiny" style={{ color: '#9c9ca3' }}>{row.slug}</span>
-                <span className="mono" style={{ color: row.qualifies ? '#d4a333' : '#e8e8ea' }}>{row.tickets}</span>
-                <span className="tiny mono" style={{ color: row.qualifies ? '#34d399' : '#9c9ca3' }}>
+                <span className="mono tiny" style={{ color: '#6e6154' }}>{row.slug}</span>
+                <span className="mono" style={{ color: row.qualifies ? '#8a5f0a' : '#17130f' }}>{row.tickets}</span>
+                <span className="tiny mono" style={{ color: row.qualifies ? '#0f7a4e' : '#6e6154' }}>
                   {row.qualifies ? 'QUALIFIES' : `${10 - row.tickets} TO GO`}
                 </span>
               </div>
@@ -174,11 +174,11 @@ export default function LeaderboardAdminClient({ bars = [] }) {
               <div key={b.slug} className="row" style={{ ...rowStyle, gridTemplateColumns: 'repeat(7, minmax(0, 1fr))' }}>
                 <span style={{ opacity: b.active ? 1 : 0.5 }}>{b.display_name}</span>
                 <span className="muted">{b.bar || '—'}</span>
-                <span className="mono tiny" style={{ color: '#9c9ca3' }}>{b.slug}</span>
+                <span className="mono tiny" style={{ color: '#6e6154' }}>{b.slug}</span>
                 <span className="tiny muted">{formatDate(b.created_at)}</span>
                 <span>
                   {b.qr_image_url ? (
-                    <a href={b.qr_image_url} target="_blank" rel="noreferrer" style={{ color: '#d4a333', fontSize: 12 }}>
+                    <a href={b.qr_image_url} target="_blank" rel="noreferrer" style={{ color: '#8a5f0a', fontSize: 12 }}>
                       view
                     </a>
                   ) : <span className="muted tiny">—</span>}
@@ -188,8 +188,8 @@ export default function LeaderboardAdminClient({ bars = [] }) {
                   disabled={busySlug === b.slug}
                   style={{
                     background: 'transparent',
-                    color: b.active ? '#d4a333' : '#6f6f76',
-                    border: `1px solid ${b.active ? '#d4a333' : '#3a3a41'}`,
+                    color: b.active ? '#8a5f0a' : '#7d7060',
+                    border: `1px solid ${b.active ? '#d4a333' : '#d7c6a4'}`,
                     borderRadius: 6,
                     padding: '4px 10px',
                     fontSize: 11,
@@ -235,7 +235,7 @@ function AddRow({ bars, onCancel, onSave }) {
   }
 
   return (
-    <div style={{ display: 'grid', gap: 8, padding: '10px 4px', borderBottom: '1px solid rgba(255,255,255,0.05)', marginTop: 6 }}>
+    <div style={{ display: 'grid', gap: 8, padding: '10px 4px', borderBottom: '1px solid rgba(23,19,15,0.05)', marginTop: 6 }}>
       <div className="tiny muted" style={{ textTransform: 'uppercase', letterSpacing: '0.14em' }}>New seller</div>
       <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', alignItems: 'center' }}>
         <input
@@ -258,7 +258,7 @@ function AddRow({ bars, onCancel, onSave }) {
         <button onClick={submit} disabled={busy} style={btnPrimary}>{busy ? 'Saving…' : 'Save'}</button>
         <button onClick={onCancel} disabled={busy} style={btnGhost}>Cancel</button>
       </div>
-      {err && <div className="tiny" style={{ color: '#e07a7a' }}>{err}</div>}
+      {err && <div className="tiny" style={{ color: '#b3311f' }}>{err}</div>}
     </div>
   )
 }
@@ -283,7 +283,7 @@ function EditRow({ bartender, bars, onCancel, onSave, busy }) {
   }
 
   return (
-    <div style={{ display: 'grid', gap: 8, padding: '10px 4px', borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
+    <div style={{ display: 'grid', gap: 8, padding: '10px 4px', borderBottom: '1px solid rgba(23,19,15,0.05)' }}>
       <div className="tiny muted" style={{ textTransform: 'uppercase', letterSpacing: '0.14em' }}>
         Editing {bartender.slug}
       </div>
@@ -306,7 +306,7 @@ function HeaderRow({ cells, cols = 6 }) {
     <div className="row tiny" style={{
       ...rowStyle,
       gridTemplateColumns: `repeat(${cols}, minmax(0, 1fr))`,
-      color: '#6f6f76',
+      color: '#7d7060',
       textTransform: 'uppercase',
       letterSpacing: '0.14em',
     }}>
@@ -334,15 +334,15 @@ function CopyableLine({ label, path, addCode = false, addToken = false }) {
 
   return (
     <div>
-      <div className="tiny" style={{ color: '#9c9ca3', marginBottom: 4 }}>{label}</div>
+      <div className="tiny" style={{ color: '#6e6154', marginBottom: 4 }}>{label}</div>
       <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
         <code style={{
           flex: '1 1 240px',
           fontFamily: 'inherit',
           fontSize: 12,
-          color: '#e8e8ea',
-          background: '#0d0d10',
-          border: '1px solid #2a2a31',
+          color: '#17130f',
+          background: '#ffffff',
+          border: '1px solid #e8ddc8',
           padding: '6px 10px',
           borderRadius: 6,
           wordBreak: 'break-all',
@@ -353,7 +353,7 @@ function CopyableLine({ label, path, addCode = false, addToken = false }) {
           onClick={copy}
           style={{
             background: 'transparent',
-            color: '#d4a333',
+            color: '#8a5f0a',
             border: '1px solid #d4a333',
             borderRadius: 6,
             padding: '6px 12px',
@@ -395,13 +395,13 @@ const rowStyle = {
   gap: 12,
   alignItems: 'center',
   padding: '8px 4px',
-  borderBottom: '1px solid rgba(255,255,255,0.05)',
+  borderBottom: '1px solid rgba(23,19,15,0.05)',
 }
 
 const inputStyle = {
-  background: '#0d0d10',
-  color: '#e8e8ea',
-  border: '1px solid #2a2a31',
+  background: '#ffffff',
+  color: '#17130f',
+  border: '1px solid #e8ddc8',
   borderRadius: 6,
   padding: '6px 10px',
   fontSize: 13,
@@ -417,7 +417,7 @@ const selectStyle = {
 
 const btnPrimary = {
   background: 'linear-gradient(180deg, #f0c24a, #d4a333)',
-  color: '#0a0a0b',
+  color: '#231903',
   border: 0,
   borderRadius: 6,
   padding: '6px 14px',
@@ -429,8 +429,8 @@ const btnPrimary = {
 
 const btnGhost = {
   background: 'transparent',
-  color: '#9c9ca3',
-  border: '1px solid #3a3a41',
+  color: '#6e6154',
+  border: '1px solid #d7c6a4',
   borderRadius: 6,
   padding: '4px 10px',
   fontSize: 11,
@@ -441,6 +441,6 @@ const btnGhost = {
 
 const btnDanger = {
   ...btnGhost,
-  color: '#e07a7a',
-  borderColor: '#5c2a2a',
+  color: '#b3311f',
+  borderColor: '#f7cfc6',
 }

@@ -7,15 +7,19 @@ import { adminBase } from '@/lib/adminBase'
 import { brandFor } from '@/lib/businessConfig'
 
 const GOLD = '#d4a333'
+const GOLD_TXT = '#8a5f0a'
 const GOLD_HI = '#f0c24a'
-const INK = '#f5f5f7'
-const INK_DIM = '#b8b8bf'
-const INK_MUTED = '#8a8a90'
-const BG = '#0a0a0b'
-const SURFACE = '#15151a'
-const LINE = 'rgba(255,255,255,0.08)'
-const GREEN = '#6fbf7f'
-const RED = '#e07a7a'
+const GOLD_HI_TXT = '#8a5f0a'
+const INK = '#17130f'
+const INK_DIM = '#3b322a'
+const INK_MUTED = '#6e6154'
+const BG = '#faf5ea'
+const SURFACE = '#fdfaf3'
+const LINE = 'rgba(23,19,15,0.08)'
+const GREEN = '#2fa36b'
+const GREEN_TXT = '#0f7a4e'
+const RED = '#d8543f'
+const RED_TXT = '#b3311f'
 
 const POLL_MS = 8000
 
@@ -105,7 +109,7 @@ export default function RosterClient({ eventId }) {
         <header>
           <div
             style={{
-              color: GOLD, fontSize: 11, letterSpacing: '0.2em',
+              color: GOLD_TXT, fontSize: 11, letterSpacing: '0.2em',
               textTransform: 'uppercase', fontWeight: 700,
             }}
           >
@@ -134,15 +138,15 @@ export default function RosterClient({ eventId }) {
         </div>
 
         {error && (
-          <div style={{ ...card, color: RED, fontSize: 14 }}>{error}</div>
+          <div style={{ ...card, color: RED_TXT, fontSize: 14 }}>{error}</div>
         )}
 
         {data && (
           <div style={{
             display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10,
           }}>
-            <Tally label="Boarded" value={data.checked_in_count} total={data.paid_count} color={GREEN} />
-            <Tally label="Still missing" value={data.paid_count - data.checked_in_count} total={data.paid_count} color={GOLD_HI} />
+            <Tally label="Boarded" value={data.checked_in_count} total={data.paid_count} color={GREEN_TXT} />
+            <Tally label="Still missing" value={data.paid_count - data.checked_in_count} total={data.paid_count} color={GOLD_HI_TXT} />
           </div>
         )}
 
@@ -260,11 +264,11 @@ function RiderRow({ rider, busy, flash, onCheckIn, showMilitary }) {
             {rider.full_name || (rider.unclaimed ? 'Unclaimed seat' : 'Guest')}
           </span>
           {rider.waiver_signed
-            ? <span style={{ color: GREEN, fontSize: 11, fontWeight: 700 }}>✓ waiver</span>
-            : <span style={{ color: RED, fontSize: 11, fontWeight: 700 }}>! waiver</span>}
+            ? <span style={{ color: GREEN_TXT, fontSize: 11, fontWeight: 700 }}>✓ waiver</span>
+            : <span style={{ color: RED_TXT, fontSize: 11, fontWeight: 700 }}>! waiver</span>}
           {showMilitary && (rider.military_verified
-            ? <span style={{ color: GREEN, fontSize: 11, fontWeight: 700 }}>✓ Marine</span>
-            : <span style={{ color: GOLD_HI, fontSize: 11, fontWeight: 700 }}>check ID at door</span>)}
+            ? <span style={{ color: GREEN_TXT, fontSize: 11, fontWeight: 700 }}>✓ Marine</span>
+            : <span style={{ color: GOLD_HI_TXT, fontSize: 11, fontWeight: 700 }}>check ID at door</span>)}
         </div>
         <div style={{ color: INK_MUTED, fontSize: 12, marginTop: 2 }}>
           {rider.buyer_name && rider.buyer_name !== rider.full_name
@@ -278,7 +282,7 @@ function RiderRow({ rider, busy, flash, onCheckIn, showMilitary }) {
         {flash && (
           <div style={{
             marginTop: 4, fontSize: 12, fontWeight: 700,
-            color: flash.kind === 'ok' ? GREEN : flash.kind === 'warn' ? GOLD_HI : RED,
+            color: flash.kind === 'ok' ? GREEN_TXT : flash.kind === 'warn' ? GOLD_HI_TXT : RED_TXT,
           }}>
             {flash.msg}
           </div>
@@ -293,7 +297,7 @@ function RiderRow({ rider, busy, flash, onCheckIn, showMilitary }) {
             padding: '10px 14px',
             borderRadius: 10,
             background: `linear-gradient(180deg, ${GOLD_HI}, ${GOLD})`,
-            color: '#0a0a0b',
+            color: '#231903',
             border: 0,
             fontWeight: 800,
             fontSize: 12,

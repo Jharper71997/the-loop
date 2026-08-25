@@ -101,8 +101,8 @@ export default function LeadershipNav() {
 
   return (
     <nav style={{
-      background: '#0d0d10',
-      borderBottom: '1px solid #2a2a31',
+      background: '#ffffff',
+      borderBottom: '1px solid #e8ddc8',
       position: 'sticky',
       top: 0,
       zIndex: 30,
@@ -117,7 +117,7 @@ export default function LeadershipNav() {
         paddingRight: 'max(18px, env(safe-area-inset-right))',
       }}>
         <a href="/leadership" style={{
-          color: '#d4a333',
+          color: '#8a5f0a',
           fontFamily: '-apple-system, "Segoe UI", Roboto, sans-serif',
           fontWeight: 700,
           fontSize: '14px',
@@ -129,7 +129,7 @@ export default function LeadershipNav() {
         </a>
 
         <span className="leadership-nav-divider" style={{
-          width: 1, height: 16, background: '#2a2a31', flexShrink: 0,
+          width: 1, height: 16, background: '#e8ddc8', flexShrink: 0,
         }} />
 
         <div className="leadership-nav-tabs-desktop" style={{
@@ -149,7 +149,7 @@ export default function LeadershipNav() {
         }}>
           {email && (
             <span className="leadership-nav-email" style={{
-              color: '#9c9ca3',
+              color: '#6e6154',
               fontFamily: '-apple-system, "Segoe UI", Roboto, sans-serif',
               fontSize: '12px',
               fontWeight: 500,
@@ -159,7 +159,7 @@ export default function LeadershipNav() {
             </span>
           )}
           <a href="/leadership/automations" className="leadership-settings-desktop" style={{
-            color: settingsActive ? '#d4a333' : '#9c9ca3',
+            color: settingsActive ? '#8a5f0a' : '#6e6154',
             fontFamily: '-apple-system, "Segoe UI", Roboto, sans-serif',
             fontSize: '12px',
             fontWeight: 500,
@@ -170,7 +170,7 @@ export default function LeadershipNav() {
           </a>
           <button className="leadership-nav-signout-desktop" onClick={signOut} style={{
             background: 'none',
-            color: '#9c9ca3',
+            color: '#6e6154',
             fontFamily: '-apple-system, "Segoe UI", Roboto, sans-serif',
             fontSize: '12px',
             fontWeight: 500,
@@ -191,7 +191,7 @@ export default function LeadershipNav() {
             style={{
               display: 'none',
               background: 'none',
-              border: '1px solid #2a2a31',
+              border: '1px solid #e8ddc8',
               borderRadius: 8,
               padding: 0,
               width: 40,
@@ -216,7 +216,7 @@ export default function LeadershipNav() {
           paddingLeft: 'max(18px, env(safe-area-inset-left))',
           paddingRight: 'max(18px, env(safe-area-inset-right))',
           overflowX: 'auto',
-          borderTop: '1px solid #1a1a20',
+          borderTop: '1px solid #f3ecdd',
           paddingTop: 8,
         }}>
           <SubTabs pathname={pathname} links={subLinks} />
@@ -270,7 +270,7 @@ function MobileMenu({ pathname, email, onClose, onSignOut }) {
         position: 'fixed',
         inset: 0,
         top: 'calc(env(safe-area-inset-top) + 65px)',
-        background: '#0a0a0b',
+        background: '#faf5ea',
         zIndex: 25,
         overflowY: 'auto',
         WebkitOverflowScrolling: 'touch',
@@ -292,11 +292,11 @@ function MobileMenu({ pathname, email, onClose, onSignOut }) {
                 paddingLeft: 'max(22px, env(safe-area-inset-left))',
                 paddingRight: 'max(22px, env(safe-area-inset-right))',
                 textDecoration: 'none',
-                color: active ? '#d4a333' : '#e8e8ea',
+                color: active ? '#8a5f0a' : '#17130f',
                 fontFamily: '-apple-system, "Segoe UI", Roboto, sans-serif',
                 fontSize: 17,
                 fontWeight: active ? 700 : 500,
-                borderBottom: '1px solid #16161c',
+                borderBottom: '1px solid #fdfaf3',
               }}
             >
               {link.label}
@@ -307,7 +307,7 @@ function MobileMenu({ pathname, email, onClose, onSignOut }) {
             </a>
             {/* Nested sub-links shown only when inside that group */}
             {link.children && isActive(pathname, link) && (
-              <div style={{ background: '#0d0d10' }}>
+              <div style={{ background: '#ffffff' }}>
                 {link.children.map(child => {
                   const childActive = child.href === '/leadership/income' || child.href === '/leadership/drivers'
                     ? pathname === child.href
@@ -322,11 +322,11 @@ function MobileMenu({ pathname, email, onClose, onSignOut }) {
                         padding: '12px 22px 12px 38px',
                         paddingRight: 'max(22px, env(safe-area-inset-right))',
                         textDecoration: 'none',
-                        color: childActive ? '#d4a333' : '#9c9ca3',
+                        color: childActive ? '#8a5f0a' : '#6e6154',
                         fontFamily: '-apple-system, "Segoe UI", Roboto, sans-serif',
                         fontSize: 15,
                         fontWeight: childActive ? 600 : 500,
-                        borderBottom: '1px solid #16161c',
+                        borderBottom: '1px solid #fdfaf3',
                       }}
                     >
                       {child.label}
@@ -339,10 +339,10 @@ function MobileMenu({ pathname, email, onClose, onSignOut }) {
         )
       })}
 
-      <div style={{ borderTop: '1px solid #16161c', marginTop: 4 }}>
+      <div style={{ borderTop: '1px solid #fdfaf3', marginTop: 4 }}>
         <div style={{
           padding: '14px 22px 6px',
-          color: '#6f6f76',
+          color: '#7d7060',
           fontFamily: '-apple-system, "Segoe UI", Roboto, sans-serif',
           fontSize: 12, fontWeight: 600, letterSpacing: '0.14em', textTransform: 'uppercase',
         }}>
@@ -360,11 +360,11 @@ function MobileMenu({ pathname, email, onClose, onSignOut }) {
                 padding: '12px 22px 12px 38px',
                 paddingRight: 'max(22px, env(safe-area-inset-right))',
                 textDecoration: 'none',
-                color: childActive ? '#d4a333' : '#9c9ca3',
+                color: childActive ? '#8a5f0a' : '#6e6154',
                 fontFamily: '-apple-system, "Segoe UI", Roboto, sans-serif',
                 fontSize: 15,
                 fontWeight: childActive ? 600 : 500,
-                borderBottom: '1px solid #16161c',
+                borderBottom: '1px solid #fdfaf3',
               }}
             >
               {child.label}
@@ -383,7 +383,7 @@ function MobileMenu({ pathname, email, onClose, onSignOut }) {
       }}>
         {email && (
           <span style={{
-            color: '#6f6f76',
+            color: '#7d7060',
             fontFamily: '-apple-system, "Segoe UI", Roboto, sans-serif',
             fontSize: 13,
           }}>
@@ -392,12 +392,12 @@ function MobileMenu({ pathname, email, onClose, onSignOut }) {
         )}
         <button onClick={onSignOut} style={{
           background: 'none',
-          color: '#9c9ca3',
+          color: '#6e6154',
           fontFamily: '-apple-system, "Segoe UI", Roboto, sans-serif',
           fontSize: 14,
           fontWeight: 600,
           padding: '8px 14px',
-          border: '1px solid #2a2a31',
+          border: '1px solid #e8ddc8',
           borderRadius: 8,
           cursor: 'pointer',
         }}>
@@ -418,7 +418,7 @@ function Tabs({ pathname, links }) {
             key={l.href}
             href={l.href}
             style={{
-              color: active ? '#0a0a0b' : '#c8c8cc',
+              color: active ? '#231903' : '#3b322a',
               background: active ? '#d4a333' : 'transparent',
               textDecoration: 'none',
               fontFamily: '-apple-system, "Segoe UI", Roboto, sans-serif',
@@ -456,7 +456,7 @@ function SubTabs({ pathname, links }) {
             key={l.href}
             href={l.href}
             style={{
-              color: active ? '#0a0a0b' : '#9c9ca3',
+              color: active ? '#231903' : '#6e6154',
               background: active ? 'rgba(212,163,51,0.85)' : 'transparent',
               textDecoration: 'none',
               fontFamily: '-apple-system, "Segoe UI", Roboto, sans-serif',

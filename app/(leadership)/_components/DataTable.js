@@ -14,7 +14,7 @@ import { th, td, tableWrap, MONO } from './tableStyles'
 export default function DataTable({ columns, rows, rowKey, empty }) {
   if (!rows || rows.length === 0) {
     return empty != null ? empty : (
-      <div style={{ color: '#9c9ca3', fontSize: 13, padding: '16px 2px' }}>Nothing yet.</div>
+      <div style={{ color: '#6e6154', fontSize: 13, padding: '16px 2px' }}>Nothing yet.</div>
     )
   }
 
@@ -22,7 +22,7 @@ export default function DataTable({ columns, rows, rowKey, empty }) {
     <div className="dt-wrap" style={{ ...tableWrap, marginBottom: 24 }}>
       <table className="dt" style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13 }}>
         <thead>
-          <tr style={{ background: '#0d0d10' }}>
+          <tr style={{ background: '#ffffff' }}>
             {columns.map(c => (
               <th key={c.key} style={{ ...th, textAlign: c.align || 'left' }}>{c.header}</th>
             ))}
@@ -60,11 +60,11 @@ export default function DataTable({ columns, rows, rowKey, empty }) {
           .dt thead { display: none; }
           .dt, .dt tbody, .dt tr, .dt td { display: block; width: 100%; }
           .dt tr {
-            border: 1px solid #2a2a31;
+            border: 1px solid #e8ddc8;
             border-radius: 8px;
             margin-bottom: 10px;
             padding: 4px 0;
-            background: linear-gradient(180deg, #121216, #0d0d10);
+            background: linear-gradient(180deg, #ffffff, #fdfaf3);
           }
           .dt td {
             display: flex;
@@ -77,7 +77,7 @@ export default function DataTable({ columns, rows, rowKey, empty }) {
           }
           .dt td::before {
             content: attr(data-label);
-            color: #9c9ca3;
+            color: #6e6154;
             font-size: 10px;
             font-weight: 600;
             letter-spacing: 0.14em;

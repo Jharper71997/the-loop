@@ -7,14 +7,18 @@ import EnableDriverAlerts from './EnableDriverAlerts'
 import ApproachAlert from '../../_components/ApproachAlert'
 
 const GOLD = '#d4a333'
+const GOLD_TXT = '#8a5f0a'
 const GOLD_HI = '#f0c24a'
-const INK = '#f5f5f7'
-const INK_DIM = '#b8b8bf'
-const BG = '#0a0a0b'
-const SURFACE = '#15151a'
-const LINE = 'rgba(255,255,255,0.08)'
-const GREEN = '#6fbf7f'
-const RED = '#e07a7a'
+const GOLD_HI_TXT = '#8a5f0a'
+const INK = '#17130f'
+const INK_DIM = '#3b322a'
+const BG = '#faf5ea'
+const SURFACE = '#fdfaf3'
+const LINE = 'rgba(23,19,15,0.08)'
+const GREEN = '#2fa36b'
+const GREEN_TXT = '#0f7a4e'
+const RED = '#d8543f'
+const RED_TXT = '#b3311f'
 
 // Minimum distance between pings we actually POST. Stops us from hammering
 // the API while parked waiting at a stop.
@@ -338,7 +342,7 @@ export default function DriverClient({
       <div style={{ maxWidth: 520, margin: '0 auto', display: 'grid', gap: 16 }}>
         <header>
           <div style={{
-            color: GOLD,
+            color: GOLD_TXT,
             fontSize: 11,
             letterSpacing: '0.22em',
             textTransform: 'uppercase',
@@ -357,7 +361,7 @@ export default function DriverClient({
             </div>
           )}
           {!groupId && (
-            <div style={{ color: '#e07a7a', fontSize: 12, marginTop: 6 }}>
+            <div style={{ color: '#b3311f', fontSize: 12, marginTop: 6 }}>
               No on-sale Loop scheduled. Pings will save without a group link.
             </div>
           )}
@@ -379,7 +383,7 @@ export default function DriverClient({
             <span
               style={{
                 width: 14, height: 14, borderRadius: '50%',
-                background: running ? GREEN : '#3a3a44',
+                background: running ? GREEN : '#d7c6a4',
                 boxShadow: running ? '0 0 14px rgba(111,191,127,0.7)' : 'none',
               }}
             />
@@ -408,7 +412,7 @@ export default function DriverClient({
 
           {error && (
             <div style={{
-              color: RED, fontSize: 12, padding: '8px 12px',
+              color: RED_TXT, fontSize: 12, padding: '8px 12px',
               background: 'rgba(224,122,122,0.08)', borderRadius: 8, marginBottom: 12,
             }}>
               {error}
@@ -448,7 +452,7 @@ export default function DriverClient({
             fontSize: 13,
             lineHeight: 1.45,
           }}>
-            <div style={{ color: GOLD, fontSize: 11, letterSpacing: '0.22em', textTransform: 'uppercase', fontWeight: 700, marginBottom: 6 }}>
+            <div style={{ color: GOLD_TXT, fontSize: 11, letterSpacing: '0.22em', textTransform: 'uppercase', fontWeight: 700, marginBottom: 6 }}>
               Seeding tonight&apos;s stops
             </div>
             Tonight&apos;s route is being prepared. Pull to refresh in a moment, or tap <strong style={{ color: INK }}>Start route</strong> above &mdash; you can keep driving while the per-stop log catches up.
@@ -466,7 +470,7 @@ export default function DriverClient({
             minHeight: 280,
             borderRadius: 16,
             overflow: 'hidden',
-            background: '#0d0d10',
+            background: '#ffffff',
             border: `1px solid ${LINE}`,
           }}
         />
@@ -478,16 +482,16 @@ export default function DriverClient({
 
       <style>{`
         .jbl-stop-pin > div { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; }
-        .leaflet-container { background: #0d0d10; }
+        .leaflet-container { background: #ffffff; }
         .leaflet-popup-content-wrapper {
-          background: #15151a; color: #f5f5f7;
-          border: 1px solid rgba(255,255,255,0.08); border-radius: 10px;
+          background: #fdfaf3; color: #17130f;
+          border: 1px solid rgba(23,19,15,0.08); border-radius: 10px;
         }
-        .leaflet-popup-tip { background: #15151a; }
+        .leaflet-popup-tip { background: #fdfaf3; }
         .leaflet-control-attribution {
-          background: rgba(10,10,11,0.6) !important; color: #9c9ca3 !important;
+          background: rgba(250,245,234,0.6) !important; color: #6e6154 !important;
         }
-        .leaflet-control-attribution a { color: ${GOLD} !important; }
+        .leaflet-control-attribution a { color: ${GOLD_TXT} !important; }
       `}</style>
     </div>
   )
@@ -497,8 +501,8 @@ function stopPinHtml(n) {
   return `
     <div style="
       width:28px;height:28px;border-radius:50%;
-      background:#15151a;border:2px solid ${GOLD};
-      color:${GOLD_HI};font-size:12px;font-weight:800;
+      background:#fdfaf3;border:2px solid ${GOLD};
+      color:${GOLD_HI_TXT};font-size:12px;font-weight:800;
       display:flex;align-items:center;justify-content:center;
       box-shadow:0 4px 14px rgba(0,0,0,0.55);
     ">${n}</div>
@@ -510,7 +514,7 @@ function driverIconHtml() {
     <div style="
       width:44px;height:44px;border-radius:50%;
       background: radial-gradient(circle at 35% 30%, rgba(240,194,74,0.95), rgba(212,163,51,0.85));
-      border:2px solid #0a0a0b;
+      border:2px solid #faf5ea;
       box-shadow:0 0 0 4px rgba(212,163,51,0.35), 0 8px 22px rgba(0,0,0,0.5);
       background-image: url('/brand/badge-black.png');
       background-size: contain; background-position: center; background-repeat: no-repeat;
@@ -537,7 +541,7 @@ function Stat({ label, value }) {
       style={{
         padding: '10px 12px',
         borderRadius: 10,
-        background: 'rgba(255,255,255,0.04)',
+        background: 'rgba(23,19,15,0.04)',
         border: `1px solid ${LINE}`,
       }}
     >
@@ -555,7 +559,7 @@ const primaryBtn = {
   padding: '16px 22px',
   borderRadius: 12,
   background: `linear-gradient(180deg, ${GOLD_HI}, ${GOLD})`,
-  color: '#0a0a0b',
+  color: '#231903',
   border: 0,
   fontWeight: 800,
   fontSize: 16,
@@ -655,7 +659,7 @@ function RouteLogList({ rows, arrivalSlotId, expandedStopId, onToggle, onSave })
       }}
     >
       <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', marginBottom: 10, padding: '0 4px' }}>
-        <div style={{ color: GOLD, fontSize: 11, letterSpacing: '0.22em', textTransform: 'uppercase', fontWeight: 700 }}>
+        <div style={{ color: GOLD_TXT, fontSize: 11, letterSpacing: '0.22em', textTransform: 'uppercase', fontWeight: 700 }}>
           Tonight&apos;s stops
         </div>
         <div style={{ color: INK_DIM, fontSize: 12, fontVariantNumeric: 'tabular-nums' }}>
@@ -685,8 +689,8 @@ function RouteLogList({ rows, arrivalSlotId, expandedStopId, onToggle, onSave })
                 flex: '0 0 auto',
                 padding: '10px 14px',
                 borderRadius: 10,
-                background: active ? GOLD : (done ? 'rgba(111,191,127,0.10)' : 'rgba(255,255,255,0.04)'),
-                color: active ? '#0a0a0b' : (done ? GREEN : INK),
+                background: active ? GOLD : (done ? 'rgba(111,191,127,0.10)' : 'rgba(23,19,15,0.04)'),
+                color: active ? '#231903' : (done ? GREEN_TXT : INK),
                 border: `1px solid ${active ? GOLD : (live ? 'rgba(212,163,51,0.45)' : LINE)}`,
                 fontSize: 13,
                 fontWeight: 700,
@@ -732,7 +736,7 @@ function RouteLogList({ rows, arrivalSlotId, expandedStopId, onToggle, onSave })
                   borderRadius: 12,
                   background: expanded
                     ? 'rgba(212,163,51,0.10)'
-                    : status === 'logged' ? 'rgba(111,191,127,0.06)' : 'rgba(255,255,255,0.04)',
+                    : status === 'logged' ? 'rgba(111,191,127,0.06)' : 'rgba(23,19,15,0.04)',
                   border: `1px solid ${
                     expanded ? 'rgba(212,163,51,0.45)'
                     : status === 'current' ? 'rgba(212,163,51,0.45)'
@@ -749,9 +753,9 @@ function RouteLogList({ rows, arrivalSlotId, expandedStopId, onToggle, onSave })
               >
                 <span style={{
                   width: 36, height: 36, borderRadius: '50%',
-                  background: status === 'logged' ? 'rgba(111,191,127,0.18)' : 'rgba(255,255,255,0.06)',
+                  background: status === 'logged' ? 'rgba(111,191,127,0.18)' : 'rgba(23,19,15,0.06)',
                   border: `1px solid ${status === 'logged' ? 'rgba(111,191,127,0.4)' : LINE}`,
-                  color: status === 'logged' ? GREEN : INK_DIM,
+                  color: status === 'logged' ? GREEN_TXT : INK_DIM,
                   display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
                   fontSize: 14, fontWeight: 800, fontFamily: 'ui-monospace, SFMono-Regular, Menlo, monospace',
                   flex: '0 0 auto',
@@ -808,7 +812,7 @@ function StatusPill({ status }) {
     logged:   { bg: 'rgba(111,191,127,0.16)', fg: GREEN, label: 'logged' },
     current:  { bg: 'rgba(212,163,51,0.20)',  fg: GOLD_HI, label: 'current' },
     missed:   { bg: 'rgba(224,122,122,0.12)', fg: RED, label: 'missed' },
-    upcoming: { bg: 'rgba(255,255,255,0.04)', fg: INK_DIM, label: 'upcoming' },
+    upcoming: { bg: 'rgba(23,19,15,0.04)', fg: INK_DIM, label: 'upcoming' },
   }
   const s = map[status] || map.upcoming
   return (
@@ -884,8 +888,8 @@ function StopLogForm({ row, onSave, onClose }) {
             style={{
               padding: '10px 14px',
               borderRadius: 10,
-              background: usingNow ? GOLD : 'rgba(255,255,255,0.04)',
-              color: usingNow ? '#0a0a0b' : INK,
+              background: usingNow ? GOLD : 'rgba(23,19,15,0.04)',
+              color: usingNow ? '#231903' : INK,
               border: `1px solid ${usingNow ? GOLD : LINE}`,
               fontWeight: 700,
               fontSize: 14,
@@ -900,8 +904,8 @@ function StopLogForm({ row, onSave, onClose }) {
             style={{
               padding: '10px 14px',
               borderRadius: 10,
-              background: !usingNow ? GOLD : 'rgba(255,255,255,0.04)',
-              color: !usingNow ? '#0a0a0b' : INK,
+              background: !usingNow ? GOLD : 'rgba(23,19,15,0.04)',
+              color: !usingNow ? '#231903' : INK,
               border: `1px solid ${!usingNow ? GOLD : LINE}`,
               fontWeight: 700,
               fontSize: 14,
@@ -958,7 +962,7 @@ function StopLogForm({ row, onSave, onClose }) {
         />
       </FormLabel>
       {err && (
-        <div style={{ color: RED, fontSize: 12 }}>{err}</div>
+        <div style={{ color: RED_TXT, fontSize: 12 }}>{err}</div>
       )}
       <div style={{ display: 'flex', gap: 8 }}>
         <button type="button" onClick={onClose} style={secondaryBtn}>Cancel</button>
@@ -986,7 +990,7 @@ const inputStyle = {
   boxSizing: 'border-box',
   padding: '8px 10px',
   borderRadius: 8,
-  background: '#0d0d10',
+  background: '#ffffff',
   color: INK,
   border: `1px solid ${LINE}`,
   fontSize: 14,
@@ -997,7 +1001,7 @@ const primaryBtnInline = {
   padding: '10px 14px',
   borderRadius: 10,
   background: `linear-gradient(180deg, ${GOLD_HI}, ${GOLD})`,
-  color: '#0a0a0b',
+  color: '#231903',
   border: 0,
   fontWeight: 800,
   fontSize: 14,
@@ -1093,7 +1097,7 @@ function NextStopCard({ position, stops, eventDate }) {
           width: 32, height: 32, borderRadius: '50%',
           background: 'rgba(212,163,51,0.18)',
           border: `1px solid ${GOLD}`,
-          color: GOLD_HI,
+          color: GOLD_HI_TXT,
           display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
           fontSize: 16, fontWeight: 800,
           flex: '0 0 auto',
@@ -1102,7 +1106,7 @@ function NextStopCard({ position, stops, eventDate }) {
         →
       </span>
       <div style={{ flex: 1, minWidth: 0 }}>
-        <div style={{ color: GOLD, fontSize: 10, letterSpacing: '0.22em', textTransform: 'uppercase', fontWeight: 700 }}>
+        <div style={{ color: GOLD_TXT, fontSize: 10, letterSpacing: '0.22em', textTransform: 'uppercase', fontWeight: 700 }}>
           {arrived ? 'At stop' : `Next stop · #${dest.index + 1}`}
         </div>
         <div style={{ color: INK, fontSize: 16, fontWeight: 800, marginTop: 2, lineHeight: 1.15 }}>
@@ -1116,7 +1120,7 @@ function NextStopCard({ position, stops, eventDate }) {
       </div>
       <div style={{ textAlign: 'right', flex: '0 0 auto' }}>
         {arrived ? (
-          <div style={{ color: GOLD_HI, fontSize: 13, fontWeight: 800 }}>Arrived</div>
+          <div style={{ color: GOLD_HI_TXT, fontSize: 13, fontWeight: 800 }}>Arrived</div>
         ) : (
           <>
             <div style={{ color: INK_DIM, fontSize: 10, letterSpacing: '0.18em', textTransform: 'uppercase', fontWeight: 700 }}>

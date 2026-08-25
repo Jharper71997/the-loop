@@ -3,12 +3,13 @@
 import { useEffect, useRef, useState } from 'react'
 
 const GOLD = '#d4a333'
+const GOLD_TXT = '#8a5f0a'
 const GOLD_HI = '#f0c24a'
-const INK = '#f5f5f7'
-const INK_DIM = '#b8b8bf'
-const SURFACE = '#15151a'
-const LINE = 'rgba(255,255,255,0.08)'
-const GREEN = '#6fbf7f'
+const INK = '#17130f'
+const INK_DIM = '#3b322a'
+const SURFACE = '#fdfaf3'
+const LINE = 'rgba(23,19,15,0.08)'
+const GREEN = '#2fa36b'
 
 // Hybrid "5 minutes away" prompt — shown on BOTH the driver and security
 // screens. The server watches the live shuttle pings and tells us which bar
@@ -103,7 +104,7 @@ export default function ApproachAlert({ eventId }) {
     }}>
       <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 4 }}>
         <span style={{ fontSize: 20 }}>🚐</span>
-        <div style={{ color: GOLD, fontSize: 10, letterSpacing: '0.2em', textTransform: 'uppercase', fontWeight: 800 }}>
+        <div style={{ color: GOLD_TXT, fontSize: 10, letterSpacing: '0.2em', textTransform: 'uppercase', fontWeight: 800 }}>
           About {candidate.eta_min} min from
         </div>
       </div>
@@ -124,8 +125,8 @@ export default function ApproachAlert({ eventId }) {
             flex: 1,
             padding: '12px 16px',
             borderRadius: 10,
-            background: riders === 0 ? 'rgba(255,255,255,0.06)' : `linear-gradient(180deg, ${GOLD_HI}, ${GOLD})`,
-            color: riders === 0 ? INK_DIM : '#0a0a0b',
+            background: riders === 0 ? 'rgba(23,19,15,0.06)' : `linear-gradient(180deg, ${GOLD_HI}, ${GOLD})`,
+            color: riders === 0 ? INK_DIM : '#231903',
             border: 0,
             fontWeight: 800,
             fontSize: 14,

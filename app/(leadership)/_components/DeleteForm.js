@@ -14,7 +14,7 @@ export default function DeleteForm({ action, label = 'Delete', confirmMessage = 
     >
       <button type="submit" style={{
         background: 'transparent',
-        color: '#c44a3a',
+        color: '#b3311f',
         border: '1px solid rgba(196,74,58,0.4)',
         fontFamily: '-apple-system, "Segoe UI", Roboto, sans-serif',
         fontSize: 13,

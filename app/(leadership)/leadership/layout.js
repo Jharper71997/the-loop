@@ -24,9 +24,9 @@ async function requireLeadership() {
   if (!isLeadership(user.email)) redirect('/admin')
 }
 
-// Same shell as /admin. The leadership pages keep their own URLs — they are now
-// tabs inside the Tonight / Riders / Bars / Money / Setup sections rather than a
-// second console with its own nav and its own look.
+// Same shell as /admin. The leadership pages keep their own URLs; they are just
+// no longer in the sidebar. The crew's console is the six things that run a
+// night, and everything here is reached from the Back office index instead.
 export default async function LeadershipLayout({ children }) {
   await requireLeadership()
   return <ConsoleShell>{children}</ConsoleShell>

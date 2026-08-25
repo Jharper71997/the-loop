@@ -194,8 +194,8 @@ export default async function IncomePage() {
       key: 'who', header: 'Who', primary: true,
       render: r => (
         <>
-          <Link href={r.href} style={{ color: '#e8e8ea', textDecoration: 'none', fontWeight: 600 }}>{r.who}</Link>
-          {!r.hasBillingDay && <div style={{ fontSize: 10, color: '#6f6f76', marginTop: 2 }}>No billing day set</div>}
+          <Link href={r.href} style={{ color: '#17130f', textDecoration: 'none', fontWeight: 600 }}>{r.who}</Link>
+          {!r.hasBillingDay && <div style={{ fontSize: 10, color: '#7d7060', marginTop: 2 }}>No billing day set</div>}
         </>
       ),
     },
@@ -208,7 +208,7 @@ export default async function IncomePage() {
       render: r => {
         const overdue = !r.paidThisCycle && r.daysUntil < 0
         const urgent = !r.paidThisCycle && r.daysUntil >= 0 && r.daysUntil <= 5
-        const dateColor = overdue ? '#c44a3a' : urgent ? '#d4a333' : '#e8e8ea'
+        const dateColor = overdue ? '#d8543f' : urgent ? '#d4a333' : '#17130f'
         return (
           <span style={{ color: dateColor, fontWeight: overdue || urgent ? 700 : 500 }}>
             {r.dueDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
@@ -220,7 +220,7 @@ export default async function IncomePage() {
     {
       key: 'amount', header: 'Amount', align: 'right', mono: true,
       render: r => (
-        <span style={{ fontWeight: 700, color: r.paidThisCycle ? '#9c9ca3' : '#d4a333' }}>
+        <span style={{ fontWeight: 700, color: r.paidThisCycle ? '#6e6154' : '#8a5f0a' }}>
           {formatCents(r.paidThisCycle ? r.monthlyCents : r.owed)}
         </span>
       ),
@@ -237,7 +237,7 @@ export default async function IncomePage() {
       render: r => <StatusBadge label={r.type} bg={typeColors[r.type].bg} fg={typeColors[r.type].fg} />,
     },
     { key: 'who', header: 'Who', render: r => r.who },
-    { key: 'method', header: 'Method', render: r => <span style={{ color: '#9c9ca3', textTransform: 'capitalize' }}>{r.method}</span> },
+    { key: 'method', header: 'Method', render: r => <span style={{ color: '#6e6154', textTransform: 'capitalize' }}>{r.method}</span> },
     {
       key: 'amount', header: 'Amount', align: 'right', mono: true,
       render: r => <span style={{ fontWeight: 700 }}>{formatCents(r.amount)}</span>,
@@ -247,8 +247,8 @@ export default async function IncomePage() {
   return (
     <main style={{
       minHeight: '100vh',
-      background: '#0a0a0b',
-      color: '#e8e8ea',
+      background: '#faf5ea',
+      color: '#17130f',
       padding: '24px 16px calc(48px + env(safe-area-inset-bottom))',
       paddingLeft: 'max(16px, env(safe-area-inset-left))',
       paddingRight: 'max(16px, env(safe-area-inset-right))',
@@ -256,7 +256,7 @@ export default async function IncomePage() {
     }}>
       <div style={{ maxWidth: 1100, margin: '0 auto' }}>
         <a href="/leadership" style={{
-          color: '#9c9ca3',
+          color: '#6e6154',
           fontSize: 11,
           letterSpacing: '0.18em',
           textTransform: 'uppercase',
@@ -268,7 +268,7 @@ export default async function IncomePage() {
         </a>
 
         <h1 style={{
-          color: '#e8e8ea',
+          color: '#17130f',
           fontFamily: '-apple-system, "Segoe UI", Roboto, sans-serif',
           fontSize: 24,
           fontWeight: 700,
@@ -290,9 +290,9 @@ export default async function IncomePage() {
             return (
               <StatCard key={p.label} label={p.label} value={formatCents(total)}>
                 <div style={{ marginTop: 10 }}>
-                  <Stream label="Tickets"  cents={p.sums.tickets}  total={total} color="#3fb27f" />
-                  <Stream label="Sponsors" cents={p.sums.sponsors} total={total} color="#d4a333" />
-                  <Stream label="Bars"     cents={p.sums.bars}     total={total} color="#5a8de8" />
+                  <Stream label="Tickets"  cents={p.sums.tickets}  total={total} color="#0f7a4e" />
+                  <Stream label="Sponsors" cents={p.sums.sponsors} total={total} color="#8a5f0a" />
+                  <Stream label="Bars"     cents={p.sums.bars}     total={total} color="#2457b8" />
                 </div>
               </StatCard>
             )
@@ -302,7 +302,7 @@ export default async function IncomePage() {
         <h2 style={sectionHeading}>
           <span>Sponsor &amp; Bar Payments — Next Due</span>
           {totalOutstanding > 0 && (
-            <span style={{ color: '#d4a333', fontSize: 11, fontWeight: 700, letterSpacing: '0.04em', textTransform: 'none', fontFamily: '"JetBrains Mono", ui-monospace, monospace' }}>
+            <span style={{ color: '#8a5f0a', fontSize: 11, fontWeight: 700, letterSpacing: '0.04em', textTransform: 'none', fontFamily: '"JetBrains Mono", ui-monospace, monospace' }}>
               {formatCents(totalOutstanding)} outstanding
             </span>
           )}
@@ -312,7 +312,7 @@ export default async function IncomePage() {
           columns={dueColumns}
           rows={dueRows}
           rowKey={(r, i) => i}
-          empty={<div style={{ color: '#9c9ca3', fontSize: 13, padding: '12px 0 24px' }}>No active sponsors or bars with a monthly fee yet.</div>}
+          empty={<div style={{ color: '#6e6154', fontSize: 13, padding: '12px 0 24px' }}>No active sponsors or bars with a monthly fee yet.</div>}
         />
 
         <h2 style={sectionHeading}>Recent Payments</h2>
@@ -321,7 +321,7 @@ export default async function IncomePage() {
           columns={feedColumns}
           rows={feed}
           rowKey={(r, i) => i}
-          empty={<div style={{ color: '#9c9ca3', fontSize: 13, padding: '20px 0' }}>No payments recorded yet. <Link href="/leadership/sponsors" style={{ color: '#d4a333' }}>Record your first one →</Link></div>}
+          empty={<div style={{ color: '#6e6154', fontSize: 13, padding: '20px 0' }}>No payments recorded yet. <Link href="/leadership/sponsors" style={{ color: '#8a5f0a' }}>Record your first one →</Link></div>}
         />
 
         <style>{`
@@ -338,15 +338,15 @@ function dueStatusEl(row) {
   const overdue = !row.paidThisCycle && row.daysUntil < 0
   const urgent  = !row.paidThisCycle && row.daysUntil >= 0 && row.daysUntil <= 5
   if (row.paidThisCycle) {
-    return <span style={{ color: '#3fb27f', fontSize: 11 }}>✓ Paid · next cycle</span>
+    return <span style={{ color: '#0f7a4e', fontSize: 11 }}>✓ Paid · next cycle</span>
   }
   if (overdue) {
-    return <span style={{ color: '#c44a3a', fontSize: 11, fontWeight: 600 }}>Overdue {-row.daysUntil}d</span>
+    return <span style={{ color: '#b3311f', fontSize: 11, fontWeight: 600 }}>Overdue {-row.daysUntil}d</span>
   }
   if (row.daysUntil === 0) {
-    return <span style={{ color: '#d4a333', fontSize: 11, fontWeight: 600 }}>Due today</span>
+    return <span style={{ color: '#8a5f0a', fontSize: 11, fontWeight: 600 }}>Due today</span>
   }
-  return <span style={{ color: urgent ? '#d4a333' : '#9c9ca3', fontSize: 11 }}>In {row.daysUntil} day{row.daysUntil === 1 ? '' : 's'}</span>
+  return <span style={{ color: urgent ? '#8a5f0a' : '#6e6154', fontSize: 11 }}>In {row.daysUntil} day{row.daysUntil === 1 ? '' : 's'}</span>
 }
 
 function Stream({ label, cents, total, color }) {
@@ -354,10 +354,10 @@ function Stream({ label, cents, total, color }) {
   return (
     <div style={{ marginBottom: 6 }}>
       <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 10, letterSpacing: '0.12em', textTransform: 'uppercase', marginBottom: 2 }}>
-        <span style={{ color: '#9c9ca3' }}>{label}</span>
-        <span style={{ color: '#e8e8ea' }}>{formatCents(cents)}</span>
+        <span style={{ color: '#6e6154' }}>{label}</span>
+        <span style={{ color: '#17130f' }}>{formatCents(cents)}</span>
       </div>
-      <div style={{ height: 4, background: '#2a2a31', borderRadius: 2, overflow: 'hidden' }}>
+      <div style={{ height: 4, background: '#e8ddc8', borderRadius: 2, overflow: 'hidden' }}>
         <div style={{ width: `${pct}%`, height: '100%', background: color, transition: 'width 0.3s' }} />
       </div>
     </div>
@@ -365,20 +365,20 @@ function Stream({ label, cents, total, color }) {
 }
 
 const typeColors = {
-  ticket:  { bg: 'rgba(63,178,127,0.15)',  fg: '#3fb27f' },
-  sponsor: { bg: 'rgba(212,163,51,0.15)',  fg: '#d4a333' },
-  bar:     { bg: 'rgba(90,141,232,0.15)',  fg: '#5a8de8' },
+  ticket:  { bg: 'rgba(63,178,127,0.15)',  fg: '#0f7a4e' },
+  sponsor: { bg: 'rgba(212,163,51,0.15)',  fg: '#8a5f0a' },
+  bar:     { bg: 'rgba(90,141,232,0.15)',  fg: '#2457b8' },
 }
 
 const sectionHeading = {
-  color: '#e8e8ea',
+  color: '#17130f',
   fontFamily: '-apple-system, "Segoe UI", Roboto, sans-serif',
   fontSize: 13,
   fontWeight: 600,
   letterSpacing: '0.06em',
   textTransform: 'uppercase',
   margin: '0 0 12px 0',
-  borderBottom: '1px solid #2a2a31',
+  borderBottom: '1px solid #e8ddc8',
   paddingBottom: 6,
   display: 'flex',
   justifyContent: 'space-between',

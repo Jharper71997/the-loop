@@ -4,10 +4,11 @@ import { operationalDateInTZ } from '@/lib/schedule'
 export const dynamic = 'force-dynamic'
 
 const ACCENT = '#d4a333'
-const SURFACE = '#15151a'
-const BORDER = '#2a2a31'
-const INK = '#e8e8ea'
-const INK_DIM = '#9c9ca3'
+const ACCENT_TXT = '#8a5f0a'
+const SURFACE = '#fdfaf3'
+const BORDER = '#e8ddc8'
+const INK = '#17130f'
+const INK_DIM = '#6e6154'
 
 export default async function ManageLoopsListPage() {
   const supabase = supabaseAdmin()
@@ -58,7 +59,7 @@ export default async function ManageLoopsListPage() {
           href="/leadership/loops/new"
           style={{
             background: ACCENT,
-            color: '#0a0a0b',
+            color: '#231903',
             padding: '10px 16px',
             borderRadius: 8,
             fontWeight: 700,
@@ -129,7 +130,7 @@ export default async function ManageLoopsListPage() {
                 }}>
                   {tickets} {tickets === 1 ? 'ticket' : 'tickets'}
                 </span>
-                <span style={{ color: ACCENT, fontWeight: 700 }}>→</span>
+                <span style={{ color: ACCENT_TXT, fontWeight: 700 }}>→</span>
               </div>
             </a>
           )
@@ -141,10 +142,10 @@ export default async function ManageLoopsListPage() {
 
 function StatusPill({ status }) {
   const palette = {
-    on_sale:   { bg: 'rgba(111,191,127,0.12)', border: 'rgba(111,191,127,0.4)', color: '#6fbf7f', label: 'On sale' },
-    draft:     { bg: 'rgba(212,163,51,0.10)',  border: 'rgba(212,163,51,0.45)', color: '#f0c24a', label: 'Draft' },
-    sold_out:  { bg: 'rgba(255,140,80,0.12)',  border: 'rgba(255,140,80,0.45)', color: '#ffb074', label: 'Sold out' },
-    cancelled: { bg: 'rgba(224,122,122,0.12)', border: 'rgba(224,122,122,0.4)', color: '#e07a7a', label: 'Cancelled' },
+    on_sale:   { bg: 'rgba(111,191,127,0.12)', border: 'rgba(111,191,127,0.4)', color: '#0f7a4e', label: 'On sale' },
+    draft:     { bg: 'rgba(212,163,51,0.10)',  border: 'rgba(212,163,51,0.45)', color: '#8a5f0a', label: 'Draft' },
+    sold_out:  { bg: 'rgba(255,140,80,0.12)',  border: 'rgba(255,140,80,0.45)', color: '#b25a16', label: 'Sold out' },
+    cancelled: { bg: 'rgba(224,122,122,0.12)', border: 'rgba(224,122,122,0.4)', color: '#b3311f', label: 'Cancelled' },
   }[status] || { bg: SURFACE, border: BORDER, color: INK_DIM, label: status }
   return (
     <span style={{

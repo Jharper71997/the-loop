@@ -51,10 +51,10 @@ async function markSponsorPaid(sponsorId) {
 export const dynamic = 'force-dynamic'
 
 const STATUS_COLORS = {
-  prospect:  { bg: 'rgba(111,111,118,0.15)', fg: '#c8c8cc' },
-  committed: { bg: 'rgba(212,163,51,0.15)',  fg: '#d4a333' },
-  paid:      { bg: 'rgba(63,178,127,0.15)',  fg: '#3fb27f' },
-  inactive:  { bg: 'rgba(196,74,58,0.12)',   fg: '#c44a3a' },
+  prospect:  { bg: 'rgba(111,111,118,0.15)', fg: '#3b322a' },
+  committed: { bg: 'rgba(212,163,51,0.15)',  fg: '#8a5f0a' },
+  paid:      { bg: 'rgba(63,178,127,0.15)',  fg: '#0f7a4e' },
+  inactive:  { bg: 'rgba(196,74,58,0.12)',   fg: '#b3311f' },
 }
 
 const METHOD_LABELS = { stripe: 'Stripe', check: 'Check', cash: 'Cash', venmo: 'Venmo', cashapp: 'Cash App', other: 'Other' }
@@ -183,7 +183,7 @@ export default async function SponsorsPage() {
         <PaymentRosterTable
           entityLabel="Sponsor"
           rows={rows}
-          empty={<div style={{ color: '#9c9ca3', fontSize: 13, padding: '20px 0' }}>No sponsors yet. Add via Asana Lead Mgmt; sponsor records get inserted as they convert.</div>}
+          empty={<div style={{ color: '#6e6154', fontSize: 13, padding: '20px 0' }}>No sponsors yet. Add via Asana Lead Mgmt; sponsor records get inserted as they convert.</div>}
         />
       </div>
     </main>
@@ -192,15 +192,15 @@ export default async function SponsorsPage() {
 
 const mainStyle = {
   minHeight: '100vh',
-  background: '#0a0a0b',
-  color: '#e8e8ea',
+  background: '#faf5ea',
+  color: '#17130f',
   padding: '24px 16px calc(48px + env(safe-area-inset-bottom))',
   paddingLeft: 'max(16px, env(safe-area-inset-left))',
   paddingRight: 'max(16px, env(safe-area-inset-right))',
   fontFamily: 'inherit',
 }
 const backLink = {
-  color: '#9c9ca3', fontSize: 11, letterSpacing: '0.18em', textTransform: 'uppercase',
+  color: '#6e6154', fontSize: 11, letterSpacing: '0.18em', textTransform: 'uppercase',
   textDecoration: 'none', display: 'inline-block', marginBottom: 18,
 }
 const headerRow = {
@@ -208,11 +208,11 @@ const headerRow = {
   gap: 12, flexWrap: 'wrap', marginBottom: 18,
 }
 const h1Style = {
-  color: '#e8e8ea', fontFamily: '-apple-system, "Segoe UI", Roboto, sans-serif',
+  color: '#17130f', fontFamily: '-apple-system, "Segoe UI", Roboto, sans-serif',
   fontSize: 24, fontWeight: 700, letterSpacing: '-0.01em', margin: 0,
 }
 const addBtn = {
-  background: '#d4a333', color: '#0a0a0b',
+  background: '#d4a333', color: '#231903',
   fontFamily: '-apple-system, "Segoe UI", Roboto, sans-serif',
   fontSize: 13, fontWeight: 600, padding: '8px 14px', borderRadius: 6, textDecoration: 'none',
 }

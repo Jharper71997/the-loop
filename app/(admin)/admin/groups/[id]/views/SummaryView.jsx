@@ -1,11 +1,13 @@
 'use client'
 
 const ACCENT = '#d4a333'
+const ACCENT_TXT = '#8a5f0a'
 const ACCENT_HI = '#f0c24a'
-const SURFACE = '#15151a'
-const BORDER = '#2a2a31'
-const INK = '#f5f5f7'
-const INK_DIM = '#9c9ca3'
+const ACCENT_HI_TXT = '#8a5f0a'
+const SURFACE = '#fdfaf3'
+const BORDER = '#e8ddc8'
+const INK = '#17130f'
+const INK_DIM = '#6e6154'
 
 export default function SummaryView({
   group,
@@ -60,7 +62,7 @@ export default function SummaryView({
             gap: 10,
             alignItems: 'center',
             padding: '12px 14px',
-            background: '#0e0e12',
+            background: '#ffffff',
             border: `1px solid ${BORDER}`,
             borderRadius: 10,
             fontFamily: 'ui-monospace, SFMono-Regular, monospace',
@@ -105,7 +107,7 @@ export default function SummaryView({
                     </div>
                   </div>
                   <div style={{ textAlign: 'right' }}>
-                    <div style={{ fontSize: 13, color: ACCENT_HI, fontWeight: 700, fontVariantNumeric: 'tabular-nums' }}>
+                    <div style={{ fontSize: 13, color: ACCENT_HI_TXT, fontWeight: 700, fontVariantNumeric: 'tabular-nums' }}>
                       {issued} issued
                     </div>
                     <div style={{ fontSize: 11, color: INK_DIM }}>
@@ -138,9 +140,9 @@ export default function SummaryView({
                   </div>
                   <div style={{ fontSize: 11 }}>
                     {sig ? (
-                      <span style={{ color: '#6fbf7f' }}>✓ waiver v{sig.waiver_versions?.version}</span>
+                      <span style={{ color: '#0f7a4e' }}>✓ waiver v{sig.waiver_versions?.version}</span>
                     ) : (
-                      <span style={{ color: '#facc15' }}>waiver pending</span>
+                      <span style={{ color: '#8a5f0a' }}>waiver pending</span>
                     )}
                   </div>
                 </div>
@@ -165,7 +167,7 @@ export default function SummaryView({
                   </div>
                 </div>
                 <div style={{ textAlign: 'right' }}>
-                  <div style={{ color: ACCENT_HI, fontWeight: 700 }}>${((o.total_cents || 0) / 100).toFixed(2)}</div>
+                  <div style={{ color: ACCENT_HI_TXT, fontWeight: 700 }}>${((o.total_cents || 0) / 100).toFixed(2)}</div>
                   <div style={{ fontSize: 11, color: INK_DIM }}>{o.status}</div>
                 </div>
               </div>
@@ -215,7 +217,7 @@ function Stat({ label, value }) {
       <div style={{
         fontSize: 26,
         fontWeight: 800,
-        color: ACCENT_HI,
+        color: ACCENT_HI_TXT,
         marginTop: 4,
         fontVariantNumeric: 'tabular-nums',
       }}>
@@ -279,7 +281,7 @@ const listRow = {
   justifyContent: 'space-between',
   alignItems: 'center',
   padding: 10,
-  background: '#0e0e12',
+  background: '#ffffff',
   border: `1px solid ${BORDER}`,
   borderRadius: 8,
   fontSize: 13,
@@ -289,7 +291,7 @@ const listRow = {
 
 const panelHeader = {
   fontSize: 11,
-  color: ACCENT,
+  color: ACCENT_TXT,
   margin: 0,
   letterSpacing: '0.22em',
   textTransform: 'uppercase',
@@ -299,7 +301,7 @@ const panelHeader = {
 const ghostBtn = {
   background: 'transparent',
   border: `1px solid ${BORDER}`,
-  color: ACCENT,
+  color: ACCENT_TXT,
   padding: '6px 12px',
   borderRadius: 8,
   fontSize: 12,
@@ -311,7 +313,7 @@ const ghostBtn = {
 
 const primaryBtn = {
   background: `linear-gradient(180deg, ${ACCENT_HI}, ${ACCENT})`,
-  color: '#0a0a0b',
+  color: '#231903',
   border: 0,
   padding: '12px 18px',
   borderRadius: 10,

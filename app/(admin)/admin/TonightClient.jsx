@@ -13,8 +13,9 @@ import { supabase } from '@/lib/supabase'
 import { isLeadership } from '@/lib/roles'
 
 const ACCENT = '#d4a333'
-const SURFACE = '#15151a'
-const BORDER = '#2a2a31'
+const ACCENT_TXT = '#8a5f0a'
+const SURFACE = '#fdfaf3'
+const BORDER = '#e8ddc8'
 
 export default function TonightClient({ state, renderedAt, today, group, currentIdx, ordersToday, orderStopBreakdown = {}, ticketsByContact = {}, totalTickets = 0, upcomingGroups = [] }) {
   const [email, setEmail] = useState(null)
@@ -29,7 +30,7 @@ export default function TonightClient({ state, renderedAt, today, group, current
       padding: '20px 16px calc(40px + env(safe-area-inset-bottom))',
       paddingLeft: 'max(16px, env(safe-area-inset-left))',
       paddingRight: 'max(16px, env(safe-area-inset-right))',
-      minHeight: '100vh', color: '#fff',
+      minHeight: '100vh', color: '#17130f',
     }}>
       <Header today={today} group={group} state={state} isLeader={isLeader} />
       {renderedAt && <LiveStamp renderedAt={renderedAt} style={{ marginTop: 0, marginBottom: 14 }} />}
@@ -58,14 +59,14 @@ export default function TonightClient({ state, renderedAt, today, group, current
                   const stops = formatOrderStops(orderStopBreakdown[o.id], o.party_size)
                   return (
                     <div key={o.id} style={{
-                      padding: 8, background: '#0e0e12', borderRadius: 6, fontSize: 12,
+                      padding: 8, background: '#ffffff', borderRadius: 6, fontSize: 12,
                       display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 8,
                     }}>
                       <span style={{ display: 'grid', gap: 2, minWidth: 0 }}>
                         <span>
-                          <strong style={{ color: '#e8e8ea' }}>{o.buyer_name || '(no name)'}</strong>
+                          <strong style={{ color: '#17130f' }}>{o.buyer_name || '(no name)'}</strong>
                           {o.buyer_phone && (
-                            <span style={{ color: '#9c9ca3', marginLeft: 6 }}>· {o.buyer_phone}</span>
+                            <span style={{ color: '#6e6154', marginLeft: 6 }}>· {o.buyer_phone}</span>
                           )}
                           {ttTagged && (
                             <span style={{
@@ -73,16 +74,16 @@ export default function TonightClient({ state, renderedAt, today, group, current
                               fontSize: 9,
                               letterSpacing: '0.18em',
                               textTransform: 'uppercase',
-                              color: '#9c9ca3',
-                              border: '1px solid #2a2a31',
+                              color: '#6e6154',
+                              border: '1px solid #e8ddc8',
                               padding: '1px 6px',
                               borderRadius: 3,
                             }}>TT</span>
                           )}
                         </span>
-                        <span style={{ color: '#9c9ca3', fontSize: 11 }}>{stops}</span>
+                        <span style={{ color: '#6e6154', fontSize: 11 }}>{stops}</span>
                       </span>
-                      <span style={{ color: ACCENT, fontWeight: 600 }}>${(o.total_cents / 100).toFixed(2)}</span>
+                      <span style={{ color: ACCENT_TXT, fontWeight: 600 }}>${(o.total_cents / 100).toFixed(2)}</span>
                     </div>
                   )
                 })}
@@ -106,20 +107,20 @@ function EventQuickPanel({ group, totalTickets, isLeader = false }) {
       gap: 12,
       alignItems: 'center',
       padding: '12px 14px',
-      background: 'linear-gradient(180deg, #15151a, #121215)',
+      background: 'linear-gradient(180deg, #ffffff, #fdfaf3)',
       border: `1px solid ${BORDER}`,
       borderRadius: 12,
       marginBottom: 14,
       flexWrap: 'wrap',
     }}>
       <div style={{ flex: 1, minWidth: 220 }}>
-        <div style={{ fontSize: 11, color: '#9c9ca3', letterSpacing: '0.18em', textTransform: 'uppercase', fontWeight: 700 }}>
+        <div style={{ fontSize: 11, color: '#6e6154', letterSpacing: '0.18em', textTransform: 'uppercase', fontWeight: 700 }}>
           Active event
         </div>
-        <div style={{ color: '#e8e8ea', fontWeight: 600, fontSize: 15, marginTop: 2 }}>
+        <div style={{ color: '#17130f', fontWeight: 600, fontSize: 15, marginTop: 2 }}>
           {group.name || 'Brew Loop'}
         </div>
-        <div style={{ color: '#9c9ca3', fontSize: 12, marginTop: 2 }}>
+        <div style={{ color: '#6e6154', fontSize: 12, marginTop: 2 }}>
           {group.event_date || 'No date'}{group.pickup_time ? ` · ${group.pickup_time}` : ''}
           {totalTickets ? ` · ${totalTickets} ticket${totalTickets === 1 ? '' : 's'} sold` : ''}
         </div>
@@ -128,7 +129,7 @@ function EventQuickPanel({ group, totalTickets, isLeader = false }) {
         href={`/admin/groups/${group.id}#summary`}
         style={{
           padding: '10px 14px', borderRadius: 8, border: `1px solid ${BORDER}`,
-          color: '#c8c8cc', fontSize: 12, fontWeight: 600, textDecoration: 'none',
+          color: '#3b322a', fontSize: 12, fontWeight: 600, textDecoration: 'none',
           minHeight: 36, display: 'inline-flex', alignItems: 'center',
         }}
       >
@@ -139,7 +140,7 @@ function EventQuickPanel({ group, totalTickets, isLeader = false }) {
           href={`/leadership/loops/${group.id}#edit`}
           style={{
             padding: '10px 14px', borderRadius: 8, border: `1px solid ${ACCENT}`,
-            color: ACCENT, fontSize: 12, fontWeight: 700, textDecoration: 'none',
+            color: ACCENT_TXT, fontSize: 12, fontWeight: 700, textDecoration: 'none',
             minHeight: 36, display: 'inline-flex', alignItems: 'center',
           }}
         >
@@ -157,7 +158,7 @@ function Header({ today, group, state, isLeader = false }) {
     <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', marginBottom: 16, gap: 12, flexWrap: 'wrap' }}>
       <div>
         <div style={{
-          color: isLive ? '#6fbf7f' : '#9c9ca3',
+          color: isLive ? '#0f7a4e' : '#6e6154',
           fontSize: 11,
           letterSpacing: '0.22em',
           textTransform: 'uppercase',
@@ -169,18 +170,18 @@ function Header({ today, group, state, isLeader = false }) {
           {isLive && (
             <span style={{
               width: 7, height: 7, borderRadius: '50%',
-              background: '#6fbf7f', boxShadow: '0 0 10px #6fbf7f',
+              background: '#2fa36b', boxShadow: '0 0 10px #2fa36b',
               display: 'inline-block',
             }} />
           )}
           {eyebrow}
         </div>
-        <h1 style={{ fontSize: 'clamp(22px, 6vw, 28px)', color: ACCENT, margin: '4px 0 0' }}>Schedule</h1>
-        <span style={{ color: '#9c9ca3', fontSize: 13 }}>{formatToday(today)}</span>
+        <h1 style={{ fontSize: 'clamp(22px, 6vw, 28px)', color: ACCENT_TXT, margin: '4px 0 0' }}>Schedule</h1>
+        <span style={{ color: '#6e6154', fontSize: 13 }}>{formatToday(today)}</span>
       </div>
       {isLeader && (
         <Link href="/leadership/loops/new" style={{
-          background: ACCENT, color: '#0a0a0b',
+          background: ACCENT, color: '#231903',
           padding: '10px 16px', borderRadius: 8, fontWeight: 700, fontSize: 13, textDecoration: 'none',
           minHeight: 44, display: 'inline-flex', alignItems: 'center',
         }}>+ New Loop</Link>
@@ -194,13 +195,13 @@ function NoLoopState({ isLeader = false }) {
     <section style={{
       background: SURFACE, border: `1px solid ${BORDER}`, borderRadius: 12, padding: 24, textAlign: 'center',
     }}>
-      <div style={{ fontSize: 14, color: '#9c9ca3', marginBottom: 8 }}>No Loops scheduled</div>
-      <p style={{ color: '#bbb', fontSize: 14, margin: '0 0 16px' }}>
+      <div style={{ fontSize: 14, color: '#6e6154', marginBottom: 8 }}>No Loops scheduled</div>
+      <p style={{ color: '#6e6154', fontSize: 14, margin: '0 0 16px' }}>
         When you create a Loop on the Loops tab, this page will show its manifest, stops, and a one-tap broadcast.
       </p>
       {isLeader && (
         <Link href="/leadership/loops/new" style={{
-          display: 'inline-block', background: ACCENT, color: '#0a0a0b',
+          display: 'inline-block', background: ACCENT, color: '#231903',
           padding: '10px 18px', borderRadius: 10, fontWeight: 700, fontSize: 14, textDecoration: 'none',
         }}>+ Create your first Loop</Link>
       )}
@@ -215,12 +216,12 @@ function UpcomingLoopState({ group, ticketsByContact, totalTickets }) {
   return (
     <>
       <Hero>
-        <div style={{ color: '#9c9ca3', fontSize: 12, letterSpacing: '0.06em', textTransform: 'uppercase' }}>Next Loop</div>
+        <div style={{ color: '#6e6154', fontSize: 12, letterSpacing: '0.06em', textTransform: 'uppercase' }}>Next Loop</div>
         <div style={{ fontSize: 24, fontWeight: 700, marginTop: 4 }}>
           {formatDate(group.event_date)}{group.pickup_time ? ` · ${formatStopTime(group.pickup_time)}` : ''}
         </div>
-        <div style={{ color: '#d4a333', fontSize: 14, marginTop: 2 }}>{group.name}</div>
-        <div style={{ color: '#9c9ca3', fontSize: 13, marginTop: 8 }}>
+        <div style={{ color: '#8a5f0a', fontSize: 14, marginTop: 2 }}>{group.name}</div>
+        <div style={{ color: '#6e6154', fontSize: 13, marginTop: 8 }}>
           {seatLabel} booked · {signed}/{riders.length} waivers signed
         </div>
         <div style={{ marginTop: 12, display: 'flex', gap: 8 }}>
@@ -245,14 +246,14 @@ function PrePickupState({ group, ticketsByContact, totalTickets }) {
   return (
     <>
       <Hero>
-        <div style={{ color: '#9c9ca3', fontSize: 12, letterSpacing: '0.06em', textTransform: 'uppercase' }}>Tonight</div>
+        <div style={{ color: '#6e6154', fontSize: 12, letterSpacing: '0.06em', textTransform: 'uppercase' }}>Tonight</div>
         <div style={{ fontSize: 24, fontWeight: 700, marginTop: 4 }}>
           {group.name} · pickup {group.pickup_time ? formatStopTime(group.pickup_time) : 'TBD'}
           {countdown != null && (
-            <span style={{ color: '#9c9ca3', fontSize: 14, marginLeft: 8 }}>(in {formatCountdown(countdown)})</span>
+            <span style={{ color: '#6e6154', fontSize: 14, marginLeft: 8 }}>(in {formatCountdown(countdown)})</span>
           )}
         </div>
-        <div style={{ color: '#9c9ca3', fontSize: 13, marginTop: 8 }}>
+        <div style={{ color: '#6e6154', fontSize: 13, marginTop: 8 }}>
           {seatLabel} · {signed}/{riders.length} waivers signed
         </div>
         <div style={{ marginTop: 12, display: 'flex', gap: 8 }}>
@@ -278,21 +279,21 @@ function InProgressState({ group, currentIdx, ticketsByContact, totalTickets }) 
   return (
     <>
       <Hero>
-        <div style={{ color: '#9c9ca3', fontSize: 12, letterSpacing: '0.06em', textTransform: 'uppercase' }}>
+        <div style={{ color: '#6e6154', fontSize: 12, letterSpacing: '0.06em', textTransform: 'uppercase' }}>
           Loop in progress
         </div>
         <div style={{ fontSize: 24, fontWeight: 700, marginTop: 4 }}>{group.name}</div>
         {currentStop && (
           <div style={{ marginTop: 6 }}>
             <span style={{
-              display: 'inline-block', background: ACCENT, color: '#0a0a0b',
+              display: 'inline-block', background: ACCENT, color: '#231903',
               padding: '3px 10px', borderRadius: 999, fontSize: 12, fontWeight: 700,
             }}>
               Current: {currentIdx + 1}. {currentStop.name}
             </span>
           </div>
         )}
-        <div style={{ color: '#9c9ca3', fontSize: 13, marginTop: 8 }}>{seatLabel}</div>
+        <div style={{ color: '#6e6154', fontSize: 13, marginTop: 8 }}>{seatLabel}</div>
       </Hero>
 
       <div style={{ marginTop: 14 }}>
@@ -335,7 +336,7 @@ function StopCards({ stops, riders, currentIdx, showCheckoff = false }) {
       <section style={{
         background: SURFACE, border: `1px solid ${BORDER}`, borderRadius: 12, padding: 14, marginTop: 14,
       }}>
-        <p style={{ color: '#9c9ca3', margin: 0, fontSize: 13 }}>
+        <p style={{ color: '#6e6154', margin: 0, fontSize: 13 }}>
           No schedule on this Loop yet. Open it on Loops to add stops.
         </p>
       </section>
@@ -346,27 +347,27 @@ function StopCards({ stops, riders, currentIdx, showCheckoff = false }) {
     <div style={{ display: 'grid', gap: 10, marginTop: 14 }}>
       {unassigned.length > 0 && (
         <section style={{
-          background: SURFACE, border: `1px solid #f87171`, borderRadius: 12, padding: 14,
+          background: SURFACE, border: `1px solid #d8543f`, borderRadius: 12, padding: 14,
         }}>
           <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between' }}>
             <div>
-              <div style={{ fontSize: 11, color: '#f87171', letterSpacing: '0.08em', textTransform: 'uppercase' }}>Unassigned</div>
-              <div style={{ fontSize: 15, fontWeight: 700, color: '#f87171' }}>No stop yet — assign on Loops tab</div>
+              <div style={{ fontSize: 11, color: '#b3311f', letterSpacing: '0.08em', textTransform: 'uppercase' }}>Unassigned</div>
+              <div style={{ fontSize: 15, fontWeight: 700, color: '#b3311f' }}>No stop yet — assign on Loops tab</div>
             </div>
-            <span style={{ fontSize: 12, color: '#f87171' }}>
+            <span style={{ fontSize: 12, color: '#b3311f' }}>
               {unassignedSeats} rider{unassignedSeats === 1 ? '' : 's'}
             </span>
           </div>
           <div style={{ display: 'grid', gap: 6, marginTop: 10 }}>
             {unassigned.map(r => (
               <div key={r.member_id} style={{
-                padding: 8, background: '#0e0e12', borderRadius: 8, border: `1px solid ${BORDER}`,
+                padding: 8, background: '#ffffff', borderRadius: 8, border: `1px solid ${BORDER}`,
                 display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 8,
               }}>
                 <div style={{ fontSize: 13 }}>
                   <strong>{r.first_name} {r.last_name}</strong>
                   {r.tickets > 1 && <TicketBadge tickets={r.tickets} />}
-                  {r.phone && <span style={{ color: '#9c9ca3', fontSize: 11, marginLeft: 6 }}>{r.phone}</span>}
+                  {r.phone && <span style={{ color: '#6e6154', fontSize: 11, marginLeft: 6 }}>{r.phone}</span>}
                 </div>
                 <SmsButton contact={r} />
               </div>
@@ -389,10 +390,10 @@ function StopCards({ stops, riders, currentIdx, showCheckoff = false }) {
           }}>
             <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between' }}>
               <div>
-                <div style={{ fontSize: 11, color: '#9c9ca3' }}>Stop {i + 1} · {formatStopTime(stop.start_time)}</div>
-                <div style={{ fontSize: 15, fontWeight: 700, color: isCurrent ? ACCENT : '#fff' }}>{stop.name}</div>
+                <div style={{ fontSize: 11, color: '#6e6154' }}>Stop {i + 1} · {formatStopTime(stop.start_time)}</div>
+                <div style={{ fontSize: 15, fontWeight: 700, color: isCurrent ? ACCENT_TXT : '#17130f' }}>{stop.name}</div>
               </div>
-              <span style={{ fontSize: 12, color: '#9c9ca3' }}>
+              <span style={{ fontSize: 12, color: '#6e6154' }}>
                 {atStopSeats} rider{atStopSeats === 1 ? '' : 's'}
               </span>
             </div>
@@ -401,7 +402,7 @@ function StopCards({ stops, riders, currentIdx, showCheckoff = false }) {
               <div style={{ display: 'grid', gap: 6, marginTop: 10 }}>
                 {atStop.map(r => (
                   <div key={r.member_id} style={{
-                    padding: 8, background: '#0e0e12', borderRadius: 8, border: `1px solid ${BORDER}`,
+                    padding: 8, background: '#ffffff', borderRadius: 8, border: `1px solid ${BORDER}`,
                     display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 8,
                   }}>
                     <a
@@ -415,13 +416,13 @@ function StopCards({ stops, riders, currentIdx, showCheckoff = false }) {
                       }}
                       title="Open contact to edit"
                     >
-                      <strong style={{ borderBottom: '1px dashed #2a2a31' }}>
+                      <strong style={{ borderBottom: '1px dashed #e8ddc8' }}>
                         {r.first_name || r.last_name ? `${r.first_name} ${r.last_name}`.trim() : '(no name)'}
                       </strong>
                       {r.tickets > 1 && <TicketBadge tickets={r.tickets} />}
                       {r.phone
-                        ? <span style={{ color: '#9c9ca3', fontSize: 11, marginLeft: 6 }}>{r.phone}</span>
-                        : <span style={{ color: '#e07a7a', fontSize: 11, marginLeft: 6 }}>no phone — tap to fix</span>}
+                        ? <span style={{ color: '#6e6154', fontSize: 11, marginLeft: 6 }}>{r.phone}</span>
+                        : <span style={{ color: '#b3311f', fontSize: 11, marginLeft: 6 }}>no phone — tap to fix</span>}
                     </a>
                     <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
                       {showCheckoff && (
@@ -464,20 +465,20 @@ function UpNextSection({ groups }) {
                 alignItems: 'center',
                 gap: 12,
                 padding: '10px 12px',
-                background: '#0e0e12',
+                background: '#ffffff',
                 borderRadius: 8,
                 border: `1px solid ${BORDER}`,
                 textDecoration: 'none',
-                color: '#fff',
+                color: '#17130f',
               }}
             >
               <div>
-                <div style={{ fontSize: 11, color: ACCENT, letterSpacing: '0.16em', textTransform: 'uppercase', fontWeight: 700 }}>
+                <div style={{ fontSize: 11, color: ACCENT_TXT, letterSpacing: '0.16em', textTransform: 'uppercase', fontWeight: 700 }}>
                   {formatDate(g.event_date)}{g.pickup_time ? ` · ${formatStopTime(g.pickup_time)}` : ''}
                 </div>
                 <div style={{ fontSize: 14, fontWeight: 600, marginTop: 2 }}>{g.name || 'Brew Loop'}</div>
               </div>
-              <span style={{ fontSize: 12, color: '#9c9ca3' }}>
+              <span style={{ fontSize: 12, color: '#6e6154' }}>
                 {seats} rider{seats === 1 ? '' : 's'}
               </span>
             </a>
@@ -496,7 +497,7 @@ function TicketBadge({ tickets }) {
       padding: '1px 7px',
       borderRadius: 999,
       background: 'rgba(212,163,51,0.15)',
-      color: ACCENT,
+      color: ACCENT_TXT,
       border: '1px solid rgba(212,163,51,0.4)',
       fontSize: 10,
       fontWeight: 700,
@@ -597,10 +598,10 @@ function formatCountdown(mins) {
 }
 
 const sectionHeader = {
-  fontSize: 12, color: ACCENT, margin: 0, letterSpacing: '0.08em', textTransform: 'uppercase',
+  fontSize: 12, color: ACCENT_TXT, margin: 0, letterSpacing: '0.08em', textTransform: 'uppercase',
 }
 
 const secondaryBtn = {
-  display: 'inline-block', color: ACCENT, textDecoration: 'none',
+  display: 'inline-block', color: ACCENT_TXT, textDecoration: 'none',
   border: `1px solid ${ACCENT}`, padding: '8px 14px', borderRadius: 8, fontSize: 13, fontWeight: 600,
 }

@@ -7,10 +7,10 @@ import DeleteForm from '../../../_components/DeleteForm'
 export const dynamic = 'force-dynamic'
 
 const STATUS_COLORS = {
-  prospect: { bg: 'rgba(111,111,118,0.15)', fg: '#c8c8cc' },
-  active:   { bg: 'rgba(63,178,127,0.15)',  fg: '#3fb27f' },
-  paused:   { bg: 'rgba(212,163,51,0.15)',  fg: '#d4a333' },
-  inactive: { bg: 'rgba(196,74,58,0.12)',   fg: '#c44a3a' },
+  prospect: { bg: 'rgba(111,111,118,0.15)', fg: '#3b322a' },
+  active:   { bg: 'rgba(63,178,127,0.15)',  fg: '#0f7a4e' },
+  paused:   { bg: 'rgba(212,163,51,0.15)',  fg: '#8a5f0a' },
+  inactive: { bg: 'rgba(196,74,58,0.12)',   fg: '#b3311f' },
 }
 
 async function deleteBar(slug) {
@@ -71,8 +71,8 @@ export default async function BarDetail({ params }) {
             <div style={notesLabel}>Contact</div>
             <div style={notesText}>
               {bar.contact_name && <div>{bar.contact_name}</div>}
-              {bar.contact_phone && <div style={{ color: '#9c9ca3' }}>{bar.contact_phone}</div>}
-              {bar.contact_email && <div style={{ color: '#9c9ca3' }}>{bar.contact_email}</div>}
+              {bar.contact_phone && <div style={{ color: '#6e6154' }}>{bar.contact_phone}</div>}
+              {bar.contact_email && <div style={{ color: '#6e6154' }}>{bar.contact_email}</div>}
             </div>
           </div>
         )}
@@ -87,12 +87,12 @@ export default async function BarDetail({ params }) {
         <h2 style={sectionHeader}>Payment History</h2>
         {payments.length === 0 ? (
           <div style={emptyState}>
-            No payments recorded yet. <a href={`/leadership/bars/${slug}/payments/new`} style={{ color: '#d4a333' }}>Record the first one.</a>
+            No payments recorded yet. <a href={`/leadership/bars/${slug}/payments/new`} style={{ color: '#8a5f0a' }}>Record the first one.</a>
           </div>
         ) : (
           <table style={tableStyle}>
             <thead>
-              <tr style={{ borderBottom: '1px solid #2a2a31' }}>
+              <tr style={{ borderBottom: '1px solid #e8ddc8' }}>
                 <th style={th}>Date</th>
                 <th style={th}>Period</th>
                 <th style={th}>Method</th>
@@ -102,11 +102,11 @@ export default async function BarDetail({ params }) {
             </thead>
             <tbody>
               {payments.map(p => (
-                <tr key={p.id} style={{ borderBottom: '1px solid #2a2a31' }}>
+                <tr key={p.id} style={{ borderBottom: '1px solid #e8ddc8' }}>
                   <td style={td}>{new Date(p.paid_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}</td>
                   <td style={td}>{p.paid_for_period ? new Date(p.paid_for_period).toLocaleDateString('en-US', { month: 'short', year: 'numeric' }) : '—'}</td>
-                  <td style={{ ...td, textTransform: 'capitalize', color: '#9c9ca3' }}>{p.method}</td>
-                  <td style={{ ...td, color: '#9c9ca3', fontSize: 12 }}>{p.reference || '—'}</td>
+                  <td style={{ ...td, textTransform: 'capitalize', color: '#6e6154' }}>{p.method}</td>
+                  <td style={{ ...td, color: '#6e6154', fontSize: 12 }}>{p.reference || '—'}</td>
                   <td style={{ ...td, textAlign: 'right', fontFamily: '"JetBrains Mono", ui-monospace, monospace', fontWeight: 700 }}>{formatCents(p.amount_cents)}</td>
                 </tr>
               ))}
@@ -121,35 +121,35 @@ export default async function BarDetail({ params }) {
 function Stat({ label, value }) {
   return (
     <div style={{
-      background: '#121216',
-      border: '1px solid #2a2a31',
+      background: '#ffffff',
+      border: '1px solid #e8ddc8',
       borderRadius: 6,
       padding: '12px 14px',
     }}>
-      <div style={{ color: '#9c9ca3', fontSize: 11, fontWeight: 600, letterSpacing: '0.04em', textTransform: 'uppercase', marginBottom: 6 }}>
+      <div style={{ color: '#6e6154', fontSize: 11, fontWeight: 600, letterSpacing: '0.04em', textTransform: 'uppercase', marginBottom: 6 }}>
         {label}
       </div>
-      <div style={{ fontFamily: '"JetBrains Mono", ui-monospace, monospace', fontSize: 18, fontWeight: 600, color: '#e8e8ea' }}>
+      <div style={{ fontFamily: '"JetBrains Mono", ui-monospace, monospace', fontSize: 18, fontWeight: 600, color: '#17130f' }}>
         {value}
       </div>
     </div>
   )
 }
 
-const pageStyle = { minHeight: '100vh', background: '#0a0a0b', color: '#e8e8ea', padding: '24px 16px 48px', fontFamily: '-apple-system, "Segoe UI", Roboto, sans-serif' }
+const pageStyle = { minHeight: '100vh', background: '#faf5ea', color: '#17130f', padding: '24px 16px 48px', fontFamily: '-apple-system, "Segoe UI", Roboto, sans-serif' }
 const containerStyle = { maxWidth: 900, margin: '0 auto' }
-const backLink = { color: '#9c9ca3', fontSize: 13, textDecoration: 'none', display: 'inline-block', marginBottom: 16 }
+const backLink = { color: '#6e6154', fontSize: 13, textDecoration: 'none', display: 'inline-block', marginBottom: 16 }
 const headerRow = { display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', flexWrap: 'wrap', gap: 12, marginBottom: 22 }
-const titleStyle = { color: '#e8e8ea', fontSize: 24, fontWeight: 700, letterSpacing: '-0.01em', margin: 0 }
-const subtitleStyle = { color: '#9c9ca3', fontSize: 13, margin: '4px 0 0 0' }
-const primaryButton = { background: '#d4a333', color: '#0a0a0b', fontSize: 13, fontWeight: 600, padding: '8px 14px', borderRadius: 6, textDecoration: 'none' }
-const secondaryButton = { background: 'transparent', color: '#e8e8ea', border: '1px solid #2a2a31', fontSize: 13, fontWeight: 600, padding: '8px 14px', borderRadius: 6, textDecoration: 'none' }
+const titleStyle = { color: '#17130f', fontSize: 24, fontWeight: 700, letterSpacing: '-0.01em', margin: 0 }
+const subtitleStyle = { color: '#6e6154', fontSize: 13, margin: '4px 0 0 0' }
+const primaryButton = { background: '#d4a333', color: '#231903', fontSize: 13, fontWeight: 600, padding: '8px 14px', borderRadius: 6, textDecoration: 'none' }
+const secondaryButton = { background: 'transparent', color: '#17130f', border: '1px solid #e8ddc8', fontSize: 13, fontWeight: 600, padding: '8px 14px', borderRadius: 6, textDecoration: 'none' }
 const statsGrid = { display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))', gap: 10, marginBottom: 18 }
-const notesBox = { background: '#121216', border: '1px solid #2a2a31', borderRadius: 6, padding: '12px 14px', marginBottom: 14 }
-const notesLabel = { color: '#9c9ca3', fontSize: 11, fontWeight: 600, letterSpacing: '0.04em', textTransform: 'uppercase', marginBottom: 6 }
-const notesText = { color: '#e8e8ea', fontSize: 13, lineHeight: 1.5 }
-const sectionHeader = { color: '#e8e8ea', fontSize: 13, fontWeight: 600, letterSpacing: '0.06em', textTransform: 'uppercase', margin: '14px 0 12px 0', borderBottom: '1px solid #2a2a31', paddingBottom: 6 }
-const emptyState = { color: '#9c9ca3', fontSize: 14, padding: '20px 0' }
+const notesBox = { background: '#ffffff', border: '1px solid #e8ddc8', borderRadius: 6, padding: '12px 14px', marginBottom: 14 }
+const notesLabel = { color: '#6e6154', fontSize: 11, fontWeight: 600, letterSpacing: '0.04em', textTransform: 'uppercase', marginBottom: 6 }
+const notesText = { color: '#17130f', fontSize: 13, lineHeight: 1.5 }
+const sectionHeader = { color: '#17130f', fontSize: 13, fontWeight: 600, letterSpacing: '0.06em', textTransform: 'uppercase', margin: '14px 0 12px 0', borderBottom: '1px solid #e8ddc8', paddingBottom: 6 }
+const emptyState = { color: '#6e6154', fontSize: 14, padding: '20px 0' }
 const tableStyle = { width: '100%', borderCollapse: 'collapse', fontSize: 13 }
-const th = { textAlign: 'left', padding: '8px 6px', color: '#9c9ca3', fontSize: 11, fontWeight: 600, letterSpacing: '0.04em', textTransform: 'uppercase' }
-const td = { padding: '10px 6px', color: '#e8e8ea' }
+const th = { textAlign: 'left', padding: '8px 6px', color: '#6e6154', fontSize: 11, fontWeight: 600, letterSpacing: '0.04em', textTransform: 'uppercase' }
+const td = { padding: '10px 6px', color: '#17130f' }

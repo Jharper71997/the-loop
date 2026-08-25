@@ -171,8 +171,8 @@ export default function TtBackfillButton() {
       style={{
         marginTop: 14,
         padding: 14,
-        background: '#15151a',
-        border: '1px solid #2a2a31',
+        background: '#fdfaf3',
+        border: '1px solid #e8ddc8',
         borderRadius: 12,
       }}
     >
@@ -192,13 +192,13 @@ export default function TtBackfillButton() {
               fontSize: 10,
               letterSpacing: '0.22em',
               textTransform: 'uppercase',
-              color: '#d4a333',
+              color: '#8a5f0a',
               fontWeight: 700,
             }}
           >
             Ticket Tailor sync
           </div>
-          <div style={{ color: '#9c9ca3', fontSize: 12, marginTop: 4 }}>
+          <div style={{ color: '#6e6154', fontSize: 12, marginTop: 4 }}>
             Replays every TT order into Orders, one event at a time. Safe to re-run.
           </div>
         </div>
@@ -210,9 +210,9 @@ export default function TtBackfillButton() {
             style={{
               padding: '10px 14px',
               borderRadius: 8,
-              border: '1px solid #2a2a31',
-              background: importing ? '#2a2a31' : 'transparent',
-              color: importing ? '#9c9ca3' : '#d4a333',
+              border: '1px solid #e8ddc8',
+              background: importing ? '#e8ddc8' : 'transparent',
+              color: importing ? '#6e6154' : '#8a5f0a',
               fontSize: 12,
               fontWeight: 700,
               letterSpacing: '0.08em',
@@ -231,9 +231,9 @@ export default function TtBackfillButton() {
               borderRadius: 8,
               border: 0,
               background: running
-                ? '#2a2a31'
+                ? '#e8ddc8'
                 : 'linear-gradient(180deg, #f0c24a, #d4a333)',
-              color: running ? '#9c9ca3' : '#0a0a0b',
+              color: running ? '#6e6154' : '#231903',
               fontSize: 12,
               fontWeight: 700,
               letterSpacing: '0.08em',
@@ -254,7 +254,7 @@ export default function TtBackfillButton() {
           marginTop: 10,
           padding: '8px 10px',
           borderRadius: 6,
-          color: '#e07a7a',
+          color: '#b3311f',
           background: 'rgba(224,122,122,0.08)',
           fontSize: 12,
         }}>
@@ -268,14 +268,14 @@ export default function TtBackfillButton() {
             marginTop: 10,
             padding: '8px 10px',
             borderRadius: 6,
-            background: 'rgba(255,255,255,0.02)',
-            border: '1px solid #1e1e23',
+            background: 'rgba(23,19,15,0.02)',
+            border: '1px solid #e8ddc8',
             fontSize: 12,
-            color: '#c8c8cc',
+            color: '#3b322a',
           }}
           open
         >
-          <summary style={{ cursor: 'pointer', color: '#9c9ca3' }}>
+          <summary style={{ cursor: 'pointer', color: '#6e6154' }}>
             Imported {importResult.upserted} of {importResult.upcoming} upcoming TT events
             {importResult.skipped > 0 ? ` · ${importResult.skipped} skipped/unchanged` : ''}
           </summary>
@@ -288,12 +288,12 @@ export default function TtBackfillButton() {
                 justifyContent: 'space-between',
                 gap: 10,
               }}>
-                <span style={{ color: '#c8c8cc' }}>{pe.event_date || '—'} · {pe.name || pe.tt_event_id}</span>
+                <span style={{ color: '#3b322a' }}>{pe.event_date || '—'} · {pe.name || pe.tt_event_id}</span>
                 <span style={{
-                  color: pe.action === 'error' ? '#e07a7a'
-                    : pe.action === 'inserted' ? '#6fbf7f'
-                    : pe.action === 'updated' ? '#f0c24a'
-                    : '#6f6f76',
+                  color: pe.action === 'error' ? '#b3311f'
+                    : pe.action === 'inserted' ? '#0f7a4e'
+                    : pe.action === 'updated' ? '#8a5f0a'
+                    : '#7d7060',
                 }}>
                   {pe.action}
                 </span>
@@ -304,7 +304,7 @@ export default function TtBackfillButton() {
       )}
 
       {stage && (
-        <div style={{ marginTop: 10, fontSize: 12, color: '#f0c24a', fontFamily: "'JetBrains Mono', monospace" }}>
+        <div style={{ marginTop: 10, fontSize: 12, color: '#8a5f0a', fontFamily: "'JetBrains Mono', monospace" }}>
           {stage}
         </div>
       )}
@@ -315,8 +315,8 @@ export default function TtBackfillButton() {
             style={{
               height: 6,
               borderRadius: 3,
-              background: '#0a0a0b',
-              border: '1px solid #2a2a31',
+              background: '#faf5ea',
+              border: '1px solid #e8ddc8',
               overflow: 'hidden',
             }}
           >
@@ -333,7 +333,7 @@ export default function TtBackfillButton() {
             style={{
               marginTop: 6,
               fontSize: 11,
-              color: '#9c9ca3',
+              color: '#6e6154',
               display: 'flex',
               justifyContent: 'space-between',
               fontFamily: "'JetBrains Mono', monospace",
@@ -355,7 +355,7 @@ export default function TtBackfillButton() {
             marginTop: 10,
             padding: '8px 10px',
             borderRadius: 6,
-            color: '#e07a7a',
+            color: '#b3311f',
             background: 'rgba(224,122,122,0.08)',
             fontSize: 12,
           }}
@@ -370,14 +370,14 @@ export default function TtBackfillButton() {
             marginTop: 10,
             padding: '8px 10px',
             borderRadius: 6,
-            background: 'rgba(255,255,255,0.02)',
-            border: '1px solid #1e1e23',
+            background: 'rgba(23,19,15,0.02)',
+            border: '1px solid #e8ddc8',
             fontSize: 12,
-            color: '#c8c8cc',
+            color: '#3b322a',
           }}
           open={totals.errors > 0}
         >
-          <summary style={{ cursor: 'pointer', color: '#9c9ca3' }}>Per-event breakdown</summary>
+          <summary style={{ cursor: 'pointer', color: '#6e6154' }}>Per-event breakdown</summary>
           <div style={{ marginTop: 6, display: 'grid', gap: 6 }}>
             {perEvent.map(pe => (
               <div
@@ -390,19 +390,19 @@ export default function TtBackfillButton() {
                 }}
               >
                 <div style={{ display: 'flex', justifyContent: 'space-between', gap: 10 }}>
-                  <span style={{ color: '#6f6f76' }}>{pe.event_id}</span>
+                  <span style={{ color: '#7d7060' }}>{pe.event_id}</span>
                   <span>
                     {pe.replayed}/{pe.orders}
                     {pe.errors > 0 ? ` · ${pe.errors} err` : ''}
                   </span>
                 </div>
                 {pe.api_error && (
-                  <div style={{ color: '#e07a7a', fontSize: 10, paddingLeft: 4 }}>
+                  <div style={{ color: '#b3311f', fontSize: 10, paddingLeft: 4 }}>
                     API: {pe.api_error}
                   </div>
                 )}
                 {Array.isArray(pe.handler_errors) && pe.handler_errors.map((he, i) => (
-                  <div key={i} style={{ color: '#e07a7a', fontSize: 10, paddingLeft: 4 }}>
+                  <div key={i} style={{ color: '#b3311f', fontSize: 10, paddingLeft: 4 }}>
                     {he.order_id}: {he.error}
                   </div>
                 ))}
@@ -418,7 +418,7 @@ export default function TtBackfillButton() {
 function StatusPanel({ status, error, loading, onRefresh }) {
   if (loading && !status) {
     return (
-      <div style={{ marginTop: 10, fontSize: 11, color: '#6f6f76', fontFamily: "'JetBrains Mono', monospace" }}>
+      <div style={{ marginTop: 10, fontSize: 11, color: '#7d7060', fontFamily: "'JetBrains Mono', monospace" }}>
         Checking TT integration status…
       </div>
     )
@@ -430,7 +430,7 @@ function StatusPanel({ status, error, loading, onRefresh }) {
         marginTop: 10,
         padding: '8px 10px',
         borderRadius: 6,
-        color: '#e07a7a',
+        color: '#b3311f',
         background: 'rgba(224,122,122,0.08)',
         fontSize: 12,
       }}>
@@ -481,8 +481,8 @@ function StatusPanel({ status, error, loading, onRefresh }) {
       marginTop: 10,
       padding: '10px 12px',
       borderRadius: 6,
-      background: 'rgba(255,255,255,0.02)',
-      border: '1px solid #1e1e23',
+      background: 'rgba(23,19,15,0.02)',
+      border: '1px solid #e8ddc8',
       fontSize: 12,
     }}>
       <div style={{
@@ -492,7 +492,7 @@ function StatusPanel({ status, error, loading, onRefresh }) {
         marginBottom: 6,
       }}>
         <span style={{
-          color: '#9c9ca3',
+          color: '#6e6154',
           fontFamily: "'JetBrains Mono', monospace",
           fontSize: 10,
           letterSpacing: '0.2em',
@@ -507,12 +507,12 @@ function StatusPanel({ status, error, loading, onRefresh }) {
           <div key={i} style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
             <span style={{
               width: 8, height: 8, borderRadius: '50%',
-              background: c.ok ? '#6fbf7f' : '#e07a7a',
+              background: c.ok ? '#2fa36b' : '#d8543f',
               flexShrink: 0,
             }} />
-            <span style={{ color: '#c8c8cc', minWidth: 160 }}>{c.label}</span>
+            <span style={{ color: '#3b322a', minWidth: 160 }}>{c.label}</span>
             <span style={{
-              color: '#9c9ca3',
+              color: '#6e6154',
               fontFamily: "'JetBrains Mono', monospace",
               fontSize: 11,
               flex: 1,
@@ -529,7 +529,7 @@ function StatusPanel({ status, error, loading, onRefresh }) {
 const statusBtnLink = {
   background: 'none',
   border: 0,
-  color: '#d4a333',
+  color: '#8a5f0a',
   fontSize: 11,
   cursor: 'pointer',
   padding: 0,

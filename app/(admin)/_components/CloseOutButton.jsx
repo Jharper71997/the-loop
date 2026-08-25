@@ -4,7 +4,8 @@ import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 
 const ACCENT = '#d4a333'
-const BORDER = '#2a2a31'
+const ACCENT_TXT = '#8a5f0a'
+const BORDER = '#e8ddc8'
 
 // "Close out loop" — the manual save staff press to take a finished loop off the
 // admin screens. Until pressed, the loop stays visible everywhere on the admin
@@ -45,7 +46,7 @@ export default function CloseOutButton({ groupId, label = 'Close out loop' }) {
         borderRadius: 8,
         border: `1px solid ${BORDER}`,
         background: busy ? 'transparent' : 'rgba(212,163,51,0.10)',
-        color: ACCENT,
+        color: ACCENT_TXT,
         fontSize: 12,
         fontWeight: 700,
         cursor: busy ? 'default' : 'pointer',

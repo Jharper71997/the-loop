@@ -11,14 +11,17 @@ import { adminBase } from '@/lib/adminBase'
 import { brandFor } from '@/lib/businessConfig'
 
 const GOLD = '#d4a333'
+const GOLD_TXT = '#8a5f0a'
 const GOLD_HI = '#f0c24a'
-const INK = '#f5f5f7'
-const INK_DIM = '#b8b8bf'
-const BG = '#0a0a0b'
-const SURFACE = '#15151a'
-const LINE = 'rgba(255,255,255,0.08)'
-const GREEN = '#6fbf7f'
-const RED = '#e07a7a'
+const INK = '#17130f'
+const INK_DIM = '#3b322a'
+const BG = '#faf5ea'
+const SURFACE = '#fdfaf3'
+const LINE = 'rgba(23,19,15,0.08)'
+const GREEN = '#2fa36b'
+const GREEN_TXT = '#0f7a4e'
+const RED = '#d8543f'
+const RED_TXT = '#b3311f'
 
 export default function SecurityClient({ eventId = null }) {
   const { business } = useBusiness()
@@ -78,7 +81,7 @@ export default function SecurityClient({ eventId = null }) {
           <div>
             <div
               style={{
-                color: GOLD,
+                color: GOLD_TXT,
                 fontSize: 11,
                 letterSpacing: '0.2em',
                 textTransform: 'uppercase',
@@ -92,8 +95,8 @@ export default function SecurityClient({ eventId = null }) {
             </h1>
           </div>
           <div style={{ textAlign: 'right' }}>
-            <Counter label="Admitted" value={tally.admitted} color={GREEN} />
-            <Counter label="Rejected" value={tally.rejected} color={RED} />
+            <Counter label="Admitted" value={tally.admitted} color={GREEN_TXT} />
+            <Counter label="Rejected" value={tally.rejected} color={RED_TXT} />
           </div>
         </header>
 
@@ -123,7 +126,7 @@ export default function SecurityClient({ eventId = null }) {
               }}
             >
               <span>Door list — see who&apos;s riding tonight</span>
-              <span style={{ color: GOLD, fontWeight: 700 }}>→</span>
+              <span style={{ color: GOLD_TXT, fontWeight: 700 }}>→</span>
             </Link>
 
             <Scanner
@@ -141,7 +144,7 @@ export default function SecurityClient({ eventId = null }) {
         ) : (
           <div style={{ display: 'grid', gap: 12 }}>
             <div style={{ background: SURFACE, border: `1px solid ${LINE}`, borderRadius: 10, padding: '12px 14px' }}>
-              <div style={{ color: GOLD, fontSize: 11, letterSpacing: '0.18em', textTransform: 'uppercase', fontWeight: 700, marginBottom: 7 }}>
+              <div style={{ color: GOLD_TXT, fontSize: 11, letterSpacing: '0.18em', textTransform: 'uppercase', fontWeight: 700, marginBottom: 7 }}>
                 How messaging works
               </div>
               <ul style={{ color: INK_DIM, fontSize: 12.5, margin: 0, paddingLeft: 16, lineHeight: 1.7 }}>
@@ -172,7 +175,7 @@ function TabButton({ active, onClick, label, badge = 0 }) {
         borderRadius: 10,
         border: `1px solid ${active ? GOLD : LINE}`,
         background: active ? 'rgba(212,163,51,0.12)' : SURFACE,
-        color: active ? GOLD : INK_DIM,
+        color: active ? GOLD_TXT : INK_DIM,
         fontSize: 13,
         fontWeight: 700,
         cursor: 'pointer',
@@ -183,7 +186,7 @@ function TabButton({ active, onClick, label, badge = 0 }) {
         <span style={{
           marginLeft: 8,
           background: GOLD,
-          color: '#0a0a0b',
+          color: '#231903',
           fontWeight: 800,
           fontSize: 11,
           borderRadius: 999,
@@ -257,7 +260,7 @@ function ResultCard({ last }) {
         <div style={{ color: INK_DIM, fontSize: 14, marginTop: 6 }}>{sub}</div>
       )}
       {last.code && (
-        <div style={{ color: 'rgba(255,255,255,0.35)', fontSize: 11, marginTop: 10, fontFamily: 'ui-monospace, monospace', letterSpacing: '0.2em' }}>
+        <div style={{ color: '#17130f', fontSize: 11, marginTop: 10, fontFamily: 'ui-monospace, monospace', letterSpacing: '0.2em' }}>
           {last.code.toUpperCase()}
         </div>
       )}

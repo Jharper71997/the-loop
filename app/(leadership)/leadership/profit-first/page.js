@@ -21,14 +21,14 @@ export default async function ProfitFirstPage() {
   return (
     <main style={{
       minHeight: '100vh',
-      background: '#0a0a0b',
-      color: '#e8e8ea',
+      background: '#faf5ea',
+      color: '#17130f',
       padding: '24px 16px 48px',
       fontFamily: 'inherit',
     }}>
       <div style={{ maxWidth: 800, margin: '0 auto' }}>
         <a href="/leadership" style={{
-          color: '#9c9ca3',
+          color: '#6e6154',
           fontSize: 11,
           letterSpacing: '0.18em',
           textTransform: 'uppercase',
@@ -40,7 +40,7 @@ export default async function ProfitFirstPage() {
         </a>
 
         <h1 style={{
-          color: '#d4a333',
+          color: '#8a5f0a',
           fontFamily: '"JetBrains Mono", ui-monospace, monospace',
           fontSize: 22,
           letterSpacing: '0.18em',
@@ -50,19 +50,19 @@ export default async function ProfitFirstPage() {
         }}>
           Profit First
         </h1>
-        <p style={{ color: '#9c9ca3', fontSize: 11, letterSpacing: '0.12em', textTransform: 'uppercase', margin: '0 0 22px 0' }}>
+        <p style={{ color: '#6e6154', fontSize: 11, letterSpacing: '0.12em', textTransform: 'uppercase', margin: '0 0 22px 0' }}>
           {year} · Q{quarter}
         </p>
 
         <div style={{
-          background: 'linear-gradient(180deg, #121216, #0d0d10)',
-          border: '1px solid #2a2a31',
+          background: 'linear-gradient(180deg, #ffffff, #fdfaf3)',
+          border: '1px solid #e8ddc8',
           borderRadius: 8,
           padding: '20px 22px',
           marginBottom: 18,
         }}>
           <h2 style={{
-            color: '#e8e8ea',
+            color: '#17130f',
             fontFamily: '-apple-system, "Segoe UI", Roboto, sans-serif',
             fontSize: 13,
             fontWeight: 600,
@@ -82,8 +82,8 @@ export default async function ProfitFirstPage() {
                   ['Operating Exp.', target.opex_pct],
                   ['COGS',           target.cogs_pct],
                 ].map(([label, pct]) => (
-                  <tr key={label} style={{ borderBottom: '1px solid #2a2a31' }}>
-                    <td style={{ padding: '10px 6px', color: '#9c9ca3', letterSpacing: '0.04em' }}>{label}</td>
+                  <tr key={label} style={{ borderBottom: '1px solid #e8ddc8' }}>
+                    <td style={{ padding: '10px 6px', color: '#6e6154', letterSpacing: '0.04em' }}>{label}</td>
                     <td style={{ padding: '10px 6px', textAlign: 'right', fontFamily: '"JetBrains Mono", ui-monospace, monospace', fontWeight: 700 }}>
                       {(Number(pct) * 100).toFixed(0)}%
                     </td>
@@ -92,16 +92,16 @@ export default async function ProfitFirstPage() {
               </tbody>
             </table>
           ) : (
-            <div style={{ color: '#9c9ca3', fontSize: 13 }}>No targets set for {year} Q{quarter}.</div>
+            <div style={{ color: '#6e6154', fontSize: 13 }}>No targets set for {year} Q{quarter}.</div>
           )}
         </div>
 
         <div style={{
-          background: 'linear-gradient(180deg, #121216, #0d0d10)',
-          border: '1px solid #2a2a31',
+          background: 'linear-gradient(180deg, #ffffff, #fdfaf3)',
+          border: '1px solid #e8ddc8',
           borderRadius: 8,
           padding: '20px 22px',
-          color: '#9c9ca3',
+          color: '#6e6154',
           fontSize: 13,
           lineHeight: 1.6,
         }}>

@@ -138,7 +138,7 @@ export default async function ManageLoopDetailPage({ params, searchParams }) {
             <div style={{
               background: 'rgba(196,74,58,0.15)',
               border: '1px solid rgba(196,74,58,0.4)',
-              color: '#f4b8ad',
+              color: '#b3311f',
               padding: '8px 12px',
               borderRadius: 6,
               fontSize: 13,
@@ -150,7 +150,7 @@ export default async function ManageLoopDetailPage({ params, searchParams }) {
             <div style={{
               background: 'rgba(111,191,127,0.12)',
               border: '1px solid rgba(111,191,127,0.4)',
-              color: '#9be0a8',
+              color: '#0f7a4e',
               padding: '8px 12px',
               borderRadius: 6,
               fontSize: 13,
@@ -192,8 +192,8 @@ function RouteLogPanel({ eventId, groupId, stats, scheduleHasStops, action }) {
   const has = stats.total > 0
   return (
     <div style={{
-      background: '#121216',
-      border: '1px solid #2a2a31',
+      background: '#ffffff',
+      border: '1px solid #e8ddc8',
       borderRadius: 8,
       padding: '16px 18px',
       display: 'flex',
@@ -202,13 +202,13 @@ function RouteLogPanel({ eventId, groupId, stats, scheduleHasStops, action }) {
       gap: 14,
     }}>
       <div style={{ flex: '1 1 220px' }}>
-        <div style={{ color: '#9c9ca3', fontSize: 11, fontWeight: 600, letterSpacing: '0.04em', textTransform: 'uppercase' }}>
+        <div style={{ color: '#6e6154', fontSize: 11, fontWeight: 600, letterSpacing: '0.04em', textTransform: 'uppercase' }}>
           Route log
         </div>
-        <div style={{ color: '#e8e8ea', fontSize: 15, fontWeight: 600, marginTop: 4 }}>
+        <div style={{ color: '#17130f', fontSize: 15, fontWeight: 600, marginTop: 4 }}>
           {has ? `${stats.logged} / ${stats.total} stops logged` : 'Not generated'}
         </div>
-        <div style={{ color: '#6f6f76', fontSize: 12, marginTop: 4 }}>
+        <div style={{ color: '#7d7060', fontSize: 12, marginTop: 4 }}>
           {scheduleHasStops
             ? 'Generates 25 slots (5 bars × 5 cycles) from the schedule. Re-running keeps driver-filled rows.'
             : 'Add a schedule to this Loop first, then generate.'}
@@ -219,8 +219,8 @@ function RouteLogPanel({ eventId, groupId, stats, scheduleHasStops, action }) {
           type="submit"
           disabled={!scheduleHasStops}
           style={{
-            background: scheduleHasStops ? '#d4a333' : '#2a2a31',
-            color: scheduleHasStops ? '#0a0a0b' : '#6f6f76',
+            background: scheduleHasStops ? '#d4a333' : '#e8ddc8',
+            color: scheduleHasStops ? '#231903' : '#7d7060',
             fontSize: 13,
             fontWeight: 600,
             padding: '8px 14px',
@@ -236,12 +236,12 @@ function RouteLogPanel({ eventId, groupId, stats, scheduleHasStops, action }) {
             href={`/leadership/drivers/route-log/${eventId}`}
             style={{
               background: 'transparent',
-              color: '#e8e8ea',
+              color: '#17130f',
               fontSize: 13,
               fontWeight: 600,
               padding: '8px 14px',
               borderRadius: 6,
-              border: '1px solid #2a2a31',
+              border: '1px solid #e8ddc8',
               textDecoration: 'none',
             }}
           >

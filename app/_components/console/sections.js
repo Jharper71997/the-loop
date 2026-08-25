@@ -1,27 +1,27 @@
-// The staff console, as five questions instead of twenty-eight pages.
+// The staff console, as the six things that run a weekend.
 //
-// Before this, the Loop had two staff surfaces in two different design systems:
-// /admin (7 links, one look) and /leadership (19 pages, five tabs with
-// dropdowns, another look). Finding anything meant knowing which of the two it
-// lived in first.
+// This used to be five sections with twenty-eight tabs hanging off them. Every
+// page in the building had a link, so the four screens a crew actually touches
+// on a Friday night were buried among Profit First, flyer tracking and season
+// planning. Two rows of navigation, thirty destinations, one bus to load.
 //
-// Now the sidebar carries five entries, each named for a question the business
-// actually runs on:
+// Now the sidebar is a flat list with no tab row under it, and each entry is a
+// job someone does on the night:
 //
-//   Tonight — what is running, who is driving, who is on the list
-//   Riders  — who rode, who might again, and what they said
-//   Bars    — the route and the partners on it
-//   Money   — what came in and what went out
-//   Setup   — the things you change twice a year
+//   Tonight — what is running right now
+//   Loops   — the nights themselves: tickets, waivers, route
+//   Crew    — who is working
+//   Door    — scanning riders in            (security)
+//   Driver  — the screen in the bus         (driver)
+//   Riders  — look somebody up, text them
 //
-// Nothing moved. Every page that used to be its own sidebar link keeps its own
-// route and shows up as a tab inside the section it belongs to, so every
-// bookmark, email link, and bit of muscle memory still lands.
+// Everything else — money, bars, sponsors, season, automations, all of it — is
+// one entry, Back office, and only leadership sees it. Nothing was deleted and
+// no URL moved: /leadership/* all still resolve, they are just reached from the
+// back office index instead of shouting at the crew from the sidebar.
 //
-// Gating flags on a tab (leadership / security / driver) hide it from staff who
-// can't use it. The section itself disappears when none of its tabs survive
-// filtering, so a driver signing in sees a two-entry sidebar, not five entries
-// with four dead ends.
+// Role flags hide what a person can't use, so a driver signing in gets a
+// two-entry console instead of six entries and four dead ends.
 
 export const SECTIONS = [
   {
@@ -30,75 +30,53 @@ export const SECTIONS = [
     label: 'Tonight',
     exact: true,
     icon: 'bus',
-    match: ['/admin/groups', '/admin/driver', '/admin/security', '/admin/schedule', '/leadership/loops', '/leadership/drivers', '/leadership/schedule'],
-    tabs: [
-      { href: '/admin', label: 'Schedule', exact: true },
-      { href: '/admin/groups', label: 'Loops' },
-      { href: '/admin/schedule', label: 'Crew' },
-      { href: '/admin/security', label: 'Security', security: true },
-      { href: '/admin/driver', label: 'Driver view', driver: true },
-      { href: '/leadership/loops', label: 'Loop P&L', leadership: true },
-      { href: '/leadership/schedule', label: 'Season', leadership: true },
-      { href: '/leadership/drivers', label: 'Drivers', leadership: true },
-      { href: '/leadership/drivers/route-log', label: 'Route log', leadership: true },
-    ],
+    blurb: 'Who is riding',
+  },
+  {
+    key: 'loops',
+    href: '/admin/groups',
+    label: 'Loops',
+    icon: 'ticket',
+    blurb: 'Nights + tickets',
+  },
+  {
+    key: 'crew',
+    href: '/admin/schedule',
+    label: 'Crew',
+    icon: 'people',
+    blurb: 'Who is working',
+  },
+  {
+    key: 'door',
+    href: '/admin/security',
+    label: 'Door',
+    icon: 'scan',
+    security: true,
+    blurb: 'Scan them in',
+  },
+  {
+    key: 'driver',
+    href: '/admin/driver',
+    label: 'Driver',
+    icon: 'wheel',
+    driver: true,
+    blurb: 'The bus screen',
   },
   {
     key: 'riders',
     href: '/admin/contacts',
     label: 'Riders',
-    icon: 'people',
-    match: ['/leadership/ridership', '/leadership/feedback', '/leadership/leaderboard', '/leadership/referrals', '/leadership/passes'],
-    tabs: [
-      { href: '/admin/contacts', label: 'Contacts' },
-      { href: '/leadership/ridership', label: 'Ridership', leadership: true },
-      { href: '/leadership/feedback', label: 'Feedback', leadership: true },
-      { href: '/leadership/leaderboard', label: 'Leaderboard', leadership: true },
-      { href: '/leadership/referrals', label: 'Referrals', leadership: true },
-      { href: '/leadership/passes', label: 'Loop Pass', leadership: true },
-    ],
+    icon: 'search',
+    blurb: 'Look someone up',
   },
   {
-    key: 'bars',
-    href: '/leadership/bars',
-    label: 'Bars',
-    icon: 'pin',
-    leadership: true,
-    match: ['/leadership/sponsors', '/leadership/comps'],
-    tabs: [
-      { href: '/leadership/bars', label: 'Bars', leadership: true },
-      { href: '/leadership/sponsors', label: 'Sponsors', leadership: true },
-      { href: '/leadership/comps', label: 'Comps', leadership: true },
-    ],
-  },
-  {
-    key: 'money',
-    href: '/leadership/income',
-    label: 'Money',
-    icon: 'dollar',
-    leadership: true,
-    match: ['/leadership/expenses', '/leadership/cash', '/leadership/profit-first', '/leadership/merch', '/admin/finance'],
-    tabs: [
-      { href: '/leadership/income', label: 'Overview', leadership: true },
-      { href: '/leadership/expenses', label: 'Expenses', leadership: true },
-      { href: '/leadership/cash', label: 'Cash', leadership: true },
-      { href: '/leadership/merch', label: 'Merch', leadership: true },
-      { href: '/leadership/profit-first', label: 'Profit First', leadership: true },
-      { href: '/admin/finance', label: 'Entries', leadership: true },
-    ],
-  },
-  {
-    key: 'setup',
-    href: '/leadership/automations',
-    label: 'Setup',
+    key: 'office',
+    href: '/leadership',
+    label: 'Back office',
     icon: 'gear',
     leadership: true,
-    match: ['/leadership/alerts', '/leadership/attribution'],
-    tabs: [
-      { href: '/leadership/automations', label: 'Automations', leadership: true },
-      { href: '/leadership/alerts', label: 'Alerts', leadership: true },
-      { href: '/leadership/attribution', label: 'Flyer tracking', leadership: true },
-    ],
+    blurb: 'Money + everything else',
+    match: ['/leadership', '/admin/finance'],
   },
 ]
 
@@ -125,16 +103,8 @@ export function sectionForPath(pathname) {
   return best
 }
 
-export function visibleTabs(section, roles) {
-  if (!section) return []
-  return section.tabs.filter(t => allowed(t, roles))
-}
-
 export function visibleSections(roles) {
-  return SECTIONS
-    .filter(s => allowed(s, roles))
-    .map(s => ({ ...s, tabs: visibleTabs(s, roles) }))
-    .filter(s => s.tabs.length > 0)
+  return SECTIONS.filter(s => allowed(s, roles))
 }
 
 function allowed(entry, roles = {}) {

@@ -190,8 +190,8 @@ export default function Groups() {
       <div style={{
         display: 'flex',
         gap: '6px',
-        background: '#121215',
-        border: '1px solid #1e1e23',
+        background: '#ffffff',
+        border: '1px solid #e8ddc8',
         borderRadius: '10px',
         padding: '4px',
         marginBottom: '16px',
@@ -205,7 +205,7 @@ export default function Groups() {
               style={{
                 flex: 1,
                 background: active ? '#d4a333' : 'transparent',
-                color: active ? '#0a0a0b' : '#c8c8cc',
+                color: active ? '#231903' : '#3b322a',
                 padding: '8px 12px',
                 fontWeight: active ? 600 : 500,
                 fontSize: '14px',
@@ -254,7 +254,7 @@ export default function Groups() {
               className="row"
             >
               <div>
-                <p style={{ fontWeight: 600, fontSize: '15px', color: '#e8e8ea' }}>
+                <p style={{ fontWeight: 600, fontSize: '15px', color: '#17130f' }}>
                   {formatEventDate(group.event_date)}
                   {isTonight && <span className="chip chip-gold" style={{ marginLeft: '8px' }}>LIVE</span>}
                 </p>
@@ -267,8 +267,8 @@ export default function Groups() {
                   href={`${base}/groups/${group.id}#summary`}
                   onClick={e => e.stopPropagation()}
                   style={{
-                    color: '#c8c8cc', fontSize: '12px', textDecoration: 'none',
-                    padding: '6px 10px', border: '1px solid #2a2a31', borderRadius: '6px',
+                    color: '#3b322a', fontSize: '12px', textDecoration: 'none',
+                    padding: '6px 10px', border: '1px solid #e8ddc8', borderRadius: '6px',
                     minHeight: 32, display: 'inline-flex', alignItems: 'center',
                     fontWeight: 600,
                   }}
@@ -285,7 +285,7 @@ export default function Groups() {
                     style={{
                       background: 'rgba(212,163,51,0.12)',
                       borderColor: 'rgba(212,163,51,0.5)',
-                      color: '#f0c24a',
+                      color: '#8a5f0a',
                       fontWeight: 700,
                     }}
                   >
@@ -304,8 +304,8 @@ export default function Groups() {
                   <p className="muted" style={{ marginTop: '12px', textAlign: 'center', fontSize: 13 }}>
                     No schedule yet. Set one in{' '}
                     {business === 'surf'
-                      ? <a href={`${base}/builder`} style={{ color: '#d4a333' }}>the route builder</a>
-                      : <a href={`/leadership/loops/${group.id}#edit`} style={{ color: '#d4a333' }}>Leadership → Loops</a>}.
+                      ? <a href={`${base}/builder`} style={{ color: '#8a5f0a' }}>the route builder</a>
+                      : <a href={`/leadership/loops/${group.id}#edit`} style={{ color: '#8a5f0a' }}>Leadership → Loops</a>}.
                   </p>
                 ) : (
                   <>
@@ -322,15 +322,15 @@ export default function Groups() {
                               textAlign: 'center',
                               padding: '8px 6px',
                               borderRadius: '8px',
-                              background: active ? '#d4a333' : past ? '#152218' : '#16161a',
-                              color: active ? '#0a0a0b' : past ? '#6fbf7f' : '#8a8a90',
-                              border: active ? '1px solid #d4a333' : '1px solid #1e1e23',
+                              background: active ? '#d4a333' : past ? '#e4f6ec' : '#fdfaf3',
+                              color: active ? '#231903' : past ? '#0f7a4e' : '#6e6154',
+                              border: active ? '1px solid #d4a333' : '1px solid #e8ddc8',
                               fontSize: '11px',
                               fontWeight: active ? 700 : 500,
                             }}
                           >
-                            <div className="tiny" style={{ color: active ? '#0a0a0b' : undefined }}>{formatStopTime(stop.start_time)}</div>
-                            <div style={{ marginTop: '2px', color: active ? '#0a0a0b' : past ? '#6fbf7f' : '#c8c8cc' }}>{stop.name}</div>
+                            <div className="tiny" style={{ color: active ? '#231903' : undefined }}>{formatStopTime(stop.start_time)}</div>
+                            <div style={{ marginTop: '2px', color: active ? '#231903' : past ? '#0f7a4e' : '#3b322a' }}>{stop.name}</div>
                           </div>
                         )
                       })}
@@ -347,8 +347,8 @@ export default function Groups() {
                               padding: '12px 14px',
                               marginBottom: '6px',
                               borderRadius: '10px',
-                              border: '1px solid #f87171',
-                              background: '#1a0f0f',
+                              border: '1px solid #d8543f',
+                              background: '#fdeae6',
                             }}
                           >
                             <div
@@ -356,16 +356,16 @@ export default function Groups() {
                               style={{ cursor: 'pointer', display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '8px' }}
                             >
                               <div>
-                                <p style={{ fontWeight: 700, color: '#f87171', fontSize: '14px' }}>Unassigned</p>
-                                <p className="tiny" style={{ color: '#f87171' }}>No stop yet — tap a rider to assign</p>
+                                <p style={{ fontWeight: 700, color: '#b3311f', fontSize: '14px' }}>Unassigned</p>
+                                <p className="tiny" style={{ color: '#b3311f' }}>No stop yet — tap a rider to assign</p>
                               </div>
                               <div style={{ display: 'flex', gap: '6px', alignItems: 'center' }}>
-                                <span className="chip" style={{ background: '#3a1a1a', color: '#f87171', borderColor: '#f87171' }}>{seatsAt(unassigned)}</span>
+                                <span className="chip" style={{ background: '#fdeae6', color: '#b3311f', borderColor: '#d8543f' }}>{seatsAt(unassigned)}</span>
                                 <span className="muted" style={{ fontSize: '12px' }}>{isOpen ? '▾' : '▸'}</span>
                               </div>
                             </div>
                             {isOpen && (
-                              <div style={{ marginTop: '10px', paddingTop: '8px', borderTop: '1px solid #3a1a1a' }}>
+                              <div style={{ marginTop: '10px', paddingTop: '8px', borderTop: '1px solid #fdeae6' }}>
                                 {unassigned.map(m => (
                                   <RiderRow
                                     key={m.id}
@@ -400,7 +400,7 @@ export default function Groups() {
                               }}
                             >
                               <div>
-                                <p style={{ fontWeight: 600, color: isActive ? '#d4a333' : '#e8e8ea', fontSize: '14px' }}>
+                                <p style={{ fontWeight: 600, color: isActive ? '#8a5f0a' : '#17130f', fontSize: '14px' }}>
                                   {stop.name}
                                 </p>
                                 <p className="tiny">{formatStopTime(stop.start_time)}</p>
@@ -412,7 +412,7 @@ export default function Groups() {
                             </div>
 
                             {isOpen && (
-                              <div style={{ marginTop: '10px', paddingTop: '8px', borderTop: '1px solid #1a1a1f' }}>
+                              <div style={{ marginTop: '10px', paddingTop: '8px', borderTop: '1px solid #f3ecdd' }}>
                                 {atStop.length === 0 ? (
                                   <p className="muted" style={{ fontSize: '13px', padding: '8px 0' }}>
                                     No one starting at this stop.
@@ -434,7 +434,7 @@ export default function Groups() {
                                   </>
                                 )}
 
-                                <div style={{ marginTop: '14px', paddingTop: '10px', borderTop: '1px solid #1a1a1f' }}>
+                                <div style={{ marginTop: '14px', paddingTop: '10px', borderTop: '1px solid #f3ecdd' }}>
                                   <h3 style={{ marginBottom: '6px' }}>Text this group</h3>
                                   <p className="tiny" style={{ marginBottom: '6px' }}>
                                     Use <code>{'{first_name}'}</code> to personalize.
@@ -461,10 +461,10 @@ export default function Groups() {
                     </div>
 
                     {!isTonight && members.length > 0 && (
-                      <div style={{ marginTop: '12px', paddingTop: '12px', borderTop: '1px solid #1e1e23' }}>
+                      <div style={{ marginTop: '12px', paddingTop: '12px', borderTop: '1px solid #e8ddc8' }}>
                         <h3 style={{ marginBottom: '6px' }}>Riders ({members.length})</h3>
                         {members.map(m => (
-                          <div key={m.id} style={{ padding: '6px 0', fontSize: '13px', color: '#c8c8cc', borderTop: '1px solid #1a1a1f' }}>
+                          <div key={m.id} style={{ padding: '6px 0', fontSize: '13px', color: '#3b322a', borderTop: '1px solid #f3ecdd' }}>
                             {m.contacts?.first_name} {m.contacts?.last_name}
                           </div>
                         ))}
@@ -489,7 +489,7 @@ function RiderRow({ member, schedule, pickerOpen, onOpenPicker, onMove, tickets 
         onClick={onOpenPicker}
         style={{
           padding: '10px 0',
-          borderTop: '1px solid #1a1a1f',
+          borderTop: '1px solid #f3ecdd',
           display: 'flex',
           justifyContent: 'space-between',
           alignItems: 'center',
@@ -498,7 +498,7 @@ function RiderRow({ member, schedule, pickerOpen, onOpenPicker, onMove, tickets 
           cursor: 'pointer',
         }}
       >
-        <span style={{ color: '#e8e8ea' }}>
+        <span style={{ color: '#17130f' }}>
           {member.contacts?.first_name} {member.contacts?.last_name}
           {tickets > 1 && (
             <span style={{
@@ -506,7 +506,7 @@ function RiderRow({ member, schedule, pickerOpen, onOpenPicker, onMove, tickets 
               padding: '1px 6px',
               borderRadius: 999,
               background: 'rgba(212,163,51,0.15)',
-              color: '#d4a333',
+              color: '#8a5f0a',
               border: '1px solid rgba(212,163,51,0.4)',
               fontSize: 10,
               fontWeight: 700,
@@ -518,7 +518,7 @@ function RiderRow({ member, schedule, pickerOpen, onOpenPicker, onMove, tickets 
           {moved && <span className="chip chip-gold" style={{ fontSize: '10px', padding: '1px 6px' }}>moved</span>}
           <span style={{
             background: '#d4a333',
-            color: '#0a0a0b',
+            color: '#231903',
             fontSize: '12px',
             fontWeight: 600,
             padding: '4px 10px',
@@ -534,8 +534,8 @@ function RiderRow({ member, schedule, pickerOpen, onOpenPicker, onMove, tickets 
           gridTemplateColumns: '1fr 1fr',
           gap: '6px',
           padding: '10px',
-          background: '#16161a',
-          border: '1px solid #24242a',
+          background: '#fdfaf3',
+          border: '1px solid #f3ecdd',
           borderRadius: '10px',
           margin: '6px 0',
         }}>
@@ -546,9 +546,9 @@ function RiderRow({ member, schedule, pickerOpen, onOpenPicker, onMove, tickets 
                 key={si}
                 onClick={() => onMove(member.id, si)}
                 style={{
-                  background: selected ? '#d4a333' : '#1c1c22',
-                  color: selected ? '#0a0a0b' : '#e8e8ea',
-                  border: selected ? '1px solid #d4a333' : '1px solid #2a2a2f',
+                  background: selected ? '#d4a333' : '#f3ecdd',
+                  color: selected ? '#231903' : '#17130f',
+                  border: selected ? '1px solid #d4a333' : '1px solid #e8ddc8',
                   padding: '10px 8px',
                   fontSize: '13px',
                   fontWeight: selected ? 600 : 500,
@@ -563,9 +563,9 @@ function RiderRow({ member, schedule, pickerOpen, onOpenPicker, onMove, tickets 
             onClick={() => onMove(member.id, null)}
             style={{
               gridColumn: '1 / -1',
-              background: '#1c1c22',
-              color: '#8a8a90',
-              border: '1px solid #2a2a2f',
+              background: '#f3ecdd',
+              color: '#6e6154',
+              border: '1px solid #e8ddc8',
               padding: '8px',
               fontSize: '12px',
             }}
@@ -585,8 +585,8 @@ function StopCard({ isActive, children }) {
         padding: '12px 14px',
         marginBottom: '6px',
         borderRadius: '10px',
-        border: isActive ? '1px solid #d4a333' : '1px solid #1e1e23',
-        background: '#121215',
+        border: isActive ? '1px solid #d4a333' : '1px solid #e8ddc8',
+        background: '#ffffff',
       }}
     >
       {children}

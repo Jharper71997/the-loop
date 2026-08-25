@@ -7,25 +7,25 @@ export const MONO = '"JetBrains Mono", ui-monospace, monospace'
 export const th = {
   textAlign: 'left',
   padding: '10px 12px',
-  color: '#9c9ca3',
+  color: '#6e6154',
   fontSize: 10,
   fontWeight: 600,
   letterSpacing: '0.18em',
   textTransform: 'uppercase',
-  borderBottom: '1px solid #2a2a31',
+  borderBottom: '1px solid #e8ddc8',
   whiteSpace: 'nowrap',
 }
 
 export const td = {
   padding: '12px',
-  color: '#e8e8ea',
+  color: '#17130f',
   verticalAlign: 'top',
-  borderBottom: '1px solid #2a2a31',
+  borderBottom: '1px solid #e8ddc8',
 }
 
 export const tableWrap = {
-  background: 'linear-gradient(180deg, #121216, #0d0d10)',
-  border: '1px solid #2a2a31',
+  background: 'linear-gradient(180deg, #ffffff, #fdfaf3)',
+  border: '1px solid #e8ddc8',
   borderRadius: 8,
   overflow: 'hidden',
 }

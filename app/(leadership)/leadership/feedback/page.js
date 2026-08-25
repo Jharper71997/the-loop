@@ -19,7 +19,8 @@ export const dynamic = 'force-dynamic'
 // Google gives us no way to tie a review back to a rider, so this is intent.
 
 const GOLD = '#d4a333'
-const INK_DIM = '#9c9ca3'
+const GOLD_TXT = '#8a5f0a'
+const INK_DIM = '#6e6154'
 const WINDOW_DAYS = 90
 
 const RIDE_AGAIN_LABEL = { yes: 'Definitely', maybe: 'Maybe', no: 'Probably not' }
@@ -138,9 +139,9 @@ export default async function FeedbackPage() {
 
         <p style={introStyle}>
           Last {WINDOW_DAYS} days. Sent the morning after each Loop to everyone who boarded — toggle it at{' '}
-          <a href="/leadership/automations" style={{ color: GOLD, textDecoration: 'none' }}>Automations</a>.
+          <a href="/leadership/automations" style={{ color: GOLD_TXT, textDecoration: 'none' }}>Automations</a>.
           Ratings of 3 or below raise an{' '}
-          <a href="/leadership/alerts" style={{ color: GOLD, textDecoration: 'none' }}>alert</a> the moment they land.
+          <a href="/leadership/alerts" style={{ color: GOLD_TXT, textDecoration: 'none' }}>alert</a> the moment they land.
         </p>
 
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))', gap: 10, marginBottom: 22 }}>
@@ -233,7 +234,7 @@ export default async function FeedbackPage() {
               { key: 'when', header: 'Loop', mono: true },
               {
                 key: 'rating', header: '★', mono: true, align: 'right',
-                render: r => <span style={{ color: r.low ? '#c44a3a' : GOLD, fontWeight: 700 }}>{r.rating}</span>,
+                render: r => <span style={{ color: r.low ? '#b3311f' : GOLD_TXT, fontWeight: 700 }}>{r.rating}</span>,
               },
               { key: 'again', header: 'Again?', hideOnMobile: true },
               { key: 'comment', header: 'Comment', primary: true },
@@ -257,9 +258,9 @@ function MigrationPending() {
           marginTop: 16, padding: '14px 16px', borderRadius: 10,
           background: 'rgba(212,163,51,0.10)', border: '1px solid rgba(212,163,51,0.35)',
         }}>
-          <p style={{ ...introStyle, margin: 0, color: '#e8e8ea' }}>
+          <p style={{ ...introStyle, margin: 0, color: '#17130f' }}>
             <strong>One migration left to run.</strong> Paste{' '}
-            <code style={{ color: GOLD }}>sql/047_ride_feedback.sql</code> into the Supabase SQL editor and
+            <code style={{ color: GOLD_TXT }}>sql/047_ride_feedback.sql</code> into the Supabase SQL editor and
             reload this page. Until then no survey can send and nothing is being collected.
           </p>
         </div>
@@ -282,7 +283,7 @@ function tally(rows, pick) {
 
 function Meter({ pct }) {
   return (
-    <div style={{ height: 6, borderRadius: 3, background: 'rgba(255,255,255,0.06)', minWidth: 80 }}>
+    <div style={{ height: 6, borderRadius: 3, background: 'rgba(23,19,15,0.06)', minWidth: 80 }}>
       <div style={{ height: 6, borderRadius: 3, width: `${Math.max(0, Math.min(100, pct))}%`, background: GOLD }} />
     </div>
   )
@@ -292,7 +293,7 @@ function Section({ title, children }) {
   return (
     <section style={{ marginBottom: 26 }}>
       <div style={{
-        color: GOLD, fontSize: 11, letterSpacing: '0.18em', textTransform: 'uppercase',
+        color: GOLD_TXT, fontSize: 11, letterSpacing: '0.18em', textTransform: 'uppercase',
         fontWeight: 700, marginBottom: 10,
       }}>
         {title}
@@ -308,8 +309,8 @@ function Empty({ children }) {
 
 const mainStyle = {
   minHeight: '100vh',
-  background: '#0a0a0b',
-  color: '#e8e8ea',
+  background: '#faf5ea',
+  color: '#17130f',
   padding: '24px 16px calc(48px + env(safe-area-inset-bottom))',
   paddingLeft: 'max(16px, env(safe-area-inset-left))',
   paddingRight: 'max(16px, env(safe-area-inset-right))',
@@ -320,7 +321,7 @@ const headerRow = {
   gap: 12, flexWrap: 'wrap', marginBottom: 18,
 }
 const h1Style = {
-  color: '#e8e8ea', fontFamily: '-apple-system, "Segoe UI", Roboto, sans-serif',
+  color: '#17130f', fontFamily: '-apple-system, "Segoe UI", Roboto, sans-serif',
   fontSize: 24, fontWeight: 700, letterSpacing: '-0.01em', margin: 0,
 }
 const introStyle = {

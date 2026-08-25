@@ -7,13 +7,14 @@ import { adminBase } from '@/lib/adminBase'
 import { brandFor } from '@/lib/businessConfig'
 
 const GOLD = '#d4a333'
-const INK = '#f5f5f7'
-const INK_DIM = '#b8b8bf'
-const INK_MUTED = '#8a8a90'
-const BG = '#0a0a0b'
-const SURFACE = '#15151a'
-const LINE = 'rgba(255,255,255,0.08)'
-const GREEN = '#6fbf7f'
+const GOLD_TXT = '#8a5f0a'
+const INK = '#17130f'
+const INK_DIM = '#3b322a'
+const INK_MUTED = '#6e6154'
+const BG = '#faf5ea'
+const SURFACE = '#fdfaf3'
+const LINE = 'rgba(23,19,15,0.08)'
+const GREEN = '#2fa36b'
 
 export default function DoorListEvents() {
   const { business } = useBusiness()
@@ -47,7 +48,7 @@ export default function DoorListEvents() {
         <header>
           <div
             style={{
-              color: GOLD,
+              color: GOLD_TXT,
               fontSize: 11,
               letterSpacing: '0.2em',
               textTransform: 'uppercase',
@@ -84,7 +85,7 @@ export default function DoorListEvents() {
 
         {error && (
           <Card>
-            <div style={{ color: '#e07a7a', fontSize: 14 }}>{error}</div>
+            <div style={{ color: '#b3311f', fontSize: 14 }}>{error}</div>
           </Card>
         )}
 
@@ -121,7 +122,7 @@ export default function DoorListEvents() {
           >
             <div
               style={{
-                color: GOLD,
+                color: GOLD_TXT,
                 fontSize: 11,
                 letterSpacing: '0.18em',
                 textTransform: 'uppercase',
@@ -164,7 +165,7 @@ function Card({ children }) {
 function Progress({ checkedIn, paid }) {
   const pct = paid > 0 ? Math.min(100, Math.round((checkedIn / paid) * 100)) : 0
   return (
-    <div style={{ flex: 1, height: 8, borderRadius: 999, background: 'rgba(255,255,255,0.08)', overflow: 'hidden' }}>
+    <div style={{ flex: 1, height: 8, borderRadius: 999, background: 'rgba(23,19,15,0.08)', overflow: 'hidden' }}>
       <div style={{ width: `${pct}%`, height: '100%', background: GREEN }} />
     </div>
   )

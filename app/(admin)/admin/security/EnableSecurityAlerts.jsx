@@ -3,11 +3,12 @@
 import { useEffect, useState } from 'react'
 
 const GOLD = '#d4a333'
+const GOLD_TXT = '#8a5f0a'
 const GOLD_HI = '#f0c24a'
-const INK = '#f5f5f7'
-const INK_DIM = '#b8b8bf'
-const SURFACE = '#15151a'
-const LINE = 'rgba(255,255,255,0.08)'
+const INK = '#17130f'
+const INK_DIM = '#3b322a'
+const SURFACE = '#fdfaf3'
+const LINE = 'rgba(23,19,15,0.08)'
 
 // Subscribes THIS device for security push alerts (role='security', no contact).
 // New rider chat messages then push here even if the page is closed. Hides once
@@ -79,9 +80,9 @@ export default function EnableSecurityAlerts() {
         <ol style={{ color: INK_DIM, fontSize: 12.5, margin: 0, paddingLeft: 18, lineHeight: 1.7 }}>
           <li>Tap the <strong style={{ color: INK }}>Share</strong> button (the square with an up-arrow) at the bottom of Safari.</li>
           <li>Scroll down and tap <strong style={{ color: INK }}>Add to Home Screen</strong>, then <strong style={{ color: INK }}>Add</strong>.</li>
-          <li>Open <strong style={{ color: INK }}>Brew Loop</strong> from the new icon, come back here, and tap <strong style={{ color: GOLD }}>Turn on</strong>.</li>
+          <li>Open <strong style={{ color: INK }}>Brew Loop</strong> from the new icon, come back here, and tap <strong style={{ color: GOLD_TXT }}>Turn on</strong>.</li>
         </ol>
-        <div style={{ color: 'rgba(255,255,255,0.4)', fontSize: 11, marginTop: 9 }}>
+        <div style={{ color: '#17130f', fontSize: 11, marginTop: 9 }}>
           Apple only allows alerts from the home-screen icon, not a normal Safari tab. On Android it just works — tap Turn on.
         </div>
       </div>
@@ -100,7 +101,7 @@ export default function EnableSecurityAlerts() {
         </div>
       </div>
       <button onClick={enable} disabled={state === 'working'} style={{
-        background: `linear-gradient(180deg, ${GOLD_HI}, ${GOLD})`, color: '#0a0a0b',
+        background: `linear-gradient(180deg, ${GOLD_HI}, ${GOLD})`, color: '#231903',
         border: 0, padding: '9px 14px', borderRadius: 8, fontWeight: 700, fontSize: 13,
         cursor: 'pointer', whiteSpace: 'nowrap', flexShrink: 0,
       }}>

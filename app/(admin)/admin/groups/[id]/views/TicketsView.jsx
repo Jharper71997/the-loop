@@ -4,11 +4,12 @@ import { useRef, useState } from 'react'
 import { useRouter } from 'next/navigation'
 
 const ACCENT = '#d4a333'
+const ACCENT_TXT = '#8a5f0a'
 const ACCENT_HI = '#f0c24a'
-const SURFACE = '#15151a'
-const BORDER = '#2a2a31'
-const INK = '#f5f5f7'
-const INK_DIM = '#9c9ca3'
+const SURFACE = '#fdfaf3'
+const BORDER = '#e8ddc8'
+const INK = '#17130f'
+const INK_DIM = '#6e6154'
 
 export default function TicketsView({ event, ticketTypes, stops, onJumpToEdit }) {
   const router = useRouter()
@@ -120,18 +121,18 @@ function TicketRow({ tt, stops, onEdit }) {
       <div style={{ flex: 1, minWidth: 0 }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
           <strong style={{ fontSize: 15 }}>{tt.name}</strong>
-          {!isActive && <Pill color="#9c9ca3" bg="rgba(255,255,255,0.04)" label="Off sale" />}
-          {isActive && <Pill color="#6fbf7f" bg="rgba(111,191,127,0.12)" label="On sale" />}
-          {needsTime && <Pill color="#ffb074" bg="rgba(255,140,80,0.12)" label="No pickup time" />}
+          {!isActive && <Pill color="#6e6154" bg="#17130f" label="Off sale" />}
+          {isActive && <Pill color="#0f7a4e" bg="#0f7a4e" label="On sale" />}
+          {needsTime && <Pill color="#b25a16" bg="rgba(255,140,80,0.12)" label="No pickup time" />}
         </div>
         <div style={{ fontSize: 12, color: INK_DIM, marginTop: 4, display: 'flex', gap: 14, flexWrap: 'wrap' }}>
           <span>${(tt.price_cents / 100).toFixed(2)}</span>
           {tt.capacity != null && <span>{tt.capacity} seats</span>}
           {stopName && <span>Stop {tt.stop_index + 1} · {stopName}</span>}
-          {pickupLabel && <span style={{ color: ACCENT }}>Pickup {pickupLabel}</span>}
+          {pickupLabel && <span style={{ color: ACCENT_TXT }}>Pickup {pickupLabel}</span>}
         </div>
       </div>
-      <span style={{ color: ACCENT, fontSize: 13, fontWeight: 700, whiteSpace: 'nowrap' }}>
+      <span style={{ color: ACCENT_TXT, fontSize: 13, fontWeight: 700, whiteSpace: 'nowrap' }}>
         Edit →
       </span>
     </button>
@@ -188,7 +189,7 @@ function PickupTimesCard({ eventId, stops, onSaved }) {
       <div>
         <h2 style={{
           fontSize: 11,
-          color: ACCENT,
+          color: ACCENT_TXT,
           margin: 0,
           letterSpacing: '0.22em',
           textTransform: 'uppercase',
@@ -209,7 +210,7 @@ function PickupTimesCard({ eventId, stops, onSaved }) {
             gap: 10,
             alignItems: 'center',
             padding: '10px 12px',
-            background: '#0e0e12',
+            background: '#ffffff',
             border: `1px solid ${BORDER}`,
             borderRadius: 10,
           }}>
@@ -235,7 +236,7 @@ function PickupTimesCard({ eventId, stops, onSaved }) {
           background: 'rgba(255,80,80,0.08)',
           border: '1px solid rgba(255,80,80,0.32)',
           borderRadius: 8,
-          color: '#ff8b8b',
+          color: '#b3311f',
           fontSize: 13,
         }}>
           {error}
@@ -256,7 +257,7 @@ function PickupTimesCard({ eventId, stops, onSaved }) {
           {saving ? 'Saving…' : 'Save pickup times'}
         </button>
         {savedAt && !saving && (
-          <span style={{ color: '#6fbf7f', fontSize: 12, fontWeight: 600 }}>✓ Saved</span>
+          <span style={{ color: '#0f7a4e', fontSize: 12, fontWeight: 600 }}>✓ Saved</span>
         )}
       </div>
     </section>
@@ -284,7 +285,7 @@ function TimePicker({ value, onChange }) {
           ...inputStyle,
           textAlign: 'left',
           cursor: 'pointer',
-          color: display ? INK : '#6f6f76',
+          color: display ? INK : '#7d7060',
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'space-between',
@@ -293,7 +294,7 @@ function TimePicker({ value, onChange }) {
         }}
       >
         <span>{display || 'Set time'}</span>
-        <span aria-hidden style={{ color: ACCENT, fontSize: 14 }}>⏱</span>
+        <span aria-hidden style={{ color: ACCENT_TXT, fontSize: 14 }}>⏱</span>
       </button>
       <input
         ref={ref}
@@ -530,13 +531,13 @@ function TicketModal({ eventId, ticket, stops, existingCount, onClose }) {
               active={draft.active}
               onClick={() => patch({ active: true })}
               label="On sale"
-              activeColor="#6fbf7f"
+              activeColor="#2fa36b"
             />
             <ToggleButton
               active={!draft.active}
               onClick={() => patch({ active: false })}
               label="Off sale"
-              activeColor="#9c9ca3"
+              activeColor="#6e6154"
             />
           </div>
         </Field>
@@ -547,7 +548,7 @@ function TicketModal({ eventId, ticket, stops, existingCount, onClose }) {
             background: 'rgba(255,80,80,0.08)',
             border: '1px solid rgba(255,80,80,0.32)',
             borderRadius: 8,
-            color: '#ff8b8b',
+            color: '#b3311f',
             fontSize: 13,
           }}>
             {error}
@@ -575,7 +576,7 @@ function TicketModal({ eventId, ticket, stops, existingCount, onClose }) {
               disabled={deleting}
               style={{
                 background: 'transparent',
-                color: '#e07a7a',
+                color: '#b3311f',
                 border: `1px solid ${BORDER}`,
                 padding: '12px 16px',
                 borderRadius: 10,
@@ -634,7 +635,7 @@ function ToggleButton({ active, onClick, label, activeColor }) {
 
 const inputStyle = {
   width: '100%',
-  background: '#0a0a0b',
+  background: '#faf5ea',
   border: `1px solid ${BORDER}`,
   color: INK,
   padding: '12px 14px',
@@ -646,7 +647,7 @@ const inputStyle = {
 
 const primaryBtn = {
   background: `linear-gradient(180deg, ${ACCENT_HI}, ${ACCENT})`,
-  color: '#0a0a0b',
+  color: '#231903',
   border: 0,
   padding: '12px 22px',
   borderRadius: 10,

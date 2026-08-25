@@ -48,13 +48,13 @@ export default async function RouteLogDetail({ params }) {
 
         {rows.length === 0 ? (
           <div style={emptyBox}>
-            No stops generated yet. Open this Loop in <a href="/leadership/loops" style={{ color: '#d4a333' }}>Loops</a> and click <strong>Generate route log</strong>.
+            No stops generated yet. Open this Loop in <a href="/leadership/loops" style={{ color: '#8a5f0a' }}>Loops</a> and click <strong>Generate route log</strong>.
           </div>
         ) : (
           <div style={tableShell}>
             <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13 }}>
               <thead>
-                <tr style={{ borderBottom: '1px solid #2a2a31' }}>
+                <tr style={{ borderBottom: '1px solid #e8ddc8' }}>
                   <th style={th}>#</th>
                   <th style={th}>Bar</th>
                   <th style={th}>Scheduled</th>
@@ -73,13 +73,13 @@ export default async function RouteLogDetail({ params }) {
                   const delay = deriveDelayMinutes(s.scheduled_at, s.actual_arrival_at)
                   return (
                     <tr key={s.id} style={{
-                      borderBottom: '1px solid #2a2a31',
-                      borderTop: isCycleBreak ? '2px solid #2a2a31' : undefined,
+                      borderBottom: '1px solid #e8ddc8',
+                      borderTop: isCycleBreak ? '2px solid #e8ddc8' : undefined,
                     }}>
-                      <td style={{ ...td, fontFamily: FONT_NUM, color: '#9c9ca3', width: 40 }}>{s.stop_index}</td>
+                      <td style={{ ...td, fontFamily: FONT_NUM, color: '#6e6154', width: 40 }}>{s.stop_index}</td>
                       <td style={{ ...td, fontWeight: 600 }}>{s.bar_name}</td>
-                      <td style={{ ...td, fontFamily: FONT_NUM, color: '#9c9ca3' }}>{formatTime(s.scheduled_at)}</td>
-                      <td style={{ ...td, fontFamily: FONT_NUM, color: s.actual_arrival_at ? '#e8e8ea' : '#6f6f76' }}>
+                      <td style={{ ...td, fontFamily: FONT_NUM, color: '#6e6154' }}>{formatTime(s.scheduled_at)}</td>
+                      <td style={{ ...td, fontFamily: FONT_NUM, color: s.actual_arrival_at ? '#17130f' : '#7d7060' }}>
                         {s.actual_arrival_at ? formatTime(s.actual_arrival_at) : '—'}
                       </td>
                       <td style={{ ...td, fontFamily: FONT_NUM, textAlign: 'right' }}>{numOrDash(s.riders_on)}</td>
@@ -88,7 +88,7 @@ export default async function RouteLogDetail({ params }) {
                       <td style={{ ...td, fontFamily: FONT_NUM, textAlign: 'right', ...delayStyle(delay) }}>
                         {formatDelay(delay)}
                       </td>
-                      <td style={{ ...td, color: '#9c9ca3', fontSize: 12, maxWidth: 320 }}>{s.notes || ''}</td>
+                      <td style={{ ...td, color: '#6e6154', fontSize: 12, maxWidth: 320 }}>{s.notes || ''}</td>
                     </tr>
                   )
                 })}
@@ -136,23 +136,23 @@ function formatDelay(min) {
 }
 
 function delayStyle(min) {
-  if (min === null || min === undefined) return { color: '#6f6f76' }
+  if (min === null || min === undefined) return { color: '#7d7060' }
   const abs = Math.abs(min)
-  if (abs <= 2) return { color: '#3fb27f' }
-  if (abs <= 10) return { color: '#d4a333' }
-  return { color: '#c44a3a' }
+  if (abs <= 2) return { color: '#0f7a4e' }
+  if (abs <= 10) return { color: '#8a5f0a' }
+  return { color: '#b3311f' }
 }
 
 const pageStyle = {
   minHeight: '100vh',
-  background: '#0a0a0b',
-  color: '#e8e8ea',
+  background: '#faf5ea',
+  color: '#17130f',
   padding: '24px 16px 48px',
   fontFamily: FONT_BODY,
 }
 const containerStyle = { maxWidth: 1200, margin: '0 auto' }
 const backLink = {
-  color: '#9c9ca3',
+  color: '#6e6154',
   fontSize: 13,
   fontWeight: 500,
   textDecoration: 'none',
@@ -168,45 +168,45 @@ const headerRow = {
   marginBottom: 22,
 }
 const titleStyle = {
-  color: '#e8e8ea',
+  color: '#17130f',
   fontSize: 24,
   fontWeight: 700,
   letterSpacing: '-0.01em',
   margin: 0,
 }
 const subtitleStyle = {
-  color: '#9c9ca3',
+  color: '#6e6154',
   fontSize: 13,
   margin: '4px 0 0 0',
 }
 const tableShell = {
-  background: '#121216',
-  border: '1px solid #2a2a31',
+  background: '#ffffff',
+  border: '1px solid #e8ddc8',
   borderRadius: 8,
   overflow: 'auto',
 }
 const th = {
   textAlign: 'left',
   padding: '10px 12px',
-  color: '#9c9ca3',
+  color: '#6e6154',
   fontSize: 11,
   fontWeight: 600,
   letterSpacing: '0.04em',
   textTransform: 'uppercase',
-  background: '#0d0d10',
+  background: '#ffffff',
   whiteSpace: 'nowrap',
 }
 const td = {
   padding: '10px 12px',
-  color: '#e8e8ea',
+  color: '#17130f',
   verticalAlign: 'middle',
   whiteSpace: 'nowrap',
 }
 const emptyBox = {
-  background: '#121216',
-  border: '1px solid #2a2a31',
+  background: '#ffffff',
+  border: '1px solid #e8ddc8',
   borderRadius: 8,
   padding: '20px 22px',
-  color: '#9c9ca3',
+  color: '#6e6154',
   fontSize: 14,
 }

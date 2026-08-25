@@ -18,8 +18,8 @@ export default function ShowMore({ label = 'Show more', count, defaultOpen = fal
         onClick={() => setOpen(o => !o)}
         style={{
           background: 'none',
-          border: '1px solid #2a2a31',
-          color: '#9c9ca3',
+          border: '1px solid #e8ddc8',
+          color: '#6e6154',
           fontFamily: FONT_BODY,
           fontSize: 12,
           fontWeight: 600,
@@ -33,10 +33,10 @@ export default function ShowMore({ label = 'Show more', count, defaultOpen = fal
           minHeight: 38,
         }}
       >
-        <span style={{ color: '#d4a333' }}>{open ? '▴' : '▾'}</span>
+        <span style={{ color: '#8a5f0a' }}>{open ? '▴' : '▾'}</span>
         {open ? 'Hide' : label}
         {!open && count != null && (
-          <span style={{ color: '#6f6f76' }}>({count})</span>
+          <span style={{ color: '#7d7060' }}>({count})</span>
         )}
       </button>
       {open && <div style={{ marginTop: 12 }}>{children}</div>}

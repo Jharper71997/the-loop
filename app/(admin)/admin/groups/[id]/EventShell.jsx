@@ -7,12 +7,14 @@ import TicketsView from './views/TicketsView'
 import RosterView from './views/RosterView'
 
 const ACCENT = '#d4a333'
+const ACCENT_TXT = '#8a5f0a'
 const ACCENT_HI = '#f0c24a'
-const SURFACE = '#15151a'
-const SURFACE_HI = '#1a1a20'
-const BORDER = '#2a2a31'
-const INK = '#f5f5f7'
-const INK_DIM = '#9c9ca3'
+const ACCENT_HI_TXT = '#8a5f0a'
+const SURFACE = '#fdfaf3'
+const SURFACE_HI = '#f3ecdd'
+const BORDER = '#e8ddc8'
+const INK = '#17130f'
+const INK_DIM = '#6e6154'
 
 const ALL_VIEWS = [
   { id: 'summary', label: 'Event summary', section: 'Overview' },
@@ -212,7 +214,7 @@ function Sidebar({ group, event, view, views, onSelect, onCopyLink, drawerOpen, 
       style={{
         width: 240,
         flexShrink: 0,
-        background: 'linear-gradient(180deg, #0d0d10, #0a0a0b)',
+        background: 'linear-gradient(180deg, #ffffff, #faf5ea)',
         borderRight: `1px solid ${BORDER}`,
         padding: '14px 14px 24px',
         display: 'flex',
@@ -246,7 +248,7 @@ function Sidebar({ group, event, view, views, onSelect, onCopyLink, drawerOpen, 
       </button>
 
       <div>
-        <a href={basePath} style={{ color: ACCENT, fontSize: 12, textDecoration: 'none', letterSpacing: '0.06em' }}>
+        <a href={basePath} style={{ color: ACCENT_TXT, fontSize: 12, textDecoration: 'none', letterSpacing: '0.06em' }}>
           ← All Loops
         </a>
         <div style={{ marginTop: 10 }}>
@@ -298,7 +300,7 @@ function Sidebar({ group, event, view, views, onSelect, onCopyLink, drawerOpen, 
                     borderRadius: 8,
                     background: active ? 'rgba(212,163,51,0.12)' : 'transparent',
                     border: active ? `1px solid ${ACCENT}` : '1px solid transparent',
-                    color: active ? ACCENT_HI : INK,
+                    color: active ? ACCENT_HI_TXT : INK,
                     fontSize: 13,
                     fontWeight: 600,
                     textAlign: 'left',
@@ -344,7 +346,7 @@ function Sidebar({ group, event, view, views, onSelect, onCopyLink, drawerOpen, 
               onClick={deleteEvent}
               style={{
                 ...actionBtn,
-                color: '#e07a7a',
+                color: '#b3311f',
                 borderTop: `1px solid ${BORDER}`,
                 marginTop: 6,
                 paddingTop: 12,
@@ -376,7 +378,7 @@ function DuplicateEventsBanner({ current, extras }) {
       display: 'grid',
       gap: 8,
     }}>
-      <div style={{ color: '#f87171', fontSize: 13, fontWeight: 700 }}>
+      <div style={{ color: '#b3311f', fontSize: 13, fontWeight: 700 }}>
         ⚠ This Loop has {extras.length + 1} events linked to it
       </div>
       <div style={{ color: INK_DIM, fontSize: 12, lineHeight: 1.45 }}>
@@ -394,7 +396,7 @@ function DuplicateEventsBanner({ current, extras }) {
             alignItems: 'center',
             gap: 8,
             padding: '8px 10px',
-            background: '#0e0e12',
+            background: '#ffffff',
             border: `1px solid ${BORDER}`,
             borderRadius: 8,
             fontSize: 12,
@@ -411,7 +413,7 @@ function DuplicateEventsBanner({ current, extras }) {
               target="_blank"
               rel="noreferrer"
               style={{
-                color: ACCENT,
+                color: ACCENT_TXT,
                 fontSize: 12,
                 fontWeight: 700,
                 textDecoration: 'none',
@@ -432,10 +434,10 @@ function DuplicateEventsBanner({ current, extras }) {
 
 function StatusPill({ status }) {
   const palette = {
-    on_sale:   { bg: 'rgba(111,191,127,0.12)', border: 'rgba(111,191,127,0.4)', color: '#6fbf7f', label: 'On sale' },
-    draft:     { bg: 'rgba(212,163,51,0.10)',  border: 'rgba(212,163,51,0.45)', color: ACCENT_HI, label: 'Draft' },
-    sold_out:  { bg: 'rgba(255,140,80,0.12)',  border: 'rgba(255,140,80,0.45)', color: '#ffb074', label: 'Sold out' },
-    cancelled: { bg: 'rgba(224,122,122,0.12)', border: 'rgba(224,122,122,0.4)', color: '#e07a7a', label: 'Cancelled' },
+    on_sale:   { bg: 'rgba(111,191,127,0.12)', border: 'rgba(111,191,127,0.4)', color: '#0f7a4e', label: 'On sale' },
+    draft:     { bg: 'rgba(212,163,51,0.10)',  border: 'rgba(212,163,51,0.45)', color: ACCENT_HI_TXT, label: 'Draft' },
+    sold_out:  { bg: 'rgba(255,140,80,0.12)',  border: 'rgba(255,140,80,0.45)', color: '#b25a16', label: 'Sold out' },
+    cancelled: { bg: 'rgba(224,122,122,0.12)', border: 'rgba(224,122,122,0.4)', color: '#b3311f', label: 'Cancelled' },
   }[status] || { bg: SURFACE, border: BORDER, color: INK_DIM, label: status }
   return (
     <span style={{
@@ -465,14 +467,14 @@ function LivePill() {
       borderRadius: 999,
       background: 'rgba(111,191,127,0.12)',
       border: '1px solid rgba(111,191,127,0.4)',
-      color: '#6fbf7f',
+      color: '#0f7a4e',
       display: 'inline-flex',
       alignItems: 'center',
       gap: 6,
     }}>
       <span style={{
         width: 6, height: 6, borderRadius: '50%',
-        background: '#6fbf7f', boxShadow: '0 0 8px #6fbf7f',
+        background: '#2fa36b', boxShadow: '0 0 8px #2fa36b',
       }} />
       Live
     </span>

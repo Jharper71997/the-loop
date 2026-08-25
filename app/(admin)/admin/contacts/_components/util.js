@@ -1,7 +1,7 @@
 export const rideChipStyle = {
-  background: '#2a2316',
-  color: '#f0c040',
-  border: '1px solid #3a3220',
+  background: '#fdf3d9',
+  color: '#8a5f0a',
+  border: '1px solid #fdf3d9',
   fontSize: '12px',
   fontWeight: 500,
   padding: '3px 8px',

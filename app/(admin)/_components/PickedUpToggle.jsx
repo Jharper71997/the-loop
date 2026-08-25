@@ -39,8 +39,8 @@ export default function PickedUpToggle({ memberId, stopIndex, nextIndex, initial
       disabled={busy}
       style={{
         background: checked ? ACCENT : 'transparent',
-        border: `1px solid ${checked ? ACCENT : '#2a2a31'}`,
-        color: checked ? '#0a0a0b' : '#9c9ca3',
+        border: `1px solid ${checked ? ACCENT : '#e8ddc8'}`,
+        color: checked ? '#231903' : '#6e6154',
         padding: '2px 8px',
         borderRadius: 999,
         fontSize: 11,

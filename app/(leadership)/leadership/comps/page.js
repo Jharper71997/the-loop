@@ -77,7 +77,7 @@ export default async function CompsPage() {
       key: 'collected', header: 'Collected', mono: true,
       render: r => r.free
         ? <StatusBadge label="$0 — free" tone="red" />
-        : <span style={{ color: '#3fb27f' }}>{money(r.collected)}</span>,
+        : <span style={{ color: '#0f7a4e' }}>{money(r.collected)}</span>,
     },
   ]
 
@@ -90,7 +90,7 @@ export default async function CompsPage() {
           <h1 style={h1Style}>Free / comped rides</h1>
         </div>
 
-        <p style={{ color: '#9c9ca3', fontSize: 13, lineHeight: 1.5, margin: '0 0 18px', maxWidth: 640 }}>
+        <p style={{ color: '#6e6154', fontSize: 13, lineHeight: 1.5, margin: '0 0 18px', maxWidth: 640 }}>
           Riders who used a 100%-off code rode free — these orders show a face value but
           collected $0, so they don&apos;t count as paid sales. Discounted (but still paid)
           orders are listed below them.
@@ -107,13 +107,13 @@ export default async function CompsPage() {
           columns={columns}
           rows={rows}
           rowKey={r => r.key}
-          empty={<div style={{ color: '#9c9ca3', fontSize: 13, padding: '20px 0' }}>
+          empty={<div style={{ color: '#6e6154', fontSize: 13, padding: '20px 0' }}>
             No comped or discounted orders captured yet.
           </div>}
         />
 
         {uncaptured > 0 && (
-          <p style={{ color: '#6b6b72', fontSize: 12, marginTop: 16 }}>
+          <p style={{ color: '#7d7060', fontSize: 12, marginTop: 16 }}>
             {uncaptured} older paid order{uncaptured === 1 ? '' : 's'} predate collected-amount
             capture and aren&apos;t classified here yet. Run the comp backfill to include them.
           </p>
@@ -125,15 +125,15 @@ export default async function CompsPage() {
 
 const mainStyle = {
   minHeight: '100vh',
-  background: '#0a0a0b',
-  color: '#e8e8ea',
+  background: '#faf5ea',
+  color: '#17130f',
   padding: '24px 16px calc(48px + env(safe-area-inset-bottom))',
   paddingLeft: 'max(16px, env(safe-area-inset-left))',
   paddingRight: 'max(16px, env(safe-area-inset-right))',
   fontFamily: 'inherit',
 }
 const backLink = {
-  color: '#9c9ca3', fontSize: 11, letterSpacing: '0.18em', textTransform: 'uppercase',
+  color: '#6e6154', fontSize: 11, letterSpacing: '0.18em', textTransform: 'uppercase',
   textDecoration: 'none', display: 'inline-block', marginBottom: 18,
 }
 const headerRow = {
@@ -141,6 +141,6 @@ const headerRow = {
   gap: 12, flexWrap: 'wrap', marginBottom: 8,
 }
 const h1Style = {
-  color: '#e8e8ea', fontFamily: '-apple-system, "Segoe UI", Roboto, sans-serif',
+  color: '#17130f', fontFamily: '-apple-system, "Segoe UI", Roboto, sans-serif',
   fontSize: 24, fontWeight: 700, letterSpacing: '-0.01em', margin: 0,
 }

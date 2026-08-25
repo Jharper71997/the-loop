@@ -144,7 +144,7 @@ export default function ContactDetail({ contact, groups, today, onBack, onRefres
     <main>
       <button
         onClick={onBack}
-        style={{ color: '#f0c040', background: 'none', marginBottom: '16px', fontSize: '15px' }}
+        style={{ color: '#8a5f0a', background: 'none', marginBottom: '16px', fontSize: '15px' }}
       >
         ← Back
       </button>
@@ -161,19 +161,19 @@ export default function ContactDetail({ contact, groups, today, onBack, onRefres
               {saveStatus === 'saving' ? 'Saving…' : 'Save Changes'}
             </button>
             {saveStatus && saveStatus !== 'saving' && (
-              <p style={{ marginTop: 8, fontSize: 12, color: saveStatus === 'ok' ? '#6fbf7f' : '#e07a7a' }}>
+              <p style={{ marginTop: 8, fontSize: 12, color: saveStatus === 'ok' ? '#0f7a4e' : '#b3311f' }}>
                 {saveStatus === 'ok' ? '✓ Saved' : `Save failed: ${saveStatus.error}`}
               </p>
             )}
-            <button onClick={() => setEditing(false)} style={{ background: 'none', color: '#888', marginTop: '8px', width: '100%' }}>Cancel</button>
+            <button onClick={() => setEditing(false)} style={{ background: 'none', color: '#6e6154', marginTop: '8px', width: '100%' }}>Cancel</button>
           </>
         ) : (
           <>
             <p className="rider-name">{current.first_name} {current.last_name}</p>
             <p className="rider-phone">📞 {current.phone}</p>
             <p className="rider-phone">✉️ {current.email}</p>
-            <button onClick={() => { setEditing(true); setEditForm(current) }} style={{ background: 'none', color: '#f0c040', marginTop: '12px', fontSize: '14px' }}>Edit</button>
-            <button onClick={deleteContact} style={{ background: 'none', color: '#ff4444', marginTop: '4px', fontSize: '14px' }}>Delete</button>
+            <button onClick={() => { setEditing(true); setEditForm(current) }} style={{ background: 'none', color: '#8a5f0a', marginTop: '12px', fontSize: '14px' }}>Edit</button>
+            <button onClick={deleteContact} style={{ background: 'none', color: '#b3311f', marginTop: '4px', fontSize: '14px' }}>Delete</button>
           </>
         )}
       </div>
@@ -181,7 +181,7 @@ export default function ContactDetail({ contact, groups, today, onBack, onRefres
       <div className="card">
         <h3>Ride History ({contact.past?.length || 0})</h3>
         {(!contact.past || contact.past.length === 0) ? (
-          <p style={{ color: '#888', fontSize: '13px' }}>No past rides recorded.</p>
+          <p style={{ color: '#6e6154', fontSize: '13px' }}>No past rides recorded.</p>
         ) : (
           <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px', marginTop: '6px' }}>
             {contact.past.map(g => (
@@ -194,7 +194,7 @@ export default function ContactDetail({ contact, groups, today, onBack, onRefres
             <h3 style={{ marginTop: '14px' }}>Upcoming ({contact.upcoming.length})</h3>
             <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px', marginTop: '6px' }}>
               {contact.upcoming.map(g => (
-                <span key={g.id} style={{ ...rideChipStyle, background: '#1a2a1a', color: '#4aa84a', borderColor: '#2a3f2a' }}>
+                <span key={g.id} style={{ ...rideChipStyle, background: '#e4f6ec', color: '#0f7a4e', borderColor: '#e4f6ec' }}>
                   {formatEventDate(g.event_date) || g.name}
                 </span>
               ))}
@@ -206,7 +206,7 @@ export default function ContactDetail({ contact, groups, today, onBack, onRefres
       <div className="card">
         <h3>Assign to Upcoming Loop</h3>
         {upcomingGroups.length === 0 ? (
-          <p style={{ color: '#888', fontSize: '13px' }}>No upcoming loops scheduled.</p>
+          <p style={{ color: '#6e6154', fontSize: '13px' }}>No upcoming loops scheduled.</p>
         ) : (
           <>
             <select value={assignedGroup} onChange={e => setAssignedGroup(e.target.value)}>
@@ -225,28 +225,28 @@ export default function ContactDetail({ contact, groups, today, onBack, onRefres
       <div className="card">
         <h3>Tickets purchased ({orders.length})</h3>
         {orders.length === 0 ? (
-          <p style={{ color: '#888', fontSize: '13px' }}>No orders found.</p>
+          <p style={{ color: '#6e6154', fontSize: '13px' }}>No orders found.</p>
         ) : (
           <div style={{ display: 'grid', gap: 10, marginTop: 8 }}>
             {orders.map(o => {
               const liveItems = (o.order_items || []).filter(i => !i.voided_at)
               const evDate = o.event?.event_date ? formatEventDate(o.event.event_date) : null
               return (
-                <div key={o.id} style={{ padding: 12, background: '#0f0f12', border: '1px solid #1e1e23', borderRadius: 10 }}>
+                <div key={o.id} style={{ padding: 12, background: '#ffffff', border: '1px solid #e8ddc8', borderRadius: 10 }}>
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', gap: 8 }}>
                     <div>
-                      <div style={{ fontSize: 13, fontWeight: 600, color: '#e8e8ea' }}>
+                      <div style={{ fontSize: 13, fontWeight: 600, color: '#17130f' }}>
                         {evDate || o.event?.name || 'Loop'}
                         {o.event?.pickup_time ? ` · ${o.event.pickup_time}` : ''}
                       </div>
-                      <div style={{ fontSize: 11, color: '#9c9ca3', marginTop: 2 }}>
+                      <div style={{ fontSize: 11, color: '#6e6154', marginTop: 2 }}>
                         {liveItems.length} of {o.order_items?.length || 0} active
                         {o.total_cents != null && ` · $${(o.total_cents / 100).toFixed(2)}`}
                         {' · '}
                         <span style={{
-                          color: o.status === 'paid' ? '#6fbf7f'
-                                : o.status === 'voided' ? '#9c9ca3'
-                                : o.status === 'refunded' ? '#e07a7a' : '#f0c24a',
+                          color: o.status === 'paid' ? '#0f7a4e'
+                                : o.status === 'voided' ? '#6e6154'
+                                : o.status === 'refunded' ? '#b3311f' : '#8a5f0a',
                         }}>{o.status}</span>
                       </div>
                     </div>
@@ -257,15 +257,15 @@ export default function ContactDetail({ contact, groups, today, onBack, onRefres
                       return (
                         <div key={item.id} style={{
                           display: 'flex', justifyContent: 'space-between', alignItems: 'center',
-                          padding: '6px 8px', background: isVoided ? '#1a1a1f' : '#16161a',
+                          padding: '6px 8px', background: isVoided ? '#f3ecdd' : '#fdfaf3',
                           borderRadius: 6, fontSize: 12,
                         }}>
-                          <span style={{ color: isVoided ? '#666' : '#c8c8cc', textDecoration: isVoided ? 'line-through' : 'none' }}>
+                          <span style={{ color: isVoided ? '#6e6154' : '#3b322a', textDecoration: isVoided ? 'line-through' : 'none' }}>
                             {item.rider_first_name || 'Guest'} {item.rider_last_name || ''}
                             {' · '}
                             ${((item.unit_price_cents || 0) / 100).toFixed(2)}
                             {isVoided && (
-                              <span style={{ marginLeft: 8, color: '#888', fontStyle: 'italic' }}>
+                              <span style={{ marginLeft: 8, color: '#6e6154', fontStyle: 'italic' }}>
                                 Voided{item.void_reason ? ` · ${item.void_reason}` : ''}{item.voided_by ? ` · ${item.voided_by}` : ''}
                               </span>
                             )}
@@ -276,7 +276,7 @@ export default function ContactDetail({ contact, groups, today, onBack, onRefres
                               onClick={() => voidOrderItem(item, o)}
                               disabled={voidingId === item.id}
                               style={{
-                                background: 'transparent', color: '#e07a7a', border: '1px solid #3a1f1f',
+                                background: 'transparent', color: '#b3311f', border: '1px solid #fdeae6',
                                 padding: '3px 8px', borderRadius: 6, fontSize: 11, fontWeight: 600,
                                 cursor: voidingId === item.id ? 'wait' : 'pointer',
                               }}

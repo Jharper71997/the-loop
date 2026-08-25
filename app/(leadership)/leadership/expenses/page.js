@@ -122,8 +122,8 @@ export default async function ExpensesPage({ searchParams }) {
   return (
     <main style={{
       minHeight: '100vh',
-      background: '#0a0a0b',
-      color: '#e8e8ea',
+      background: '#faf5ea',
+      color: '#17130f',
       padding: '24px 16px calc(48px + env(safe-area-inset-bottom))',
       paddingLeft: 'max(16px, env(safe-area-inset-left))',
       paddingRight: 'max(16px, env(safe-area-inset-right))',
@@ -131,7 +131,7 @@ export default async function ExpensesPage({ searchParams }) {
     }}>
       <div style={{ maxWidth: 1200, margin: '0 auto' }}>
         <Link href="/leadership/income" style={{
-          color: '#9c9ca3',
+          color: '#6e6154',
           fontSize: 11,
           letterSpacing: '0.18em',
           textTransform: 'uppercase',
@@ -151,7 +151,7 @@ export default async function ExpensesPage({ searchParams }) {
           marginBottom: 6,
         }}>
           <h1 style={{
-            color: '#e8e8ea',
+            color: '#17130f',
             fontSize: 26,
             fontWeight: 700,
             letterSpacing: '-0.01em',
@@ -161,7 +161,7 @@ export default async function ExpensesPage({ searchParams }) {
           </h1>
           <Link href="/leadership/expenses/import" style={{
             background: 'linear-gradient(180deg, #f0c24a, #d4a333)',
-            color: '#0a0a0b',
+            color: '#231903',
             fontFamily: FONT_MONO,
             fontSize: 11,
             fontWeight: 700,
@@ -175,7 +175,7 @@ export default async function ExpensesPage({ searchParams }) {
             Import P&L
           </Link>
         </div>
-        <p style={{ color: '#9c9ca3', fontSize: 13, margin: '0 0 22px 0' }}>
+        <p style={{ color: '#6e6154', fontSize: 13, margin: '0 0 22px 0' }}>
           From Diamond&rsquo;s monthly QuickBooks P&L. Sorted by spend so the biggest line items rise to the top.
         </p>
 
@@ -183,7 +183,7 @@ export default async function ExpensesPage({ searchParams }) {
           <div style={{
             background: 'rgba(63,178,127,0.12)',
             border: '1px solid rgba(63,178,127,0.4)',
-            color: '#7cd5a4',
+            color: '#0f7a4e',
             padding: '8px 12px',
             borderRadius: 6,
             fontSize: 12,
@@ -196,17 +196,17 @@ export default async function ExpensesPage({ searchParams }) {
 
         {grandTotal === 0 ? (
           <div style={{
-            background: 'linear-gradient(180deg, #121216, #0d0d10)',
-            border: '1px solid #2a2a31',
+            background: 'linear-gradient(180deg, #ffffff, #fdfaf3)',
+            border: '1px solid #e8ddc8',
             borderRadius: 8,
             padding: 24,
-            color: '#9c9ca3',
+            color: '#6e6154',
             fontSize: 13,
             lineHeight: 1.6,
           }}>
             <p style={{ margin: '0 0 10px 0' }}>No expenses entered yet.</p>
             <p style={{ margin: 0 }}>
-              <Link href="/leadership/expenses/import" style={{ color: '#d4a333' }}>Import your first month&rsquo;s P&L →</Link>
+              <Link href="/leadership/expenses/import" style={{ color: '#8a5f0a' }}>Import your first month&rsquo;s P&L →</Link>
             </p>
           </div>
         ) : (
@@ -247,12 +247,12 @@ export default async function ExpensesPage({ searchParams }) {
               <div style={tableWrap}>
                 <table style={{ width: '100%', borderCollapse: 'collapse', fontFamily: FONT_BODY }}>
                   <thead>
-                    <tr style={{ borderBottom: '1px solid #2a2a31' }}>
+                    <tr style={{ borderBottom: '1px solid #e8ddc8' }}>
                       <th style={{ ...th, textAlign: 'left', minWidth: 180 }}>Category</th>
                       {visibleMonths.map(m => (
                         <th key={m} style={{ ...th, textAlign: 'right' }}>{monthLabel(m)}</th>
                       ))}
-                      <th style={{ ...th, textAlign: 'right', borderLeft: '1px solid #2a2a31', color: '#d4a333' }}>Total</th>
+                      <th style={{ ...th, textAlign: 'right', borderLeft: '1px solid #e8ddc8', color: '#8a5f0a' }}>Total</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -261,11 +261,11 @@ export default async function ExpensesPage({ searchParams }) {
                       const ytd = categoryYtd.get(bucket) || 0
                       const share = grandTotal > 0 ? ytd / grandTotal : 0
                       return (
-                        <tr key={bucket} style={{ borderBottom: '1px solid #1a1a20' }}>
+                        <tr key={bucket} style={{ borderBottom: '1px solid #f3ecdd' }}>
                           <td style={{ ...td, textAlign: 'left' }}>
                             <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
-                              <span style={{ color: '#e8e8ea', fontSize: 13, fontWeight: 500 }}>{bucket}</span>
-                              <span style={{ color: '#6e6e75', fontSize: 10, letterSpacing: '0.04em', fontFamily: FONT_MONO }}>
+                              <span style={{ color: '#17130f', fontSize: 13, fontWeight: 500 }}>{bucket}</span>
+                              <span style={{ color: '#7d7060', fontSize: 10, letterSpacing: '0.04em', fontFamily: FONT_MONO }}>
                                 {(share * 100).toFixed(0)}% of spend
                               </span>
                             </div>
@@ -273,12 +273,12 @@ export default async function ExpensesPage({ searchParams }) {
                           {visibleMonths.map(m => {
                             const cents = row.get(m) || 0
                             return (
-                              <td key={m} style={{ ...td, textAlign: 'right', fontFamily: FONT_MONO, color: cents ? '#e8e8ea' : '#3a3a42' }}>
+                              <td key={m} style={{ ...td, textAlign: 'right', fontFamily: FONT_MONO, color: cents ? '#17130f' : '#6e6154' }}>
                                 {cents ? formatCents(cents) : '—'}
                               </td>
                             )
                           })}
-                          <td style={{ ...td, textAlign: 'right', fontFamily: FONT_MONO, fontWeight: 700, color: '#d4a333', borderLeft: '1px solid #2a2a31' }}>
+                          <td style={{ ...td, textAlign: 'right', fontFamily: FONT_MONO, fontWeight: 700, color: '#8a5f0a', borderLeft: '1px solid #e8ddc8' }}>
                             {formatCents(ytd)}
                           </td>
                         </tr>
@@ -286,19 +286,19 @@ export default async function ExpensesPage({ searchParams }) {
                     })}
                   </tbody>
                   <tfoot>
-                    <tr style={{ borderTop: '2px solid #2a2a31' }}>
-                      <td style={{ ...td, textAlign: 'left', color: '#9c9ca3', fontSize: 11, letterSpacing: '0.18em', textTransform: 'uppercase', fontWeight: 600 }}>
+                    <tr style={{ borderTop: '2px solid #e8ddc8' }}>
+                      <td style={{ ...td, textAlign: 'left', color: '#6e6154', fontSize: 11, letterSpacing: '0.18em', textTransform: 'uppercase', fontWeight: 600 }}>
                         Total
                       </td>
                       {visibleMonths.map(m => {
                         const cents = monthTotals.get(m) || 0
                         return (
-                          <td key={m} style={{ ...td, textAlign: 'right', fontFamily: FONT_MONO, fontWeight: 700, color: cents ? '#e8e8ea' : '#3a3a42' }}>
+                          <td key={m} style={{ ...td, textAlign: 'right', fontFamily: FONT_MONO, fontWeight: 700, color: cents ? '#17130f' : '#6e6154' }}>
                             {cents ? formatCents(cents) : '—'}
                           </td>
                         )
                       })}
-                      <td style={{ ...td, textAlign: 'right', fontFamily: FONT_MONO, fontWeight: 800, color: '#d4a333', fontSize: 14, borderLeft: '1px solid #2a2a31' }}>
+                      <td style={{ ...td, textAlign: 'right', fontFamily: FONT_MONO, fontWeight: 800, color: '#8a5f0a', fontSize: 14, borderLeft: '1px solid #e8ddc8' }}>
                         {formatCents(grandTotal)}
                       </td>
                     </tr>
@@ -309,7 +309,7 @@ export default async function ExpensesPage({ searchParams }) {
               {hasSplitFlag && (
                 <div style={{
                   marginTop: 10,
-                  color: '#9c9ca3',
+                  color: '#6e6154',
                   fontSize: 11,
                   fontStyle: 'italic',
                   lineHeight: 1.5,
@@ -326,7 +326,7 @@ export default async function ExpensesPage({ searchParams }) {
                   <DataTable
                     columns={[
                       { key: 'month', header: 'Month', primary: true, render: r => monthLabelLong(r.month) },
-                      { key: 'amount', header: 'Amount', align: 'right', mono: true, render: r => <span style={{ color: '#9c9ca3' }}>{formatCents(r.cents)}</span> },
+                      { key: 'amount', header: 'Amount', align: 'right', mono: true, render: r => <span style={{ color: '#6e6154' }}>{formatCents(r.cents)}</span> },
                     ]}
                     rows={olderMonths.map(([month, cents]) => ({ month, cents }))}
                     rowKey={r => r.month}
@@ -351,19 +351,19 @@ export default async function ExpensesPage({ searchParams }) {
 }
 
 const sectionHeading = {
-  color: '#e8e8ea',
+  color: '#17130f',
   fontSize: 13,
   fontWeight: 600,
   letterSpacing: '0.06em',
   textTransform: 'uppercase',
   margin: '0 0 10px 0',
-  borderBottom: '1px solid #2a2a31',
+  borderBottom: '1px solid #e8ddc8',
   paddingBottom: 6,
 }
 
 const tableWrap = {
-  background: 'linear-gradient(180deg, #121216, #0d0d10)',
-  border: '1px solid #2a2a31',
+  background: 'linear-gradient(180deg, #ffffff, #fdfaf3)',
+  border: '1px solid #e8ddc8',
   borderRadius: 8,
   padding: '4px 12px',
   overflowX: 'auto',
@@ -371,7 +371,7 @@ const tableWrap = {
 
 const th = {
   padding: '12px 8px',
-  color: '#9c9ca3',
+  color: '#6e6154',
   fontSize: 10,
   fontWeight: 600,
   letterSpacing: '0.18em',

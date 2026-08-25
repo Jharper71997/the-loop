@@ -73,9 +73,9 @@ export default async function ReferralsPage() {
           <h1 style={h1Style}>Rider referrals</h1>
         </div>
 
-        <p style={{ color: '#9c9ca3', fontSize: 13, margin: '0 0 18px', maxWidth: 640, fontFamily: '-apple-system, "Segoe UI", Roboto, sans-serif' }}>
+        <p style={{ color: '#6e6154', fontSize: 13, margin: '0 0 18px', maxWidth: 640, fontFamily: '-apple-system, "Segoe UI", Roboto, sans-serif' }}>
           Standings only — riders earn a spot here, not a discount. Every rider gets a
-          personal link (<span style={{ color: '#d4a333' }}>/invite/&lt;code&gt;</span>) on their My Tickets page.
+          personal link (<span style={{ color: '#8a5f0a' }}>/invite/&lt;code&gt;</span>) on their My Tickets page.
         </p>
 
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))', gap: 10, marginBottom: 22 }}>
@@ -88,7 +88,7 @@ export default async function ReferralsPage() {
           columns={columns}
           rows={rows}
           rowKey={r => r.key}
-          empty={<div style={{ color: '#9c9ca3', fontSize: 13, padding: '20px 0' }}>
+          empty={<div style={{ color: '#6e6154', fontSize: 13, padding: '20px 0' }}>
             No rider referrals yet. They start counting once a friend books off a rider&apos;s invite link.
           </div>}
         />
@@ -99,15 +99,15 @@ export default async function ReferralsPage() {
 
 const mainStyle = {
   minHeight: '100vh',
-  background: '#0a0a0b',
-  color: '#e8e8ea',
+  background: '#faf5ea',
+  color: '#17130f',
   padding: '24px 16px calc(48px + env(safe-area-inset-bottom))',
   paddingLeft: 'max(16px, env(safe-area-inset-left))',
   paddingRight: 'max(16px, env(safe-area-inset-right))',
   fontFamily: 'inherit',
 }
 const backLink = {
-  color: '#9c9ca3', fontSize: 11, letterSpacing: '0.18em', textTransform: 'uppercase',
+  color: '#6e6154', fontSize: 11, letterSpacing: '0.18em', textTransform: 'uppercase',
   textDecoration: 'none', display: 'inline-block', marginBottom: 18,
 }
 const headerRow = {
@@ -115,6 +115,6 @@ const headerRow = {
   gap: 12, flexWrap: 'wrap', marginBottom: 18,
 }
 const h1Style = {
-  color: '#e8e8ea', fontFamily: '-apple-system, "Segoe UI", Roboto, sans-serif',
+  color: '#17130f', fontFamily: '-apple-system, "Segoe UI", Roboto, sans-serif',
   fontSize: 24, fontWeight: 700, letterSpacing: '-0.01em', margin: 0,
 }
