@@ -2,6 +2,8 @@
 
 import { useEffect, useMemo, useState } from 'react'
 import { supabase } from '@/lib/supabase'
+import { useBusiness } from '../../_components/BusinessProvider'
+import { adminBase } from '@/lib/adminBase'
 import { personalize } from '@/lib/personalize'
 import {
   currentStopIndex,
@@ -21,6 +23,8 @@ const DAY_TABS = [
 ]
 
 export default function Groups() {
+  const { business } = useBusiness()
+  const base = adminBase(business)
   const [groups, setGroups] = useState([])
   const [groupHasEvent, setGroupHasEvent] = useState({})
   const [ticketsByGroup, setTicketsByGroup] = useState({})
@@ -38,7 +42,8 @@ export default function Groups() {
     fetchGroups()
     const t = setInterval(() => setNow(nowInTZ()), 60000)
     return () => clearInterval(t)
-  }, [])
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [business])
 
   async function fetchGroups() {
     const { data } = await supabase
@@ -51,6 +56,7 @@ export default function Groups() {
           contacts ( id, first_name, last_name, phone )
         )
       `)
+      .eq('kind', business)   // active console's business (Brew /admin, Surf /surf, Marines /loop)
       .order('event_date')
     const groupRows = data || []
     setGroups(groupRows)
@@ -60,7 +66,7 @@ export default function Groups() {
     // and counts fall back to contact rows (a 4-ticket group buy → "1 rider").
     // seatsByContact already credits unnamed group-buy seats to the buyer.
     try {
-      const res = await fetch('/api/admin/loop-tickets')
+      const res = await fetch(`/api/admin/loop-tickets?business=${business}`)
       const j = res.ok ? await res.json() : {}
       setGroupHasEvent(j.groupHasEvent || {})
       setTicketsByGroup(j.ticketsByGroup || {})
@@ -258,7 +264,7 @@ export default function Groups() {
               </div>
               <div style={{ display: 'flex', gap: '6px', alignItems: 'center', flexWrap: 'wrap', justifyContent: 'flex-end' }}>
                 <a
-                  href={`/admin/groups/${group.id}#summary`}
+                  href={`${base}/groups/${group.id}#summary`}
                   onClick={e => e.stopPropagation()}
                   style={{
                     color: '#c8c8cc', fontSize: '12px', textDecoration: 'none',
@@ -296,7 +302,10 @@ export default function Groups() {
               <>
                 {schedule.length === 0 ? (
                   <p className="muted" style={{ marginTop: '12px', textAlign: 'center', fontSize: 13 }}>
-                    No schedule yet. Set one in <a href={`/leadership/loops/${group.id}#edit`} style={{ color: '#d4a333' }}>Leadership → Loops</a>.
+                    No schedule yet. Set one in{' '}
+                    {business === 'surf'
+                      ? <a href={`${base}/builder`} style={{ color: '#d4a333' }}>the route builder</a>
+                      : <a href={`/leadership/loops/${group.id}#edit`} style={{ color: '#d4a333' }}>Leadership → Loops</a>}.
                   </p>
                 ) : (
                   <>

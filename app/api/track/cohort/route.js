@@ -27,6 +27,7 @@ export async function GET() {
     .from('events')
     .select('id, group_id, event_date, status')
     .eq('status', 'on_sale')
+    .eq('kind', 'brew')   // Brew Loop /track cohort roll only
     .gte('event_date', today)
     .order('event_date', { ascending: true })
     .limit(1)

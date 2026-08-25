@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState } from 'react'
 import { supabase } from '@/lib/supabase'
+import { useBusiness } from '../../_components/BusinessProvider'
 
 const ACCENT = '#d4a333'
 const SURFACE = '#15151a'
@@ -23,6 +24,7 @@ const DEFAULT_PROFORMA = {
 const EXPENSE_CATEGORIES = ['driver_pay', 'fuel', 'insurance', 'marketing', 'platform_fees', 'other']
 
 export default function Finance() {
+  const { business } = useBusiness()
   const [summary, setSummary] = useState(null)
   const [data, setData] = useState(null)
   const [groups, setGroups] = useState([])
@@ -37,7 +39,8 @@ export default function Finance() {
       if (saved) setPro({ ...DEFAULT_PROFORMA, ...JSON.parse(saved) })
     } catch {}
     refresh()
-  }, [])
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [business])
 
   useEffect(() => {
     try { localStorage.setItem(LS_KEY, JSON.stringify(pro)) } catch {}
@@ -49,7 +52,7 @@ export default function Finance() {
       const [sumRes, dataRes, groupsRes] = await Promise.all([
         fetch('/api/finance-summary').then(r => r.json()),
         fetch('/api/finance-data').then(r => r.json()),
-        supabase.from('groups').select('id, name, event_date').order('event_date', { ascending: false }).limit(40),
+        supabase.from('groups').select('id, name, event_date').eq('kind', business).order('event_date', { ascending: false }).limit(40),
       ])
       if (sumRes.error) throw new Error(sumRes.error)
       setSummary(sumRes)

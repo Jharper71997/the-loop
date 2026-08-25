@@ -2,7 +2,7 @@ import { redirect } from 'next/navigation'
 import { cookies } from 'next/headers'
 import { createServerClient } from '@supabase/ssr'
 import { isLeadership } from '@/lib/roles'
-import LeadershipNav from '../_components/LeadershipNav'
+import ConsoleShell from '../../_components/console/ConsoleShell'
 
 // Middleware already gates /leadership/** via LEADERSHIP_ONLY_PREFIXES, but
 // we double-check at the layout level so that a slip in middleware config
@@ -24,12 +24,10 @@ async function requireLeadership() {
   if (!isLeadership(user.email)) redirect('/admin')
 }
 
+// Same shell as /admin. The leadership pages keep their own URLs — they are now
+// tabs inside the Tonight / Riders / Bars / Money / Setup sections rather than a
+// second console with its own nav and its own look.
 export default async function LeadershipLayout({ children }) {
   await requireLeadership()
-  return (
-    <div className="hud-shell">
-      <LeadershipNav />
-      {children}
-    </div>
-  )
+  return <ConsoleShell>{children}</ConsoleShell>
 }

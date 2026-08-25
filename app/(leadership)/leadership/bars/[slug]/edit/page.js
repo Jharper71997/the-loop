@@ -35,6 +35,8 @@ async function updateBar(slug, formData) {
   const contact_phone = (formData.get('contact_phone') || '').toString().trim() || null
   const contact_email = (formData.get('contact_email') || '').toString().trim() || null
   const notes = (formData.get('notes') || '').toString().trim() || null
+  const dueDayRaw = parseInt(formData.get('payment_due_day'), 10)
+  const payment_due_day = Number.isInteger(dueDayRaw) && dueDayRaw >= 1 && dueDayRaw <= 31 ? dueDayRaw : null
 
   const supabase = supabaseAdmin()
   const { error } = await supabase.from('bars').update({
@@ -46,6 +48,7 @@ async function updateBar(slug, formData) {
     contact_phone,
     contact_email,
     notes,
+    payment_due_day,
     updated_at: new Date().toISOString(),
   }).eq('slug', slug)
   if (error) {
@@ -92,6 +95,16 @@ export default async function EditBarPage({ params, searchParams }) {
           step="0.01"
           min="0"
           defaultValue={bar.monthly_fee_cents > 0 ? (bar.monthly_fee_cents / 100).toFixed(2) : ''}
+        />
+        <Field
+          label="Billing day (1–31)"
+          name="payment_due_day"
+          type="number"
+          min="1"
+          max="31"
+          step="1"
+          defaultValue={bar.payment_due_day || ''}
+          hint="Day of month payment is due. Leave blank for end-of-month."
         />
         <Select label="Payment method" name="payment_method" options={METHODS} defaultValue={bar.payment_method || 'check'} required />
         <Select label="Status" name="status" options={STATUSES} defaultValue={bar.status || 'prospect'} required />

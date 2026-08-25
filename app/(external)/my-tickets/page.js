@@ -1,64 +1,12 @@
-import MyTicketsClient from './MyTicketsClient'
+import MyTicketsBody from '../_components/MyTicketsBody'
 
 export const metadata = {
-  title: 'My Tickets',
-  description: 'Look up your Brew Loop tickets and waiver status.',
+  title: 'My Tickets & Messages',
+  description: 'Pull up your Brew Loop tickets, waiver, and message security.',
   robots: { index: false, follow: false },
   alternates: { canonical: '/my-tickets' },
 }
 
-const GOLD = '#d4a333'
-const INK = '#f5f5f7'
-
 export default function MyTicketsPage() {
-  return (
-    <main style={{ padding: '16px 16px 24px' }}>
-      <div style={{ maxWidth: 520, margin: '0 auto', display: 'grid', gap: 14 }}>
-        <header style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-          <span
-            aria-hidden
-            style={{
-              flex: '0 0 auto',
-              display: 'inline-flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              width: 44,
-              height: 44,
-              borderRadius: '50%',
-              border: `1.5px solid ${GOLD}`,
-              color: GOLD,
-              fontSize: 14,
-              fontWeight: 800,
-              letterSpacing: '0.04em',
-              background: 'radial-gradient(60% 60% at 50% 40%, rgba(212,163,51,0.18), transparent 70%)',
-            }}
-          >
-            JBL
-          </span>
-          <div style={{ minWidth: 0 }}>
-            <div
-              style={{
-                color: GOLD,
-                fontSize: 11,
-                letterSpacing: '0.22em',
-                textTransform: 'uppercase',
-                fontWeight: 700,
-              }}
-            >
-              My tickets
-            </div>
-            <h1 style={{ color: INK, fontSize: 22, fontWeight: 800, margin: '2px 0 0', lineHeight: 1.15 }}>
-              Find your ride.
-            </h1>
-          </div>
-        </header>
-
-        <p style={{ color: '#b8b8bf', fontSize: 14, margin: 0 }}>
-          Enter the phone you booked with. We&rsquo;ll show your tickets and waiver.
-        </p>
-
-        <MyTicketsClient />
-      </div>
-    </main>
-  )
+  return <MyTicketsBody business="brew" />
 }

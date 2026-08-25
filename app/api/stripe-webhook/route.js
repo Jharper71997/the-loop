@@ -5,6 +5,10 @@ import { finalizeBooking } from '@/lib/booking'
 import { sendSms } from '@/lib/sms'
 import { recordAlert } from '@/lib/alerts'
 import { syncTtForEvent } from '@/lib/ticketTailorSync'
+import { stripe as stripeLib } from '@/lib/stripe'
+import { mapSubStatus } from '@/lib/loopPass'
+import { sendEmail } from '@/lib/email'
+import { merchOrderHtml, merchOrderText } from '@/lib/emailTemplates'
 
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
@@ -76,6 +80,12 @@ export async function POST(req) {
   try {
     if (event.type === 'checkout.session.completed') {
       await handleCheckoutCompleted(supabase, event.data.object)
+    } else if (
+      event.type === 'customer.subscription.created' ||
+      event.type === 'customer.subscription.updated' ||
+      event.type === 'customer.subscription.deleted'
+    ) {
+      await handleSubscriptionChange(supabase, event.data.object)
     } else if (event.type === 'charge.refunded' || event.type === 'refund.created') {
       await handleRefund(supabase, event.data.object)
     } else {
@@ -97,7 +107,119 @@ export async function POST(req) {
   }
 }
 
+// Loop Pass subscriptions ride the same Checkout webhook but have no order row.
+async function handlePassCheckout(supabase, session) {
+  const subId = session.subscription
+  if (!subId) return
+
+  let sub = null
+  try { sub = await stripeLib().subscriptions.retrieve(subId) } catch (err) {
+    console.error('[stripe-webhook] subscription retrieve failed', err)
+  }
+
+  await upsertPass(supabase, {
+    subId,
+    contactId: session.metadata?.contact_id || sub?.metadata?.contact_id || null,
+    plan: session.metadata?.plan || sub?.metadata?.plan || 'monthly',
+    customerId: session.customer || sub?.customer || null,
+    status: sub ? mapSubStatus(sub.status) : 'active',
+    periodEnd: sub?.current_period_end || null,
+  })
+}
+
+// customer.subscription.created/updated/deleted — keep the local pass mirror in
+// sync (renewals, payment failures, cancellations). Upsert on the subscription
+// id so an event arriving before checkout.session.completed still creates the row.
+async function handleSubscriptionChange(supabase, sub) {
+  if (sub?.metadata?.kind !== 'loop_pass') return
+  await upsertPass(supabase, {
+    subId: sub.id,
+    contactId: sub.metadata?.contact_id || null,
+    plan: sub.metadata?.plan || 'monthly',
+    customerId: typeof sub.customer === 'string' ? sub.customer : null,
+    status: mapSubStatus(sub.status),
+    periodEnd: sub.current_period_end || null,
+  })
+}
+
+async function upsertPass(supabase, { subId, contactId, plan, customerId, status, periodEnd }) {
+  const row = {
+    contact_id: contactId || null,
+    plan: plan === 'season' ? 'season' : 'monthly',
+    status,
+    stripe_subscription_id: subId,
+    stripe_customer_id: customerId || null,
+    current_period_end: periodEnd ? new Date(periodEnd * 1000).toISOString() : null,
+    updated_at: new Date().toISOString(),
+  }
+  const { error } = await supabase
+    .from('loop_passes')
+    .upsert(row, { onConflict: 'stripe_subscription_id' })
+  if (error) console.error('[stripe-webhook] loop_passes upsert failed', error)
+}
+
+// Best-effort friendly promo code for a completed session. Prefers the
+// human-readable promotion code (e.g. "FREERIDE") over Stripe's internal ids;
+// falls back to the coupon name/id. Never throws — attribution is non-critical.
+async function resolvePromoCode(session) {
+  try {
+    const disc = Array.isArray(session.discounts) ? session.discounts[0] : null
+    if (!disc) return null
+    if (disc.promotion_code) {
+      const id = typeof disc.promotion_code === 'string' ? disc.promotion_code : disc.promotion_code?.id
+      if (id) {
+        try {
+          const pc = await stripeLib.promotionCodes.retrieve(id)
+          return pc?.code || id
+        } catch { return id }
+      }
+    }
+    if (disc.coupon) {
+      return typeof disc.coupon === 'string' ? disc.coupon : (disc.coupon?.name || disc.coupon?.id || null)
+    }
+    return null
+  } catch { return null }
+}
+
+// Which shipping option the buyer picked, as the human label they saw. This is
+// the whole difference between "put it in the mail" and "hand it to them on the
+// shuttle", so fulfillment is guesswork without it. The rates are created inline
+// (shipping_rate_data), so the session only carries the rate ID and we have to
+// go get the name. Falls back to the amount — $0 is the shuttle — because a
+// missing label must never cost us the distinction. Never throws.
+async function resolveShippingMethod(session) {
+  const cost = session.shipping_cost
+  if (!cost) return null
+  try {
+    const rate = cost.shipping_rate
+    if (rate) {
+      if (typeof rate === 'object' && rate.display_name) return rate.display_name
+      const id = typeof rate === 'string' ? rate : rate?.id
+      if (id) {
+        const full = await stripeLib.shippingRates.retrieve(id)
+        if (full?.display_name) return full.display_name
+      }
+    }
+  } catch { /* fall through to the amount */ }
+  const amt = cost.amount_total
+  if (amt === 0) return 'Grab it on the shuttle'
+  if (Number.isInteger(amt)) return 'Standard shipping'
+  return null
+}
+
 async function handleCheckoutCompleted(supabase, session) {
+  // Merch store orders live in their own tables (kind:'merch') — settle them
+  // before any ride/pass logic runs, and never touch `orders`.
+  if (session.metadata?.kind === 'merch') {
+    return handleMerchCheckout(supabase, session)
+  }
+
+  // Loop Pass purchases come through Checkout too, but in subscription mode and
+  // with no order_id — route them to the pass handler before the order lookup.
+  if (session.mode === 'subscription' || session.metadata?.kind === 'loop_pass') {
+    return handlePassCheckout(supabase, session)
+  }
+
   const orderId = session.metadata?.order_id
   if (!orderId) {
     // Likely the legacy Stripe Checkout flow with metadata.group_id — preserve it.
@@ -106,7 +228,7 @@ async function handleCheckoutCompleted(supabase, session) {
 
   const { data: order } = await supabase
     .from('orders')
-    .select('id, event_id, contact_id, status, buyer_phone, party_size')
+    .select('id, event_id, contact_id, status, buyer_phone, party_size, metadata')
     .eq('id', orderId)
     .maybeSingle()
   if (!order) throw new Error(`order ${orderId} not found`)
@@ -118,18 +240,32 @@ async function handleCheckoutCompleted(supabase, session) {
   const utmMedium = session.metadata?.utm_medium || null
   const utmCampaign = session.metadata?.utm_campaign || null
 
+  // Capture what was ACTUALLY collected vs the ticket's face value, plus any
+  // promo code, so leadership can separate real paid sales from free/comped
+  // rides — a 100%-off code completes checkout at $0 but the order still
+  // carries its face value in total_cents.
+  const collectedCents = Number.isInteger(session.amount_total) ? session.amount_total : null
+  const discountCents = session.total_details?.amount_discount ?? 0
+  const promoCode = await resolvePromoCode(session)
+
   const orderUpdate = {
     status: 'paid',
     stripe_payment_intent_id: session.payment_intent || null,
     paid_at: new Date().toISOString(),
   }
+  const baseMeta = (order.metadata && typeof order.metadata === 'object') ? order.metadata : {}
+  orderUpdate.metadata = {
+    ...baseMeta,
+    amount_collected_cents: collectedCents,
+    discount_cents: discountCents,
+    promo_code: promoCode,
+    comp: collectedCents === 0,
+  }
   if (qrCode || utmSource || utmMedium || utmCampaign) {
-    orderUpdate.metadata = {
-      qr_code: qrCode,
-      utm_source: utmSource,
-      utm_medium: utmMedium,
-      utm_campaign: utmCampaign,
-    }
+    orderUpdate.metadata.qr_code = qrCode
+    orderUpdate.metadata.utm_source = utmSource
+    orderUpdate.metadata.utm_medium = utmMedium
+    orderUpdate.metadata.utm_campaign = utmCampaign
   }
 
   await supabase
@@ -244,6 +380,68 @@ async function handleCheckoutCompleted(supabase, session) {
   }
 }
 
+// Merch store checkout — settle the separate merch_orders row. Captures the
+// Stripe-collected shipping address so leadership can fulfill. Idempotent.
+async function handleMerchCheckout(supabase, session) {
+  const merchOrderId = session.metadata?.merch_order_id
+  if (!merchOrderId) return
+  const { data: order } = await supabase
+    .from('merch_orders')
+    .select('id, status')
+    .eq('id', merchOrderId)
+    .maybeSingle()
+  if (!order) throw new Error(`merch order ${merchOrderId} not found`)
+  if (order.status === 'paid' || order.status === 'fulfilled') return
+
+  const shippingMethod = await resolveShippingMethod(session)
+  const cust = session.customer_details || null
+  // Stripe renamed session.shipping_details → collected_information.shipping_details
+  // across API versions; read whichever this version provides.
+  const ship = session.shipping_details
+    || session.collected_information?.shipping_details
+    || session.shipping
+    || null
+
+  const patch = {
+    status: 'paid',
+    paid_at: new Date().toISOString(),
+    stripe_payment_intent_id: session.payment_intent || null,
+    total_cents: Number.isInteger(session.amount_total) ? session.amount_total : null,
+    shipping_cents: session.shipping_cost?.amount_total ?? session.total_details?.amount_shipping ?? null,
+    shipping_method: shippingMethod,
+    buyer_email: cust?.email || null,
+    buyer_name: (ship?.name || cust?.name) || null,
+    buyer_phone: cust?.phone || null,
+    shipping_address: (ship?.address || cust?.address) || null,
+  }
+
+  await supabase
+    .from('merch_orders')
+    .update(patch)
+    .eq('id', order.id)
+
+  // Confirmation email. Deliberately AFTER the row is settled and deliberately
+  // swallowed: a Resend outage must never fail the webhook, because Stripe
+  // would retry it and the money is already captured. Worst case the buyer
+  // gets no email and the order is still correct in the table.
+  try {
+    const { data: items } = await supabase
+      .from('merch_order_items')
+      .select('name, unit_price_cents, quantity')
+      .eq('merch_order_id', order.id)
+    if (patch.buyer_email) {
+      await sendEmail({
+        to: patch.buyer_email,
+        subject: 'Your Brew Loop order is confirmed',
+        html: merchOrderHtml({ order: patch, items: items || [] }),
+        text: merchOrderText({ order: patch, items: items || [] }),
+      })
+    }
+  } catch (err) {
+    console.error('[merch] confirmation email failed', err)
+  }
+}
+
 async function handleRefund(supabase, obj) {
   const paymentIntent = obj.payment_intent
   if (!paymentIntent) return
@@ -252,7 +450,21 @@ async function handleRefund(supabase, obj) {
     .select('id, event_id, status, buyer_phone, buyer_name, total_cents')
     .eq('stripe_payment_intent_id', paymentIntent)
     .maybeSingle()
-  if (!order) return
+  if (!order) {
+    // Might be a merch order (separate table) — refund that instead.
+    const { data: merchOrder } = await supabase
+      .from('merch_orders')
+      .select('id, status')
+      .eq('stripe_payment_intent_id', paymentIntent)
+      .maybeSingle()
+    if (merchOrder && merchOrder.status !== 'refunded') {
+      await supabase
+        .from('merch_orders')
+        .update({ status: 'refunded', refunded_at: new Date().toISOString() })
+        .eq('id', merchOrder.id)
+    }
+    return
+  }
   // Idempotent: charge.refunded + refund.created can both fire for the same
   // refund; only the first should run side effects.
   if (order.status === 'refunded') return

@@ -19,17 +19,13 @@ export default function SummaryView({
   onJumpToTickets,
 }) {
   const paidOrders = (orders || []).filter(o => o.status === 'paid')
-  // Real ticket count comes from active (non-voided) order_items, not
-  // orders.party_size — voiding a seat decrements party_size but the order's
-  // party_size sum is the right rollup either way. Use order_items length so
-  // per-type counts and total agree.
-  const ticketsSold = orderItems.length
+  const activeItems = orderItems.filter(oi => !oi.voided_at)
+  const ticketsSold = activeItems.length
   const revenueCents = paidOrders.reduce((s, o) => s + (o.total_cents || 0), 0)
   const checkedIn = (members || []).filter(m => m.checked_in_at).length
 
-  // Group order_items by ticket_type_id for the "issued" column.
   const issuedByType = new Map()
-  for (const oi of orderItems) {
+  for (const oi of activeItems) {
     if (!oi.ticket_type_id) continue
     issuedByType.set(oi.ticket_type_id, (issuedByType.get(oi.ticket_type_id) || 0) + 1)
   }

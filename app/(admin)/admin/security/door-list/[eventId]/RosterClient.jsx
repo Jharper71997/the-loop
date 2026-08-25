@@ -2,6 +2,9 @@
 
 import { useCallback, useEffect, useRef, useState } from 'react'
 import Link from 'next/link'
+import { useBusiness } from '../../../../_components/BusinessProvider'
+import { adminBase } from '@/lib/adminBase'
+import { brandFor } from '@/lib/businessConfig'
 
 const GOLD = '#d4a333'
 const GOLD_HI = '#f0c24a'
@@ -17,6 +20,9 @@ const RED = '#e07a7a'
 const POLL_MS = 8000
 
 export default function RosterClient({ eventId }) {
+  const { business } = useBusiness()
+  const base = adminBase(business)
+  const isMarines = business === 'marines'
   const [data, setData] = useState(null)
   const [error, setError] = useState(null)
   const [filter, setFilter] = useState('') // search-by-name
@@ -103,7 +109,7 @@ export default function RosterClient({ eventId }) {
               textTransform: 'uppercase', fontWeight: 700,
             }}
           >
-            Brew Loop · Door list
+            {brandFor(business).shortBrand} · Door list
           </div>
           {event ? (
             <>
@@ -122,8 +128,8 @@ export default function RosterClient({ eventId }) {
         </header>
 
         <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-          <Link href="/admin/security/door-list" style={ghostBtn}>← All events</Link>
-          <Link href="/admin/security" style={ghostBtn}>Camera scanner</Link>
+          <Link href={`${base}/security/door-list`} style={ghostBtn}>← All events</Link>
+          <Link href={`${base}/security`} style={ghostBtn}>Camera scanner</Link>
           <button type="button" onClick={load} style={ghostBtn}>Refresh</button>
         </div>
 
@@ -175,6 +181,7 @@ export default function RosterClient({ eventId }) {
                 rider={r}
                 busy={busyItem === r.order_item_id}
                 flash={flash?.itemId === r.order_item_id ? flash : null}
+                showMilitary={isMarines}
                 onCheckIn={() => manualCheckIn(r)}
               />
             ))}
@@ -189,6 +196,7 @@ export default function RosterClient({ eventId }) {
                 rider={r}
                 busy={false}
                 flash={flash?.itemId === r.order_item_id ? flash : null}
+                showMilitary={isMarines}
                 onCheckIn={null}
               />
             ))}
@@ -234,7 +242,7 @@ function Tally({ label, value, total, color }) {
   )
 }
 
-function RiderRow({ rider, busy, flash, onCheckIn }) {
+function RiderRow({ rider, busy, flash, onCheckIn, showMilitary }) {
   const checkedIn = !!rider.checked_in_at
   return (
     <div
@@ -254,6 +262,9 @@ function RiderRow({ rider, busy, flash, onCheckIn }) {
           {rider.waiver_signed
             ? <span style={{ color: GREEN, fontSize: 11, fontWeight: 700 }}>✓ waiver</span>
             : <span style={{ color: RED, fontSize: 11, fontWeight: 700 }}>! waiver</span>}
+          {showMilitary && (rider.military_verified
+            ? <span style={{ color: GREEN, fontSize: 11, fontWeight: 700 }}>✓ Marine</span>
+            : <span style={{ color: GOLD_HI, fontSize: 11, fontWeight: 700 }}>check ID at door</span>)}
         </div>
         <div style={{ color: INK_MUTED, fontSize: 12, marginTop: 2 }}>
           {rider.buyer_name && rider.buyer_name !== rider.full_name

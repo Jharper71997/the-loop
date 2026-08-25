@@ -30,6 +30,8 @@ async function createSponsor(formData) {
   const monthly = parseFloat(formData.get('monthly_amount'))
   const status = (formData.get('status') || 'prospect').toString()
   const notes = (formData.get('notes') || '').toString().trim() || null
+  const dueDayRaw = parseInt(formData.get('payment_due_day'), 10)
+  const payment_due_day = Number.isInteger(dueDayRaw) && dueDayRaw >= 1 && dueDayRaw <= 31 ? dueDayRaw : null
 
   const supabase = supabaseAdmin()
   const { error } = await supabase.from('sponsors').insert({
@@ -39,6 +41,7 @@ async function createSponsor(formData) {
     amount_committed: isFinite(monthly) && monthly > 0 ? monthly : null,
     status,
     notes,
+    payment_due_day,
   })
   if (error) {
     redirect('/leadership/sponsors/new?error=' + encodeURIComponent(error.message))
@@ -97,6 +100,16 @@ export default async function NewSponsorPage({ searchParams }) {
           min="0"
           placeholder="250"
           hint="Stored as amount_committed; treated as monthly fee for outstanding tracking"
+        />
+        <Field
+          label="Billing day (1–31)"
+          name="payment_due_day"
+          type="number"
+          min="1"
+          max="31"
+          step="1"
+          placeholder="1"
+          hint="Day of month payment is due. Leave blank for end-of-month."
         />
         <Select
           label="Status"

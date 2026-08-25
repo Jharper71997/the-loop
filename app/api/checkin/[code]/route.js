@@ -44,12 +44,14 @@ export async function POST(req, ctx) {
   const admin = supabaseAdmin()
 
   // Two scanner paths converge here:
-  //   1. Native Loop QRs encode `${appUrl}/r/<code>` — `code` matches a row in
-  //      qr_codes (kind='checkin') pointing at an order_item.
-  //   2. Ticket Tailor QRs encode a short barcode like "yA7PhHf", which maps to
-  //      order_items.tt_barcode.
-  // Without path 2 every Ticket Tailor ticket scans as unknown_code, which is
-  // what turned riders away on 2026-07-31 (an all-TT night).
+  //   1. Native Loop QRs encode `${appUrl}/r/<code>` — `code` matches a row
+  //      in qr_codes (kind='checkin') that points to an order_item.
+  //   2. Ticket Tailor QRs encode a short barcode like "ww64NQx" — that
+  //      maps directly to order_items.tt_barcode (populated by the TT
+  //      webhook mirror).
+  // Try the Loop path first, then fall through to TT lookup. Without path 2
+  // every Ticket Tailor ticket scans as unknown_code, which is what turned
+  // riders away on 2026-07-31 (an all-TT night).
   let itemId = null
   let viaChannel = 'security_scan'
 

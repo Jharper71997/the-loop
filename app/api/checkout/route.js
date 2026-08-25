@@ -1,9 +1,15 @@
 import { randomBytes } from 'crypto'
+import { cookies } from 'next/headers'
 import { supabaseAdmin } from '@/lib/supabaseAdmin'
 import { createBookingCheckoutSession } from '@/lib/stripe'
+import { brandFor } from '@/lib/businessConfig'
 import { upsertContactByPhoneOrEmail, normalizeEmail } from '@/lib/contacts'
 import { normalizePhone } from '@/lib/phone'
-import { getCurrentWaiverVersion, contactHasSignedCurrent } from '@/lib/waiver'
+import { getCurrentWaiverVersion, contactHasSignedCurrent, recordSignature } from '@/lib/waiver'
+import { syncTtForEvent } from '@/lib/ticketTailorSync'
+import { getActivePass } from '@/lib/loopPass'
+import { finalizeBooking } from '@/lib/booking'
+import { MARINES_VERIFIED_COOKIE } from '@/lib/marines'
 import { capacityForTicketType } from '@/lib/capacity'
 
 function mintClaimToken() {
@@ -32,7 +38,21 @@ export const dynamic = 'force-dynamic'
 //   ],
 //   buyer_typed_name: string          // required if buyer or any rider is signing
 // }
+// Thin wrapper so an uncaught throw anywhere in the handler (a Supabase error
+// bubbling up from upsertContactByPhoneOrEmail / getCurrentWaiverVersion / etc.)
+// always returns a JSON body instead of a bare 500. A bare 500 has an empty
+// body, which makes the client's res.json() throw "Unexpected end of JSON
+// input" and surfaces a cryptic error to the rider. Real cause is logged here.
 export async function POST(req) {
+  try {
+    return await handleCheckout(req)
+  } catch (err) {
+    console.error('[checkout] unhandled error', err)
+    return Response.json({ error: 'checkout_failed' }, { status: 500 })
+  }
+}
+
+async function handleCheckout(req) {
   let body
   try {
     body = await req.json()
@@ -79,12 +99,31 @@ export async function POST(req) {
 
   const { data: event } = await supabase
     .from('events')
-    .select('id, name, event_date, pickup_time, status, group_id')
+    .select('id, name, event_date, pickup_time, status, group_id, kind')
     .eq('id', event_id)
     .maybeSingle()
   if (!event) return Response.json({ error: 'event not found' }, { status: 404 })
   if (event.status !== 'on_sale') {
     return Response.json({ error: `event_not_on_sale_${event.status}` }, { status: 400 })
+  }
+
+  // The Loop (Marines): only a rider who has cleared DoD-ID verification can buy.
+  // The verify flow drops a cookie holding the verified contact id; re-check the
+  // military_verified flag server-side so a stale or forged cookie can't get
+  // through. This gates the BUYER only — guests still ride (the driver checks a
+  // base visitor pass at the door). Brew/Surf are untouched.
+  if (event.kind === 'marines') {
+    let verifiedContactId = null
+    try { verifiedContactId = (await cookies()).get(MARINES_VERIFIED_COOKIE)?.value || null } catch {}
+    let cleared = false
+    if (verifiedContactId) {
+      const { data: vc } = await supabase
+        .from('contacts').select('military_verified').eq('id', verifiedContactId).maybeSingle()
+      cleared = !!vc?.military_verified
+    }
+    if (!cleared) {
+      return Response.json({ error: 'verification_required' }, { status: 403 })
+    }
   }
 
   const ticketTypeIds = [...new Set(riders.map(r => r.ticket_type_id).filter(Boolean))]
@@ -98,6 +137,31 @@ export async function POST(req) {
     const tt = ttById.get(r.ticket_type_id)
     if (!tt || tt.event_id !== event.id || !tt.active) {
       return Response.json({ error: 'invalid ticket_type_id' }, { status: 400 })
+    }
+  }
+
+  // Walk-on pickup. A ticket type with no stop_index has no bar attached, so the
+  // rider chose a pickup bar at checkout (an index into the night's schedule).
+  // Validate it against the schedule and require it when bars exist. Per-bar
+  // tickets ignore this — their pickup is the ticket type's own stop_index.
+  let scheduleLen = 0
+  if (event.group_id) {
+    const { data: g } = await supabase
+      .from('groups').select('schedule').eq('id', event.group_id).maybeSingle()
+    const sched = Array.isArray(g?.schedule) ? g.schedule : []
+    scheduleLen = sched.length
+  }
+  function pickupIndexFor(r) {
+    const tt = ttById.get(r.ticket_type_id)
+    if (!tt || tt.stop_index != null) return null
+    const raw = Number(r.pickup_stop_index)
+    return Number.isInteger(raw) && raw >= 0 && raw < scheduleLen ? raw : null
+  }
+  for (const r of riders) {
+    const tt = ttById.get(r.ticket_type_id)
+    // Walk-ons must choose a pickup bar when the night has a schedule.
+    if (tt && tt.stop_index == null && scheduleLen > 0 && pickupIndexFor(r) == null) {
+      return Response.json({ error: 'pickup_required' }, { status: 400 })
     }
   }
 
@@ -276,7 +340,75 @@ export async function POST(req) {
     delete resolvedAttribution.bartender_code
   }
 
-  const totalCents = riders.reduce((s, r) => s + (ttById.get(r.ticket_type_id)?.price_cents || 0), 0)
+  // Loop Pass redemption. A rider whose contact holds an active pass rides for
+  // free: the seat still counts against capacity (already counted above) but is
+  // dropped from the charge. One active pass covers one seat per order, so a
+  // passholder can't cover their whole party off a single pass. Claim-link
+  // riders have no contact yet, so they're never covered here.
+  const usedPassContacts = new Set()
+  for (const rc of riderContacts) {
+    rc.covered = false
+    // Only Brew Loop honors the Brew Loop subscription pass. Marines + Surf City
+    // are separate businesses — their fares are always charged, so a rider who
+    // happens to hold a Brew Loop Pass can't ride those free.
+    if (event.kind !== 'brew') continue
+    if (rc.claim || !rc.contact?.id) continue
+    if (usedPassContacts.has(rc.contact.id)) continue
+    const pass = await getActivePass(supabase, rc.contact.id)
+    if (pass) {
+      rc.covered = true
+      usedPassContacts.add(rc.contact.id)
+    }
+  }
+
+  const priceForRc = rc => (rc.covered ? 0 : (ttById.get(rc.rider.ticket_type_id)?.price_cents || 0))
+  const ticketCents = riderContacts.reduce((s, rc) => s + priceForRc(rc), 0)
+
+  // Checkout add-ons. Re-price every selection against the catalog so a tampered
+  // client can't set its own price. Unknown / inactive / wrong-event add-ons are
+  // dropped silently rather than failing the sale.
+  const addonRows = []
+  const addonLineItems = []
+  const requestedAddons = Array.isArray(body.addons) ? body.addons : []
+  if (requestedAddons.length) {
+    const addonIds = [...new Set(requestedAddons.map(a => a?.addon_id).filter(Boolean))]
+    if (addonIds.length) {
+      const { data: catalog } = await supabase
+        .from('addons')
+        .select('id, name, price_cents, active, event_id')
+        .in('id', addonIds)
+      const addonById = new Map((catalog || []).map(a => [a.id, a]))
+      for (const a of requestedAddons) {
+        const def = addonById.get(a?.addon_id)
+        const qty = Math.max(0, Math.min(20, parseInt(a?.quantity, 10) || 0))
+        if (!def || !def.active || qty < 1) continue
+        if (def.event_id && def.event_id !== event.id) continue
+        addonRows.push({ addon_id: def.id, name: def.name, unit_price_cents: def.price_cents, quantity: qty })
+        addonLineItems.push({ name: def.name, unit_price_cents: def.price_cents, quantity: qty, addon: true })
+      }
+    }
+  }
+  const addonCents = addonRows.reduce((s, a) => s + a.unit_price_cents * a.quantity, 0)
+  const totalCents = ticketCents + addonCents
+
+  // Rider referral (leaderboard-only): resolve the referrer's code → contact and
+  // stamp it on the order. No discount is applied. Self-referrals are ignored.
+  let referrerContactId = null
+  let referrerCode = String(resolvedAttribution?.referrer_code || '').trim()
+  // Fall back to the durable cookie set by /invite/<code> — the rider may have
+  // browsed from /events to a specific loop, dropping the URL param along the way.
+  if (!referrerCode) {
+    try { referrerCode = (await cookies()).get('bl_rref')?.value?.trim() || '' } catch {}
+  }
+  referrerCode = referrerCode.toUpperCase()
+  if (referrerCode) {
+    const { data: refContact } = await supabase
+      .from('contacts')
+      .select('id')
+      .eq('referral_code', referrerCode)
+      .maybeSingle()
+    if (refContact && refContact.id !== buyerContact.id) referrerContactId = refContact.id
+  }
 
   const { data: order, error: orderErr } = await supabase
     .from('orders')
@@ -289,7 +421,13 @@ export async function POST(req) {
       buyer_phone: normalizePhone(buyer.phone),
       buyer_name: `${buyer.first_name || ''} ${buyer.last_name || ''}`.trim(),
       party_size: riders.length,
+      referrer_contact_id: referrerContactId,
       client_token: client_token || null,
+      // Tag the order's product so dashboards filter by business with one
+      // metadata->>kind test (marines / surf). Brew Loop stays untagged. The
+      // webhook spreads existing order.metadata before its own fields, so this
+      // survives settlement.
+      ...(event.kind && event.kind !== 'brew' ? { metadata: { kind: event.kind } } : {}),
     })
     .select('id')
     .single()
@@ -331,6 +469,7 @@ export async function POST(req) {
         rider_phone: null,
         unit_price_cents: tt.price_cents,
         stop_index: tt.stop_index,
+        pickup_stop_index: pickupIndexFor(rc.rider),
         claim_token: mintClaimToken(),
       }
     }
@@ -342,14 +481,26 @@ export async function POST(req) {
       rider_last_name: rc.rider.last_name || '',
       rider_email: normalizeEmail(rc.rider.email),
       rider_phone: normalizePhone(rc.rider.phone),
-      unit_price_cents: tt.price_cents,
+      unit_price_cents: priceForRc(rc),
       stop_index: tt.stop_index,
+      pickup_stop_index: pickupIndexFor(rc.rider),
     }
   })
   const { error: itemsErr } = await supabase.from('order_items').insert(orderItemRows)
   if (itemsErr) {
     console.error('[checkout] order_items insert failed', itemsErr)
     return Response.json({ error: 'order_items_insert_failed' }, { status: 500 })
+  }
+
+  if (addonRows.length) {
+    const { error: addonErr } = await supabase
+      .from('order_addons')
+      .insert(addonRows.map(a => ({ order_id: order.id, ...a })))
+    if (addonErr) {
+      // Non-fatal: the ticket sale is what matters. Log + alert so an add-on
+      // that didn't persist can be reconciled, but don't block the booking.
+      console.error('[checkout] order_addons insert failed', addonErr)
+    }
   }
 
   // Belt-and-suspenders capacity recheck. The pre-insert check is racy across
@@ -376,14 +527,93 @@ export async function POST(req) {
     }
   }
 
+  // Only non-covered seats are charged. Loop Pass seats are omitted entirely
+  // (a $0 Stripe line item is rejected in payment mode).
   const sessionLineItems = []
   const byType = new Map()
-  for (const r of riders) {
-    byType.set(r.ticket_type_id, (byType.get(r.ticket_type_id) || 0) + 1)
+  for (const rc of riderContacts) {
+    if (rc.covered) continue
+    const id = rc.rider.ticket_type_id
+    byType.set(id, (byType.get(id) || 0) + 1)
   }
   for (const [ttId, qty] of byType.entries()) {
     const tt = ttById.get(ttId)
     sessionLineItems.push({ name: tt.name, unit_price_cents: tt.price_cents, quantity: qty })
+  }
+  // Add-ons are charged on top of (non-covered) seats — a Loop Pass covers the
+  // ride, not the extras.
+  for (const a of addonLineItems) sessionLineItems.push(a)
+
+  // Fully covered by Loop Pass(es): nothing to charge. A $0 Stripe Checkout
+  // session can't be created, and no webhook would fire to settle it — so mark
+  // the order paid here and run the same post-payment steps the Stripe webhook
+  // would: waiver signatures, group membership, ticket QRs + confirmations, and
+  // the TT inventory push.
+  if (sessionLineItems.length === 0) {
+    const update = { status: 'paid', paid_at: new Date().toISOString() }
+    if (resolvedAttribution?.qr_code || resolvedAttribution?.utm_source || resolvedAttribution?.utm_medium || resolvedAttribution?.utm_campaign) {
+      update.metadata = {
+        qr_code: resolvedAttribution.qr_code || null,
+        utm_source: resolvedAttribution.utm_source || null,
+        utm_medium: resolvedAttribution.utm_medium || null,
+        utm_campaign: resolvedAttribution.utm_campaign || null,
+      }
+    }
+    await supabase.from('orders').update(update).eq('id', order.id)
+
+    const signedContactIds = new Set()
+    for (const s of waiverQueue) {
+      try {
+        await recordSignature(supabase, {
+          contactId: s.contactId,
+          fullNameTyped: s.typedName,
+          signedForContactId: s.signedForContactId || null,
+          orderId: order.id,
+        })
+        signedContactIds.add(s.contactId)
+      } catch (err) {
+        console.error('[checkout] free-order waiver signature failed', err)
+      }
+    }
+    if (signedContactIds.size) {
+      await supabase
+        .from('waiver_signatures')
+        .update({ order_id: order.id })
+        .is('order_id', null)
+        .in('contact_id', [...signedContactIds])
+    }
+
+    if (event.group_id) {
+      const memberRows = riderContacts
+        .filter(rc => rc.contact?.id)
+        .map(rc => {
+          const tt = ttById.get(rc.rider.ticket_type_id)
+          const eff = tt?.stop_index != null ? tt.stop_index : pickupIndexFor(rc.rider)
+          return {
+            group_id: event.group_id,
+            contact_id: rc.contact.id,
+            ...(eff != null ? { current_stop_index: eff } : {}),
+          }
+        })
+      if (memberRows.length) {
+        await supabase
+          .from('group_members')
+          .upsert(memberRows, { onConflict: 'group_id,contact_id', ignoreDuplicates: true })
+      }
+    }
+
+    try {
+      await finalizeBooking(supabase, order.id)
+    } catch (err) {
+      console.error('[checkout] free-order finalizeBooking failed', err)
+    }
+    try {
+      await syncTtForEvent(supabase, event.id)
+    } catch (err) {
+      console.error('[checkout] free-order tt sync threw', err)
+    }
+
+    return Response.json({ checkout_url: `${brandFor(event.kind).basePath}/book/success?order_id=${order.id}`, order_id: order.id, free: true })
   }
 
   let session
@@ -412,6 +642,16 @@ export async function POST(req) {
       stripe_checkout_url: session.url,
     })
     .eq('id', order.id)
+
+  // Decrement TT's quantity_total now that the seat is pending in our DB —
+  // closes the race where a Loop cart sits at Stripe Checkout while TT sells
+  // the same seat. syncTtForEvent counts paid + fresh pending. Best-effort:
+  // never block the customer's checkout flow on a TT call.
+  try {
+    await syncTtForEvent(supabase, event.id)
+  } catch (err) {
+    console.error('[checkout] tt sync threw', err)
+  }
 
   return Response.json({ checkout_url: session.url, order_id: order.id })
 }

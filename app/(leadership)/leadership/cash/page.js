@@ -21,7 +21,7 @@ export default async function CashPage() {
       background: '#0a0a0b',
       color: '#e8e8ea',
       padding: '24px 16px 48px',
-      fontFamily: "'JetBrains Mono', ui-monospace, monospace",
+      fontFamily: 'inherit',
     }}>
       <div style={{ maxWidth: 900, margin: '0 auto' }}>
         <a href="/leadership/income" style={{
@@ -50,7 +50,7 @@ export default async function CashPage() {
           <a href="/leadership/cash/new" style={{
             background: 'linear-gradient(180deg, #f0c24a, #d4a333)',
             color: '#0a0a0b',
-            fontFamily: "'JetBrains Mono', ui-monospace, monospace",
+            fontFamily: 'inherit',
             fontSize: 11,
             fontWeight: 700,
             letterSpacing: '0.18em',

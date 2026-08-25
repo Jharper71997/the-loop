@@ -1,13 +1,17 @@
 import { notFound } from 'next/navigation'
 import { supabaseAdmin } from '@/lib/supabaseAdmin'
+import { getActiveBusiness } from '@/lib/businessServer'
+import { adminBase } from '@/lib/adminBase'
 import EventShell from './EventShell'
 import WaiversPanel from './WaiversPanel'
 import SmsBroadcast from '../../../_components/SmsBroadcast'
+import ShowMore from '@/app/(leadership)/_components/ShowMore'
 
 export const dynamic = 'force-dynamic'
 
 export default async function ManageLoopPage({ params }) {
   const { id } = await params
+  const base = adminBase(await getActiveBusiness())
   const supabase = supabaseAdmin()
 
   const { data: group } = await supabase
@@ -102,11 +106,11 @@ export default async function ManageLoopPage({ params }) {
         orders={orders}
         orderItems={orderItems}
         waiverSigs={waiverSigs}
+        basePath={`${base}/groups`}
       />
 
       {(members || []).length > 0 && (
-        <div style={{ maxWidth: 1100, margin: '0 auto', padding: '0 16px 40px', display: 'grid', gap: 14 }}>
-          <WaiversPanel groupId={group.id} members={flatMembers} />
+        <div style={{ maxWidth: 1100, margin: '0 auto', padding: '0 16px calc(40px + env(safe-area-inset-bottom))', display: 'grid', gap: 14 }}>
           <SmsBroadcast
             recipients={(members || []).map(m => ({
               id: m.contacts?.id,
@@ -118,6 +122,10 @@ export default async function ManageLoopPage({ params }) {
             stops={Array.isArray(group.schedule) ? group.schedule : null}
             title="Text the riders on this Loop"
           />
+          {/* Waiver nudges are a when-needed task — collapsed so the SMS composer leads. */}
+          <ShowMore label="Waiver tracker">
+            <WaiversPanel groupId={group.id} members={flatMembers} />
+          </ShowMore>
         </div>
       )}
     </div>

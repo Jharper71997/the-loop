@@ -31,6 +31,7 @@ export async function GET() {
   const { data: events, error } = await admin
     .from('events')
     .select('id, name, event_date, pickup_time, status, group:groups ( id, schedule )')
+    .eq('kind', 'brew')   // door-scanner roster is Brew Loop; Marines checks IDs at the shuttle
     .gte('event_date', today)
     .lte('event_date', horizon)
     .in('status', ['on_sale', 'coming_soon'])

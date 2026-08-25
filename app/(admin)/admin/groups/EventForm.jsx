@@ -10,7 +10,7 @@ const DEFAULT_TICKET_TYPES = [
   { name: 'Stop 1: Angry Ginger', stop_index: 0, price_cents: 2500 },
   { name: "Stop 2: Shirley V's",  stop_index: 1, price_cents: 2500 },
   { name: 'Stop 3: Archies',      stop_index: 2, price_cents: 2500 },
-  { name: "Stop 4: Gus's",        stop_index: 3, price_cents: 2500 },
+  { name: 'Stop 4: Twin Ravens',  stop_index: 3, price_cents: 2500 },
   { name: 'Stop 5: Hideaway',     stop_index: 4, price_cents: 2500 },
 ]
 

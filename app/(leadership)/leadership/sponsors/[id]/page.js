@@ -130,7 +130,7 @@ function Stat({ label, value }) {
   )
 }
 
-const pageStyle = { minHeight: '100vh', background: '#0a0a0b', color: '#e8e8ea', padding: '24px 16px 48px', fontFamily: "'JetBrains Mono', ui-monospace, monospace" }
+const pageStyle = { minHeight: '100vh', background: '#0a0a0b', color: '#e8e8ea', padding: '24px 16px 48px', fontFamily: 'inherit' }
 const containerStyle = { maxWidth: 900, margin: '0 auto' }
 const backLink = { color: '#9c9ca3', fontSize: 11, letterSpacing: '0.18em', textTransform: 'uppercase', textDecoration: 'none', display: 'inline-block', marginBottom: 18 }
 const headerRow = { display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', flexWrap: 'wrap', gap: 12, marginBottom: 22 }

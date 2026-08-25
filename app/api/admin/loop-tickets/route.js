@@ -19,16 +19,21 @@ export const dynamic = 'force-dynamic'
 //     sums match the group total without double-counting a named companion who
 //     already has their own rider row.
 //   groupHasEvent  { [groupId]: true }
-export async function GET() {
+export async function GET(req) {
   const denied = await denyIfNotAdmin()
   if (denied) return denied
 
   const supabase = supabaseAdmin()
 
+  // Scope to the active business (Brew/Surf/Marines) so the Loops page counts
+  // match the active console. Defaults to brew when the param is absent.
+  const param = new URL(req.url).searchParams.get('business')
+  const business = param === 'surf' ? 'surf' : param === 'marines' ? 'marines' : 'brew'
+
   const { data: groups } = await supabase
     .from('groups')
     .select('id, tt_event_id')
-    .eq('kind', 'brew')
+    .eq('kind', business)
   const groupRows = groups || []
   const groupIds = groupRows.map(g => g.id)
   if (!groupIds.length) {

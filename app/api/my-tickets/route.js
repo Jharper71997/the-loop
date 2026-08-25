@@ -3,6 +3,7 @@ import { supabaseAdmin } from '@/lib/supabaseAdmin'
 import { contactHasSignedCurrent } from '@/lib/waiver'
 import { normalizePhone } from '@/lib/phone'
 import { appUrl } from '@/lib/stripe'
+import { getOrCreateReferralCode } from '@/lib/riderReferral'
 
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
@@ -63,7 +64,7 @@ export async function POST(req) {
   const orderSelect = `
     id, status, total_cents, buyer_phone, buyer_name, party_size,
     paid_at, created_at, contact_id,
-    event:events ( id, name, event_date, pickup_time, status, group:groups ( id, schedule ) ),
+    event:events ( id, name, event_date, pickup_time, status, kind, group:groups ( id, schedule ) ),
     order_items ( id, rider_first_name, rider_last_name, contact_id, rider_phone, voided_at, claim_token, claimed_at )
   `
   const [{ data: byBuyer }, { data: byRider }] = await Promise.all([
@@ -93,7 +94,12 @@ export async function POST(req) {
     extraOrders = data || []
   }
 
+  // This is the BREW ticket lookup. A rider's Marines/Surf passes have their own
+  // lookups (/marines/my-tickets, /surfcity/my-tickets) and must never surface
+  // in the Brew chrome here. Brew events are kind='brew' (legacy rows may be
+  // null); drop anything tagged for another business.
   const all = [...(byBuyer || []), ...extraOrders]
+    .filter(o => { const k = o.event?.kind; return k == null || k === 'brew' })
     .sort((a, b) => (b.created_at || '').localeCompare(a.created_at || ''))
 
   // Resolve waiver status per distinct contact (across buyer + active items).
@@ -188,7 +194,58 @@ export async function POST(req) {
     }
   })
 
-  return Response.json({ orders: result })
+  // Rider referral: surface the looked-up rider's personal invite link +
+  // confirmed-referral count so they can share it straight from My Tickets.
+  // Leaderboard-only — no discount is tied to it.
+  let referral = null
+  const { data: selfContact } = await sb
+    .from('contacts')
+    .select('id')
+    .eq('phone', normPhone)
+    .maybeSingle()
+  const primaryContactId = selfContact?.id || (byBuyer && byBuyer[0]?.contact_id) || null
+  if (primaryContactId) {
+    try {
+      const code = await getOrCreateReferralCode(sb, primaryContactId)
+      if (code) {
+        const { count } = await sb
+          .from('orders')
+          .select('id', { count: 'exact', head: true })
+          .eq('referrer_contact_id', primaryContactId)
+          .eq('status', 'paid')
+        referral = { code, url: `${appUrl()}/invite/${code}`, confirmed: count || 0 }
+      }
+    } catch (err) {
+      console.error('[my-tickets] referral lookup failed', err)
+    }
+  }
+
+  // Boarding-pass code to message security with, surfaced on /my-tickets so the
+  // chat embeds without opening a full pass first. Prefer a paid ticket for an
+  // upcoming/tonight loop (event_date today or later in ET); if there's no
+  // upcoming loop, fall back to the rider's most recent paid pass so the chat is
+  // available whenever they hold a ticket, not only on loop nights. Within each
+  // tier, prefer the looked-up rider's own seat, else any claimed seat on the
+  // order (so a buyer who booked only for friends can still reach the door).
+  const todayET = new Date().toLocaleDateString('en-CA', { timeZone: 'America/Indiana/Indianapolis' })
+  const paid = result.filter(o => o.status === 'paid')
+  const upcomingPaid = paid.filter(o => o.event?.event_date && o.event.event_date >= todayET)
+
+  function pickCode(orders) {
+    for (const o of orders) {
+      const self = o.riders.find(r => r.ticket_code && r.contact_id && r.contact_id === primaryContactId)
+      if (self) return self.ticket_code
+    }
+    for (const o of orders) {
+      const any = o.riders.find(r => r.ticket_code)
+      if (any) return any.ticket_code
+    }
+    return null
+  }
+
+  const chatCode = pickCode(upcomingPaid) || pickCode(paid)
+
+  return Response.json({ orders: result, referral, chat_code: chatCode })
 }
 
 function splitFirst(name) {

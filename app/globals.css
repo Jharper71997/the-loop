@@ -80,6 +80,20 @@ main {
   z-index: 1;
 }
 
+/* Marketing website pages (landing, bars, sponsors, merch, cart) fill the
+   screen and manage their own section widths — the narrow 640px app-page `main`
+   cap above does not apply to them. */
+main.site-main {
+  max-width: none;
+  margin: 0;
+  padding: 0;
+  width: 100%;
+  /* The marketing surface sits on lifted graphite, not the app shell's near
+     black (see lib/marketingTheme.js BG). Scoped to .site-main so /admin, the
+     staff console and the Surf/Marines rider app pages keep --bg. */
+  background: #17171a;
+}
+
 /* ============================================================
    Typography
    ============================================================ */
@@ -536,3 +550,12 @@ nav a:hover { color: var(--gold) !important; }
 .external-shell h2::before { content: none; }
 .external-shell h3 { font-size: 18px; font-weight: 600; }
 .external-shell p { font-size: 16px; line-height: 1.65; color: var(--ext-ink-dim); }
+
+/* ============================================================
+   The Loop (Marines) — now matches the Brew gold design system exactly.
+   It reuses every Brew class (.card, .hud-shell, .stat, .hud-heading,
+   .chip, .pulse-dot, .tag-status, .btn-primary, .external-shell …) and
+   inherits the :root tokens unchanged (black + gold), so there is nothing
+   left to override here. The old red variable + literal-wash overrides
+   were removed so .loop-shell renders identically to Brew.
+   ============================================================ */

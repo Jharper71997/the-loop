@@ -30,6 +30,8 @@ async function updateSponsor(id, formData) {
   const monthly = parseFloat(formData.get('monthly_amount'))
   const status = (formData.get('status') || 'prospect').toString()
   const notes = (formData.get('notes') || '').toString().trim() || null
+  const dueDayRaw = parseInt(formData.get('payment_due_day'), 10)
+  const payment_due_day = Number.isInteger(dueDayRaw) && dueDayRaw >= 1 && dueDayRaw <= 31 ? dueDayRaw : null
 
   const supabase = supabaseAdmin()
   const { error } = await supabase.from('sponsors').update({
@@ -39,6 +41,7 @@ async function updateSponsor(id, formData) {
     amount_committed: isFinite(monthly) && monthly > 0 ? monthly : null,
     status,
     notes,
+    payment_due_day,
     updated_at: new Date().toISOString(),
   }).eq('id', id)
   if (error) {
@@ -94,6 +97,16 @@ export default async function EditSponsorPage({ params, searchParams }) {
           step="0.01"
           min="0"
           defaultValue={sponsor.amount_committed || ''}
+        />
+        <Field
+          label="Billing day (1–31)"
+          name="payment_due_day"
+          type="number"
+          min="1"
+          max="31"
+          step="1"
+          defaultValue={sponsor.payment_due_day || ''}
+          hint="Day of month payment is due. Leave blank for end-of-month."
         />
         <Select label="Status" name="status" options={STATUSES} defaultValue={sponsor.status || 'prospect'} required />
         <Textarea label="Notes" name="notes" defaultValue={sponsor.notes || ''} />

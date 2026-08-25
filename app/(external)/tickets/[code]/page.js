@@ -3,6 +3,8 @@ import QRCode from 'qrcode'
 import { supabaseAdmin } from '@/lib/supabaseAdmin'
 import { contactHasSignedCurrent } from '@/lib/waiver'
 import { appUrl } from '@/lib/stripe'
+import { brandFor, prefixLink } from '@/lib/businessConfig'
+import { getBar, getBarByName } from '@/lib/bars'
 import TicketView from './TicketView'
 
 export const runtime = 'nodejs'
@@ -33,7 +35,7 @@ export default async function TicketPage({ params }) {
       voided_at,
       claim_token,
       claimed_at,
-      order:orders ( id, status, event:events ( id, name, event_date, pickup_time, group:groups ( id, schedule ) ) )
+      order:orders ( id, status, event:events ( id, name, event_date, pickup_time, kind, group:groups ( id, schedule ) ) )
     `)
     .eq('id', qr.order_item_id)
     .maybeSingle()
@@ -52,12 +54,42 @@ export default async function TicketPage({ params }) {
   const isPaid = item.order?.status === 'paid'
   const isVoided = !!item.voided_at
 
+  // Branding is data-driven from the loaded event's kind, so a Surf ticket reads
+  // "Surf City" whether opened at /tickets/<code> or /surfcity/tickets/<code>.
+  const cfg = brandFor(event?.kind)
+
   // First stop on the route is the pickup location. groups.schedule shape:
   // [{ name, start_time }]. Empty/missing schedule → fall back to whatever
   // event.pickup_time we already had.
   const firstStop = event?.group?.schedule?.[0] || null
   const pickupSpot = firstStop?.name || null
   const pickupTimeFromStop = firstStop?.start_time || null
+
+  // The whole route, not just the first stop. We were already loading
+  // groups.schedule to find the pickup and then throwing the rest away, so a
+  // rider holding a boarding pass could not see which bars the night actually
+  // visits — the one thing they most want to know once the seat is bought.
+  //
+  // Stop names come from the schedule (which Ticket Tailor sync matches on and
+  // must not be renamed), so resolve them through getBar for display only: the
+  // same bar was reading as two different places depending on the page. Surf
+  // and Marines schedules aren't in the Brew bar directory, so an unresolved
+  // stop keeps its schedule name rather than disappearing.
+  const isBrew = !event?.kind || event.kind === 'brew'
+  const stops = (event?.group?.schedule || [])
+    .filter(st => st && (st.name || st.slug))
+    .map((st, i) => {
+      // Only Brew stops resolve — getBar reads the Brew directory, and a Surf
+      // or Marines bar sharing a name must never link to a Brew bar page.
+      const bar = isBrew ? ((st.slug && getBar(st.slug)) || getBarByName(st.name)) : null
+      return {
+        order: i,
+        name: bar?.name || st.name,
+        slug: bar?.slug || null,
+        time: st.start_time || null,
+        isPickup: i === 0,
+      }
+    })
 
   // Waiver status — show the rider whether they still need to sign before
   // pickup. We render a deep link to /waiver/<contactId> right on the ticket.
@@ -88,15 +120,22 @@ export default async function TicketPage({ params }) {
       qrDataUrl={qrDataUrl}
       ticketUrl={ticketUrl}
       riderName={riderName}
-      eventName={event?.name || 'Brew Loop'}
+      eventName={event?.name || cfg.brand}
+      brand={cfg.shortBrand}
+      eventsHref={prefixLink('/events', event?.kind)}
       eventDate={event?.event_date || null}
       pickupTime={pickupTimeFromStop || event?.pickup_time || null}
       pickupSpot={pickupSpot}
+      stops={stops}
+      barsHref={prefixLink('/bars', event?.kind)}
+      trackHref={cfg.trackPath}
       isPaid={isPaid}
       isVoided={isVoided}
       waiverSigned={waiverSigned}
       contactId={item.contact_id || null}
       checkedInAt={item.checked_in_at || null}
+      supportPhone={cfg.contactPhone}
+      supportPhoneDisplay={cfg.contactPhoneDisplay}
     />
   )
 }

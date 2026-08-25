@@ -41,3 +41,7 @@ yarn-error.log*
 next-env.d.ts
 
 .vercel
+
+# Ad-hoc script output. These are DB dumps and have contained real rider
+# names, emails and phone numbers - this repo is public, so they never go up.
+scripts/*.json

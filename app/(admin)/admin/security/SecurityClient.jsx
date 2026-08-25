@@ -1,8 +1,14 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import Link from 'next/link'
 import Scanner from '@/app/_components/Scanner'
+import SecurityMessages from './SecurityMessages'
+import EnableSecurityAlerts from './EnableSecurityAlerts'
+import ApproachAlert from '../../_components/ApproachAlert'
+import { useBusiness } from '../../_components/BusinessProvider'
+import { adminBase } from '@/lib/adminBase'
+import { brandFor } from '@/lib/businessConfig'
 
 const GOLD = '#d4a333'
 const GOLD_HI = '#f0c24a'
@@ -14,10 +20,29 @@ const LINE = 'rgba(255,255,255,0.08)'
 const GREEN = '#6fbf7f'
 const RED = '#e07a7a'
 
-export default function SecurityClient() {
+export default function SecurityClient({ eventId = null }) {
+  const { business } = useBusiness()
+  const base = adminBase(business)
   const [busy, setBusy] = useState(false)
   const [last, setLast] = useState(null)
   const [tally, setTally] = useState({ admitted: 0, rejected: 0 })
+  const [view, setView] = useState('scan') // 'scan' | 'chat'
+  const [unread, setUnread] = useState(0)
+
+  // Keep the Messages tab badge live even while scanning.
+  useEffect(() => {
+    let cancelled = false
+    async function poll() {
+      try {
+        const res = await fetch('/api/security/chat', { cache: 'no-store' })
+        const json = await res.json()
+        if (!cancelled) setUnread((json.threads || []).reduce((s, t) => s + (t.unread || 0), 0))
+      } catch {}
+    }
+    poll()
+    const t = setInterval(() => { if (document.visibilityState === 'visible') poll() }, 10000)
+    return () => { cancelled = true; clearInterval(t) }
+  }, [])
 
   async function onScan(code) {
     if (!code || busy) return
@@ -60,7 +85,7 @@ export default function SecurityClient() {
                 fontWeight: 700,
               }}
             >
-              Brew Loop · Security
+              {brandFor(business).shortBrand} · Security
             </div>
             <h1 style={{ color: INK, fontSize: 22, fontWeight: 700, margin: '4px 0 0' }}>
               Door scanner
@@ -72,39 +97,102 @@ export default function SecurityClient() {
           </div>
         </header>
 
-        <Link
-          href="/admin/security/door-list"
-          style={{
-            padding: '12px 14px',
-            borderRadius: 10,
-            border: `1px solid ${LINE}`,
-            background: SURFACE,
-            color: INK,
-            textDecoration: 'none',
-            fontSize: 13,
-            fontWeight: 600,
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'space-between',
-          }}
-        >
-          <span>Door list — see who&apos;s riding tonight</span>
-          <span style={{ color: GOLD, fontWeight: 700 }}>→</span>
-        </Link>
+        <div style={{ display: 'flex', gap: 8 }}>
+          <TabButton active={view === 'scan'} onClick={() => setView('scan')} label="Door scanner" />
+          <TabButton active={view === 'chat'} onClick={() => setView('chat')} label="Messages" badge={unread} />
+        </div>
 
-        <Scanner
-          onScan={onScan}
-          busy={busy}
-          prompt="Aim at the rider's boarding pass"
-        />
+        {view === 'scan' ? (
+          <>
+            <ApproachAlert eventId={eventId} />
 
-        <ResultCard last={last} />
+            <Link
+              href={`${base}/security/door-list`}
+              style={{
+                padding: '12px 14px',
+                borderRadius: 10,
+                border: `1px solid ${LINE}`,
+                background: SURFACE,
+                color: INK,
+                textDecoration: 'none',
+                fontSize: 13,
+                fontWeight: 600,
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+              }}
+            >
+              <span>Door list — see who&apos;s riding tonight</span>
+              <span style={{ color: GOLD, fontWeight: 700 }}>→</span>
+            </Link>
 
-        <p style={{ color: INK_DIM, fontSize: 12, textAlign: 'center', margin: 0 }}>
-          Green = admit. Red = stop. Continuous scan: hold the camera on the next rider.
-        </p>
+            <Scanner
+              onScan={onScan}
+              busy={busy}
+              prompt="Aim at the rider's boarding pass"
+            />
+
+            <ResultCard last={last} />
+
+            <p style={{ color: INK_DIM, fontSize: 12, textAlign: 'center', margin: 0 }}>
+              Green = admit. Red = stop. Continuous scan: hold the camera on the next rider.
+            </p>
+          </>
+        ) : (
+          <div style={{ display: 'grid', gap: 12 }}>
+            <div style={{ background: SURFACE, border: `1px solid ${LINE}`, borderRadius: 10, padding: '12px 14px' }}>
+              <div style={{ color: GOLD, fontSize: 11, letterSpacing: '0.18em', textTransform: 'uppercase', fontWeight: 700, marginBottom: 7 }}>
+                How messaging works
+              </div>
+              <ul style={{ color: INK_DIM, fontSize: 12.5, margin: 0, paddingLeft: 16, lineHeight: 1.7 }}>
+                <li>Riders message you from their boarding pass — &ldquo;where&rsquo;s pickup,&rdquo; &ldquo;I&rsquo;m at the door,&rdquo; etc.</li>
+                <li>Each rider is a thread below; a gold badge shows unread count.</li>
+                <li>Tap a rider to read and reply — they see it on their ticket within seconds.</li>
+                <li>Turn on alerts above so new messages buzz this phone even when it&rsquo;s closed.</li>
+              </ul>
+            </div>
+            <EnableSecurityAlerts />
+            <SecurityMessages onUnreadChange={setUnread} />
+          </div>
+        )}
       </div>
     </div>
+  )
+}
+
+function TabButton({ active, onClick, label, badge = 0 }) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      style={{
+        flex: 1,
+        position: 'relative',
+        padding: '10px 12px',
+        borderRadius: 10,
+        border: `1px solid ${active ? GOLD : LINE}`,
+        background: active ? 'rgba(212,163,51,0.12)' : SURFACE,
+        color: active ? GOLD : INK_DIM,
+        fontSize: 13,
+        fontWeight: 700,
+        cursor: 'pointer',
+      }}
+    >
+      {label}
+      {badge > 0 && (
+        <span style={{
+          marginLeft: 8,
+          background: GOLD,
+          color: '#0a0a0b',
+          fontWeight: 800,
+          fontSize: 11,
+          borderRadius: 999,
+          padding: '1px 7px',
+        }}>
+          {badge}
+        </span>
+      )}
+    </button>
   )
 }
 

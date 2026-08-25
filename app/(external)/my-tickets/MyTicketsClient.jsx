@@ -1,6 +1,8 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
+import SecurityChat from '../_components/SecurityChat'
+import { brandFor, prefixLink } from '@/lib/businessConfig'
 
 const GOLD = '#d4a333'
 const GOLD_HI = '#f0c24a'
@@ -11,23 +13,32 @@ const LINE = 'rgba(255,255,255,0.08)'
 const RED = '#e07a7a'
 const GREEN = '#6fbf7f'
 
-export default function MyTicketsClient() {
+export default function MyTicketsClient({ business = 'brew' }) {
+  const cfg = brandFor(business)
+  // Surf tickets live behind a separate lookup endpoint that scopes to kind='surf'
+  // and returns /surfcity-prefixed links.
+  const apiPath = business === 'surf' ? '/api/surf/my-tickets' : business === 'marines' ? '/api/marines/my-tickets' : '/api/my-tickets'
+  // Remember the phone the rider looked up with, per business, so they land
+  // straight on their tickets next visit instead of re-typing it.
+  const STORAGE_KEY = business === 'surf' ? 'surfloop:mytickets:phone' : business === 'marines' ? 'theloop:mytickets:phone' : 'brewloop:mytickets:phone'
   const [phone, setPhone] = useState('')
   const [submitting, setSubmitting] = useState(false)
   const [searched, setSearched] = useState(false)
   const [orders, setOrders] = useState([])
+  const [referral, setReferral] = useState(null)
+  const [chatCode, setChatCode] = useState(null)
   const [error, setError] = useState(null)
 
-  async function onSubmit(e) {
-    e.preventDefault()
-    if (submitting) return
+  async function lookup(rawPhone, { remember = true } = {}) {
+    const p = (rawPhone || '').trim()
+    if (p.replace(/\D/g, '').length < 10) return
     setSubmitting(true)
     setError(null)
     try {
-      const res = await fetch('/api/my-tickets', {
+      const res = await fetch(apiPath, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ phone: phone.trim() }),
+        body: JSON.stringify({ phone: p }),
       })
       const json = await res.json()
       if (!res.ok) {
@@ -40,22 +51,56 @@ export default function MyTicketsClient() {
         return
       }
       setOrders(json.orders || [])
+      setReferral(json.referral || null)
+      setChatCode(json.chat_code || null)
       setSearched(true)
+      // Remember this number so the next visit skips the form.
+      if (remember) {
+        try { window.localStorage.setItem(STORAGE_KEY, p) } catch {}
+      }
     } catch (err) {
       setError(err.message)
     }
     setSubmitting(false)
   }
 
+  function onSubmit(e) {
+    e.preventDefault()
+    if (submitting) return
+    lookup(phone)
+  }
+
+  // On return visits, auto-load the saved number so riders go straight to their
+  // tickets (and the chat on each boarding pass) without re-typing it.
+  useEffect(() => {
+    let saved = null
+    try { saved = window.localStorage.getItem(STORAGE_KEY) } catch {}
+    if (saved) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
+      setPhone(saved)
+      lookup(saved)
+    }
+  }, [])
+
   function reset() {
     setSearched(false)
     setOrders([])
+    setReferral(null)
+    setChatCode(null)
     setError(null)
+    setPhone('')
+    // Forget the saved number so they can look up a different one.
+    try { window.localStorage.removeItem(STORAGE_KEY) } catch {}
   }
 
   if (searched) {
     return (
       <div style={{ display: 'grid', gap: 16 }}>
+        {/* Security chat is embedded right here — this page is a direct line to
+            security, not just a ticket lookup. Shows whenever the rider holds a
+            paid pass (prefers tonight's loop). */}
+        {chatCode && <SecurityChat code={chatCode} inline />}
+
         {orders.length === 0 && (
           <Card>
             <div style={{ color: INK, fontWeight: 600, fontSize: 17, marginBottom: 6 }}>
@@ -63,15 +108,17 @@ export default function MyTicketsClient() {
             </div>
             <p style={{ color: INK_DIM, margin: 0, fontSize: 14 }}>
               Double-check the phone number you booked with. If it still doesn’t match, text us at{' '}
-              <a href="sms:+16362661801" style={{ color: GOLD, textDecoration: 'none', fontWeight: 600 }}>
-                (636) 266-1801
+              <a href={`sms:${cfg.contactPhone}`} style={{ color: GOLD, textDecoration: 'none', fontWeight: 600 }}>
+                {cfg.contactPhoneDisplay}
               </a>{' '}
               and we’ll track it down.
             </p>
           </Card>
         )}
 
-        {orders.map(o => <OrderCard key={o.id} order={o} phone={phone} />)}
+        {orders.map(o => <OrderCard key={o.id} order={o} phone={phone} business={business} />)}
+
+        {referral && <ReferralCard referral={referral} business={business} />}
 
         <button
           type="button"
@@ -90,6 +137,9 @@ export default function MyTicketsClient() {
         >
           Look up another
         </button>
+
+        {/* Save-to-phone how-to anchored at the bottom of the page. */}
+        <AddToHomeScreen />
       </div>
     )
   }
@@ -138,13 +188,14 @@ export default function MyTicketsClient() {
       </button>
 
       <p style={{ color: INK_MUTED, fontSize: 12, textAlign: 'center', margin: '8px 0 0' }}>
-        Enter the phone you booked with. We&rsquo;ll show your tickets and waiver.
+        Enter the phone you booked with to see your tickets, waiver, and message security.
       </p>
     </form>
   )
 }
 
-function OrderCard({ order, phone }) {
+function OrderCard({ order, phone, business = 'brew' }) {
+  const cfg = brandFor(business)
   const ev = order.event
   const eventDate = ev?.event_date ? formatDate(ev.event_date) : null
   const pickupTime = ev?.pickup_time ? formatTime(ev.pickup_time) : null
@@ -198,7 +249,7 @@ function OrderCard({ order, phone }) {
             {pickupTime ? ` · ${pickupTime}` : ''}
           </div>
           <h3 style={{ color: INK, fontSize: 18, fontWeight: 600, margin: '4px 0 0' }}>
-            {ev?.name || 'Brew Loop'}
+            {ev?.name || cfg.brand}
           </h3>
         </div>
         <span
@@ -220,7 +271,10 @@ function OrderCard({ order, phone }) {
       </div>
 
       <div style={{ display: 'flex', gap: 16, flexWrap: 'wrap', color: INK_DIM, fontSize: 14, marginBottom: 12 }}>
-        <span>{order.party_size} seat{order.party_size === 1 ? '' : 's'}</span>
+        {(() => {
+          const seats = order.party_size ?? order.riders?.length ?? 1
+          return <span>{seats} seat{seats === 1 ? '' : 's'}</span>
+        })()}
         {order.total_cents != null && <span>${(order.total_cents / 100).toFixed(2)} total</span>}
       </div>
 
@@ -256,6 +310,7 @@ function OrderCard({ order, phone }) {
         </div>
       )}
 
+      {business === 'brew' && (
       <div
         style={{
           padding: '12px 14px',
@@ -298,6 +353,7 @@ function OrderCard({ order, phone }) {
           </a>
         )}
       </div>
+      )}
 
       {order.riders?.length > 0 && (
         <div style={{ marginTop: 14, display: 'grid', gap: 8 }}>
@@ -313,7 +369,7 @@ function OrderCard({ order, phone }) {
             Riders
           </div>
           {order.riders.map((r, i) => (
-            <RiderRow key={i} rider={r} />
+            <RiderRow key={i} rider={r} business={business} />
           ))}
           {order.status !== 'paid' && !order.riders.some(r => r.ticket_code) && (
             <div style={{ color: INK_MUTED, fontSize: 11, lineHeight: 1.4 }}>
@@ -323,7 +379,7 @@ function OrderCard({ order, phone }) {
         </div>
       )}
 
-      {order.status === 'paid' && (
+      {business === 'brew' && order.status === 'paid' && (
         <div style={{ marginTop: 14, paddingTop: 12, borderTop: `1px solid ${LINE}` }}>
           <button
             type="button"
@@ -359,7 +415,9 @@ function OrderCard({ order, phone }) {
   )
 }
 
-function RiderRow({ rider: r }) {
+function RiderRow({ rider: r, business = 'brew' }) {
+  const cfg = brandFor(business)
+  const ticketHref = r.ticket_code ? prefixLink(`/tickets/${r.ticket_code}`, business) : null
   const claimUrl = r.claim_token
     ? (typeof window !== 'undefined'
         ? `${window.location.origin}/c/${r.claim_token}`
@@ -370,10 +428,10 @@ function RiderRow({ rider: r }) {
 
   async function onShareClaim() {
     if (!claimUrl) return
-    const text = `You've got a seat on the Brew Loop. Tap to fill in your info and sign the waiver: ${claimUrl}`
+    const text = `You've got a seat on ${cfg.rideName}. Tap to fill in your info and sign the waiver: ${claimUrl}`
     if (typeof navigator !== 'undefined' && navigator.share) {
       try {
-        await navigator.share({ title: 'Brew Loop ticket', text, url: claimUrl })
+        await navigator.share({ title: `${cfg.shortBrand} ticket`, text, url: claimUrl })
         return
       } catch {}
     }
@@ -413,7 +471,7 @@ function RiderRow({ rider: r }) {
         </div>
         {r.ticket_code && !r.unclaimed && (
           <a
-            href={`/tickets/${r.ticket_code}`}
+            href={ticketHref}
             target="_blank"
             rel="noreferrer"
             style={{
@@ -435,7 +493,7 @@ function RiderRow({ rider: r }) {
 
       {r.ticket_qr_data_url && !r.unclaimed && (
         <a
-          href={`/tickets/${r.ticket_code}`}
+          href={ticketHref}
           target="_blank"
           rel="noreferrer"
           style={{
@@ -494,6 +552,126 @@ function RiderRow({ rider: r }) {
         </div>
       )}
     </div>
+  )
+}
+
+function ReferralCard({ referral, business = 'brew' }) {
+  const cfg = brandFor(business)
+  const [msg, setMsg] = useState(null)
+
+  async function onShare() {
+    const text = `Come ride ${cfg.rideName} with me. Book here: ${referral.url}`
+    if (typeof navigator !== 'undefined' && navigator.share) {
+      try {
+        await navigator.share({ title: cfg.shortBrand, text, url: referral.url })
+        return
+      } catch {}
+    }
+    if (typeof navigator !== 'undefined' && navigator.clipboard) {
+      try {
+        await navigator.clipboard.writeText(referral.url)
+        setMsg('Link copied. Text it to a friend.')
+        setTimeout(() => setMsg(null), 3000)
+        return
+      } catch {}
+    }
+    setMsg(`Copy this: ${referral.url}`)
+  }
+
+  return (
+    <Card>
+      <div style={{ color: GOLD, fontSize: 11, letterSpacing: '0.18em', textTransform: 'uppercase', fontWeight: 700, marginBottom: 8 }}>
+        Bring a friend
+      </div>
+      <div style={{ color: INK, fontSize: 16, fontWeight: 600, marginBottom: 4 }}>
+        Your invite link
+      </div>
+      <p style={{ color: INK_DIM, fontSize: 13, margin: '0 0 12px' }}>
+        Share it. Every friend who books off your link counts toward your spot on the rider leaderboard.
+      </p>
+
+      <div style={{
+        display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap',
+        padding: '10px 12px', borderRadius: 10,
+        background: 'rgba(212,163,51,0.08)', border: '1px solid rgba(212,163,51,0.32)',
+        marginBottom: 12,
+      }}>
+        <code style={{ color: INK, fontSize: 13, wordBreak: 'break-all', flex: 1, minWidth: 0 }}>
+          {referral.url}
+        </code>
+        <span style={{ color: GOLD_HI, fontWeight: 700, fontSize: 14, whiteSpace: 'nowrap' }}>
+          {referral.confirmed} referred
+        </span>
+      </div>
+
+      <button
+        type="button"
+        onClick={onShare}
+        style={{
+          width: '100%', padding: '12px 16px', borderRadius: 10,
+          background: `linear-gradient(180deg, ${GOLD_HI}, ${GOLD})`,
+          color: '#0a0a0b', border: 0, fontWeight: 700, fontSize: 14, cursor: 'pointer',
+        }}
+      >
+        Share my link
+      </button>
+      {msg && <div style={{ color: GREEN, fontSize: 12, textAlign: 'center', marginTop: 8 }}>{msg}</div>}
+    </Card>
+  )
+}
+
+// Platform-aware "save the Loop to your home screen" how-to. Hides itself once
+// the rider has already installed it (running standalone). Saving it to the home
+// screen is also what lets push alerts (security replies, shuttle heads-ups)
+// reach them on iPhone.
+function AddToHomeScreen() {
+  const [platform, setPlatform] = useState('pending') // pending | hidden | ios | android | other
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return
+    const standalone = window.matchMedia?.('(display-mode: standalone)')?.matches
+      || window.navigator.standalone === true
+    const ua = navigator.userAgent || ''
+    const isIOS = /iphone|ipad|ipod/i.test(ua)
+      || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1)
+    const isAndroid = /android/i.test(ua)
+    const next = standalone ? 'hidden' : isIOS ? 'ios' : isAndroid ? 'android' : 'other'
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    setPlatform(next)
+  }, [])
+
+  if (platform === 'pending' || platform === 'hidden') return null
+
+  const steps = platform === 'ios'
+    ? [
+        <>Tap the <strong style={{ color: INK }}>Share</strong> button (the square with an up-arrow) at the bottom of Safari.</>,
+        <>Scroll down and tap <strong style={{ color: INK }}>Add to Home Screen</strong>, then <strong style={{ color: INK }}>Add</strong>.</>,
+        <>Open the Loop from the new icon — your tickets, pickup, and security chat in one tap, plus alerts.</>,
+      ]
+    : platform === 'android'
+    ? [
+        <>Tap the <strong style={{ color: INK }}>⋮</strong> menu (top-right of Chrome).</>,
+        <>Tap <strong style={{ color: INK }}>Add to Home screen</strong> (or <strong style={{ color: INK }}>Install app</strong>), then confirm.</>,
+        <>Open the Loop from the new icon — your tickets, pickup, and security chat in one tap, plus alerts.</>,
+      ]
+    : [
+        <>Open this page in your phone&rsquo;s browser.</>,
+        <>Use the browser menu and choose <strong style={{ color: INK }}>Add to Home Screen</strong> or <strong style={{ color: INK }}>Install</strong>.</>,
+        <>Open the Loop from the new icon — your tickets and security chat in one tap.</>,
+      ]
+
+  return (
+    <Card>
+      <div style={{ color: GOLD, fontSize: 11, letterSpacing: '0.18em', textTransform: 'uppercase', fontWeight: 700, marginBottom: 8 }}>
+        📱 Save the Loop to your phone
+      </div>
+      <p style={{ color: INK_DIM, fontSize: 13, margin: '0 0 10px' }}>
+        Add it to your home screen so your tickets and the security chat are one tap away all night.
+      </p>
+      <ol style={{ color: INK_DIM, fontSize: 13, margin: 0, paddingLeft: 18, lineHeight: 1.7 }}>
+        {steps.map((s, i) => <li key={i}>{s}</li>)}
+      </ol>
+    </Card>
   )
 }
 

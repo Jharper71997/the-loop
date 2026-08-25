@@ -1,12 +1,24 @@
 {
   "crons": [
     {
+      "path": "/api/cron/close-loops",
+      "schedule": "0 8 * * *"
+    },
+    {
       "path": "/api/cron/cleanup-pending",
       "schedule": "0 9 * * *"
     },
     {
       "path": "/api/cron/alert-on-failures",
       "schedule": "0 9 * * *"
+    },
+    {
+      "path": "/api/cron/tt-reconcile",
+      "schedule": "0 12 * * *"
+    },
+    {
+      "path": "/api/cron/ride-feedback",
+      "schedule": "30 14 * * *"
     }
   ]
 }

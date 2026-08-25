@@ -2,6 +2,7 @@
 
 import { usePathname } from 'next/navigation'
 import { useEffect, useState } from 'react'
+import { brandFor, businessFromPath, prefixLink } from '@/lib/businessConfig'
 
 const GOLD = '#d4a333'
 const GOLD_HI = '#f0c24a'
@@ -14,6 +15,21 @@ const TABS = [
   { href: '/my-tickets', label: 'Tickets', kind: 'tickets', match: p => p.startsWith('/my-tickets') || p.startsWith('/tickets') },
 ]
 
+// The Loop (Marines) is a verified-rider shuttle, not a bar-loop booking, so
+// the second tab reads "Ride" and passes live under "Pass". It points at
+// /events like the others — the old /ride fare page was retired and now just
+// redirects, so linking it here cost every rider an extra hop.
+const MARINES_TABS = [
+  { href: '/', label: 'Home', kind: 'home', match: p => p === '/' },
+  { href: '/events', label: 'Ride', kind: 'book', match: p => p.startsWith('/events') || p.startsWith('/book') || p.startsWith('/ride') || p.startsWith('/verify') },
+  { href: '/track', label: 'Track', kind: 'track', match: p => p.startsWith('/track') || p.startsWith('/bars') },
+  { href: '/my-tickets', label: 'Pass', kind: 'tickets', match: p => p.startsWith('/my-tickets') || p.startsWith('/tickets') },
+]
+
+function tabsFor(kind) {
+  return kind === 'marines' ? MARINES_TABS : TABS
+}
+
 const HIDDEN_ON = [
   /^\/tickets\/[^/]+/,
   /^\/waiver\/[^/]+/,
@@ -22,9 +38,20 @@ const HIDDEN_ON = [
 
 export default function TabBar() {
   const pathname = usePathname() || '/'
+  const kind = businessFromPath(pathname)
+  const badge = brandFor(kind).badge
+  // Match/hide logic runs on the path with the business prefix stripped, so the
+  // shared TABS definitions work for brew ('/'), surf ('/surfcity') and marines
+  // ('/marines') alike.
+  const base = brandFor(kind).basePath
+  const rel = base ? (pathname.replace(new RegExp('^' + base), '') || '/') : pathname
+  const tabs = tabsFor(kind)
   const [shuttleLive, setShuttleLive] = useState(false)
 
   useEffect(() => {
+    // The shared shuttle feed is the Brew shuttle; don't surface a brew "Live"
+    // dot on the Surf tabs (surf GPS broadcasting isn't wired yet).
+    if (kind !== 'brew') return
     let cancelled = false
     async function poll() {
       try {
@@ -35,8 +62,8 @@ export default function TabBar() {
       } catch {}
     }
     poll()
-    // Only poll while the tab is on screen — a pocketed phone with the page
-    // open shouldn't keep hitting /api/shuttle/current every 20s. Resume +
+    // Only poll while the tab is actually on screen — a pocketed phone with the
+    // page open shouldn't keep hitting /api/shuttle/current every 20s. Resume +
     // refresh the moment the rider comes back.
     const t = setInterval(() => {
       if (document.visibilityState === 'visible') poll()
@@ -48,13 +75,13 @@ export default function TabBar() {
       clearInterval(t)
       document.removeEventListener('visibilitychange', onVis)
     }
-  }, [])
+  }, [kind])
 
-  if (HIDDEN_ON.some(re => re.test(pathname))) return null
+  if (HIDDEN_ON.some(re => re.test(rel))) return null
 
   return (
     <nav
-      aria-label="Brew Loop"
+      aria-label={brandFor(kind).brand}
       style={{
         position: 'fixed',
         bottom: 0,
@@ -71,19 +98,19 @@ export default function TabBar() {
       <div
         style={{
           display: 'grid',
-          gridTemplateColumns: `repeat(${TABS.length}, 1fr)`,
+          gridTemplateColumns: `repeat(${tabs.length}, 1fr)`,
           padding: '6px 8px 8px',
           maxWidth: 560,
           margin: '0 auto',
         }}
       >
-        {TABS.map(t => {
-          const active = t.match(pathname)
+        {tabs.map(t => {
+          const active = t.match(rel)
           const showLiveDot = t.kind === 'track' && shuttleLive
           return (
             <a
               key={t.href}
-              href={t.href}
+              href={prefixLink(t.href, kind)}
               style={{
                 display: 'flex',
                 flexDirection: 'column',
@@ -97,7 +124,7 @@ export default function TabBar() {
               }}
             >
               <span style={{ position: 'relative', display: 'inline-flex' }}>
-                <TabIcon kind={t.kind} active={active} />
+                <TabIcon kind={t.kind} active={active} badge={badge} />
                 {showLiveDot && (
                   <span
                     aria-hidden
@@ -156,15 +183,15 @@ export default function TabBar() {
   )
 }
 
-function TabIcon({ kind, active }) {
-  if (kind === 'home') return <HomeIcon active={active} />
+function TabIcon({ kind, active, badge }) {
+  if (kind === 'home') return <HomeIcon active={active} badge={badge} />
   if (kind === 'book') return <TicketPlusIcon active={active} />
   if (kind === 'track') return <TrackIcon active={active} />
   if (kind === 'tickets') return <TicketIcon active={active} />
   return null
 }
 
-function HomeIcon({ active }) {
+function HomeIcon({ active, badge }) {
   if (active) {
     return (
       <span
@@ -184,7 +211,7 @@ function HomeIcon({ active }) {
           filter: `drop-shadow(0 0 8px ${GOLD})`,
         }}
       >
-        JBL
+        {badge}
       </span>
     )
   }

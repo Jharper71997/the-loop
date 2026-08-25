@@ -24,7 +24,7 @@ export default async function ProfitFirstPage() {
       background: '#0a0a0b',
       color: '#e8e8ea',
       padding: '24px 16px 48px',
-      fontFamily: "'JetBrains Mono', ui-monospace, monospace",
+      fontFamily: 'inherit',
     }}>
       <div style={{ maxWidth: 800, margin: '0 auto' }}>
         <a href="/leadership" style={{

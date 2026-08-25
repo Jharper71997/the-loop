@@ -65,9 +65,20 @@ async function importExpenses(formData) {
     redirect('/leadership/expenses/import?error=no_amounts')
   }
 
+  // expenses.qb_id has a PARTIAL unique index (where qb_id is not null), which
+  // Postgres won't use for ON CONFLICT without a WHERE clause supabase-js can't
+  // express. Delete-then-insert by qb_id list to stay idempotent.
+  const qbIds = rows.map(r => r.qb_id)
+  const { error: delErr } = await supabase
+    .from('expenses')
+    .delete()
+    .in('qb_id', qbIds)
+  if (delErr) {
+    redirect('/leadership/expenses/import?error=' + encodeURIComponent(delErr.message))
+  }
   const { error } = await supabase
     .from('expenses')
-    .upsert(rows, { onConflict: 'qb_id' })
+    .insert(rows)
 
   if (error) {
     redirect('/leadership/expenses/import?error=' + encodeURIComponent(error.message))

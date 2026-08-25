@@ -1,12 +1,18 @@
 'use client'
 
 import { useEffect, useMemo, useState } from 'react'
+import { prefixLink } from '@/lib/businessConfig'
 
 const ACCENT = '#d4a333'
 const SURFACE = '#15151a'
 const BORDER = '#2a2a31'
 
-export default function BookingForm({ eventId, eventName, ticketTypes, waiver }) {
+export default function BookingForm({ eventId, eventName, ticketTypes, addons = [], stops = [], waiver }) {
+  // A walk-on ticket type carries no bar (stop_index null). When the rider picks
+  // one we make them choose a pickup bar from the night's list so the driver and
+  // security know where to get them.
+  const isWalkOn = tt => !!tt && tt.stop_index == null
+  const needsPickup = tt => isWalkOn(tt) && stops.length > 0
   // Default to the first ticket type that still has seats. If everything is
   // sold out we fall back to the first one anyway so the form renders — the
   // submit button will be disabled by the oversell check below.
@@ -14,16 +20,35 @@ export default function BookingForm({ eventId, eventName, ticketTypes, waiver })
 
   const [attribution, setAttribution] = useState(null)
   const [bartenderCode, setBartenderCode] = useState('')
+  // Capture attribution from the URL on landing and STICK it for the session.
+  // Tags ride on the first touch (a QR scan / shared link), but the buyer often
+  // navigates (listing → event → /book) before paying, which used to drop the
+  // tag. Persisting to sessionStorage keeps the credit through that journey.
+  // `qr` and `ref` both map to qr_code so bartender/QR slugs work either way.
   useEffect(() => {
     if (typeof window === 'undefined') return
+    const STORE_KEY = 'bl_attribution'
     const p = new URLSearchParams(window.location.search)
-    const a = {
-      qr_code: p.get('qr') || null,
+    const fresh = {
+      qr_code: p.get('qr') || p.get('ref') || null,
+      // rider-to-rider referral code (from /invite/<code>); separate from the
+      // bartender/QR qr_code so a booking can carry both.
+      referrer_code: p.get('rref') || null,
       utm_source: p.get('utm_source') || null,
       utm_medium: p.get('utm_medium') || null,
       utm_campaign: p.get('utm_campaign') || null,
     }
-    if (a.qr_code || a.utm_source || a.utm_campaign) setAttribution(a)
+    const hasFresh = fresh.qr_code || fresh.referrer_code || fresh.utm_source || fresh.utm_medium || fresh.utm_campaign
+    if (hasFresh) {
+      try { sessionStorage.setItem(STORE_KEY, JSON.stringify(fresh)) } catch {}
+      setAttribution(fresh)
+      return
+    }
+    // No tag on this URL — fall back to whatever was captured earlier this session.
+    try {
+      const saved = sessionStorage.getItem(STORE_KEY)
+      if (saved) setAttribution(JSON.parse(saved))
+    } catch {}
   }, [])
 
   const [buyer, setBuyer] = useState({
@@ -38,8 +63,12 @@ export default function BookingForm({ eventId, eventName, ticketTypes, waiver })
       signed_by_buyer: false,
       claim_link: false,
       typed_name: '',
+      pickup_stop_index: '',
     },
   ])
+  // Add-on quantities, keyed by addon id. Default everything to 0 (opt-in).
+  const [addonQty, setAddonQty] = useState(() =>
+    Object.fromEntries((addons || []).map(a => [a.id, 0])))
   const [buyerTypedName, setBuyerTypedName] = useState('')
   const [waiverOpen, setWaiverOpen] = useState(false)
   const [bartenderOpen, setBartenderOpen] = useState(false)
@@ -51,10 +80,17 @@ export default function BookingForm({ eventId, eventName, ticketTypes, waiver })
   // a failed submit so the next manual click starts a fresh attempt.
   const [clientToken, setClientToken] = useState(() => mintToken())
 
-  const totalCents = useMemo(() => riders.reduce((s, r) => {
+  const ticketCents = useMemo(() => riders.reduce((s, r) => {
     const tt = ticketTypes.find(t => t.id === r.ticket_type_id)
     return s + (tt?.price_cents || 0)
   }, 0), [riders, ticketTypes])
+
+  const addonCents = useMemo(() => (addons || []).reduce(
+    (s, a) => s + (a.price_cents || 0) * (addonQty[a.id] || 0), 0), [addons, addonQty])
+
+  // What the buyer sees. A Loop Pass may cover some seats server-side, so the
+  // amount actually charged can be lower — the server is the source of truth.
+  const totalCents = ticketCents + addonCents
 
   function updateRider(idx, patch) {
     setRiders(prev => prev.map((r, i) => (i === idx ? { ...r, ...patch } : r)))
@@ -69,11 +105,16 @@ export default function BookingForm({ eventId, eventName, ticketTypes, waiver })
       signed_by_buyer: false,
       claim_link: true,
       typed_name: '',
+      pickup_stop_index: '',
     }])
   }
 
   function removeRider(idx) {
     setRiders(prev => prev.filter((_, i) => i !== idx))
+  }
+
+  function setAddon(id, qty) {
+    setAddonQty(prev => ({ ...prev, [id]: Math.max(0, Math.min(20, qty)) }))
   }
 
   // Per-ticket-type request count → use to disable Pay when the rider has
@@ -100,6 +141,10 @@ export default function BookingForm({ eventId, eventName, ticketTypes, waiver })
     return null
   }, [requestedByTt, ticketTypes])
 
+  const soldOutTypes = useMemo(
+    () => ticketTypes.filter(t => t.remaining === 0),
+    [ticketTypes])
+
   const buyerOwesSig = riders.some(r => r.signed_by_buyer)
   const formValid = useMemo(() => {
     if (!buyer.first_name || !buyer.last_name) return false
@@ -108,6 +153,11 @@ export default function BookingForm({ eventId, eventName, ticketTypes, waiver })
     if (oversellError) return false
     for (const r of riders) {
       if (!r.ticket_type_id) return false
+      // Walk-on riders must pick a pickup bar (applies even to claim-link seats
+      // — the buyer chooses where their friend boards).
+      const tt = ticketTypes.find(t => t.id === r.ticket_type_id)
+      const walkOn = tt && tt.stop_index == null
+      if (walkOn && stops.length > 0 && (r.pickup_stop_index === '' || r.pickup_stop_index == null)) return false
       // claim_link riders skip name + contact + waiver — that's the whole point
       if (r.claim_link) continue
       if (!r.same_as_buyer && (!r.first_name || !r.last_name)) return false
@@ -116,7 +166,7 @@ export default function BookingForm({ eventId, eventName, ticketTypes, waiver })
     }
     if (buyerOwesSig && !buyerTypedName.trim()) return false
     return true
-  }, [buyer, riders, ticketTypes, buyerOwesSig, buyerTypedName, oversellError])
+  }, [buyer, riders, ticketTypes, stops, buyerOwesSig, buyerTypedName, oversellError])
 
   async function onSubmit(e) {
     e.preventDefault()
@@ -125,12 +175,18 @@ export default function BookingForm({ eventId, eventName, ticketTypes, waiver })
     setError(null)
 
     const ridersPayload = riders.map(r => {
+      // Walk-on pickup bar → numeric stop index (null for normal per-bar tickets).
+      const ttSel = ticketTypes.find(t => t.id === r.ticket_type_id)
+      const pickupStopIndex = (ttSel && ttSel.stop_index == null && r.pickup_stop_index !== '' && r.pickup_stop_index != null)
+        ? Number(r.pickup_stop_index)
+        : null
       // Claim-link riders: no contact info collected; checkout mints a token
       // the buyer can forward to the friend. Friend fills info + signs at /c/<token>.
       if (r.claim_link) {
         return {
           ticket_type_id: r.ticket_type_id,
           claim_link: true,
+          pickup_stop_index: pickupStopIndex,
         }
       }
       const baseRider = r.same_as_buyer
@@ -152,6 +208,7 @@ export default function BookingForm({ eventId, eventName, ticketTypes, waiver })
         signed_self: !!r.signed_self,
         signed_by_buyer: !!r.signed_by_buyer,
         typed_name: r.signed_self ? r.typed_name.trim() : '',
+        pickup_stop_index: pickupStopIndex,
       }
     })
 
@@ -170,6 +227,9 @@ export default function BookingForm({ eventId, eventName, ticketTypes, waiver })
           event_id: eventId,
           buyer,
           riders: ridersPayload,
+          addons: Object.entries(addonQty)
+            .filter(([, q]) => q > 0)
+            .map(([addon_id, quantity]) => ({ addon_id, quantity })),
           buyer_typed_name: buyerTypedName.trim(),
           attribution: submittedAttribution,
           client_token: clientToken,
@@ -177,7 +237,10 @@ export default function BookingForm({ eventId, eventName, ticketTypes, waiver })
       })
       const json = await res.json()
       if (!res.ok || !json.checkout_url) {
-        let message = json.error || `Checkout failed (${res.status})`
+        // Default to a friendly, generic message. Raw server codes
+        // (checkout_failed, order_insert_failed, etc.) are for diagnosis, not
+        // for the rider — log them to the console instead of showing them.
+        let message = 'Something went wrong starting checkout. Please try again.'
         if (json.error === 'sold_out') {
           const remaining = json.remaining ?? 0
           message = remaining > 0
@@ -185,6 +248,15 @@ export default function BookingForm({ eventId, eventName, ticketTypes, waiver })
             : `Sold out: ${json.ticket_type_name || 'this ticket'} is fully booked.`
         } else if (json.error === 'in_flight_retry') {
           message = 'Hang on — finalizing your previous attempt. Try again in a few seconds.'
+        } else if (json.error === 'pickup_required') {
+          message = 'Please choose a pickup stop for your walk-on ticket.'
+        } else if (json.error === 'verification_required') {
+          // The Loop (Marines): not cleared, or the verify cookie expired. Send
+          // them to verify with their DoD ID, then back to buying.
+          window.location.href = prefixLink('/verify', 'marines')
+          return
+        } else if (json.error) {
+          console.error('[checkout] server error:', json.error, json)
         }
         setError(message)
         setSubmitting(false)
@@ -193,7 +265,10 @@ export default function BookingForm({ eventId, eventName, ticketTypes, waiver })
       }
       window.location.href = json.checkout_url
     } catch (err) {
-      setError(err.message)
+      // Network failure or an empty/non-JSON response body. Never show the raw
+      // JS message ("Unexpected end of JSON input") to a rider.
+      console.error('[checkout] request failed', err)
+      setError('Something went wrong reaching checkout. Please try again.')
       setSubmitting(false)
       setClientToken(mintToken())
     }
@@ -208,7 +283,7 @@ export default function BookingForm({ eventId, eventName, ticketTypes, waiver })
   }
 
   return (
-    <form onSubmit={onSubmit} style={{ display: 'grid', gap: 16 }}>
+    <form onSubmit={onSubmit} className="bk-form-fields" style={{ display: 'grid', gap: 18 }}>
       <Section title="Your info">
         <Row>
           <Field label="First name" value={buyer.first_name} onChange={v => setBuyer(b => ({ ...b, first_name: v }))} />
@@ -230,46 +305,91 @@ export default function BookingForm({ eventId, eventName, ticketTypes, waiver })
           {riders.map((r, idx) => {
             const tt = ticketTypes.find(t => t.id === r.ticket_type_id)
             return (
+              /* No box. A rider is a passage of the section, marked by a
+                 gold rail and a rule above it - not a card inside a card. */
               <div key={idx} style={{
-                padding: 12,
-                background: '#0e0e12',
-                border: `1px solid ${BORDER}`,
-                borderRadius: 10,
                 display: 'grid',
-                gap: 8,
+                gap: 12,
+                paddingLeft: 16,
+                paddingTop: idx === 0 ? 0 : 20,
+                borderLeft: `2px solid ${idx === 0 ? 'rgba(212,163,51,0.55)' : 'rgba(255,255,255,0.10)'}`,
+                borderTop: idx === 0 ? 0 : '1px solid rgba(255,255,255,0.07)',
+                marginLeft: 2,
               }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                  <strong style={{ color: ACCENT, fontSize: 13 }}>Rider {idx + 1}</strong>
+                  <strong style={{ color: ACCENT, fontSize: 11, letterSpacing: '0.2em', textTransform: 'uppercase', fontWeight: 800 }}>Rider {idx + 1}</strong>
                   {idx > 0 && (
                     <button type="button" onClick={() => removeRider(idx)} style={btnGhost}>Remove</button>
                   )}
                 </div>
 
-                <select
-                  value={r.ticket_type_id}
-                  onChange={e => updateRider(idx, { ticket_type_id: e.target.value })}
-                  style={input}
-                >
-                  {ticketTypes.map(t => (
-                    <option key={t.id} value={t.id} disabled={t.remaining === 0}>
-                      {ticketLabel(t)}
-                    </option>
-                  ))}
-                </select>
                 {(() => {
-                  const t = ticketTypes.find(x => x.id === r.ticket_type_id)
-                  if (!t) return null
+                  const sel = ticketTypes.find(x => x.id === r.ticket_type_id)
+                  // A walk-on ticket is not tied to a stop, so for those this
+                  // select really is just the ticket and the bar is asked
+                  // separately below. For every normal ticket type it IS the
+                  // pickup bar, and has to say so.
+                  const walkOn = needsPickup(sel)
                   return (
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: 12, color: '#9c9ca3', marginTop: -2, gap: 8 }}>
-                      <span>
-                        {t.pickup_time ? (
-                          <>Pickup at <strong style={{ color: ACCENT, fontWeight: 700 }}>{formatPickupTime(t.pickup_time)}</strong></>
-                        ) : null}
+                    <label style={{ display: 'grid', gap: 7 }}>
+                      <span style={{ fontSize: 14, color: '#f5f5f7', fontWeight: 700 }}>
+                        {walkOn ? 'Which ticket?' : 'Where should we pick you up?'}
                       </span>
-                      <RemainingBadge remaining={t.remaining} />
-                    </div>
+                      {!walkOn && (
+                        <span style={{ fontSize: 12.5, color: '#9c9ca3', lineHeight: 1.5, marginTop: -3 }}>
+                          Pick the bar you&rsquo;ll already be at. You can ride between every bar on the
+                          route from there, and the last loop brings you back to this one.
+                        </span>
+                      )}
+                      <select
+                        value={r.ticket_type_id}
+                        onChange={e => updateRider(idx, { ticket_type_id: e.target.value })}
+                        style={input}
+                      >
+                        {ticketTypes.map(t => (
+                          <option key={t.id} value={t.id} disabled={t.remaining === 0}>
+                            {ticketLabel(t)}
+                          </option>
+                        ))}
+                      </select>
+                      {sel && (
+                        <span style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: 12.5, color: '#9c9ca3', gap: 8 }}>
+                          <span>
+                            {!walkOn && sel.pickup_time ? (
+                              <>Be at <strong style={{ color: '#f5f5f7', fontWeight: 700 }}>{sel.name}</strong>{' '}
+                              for <strong style={{ color: ACCENT, fontWeight: 700 }}>{formatPickupTime(sel.pickup_time)}</strong>.</>
+                            ) : null}
+                          </span>
+                          <RemainingBadge remaining={sel.remaining} />
+                        </span>
+                      )}
+                    </label>
                   )
                 })()}
+
+                {needsPickup(ticketTypes.find(x => x.id === r.ticket_type_id)) && (
+                  <label style={{ display: 'grid', gap: 7 }}>
+                    <span style={{ fontSize: 14, color: '#f5f5f7', fontWeight: 700 }}>
+                      Where should we pick you up? <span style={{ color: ACCENT }}>*</span>
+                    </span>
+                    <span style={{ fontSize: 12.5, color: '#9c9ca3', lineHeight: 1.5, marginTop: -3 }}>
+                      Pick the bar you&rsquo;ll already be at. You can ride between every bar on the
+                      route from there, and the last loop brings you back to this one.
+                    </span>
+                    <select
+                      value={r.pickup_stop_index}
+                      onChange={e => updateRider(idx, { pickup_stop_index: e.target.value })}
+                      style={{ ...input, borderColor: r.pickup_stop_index === '' ? '#f87171' : BORDER }}
+                    >
+                      <option value="" disabled>Which bar should we pick you up at?</option>
+                      {stops.map(s => (
+                        <option key={s.index} value={s.index}>
+                          {s.name}{s.start_time ? ` — ${formatPickupTime(s.start_time)}` : ''}
+                        </option>
+                      ))}
+                    </select>
+                  </label>
+                )}
 
                 {idx === 0 ? (
                   <CheckRow
@@ -319,7 +439,7 @@ export default function BookingForm({ eventId, eventName, ticketTypes, waiver })
                       </>
                     )}
 
-                    <div style={{ display: 'grid', gap: 8, padding: 12, background: '#15151a', borderRadius: 8, marginTop: 4 }}>
+                    <div style={{ display: 'grid', gap: 10, paddingTop: 14, marginTop: 4, borderTop: '1px solid rgba(255,255,255,0.07)' }}>
                       <strong style={{ fontSize: 11, color: ACCENT, letterSpacing: '0.08em', textTransform: 'uppercase' }}>
                         Waiver for this rider
                       </strong>
@@ -362,6 +482,37 @@ export default function BookingForm({ eventId, eventName, ticketTypes, waiver })
           + Add another rider
         </button>
       </Section>
+
+      {addons.length > 0 && (
+        <Section title="Add to your night">
+          <div style={{ display: 'grid', gap: 8 }}>
+            {addons.map(a => {
+              const qty = addonQty[a.id] || 0
+              return (
+                <div key={a.id} style={{
+                  display: 'flex', alignItems: 'center', gap: 12,
+                  padding: 12, background: '#0e0e12', border: `1px solid ${BORDER}`, borderRadius: 10,
+                }}>
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <div style={{ fontSize: 14, color: '#eee', fontWeight: 600 }}>
+                      {a.name}{' '}
+                      <span style={{ color: ACCENT, fontWeight: 700 }}>+${(a.price_cents / 100).toFixed(2)}</span>
+                    </div>
+                    {a.description && (
+                      <div style={{ fontSize: 12, color: '#9c9ca3', marginTop: 2 }}>{a.description}</div>
+                    )}
+                  </div>
+                  <Stepper
+                    qty={qty}
+                    onDec={() => setAddon(a.id, qty - 1)}
+                    onInc={() => setAddon(a.id, qty + 1)}
+                  />
+                </div>
+              )
+            })}
+          </div>
+        </Section>
+      )}
 
       <Section title="Liability waiver">
         <button
@@ -446,49 +597,105 @@ export default function BookingForm({ eventId, eventName, ticketTypes, waiver })
         )}
       </div>
 
+      {soldOutTypes.length > 0 && (
+        <WaitlistForm eventId={eventId} soldOutTypes={soldOutTypes} />
+      )}
+
       {(error || oversellError) && (
         <div style={{ padding: 10, background: '#3a1a1a', border: '1px solid #f87171', borderRadius: 8, color: '#f87171', fontSize: 13 }}>
           {error || oversellError}
         </div>
       )}
 
+      {/* The destination. It was the same grey box at the same weight as
+          every other grey box, so the end of the page looked like the middle
+          of it. Gold-lit, bigger number, clearly where this is going. */}
       <div style={{
-        padding: 16,
-        background: SURFACE,
-        border: `1px solid ${BORDER}`,
-        borderRadius: 12,
+        padding: 'clamp(20px, 3vw, 26px)',
+        background: 'linear-gradient(180deg, rgba(212,163,51,0.10), rgba(212,163,51,0.02) 60%), #1b1b21',
+        border: '1px solid rgba(212,163,51,0.28)',
+        borderRadius: 18,
         display: 'grid',
-        gap: 12,
+        gap: 14,
+        boxShadow: '0 22px 50px rgba(0,0,0,0.45)',
       }}>
         <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between' }}>
-          <span style={{ fontSize: 12, color: '#9c9ca3', textTransform: 'uppercase', letterSpacing: '0.08em' }}>Total</span>
-          <span style={{ fontSize: 26, fontWeight: 700, color: ACCENT, letterSpacing: '-0.01em' }}>
+          <span style={{ fontSize: 11, color: '#a6a6ae', textTransform: 'uppercase', letterSpacing: '0.2em', fontWeight: 700 }}>Total</span>
+          <span style={{ fontSize: 'clamp(30px, 4vw, 38px)', fontWeight: 800, color: ACCENT, letterSpacing: '-0.03em', lineHeight: 1 }}>
             ${(totalCents / 100).toFixed(2)}
           </span>
         </div>
+        {/* The disabled state used to be #3a2f15 on #7a6a3a - a muddy brown
+            bar with unreadable text that looked like a broken button rather
+            than a form waiting to be filled in. It is a neutral, legible
+            "not yet" now, and the line underneath says what it is waiting for
+            instead of leaving the rider to guess. The `disabled` condition
+            itself is unchanged: this is a live checkout and the styling pass
+            does not touch what gates the payment. */}
         <button
           type="submit"
           disabled={!formValid || submitting}
           style={{
-            background: formValid && !submitting ? ACCENT : '#3a2f15',
-            color: formValid && !submitting ? '#0a0a0b' : '#7a6a3a',
-            border: 0,
-            padding: '14px 20px',
-            borderRadius: 10,
-            fontWeight: 700,
+            background: formValid && !submitting
+              ? 'linear-gradient(180deg, #f0c24a, #d4a333)'
+              : 'rgba(255,255,255,0.05)',
+            color: formValid && !submitting ? '#0a0a0b' : '#8a8a92',
+            border: formValid && !submitting ? '1px solid transparent' : '1px solid rgba(255,255,255,0.12)',
+            padding: '15px 20px',
+            borderRadius: 12,
+            fontWeight: 800,
             fontSize: 16,
-            letterSpacing: '0.02em',
+            letterSpacing: '0.01em',
             cursor: formValid && !submitting ? 'pointer' : 'not-allowed',
             width: '100%',
-            transition: 'background 120ms ease',
+            boxShadow: formValid && !submitting ? '0 10px 28px rgba(212,163,51,0.28)' : 'none',
+            transition: 'background 160ms ease, box-shadow 160ms ease, color 160ms ease',
           }}
         >
           {submitting ? 'Loading…' : `Pay $${(totalCents / 100).toFixed(2)}`}
         </button>
+        {!formValid && !submitting && (
+          <div style={{ fontSize: 12, color: '#8a8a92', textAlign: 'center', lineHeight: 1.45 }}>
+            Add your details, pick a pickup bar, and sign the waiver to continue.
+          </div>
+        )}
         <div style={{ fontSize: 11, color: '#777', textAlign: 'center' }}>
           Secure checkout powered by Stripe
         </div>
       </div>
+
+      <style>{`
+        /* Only what an inline style object cannot express. The base look of
+           these controls lives in the input style object above, because inline
+           wins over a stylesheet and splitting it would make the two fight. */
+        .bk-form-fields input::placeholder { color: #6a6a73; }
+        .bk-form-fields input:focus-visible,
+        .bk-form-fields select:focus-visible,
+        .bk-form-fields textarea:focus-visible,
+        .bk-form-fields button:focus-visible {
+          outline: none;
+          border-color: rgba(212,163,51,0.7);
+          box-shadow: 0 0 0 3px rgba(212,163,51,0.18);
+        }
+        .bk-form-fields select {
+          background: #21212a;
+          border: 1px solid rgba(255,255,255,0.14);
+          color: #f5f5f7;
+          padding: 12px 13px;
+          border-radius: 10px;
+          font-size: 16px;
+          width: 100%;
+          box-sizing: border-box;
+        }
+        /* These buttons set their background inline, and inline beats any
+           selector - so this needs !important or it silently does nothing.
+           Scoped to hover only, and never to the submit button, which owns
+           its own gold treatment. */
+        .bk-form-fields button:not(:disabled):not([type="submit"]):hover {
+          border-color: rgba(212,163,51,0.45) !important;
+          background: rgba(212,163,51,0.08) !important;
+        }
+      `}</style>
     </form>
   )
 }
@@ -498,7 +705,7 @@ function ticketLabel(t) {
   const price = `$${(t.price_cents / 100).toFixed(2)}`
   const head = time ? `${t.name} — ${time} — ${price}` : `${t.name} — ${price}`
   if (t.remaining === 0) return `${head} — Sold out`
-  if (Number.isFinite(t.remaining)) return `${head} — ${t.remaining} left`
+  if (Number.isFinite(t.remaining) && t.remaining <= 5) return `${head} — ${t.remaining} left`
   return head
 }
 
@@ -519,6 +726,7 @@ function RemainingBadge({ remaining }) {
       }}>Sold out</span>
     )
   }
+  if (remaining > 5) return null
   const tight = remaining <= 3
   return (
     <span style={{
@@ -551,20 +759,43 @@ function mintToken() {
 
 function Section({ title, children }) {
   return (
-    <section style={{ background: SURFACE, border: `1px solid ${BORDER}`, borderRadius: 12, padding: 14, display: 'grid', gap: 10 }}>
-      <h2 style={{ fontSize: 13, color: ACCENT, margin: 0, letterSpacing: '0.08em', textTransform: 'uppercase' }}>{title}</h2>
+    <section style={{
+      // The ONE card level on this form. Lit along the top edge like every
+      // other surface on the site, and nothing inside it is allowed to be a
+      // box as well - that stacking is what made this page look like a form.
+      background: `linear-gradient(180deg, rgba(255,255,255,0.05), rgba(255,255,255,0) 42%), ${SURFACE}`,
+      border: `1px solid ${BORDER}`,
+      borderRadius: 18,
+      padding: 'clamp(20px, 3vw, 28px)',
+      display: 'grid',
+      gap: 16,
+      boxShadow: '0 20px 44px rgba(0,0,0,0.38)',
+    }}>
+      {/* A real heading, not a 11px gold caps label. The whole page was set
+          at one size, so nothing led the eye anywhere. */}
+      <h2 style={{
+        fontSize: 'clamp(17px, 2.2vw, 20px)', color: '#f5f5f7', margin: 0,
+        letterSpacing: '-0.015em', fontWeight: 800, display: 'flex',
+        alignItems: 'center', gap: 10,
+      }}>
+        <span aria-hidden style={{
+          width: 4, height: 17, borderRadius: 2, flex: '0 0 auto',
+          background: `linear-gradient(180deg, ${ACCENT}, rgba(212,163,51,0.25))`,
+        }} />
+        {title}
+      </h2>
       {children}
     </section>
   )
 }
 
 function Row({ children }) {
-  return <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>{children}</div>
+  return <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>{children}</div>
 }
 
 function Field({ label, value, onChange, type = 'text' }) {
   return (
-    <label style={{ display: 'grid', gap: 4, fontSize: 12, color: '#9c9ca3' }}>
+    <label style={{ display: 'grid', gap: 7, fontSize: 12.5, color: '#a6a6ae', fontWeight: 600 }}>
       {label}
       <input type={type} value={value} onChange={e => onChange(e.target.value)} style={input} />
     </label>
@@ -601,6 +832,109 @@ function CheckRow({ checked, onChange, label, accentText = false }) {
   )
 }
 
+function WaitlistForm({ eventId, soldOutTypes }) {
+  const [open, setOpen] = useState(false)
+  const [f, setF] = useState({
+    first_name: '', last_name: '', phone: '',
+    party_size: 1, ticket_type_id: soldOutTypes[0]?.id || '',
+  })
+  const [state, setState] = useState('idle') // idle | submitting | done
+  const [err, setErr] = useState(null)
+
+  async function submit(e) {
+    e.preventDefault()
+    if (state === 'submitting') return
+    setState('submitting')
+    setErr(null)
+    const tt = soldOutTypes.find(t => t.id === f.ticket_type_id)
+    try {
+      const res = await fetch('/api/waitlist', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          event_id: eventId,
+          ticket_type_id: f.ticket_type_id || null,
+          stop_index: tt?.stop_index ?? null,
+          first_name: f.first_name,
+          last_name: f.last_name,
+          phone: f.phone,
+          party_size: Number(f.party_size) || 1,
+        }),
+      })
+      const j = await res.json()
+      if (!res.ok) { setErr(typeof j.error === 'string' ? j.error : 'Could not join. Try again.'); setState('idle'); return }
+      setState('done')
+    } catch {
+      setErr('Could not reach the waitlist. Try again.')
+      setState('idle')
+    }
+  }
+
+  if (state === 'done') {
+    return (
+      <div style={{ padding: 14, background: 'rgba(63,178,127,0.08)', border: '1px solid rgba(63,178,127,0.4)', borderRadius: 10, color: '#9fe3bf', fontSize: 14 }}>
+        You&rsquo;re on the waitlist. We&rsquo;ll text you if a seat opens up.
+      </div>
+    )
+  }
+
+  return (
+    <Section title="Sold out where you wanted?">
+      {!open ? (
+        <button type="button" onClick={() => setOpen(true)} style={{ ...btnGhost, width: '100%' }}>
+          Join the waitlist
+        </button>
+      ) : (
+        <div style={{ display: 'grid', gap: 8 }}>
+          <p style={{ fontSize: 12, color: '#9c9ca3', margin: 0 }}>
+            We&rsquo;ll reach out if a seat frees up. No charge until you book.
+          </p>
+          {soldOutTypes.length > 1 && (
+            <select value={f.ticket_type_id} onChange={e => setF(s => ({ ...s, ticket_type_id: e.target.value }))} style={input}>
+              {soldOutTypes.map(t => <option key={t.id} value={t.id}>{t.name}</option>)}
+            </select>
+          )}
+          <Row>
+            <Field label="First name" value={f.first_name} onChange={v => setF(s => ({ ...s, first_name: v }))} />
+            <Field label="Last name" value={f.last_name} onChange={v => setF(s => ({ ...s, last_name: v }))} />
+          </Row>
+          <Row>
+            <Field label="Phone" value={f.phone} type="tel" onChange={v => setF(s => ({ ...s, phone: v }))} />
+            <label style={{ display: 'grid', gap: 4, fontSize: 12, color: '#9c9ca3' }}>
+              Party size
+              <input type="number" min={1} max={20} value={f.party_size} onChange={e => setF(s => ({ ...s, party_size: e.target.value }))} style={input} />
+            </label>
+          </Row>
+          {err && <div style={{ color: '#f87171', fontSize: 12 }}>{err}</div>}
+          <button
+            type="button"
+            onClick={submit}
+            disabled={state === 'submitting' || !f.first_name.trim() || !f.phone.trim()}
+            style={{ ...btnGhost, width: '100%', opacity: (!f.first_name.trim() || !f.phone.trim()) ? 0.5 : 1 }}
+          >
+            {state === 'submitting' ? 'Joining…' : 'Join the waitlist'}
+          </button>
+        </div>
+      )}
+    </Section>
+  )
+}
+
+function Stepper({ qty, onDec, onInc }) {
+  const btn = {
+    width: 32, height: 32, borderRadius: 8, border: `1px solid ${BORDER}`,
+    background: '#15151a', color: ACCENT, fontSize: 18, lineHeight: 1,
+    cursor: 'pointer', flexShrink: 0,
+  }
+  return (
+    <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexShrink: 0 }}>
+      <button type="button" onClick={onDec} disabled={qty === 0} style={{ ...btn, opacity: qty === 0 ? 0.4 : 1, cursor: qty === 0 ? 'not-allowed' : 'pointer' }} aria-label="Remove one">−</button>
+      <span style={{ minWidth: 16, textAlign: 'center', color: '#eee', fontSize: 15, fontWeight: 700 }}>{qty}</span>
+      <button type="button" onClick={onInc} style={btn} aria-label="Add one">+</button>
+    </div>
+  )
+}
+
 function RadioRow({ name, checked, onChange, label }) {
   return (
     <label style={{
@@ -632,23 +966,35 @@ function RadioRow({ name, checked, onChange, label }) {
   )
 }
 
+// Inline, because inline beats the stylesheet - so the BASE look has to live
+// here and the sheet below only handles what inline styles cannot express
+// (:focus-visible, ::placeholder, the select arrow).
+// 16px is not an aesthetic choice: iOS Safari zooms the whole viewport when a
+// focused input is under 16px, which on a checkout form throws the rider's
+// layout around mid-purchase.
 const input = {
-  background: '#0a0a0b',
-  border: '1px solid #2a2a31',
-  color: '#fff',
-  padding: '10px 12px',
-  borderRadius: 8,
-  fontSize: 14,
+  // A lifted fill, not a black hole. Against the section surface these used to
+  // read as punched-out voids in a row, which is most of why a plain four-field
+  // block looked so grim.
+  background: 'rgba(255,255,255,0.05)',
+  border: '1px solid rgba(255,255,255,0.14)',
+  color: '#f5f5f7',
+  padding: '12px 13px',
+  borderRadius: 10,
+  fontSize: 16,
   width: '100%',
   boxSizing: 'border-box',
+  transition: 'border-color .18s ease, box-shadow .18s ease',
 }
 
 const btnGhost = {
-  background: 'transparent',
-  border: '1px solid #2a2a31',
-  color: '#d4a333',
-  padding: '8px 12px',
-  borderRadius: 8,
-  fontSize: 13,
+  background: 'rgba(255,255,255,0.03)',
+  border: '1px solid rgba(255,255,255,0.14)',
+  color: '#f0c24a',
+  padding: '12px 14px',
+  borderRadius: 10,
+  fontSize: 14,
+  fontWeight: 700,
   cursor: 'pointer',
+  transition: 'border-color .2s ease, background .2s ease',
 }

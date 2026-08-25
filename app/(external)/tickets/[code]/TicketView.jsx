@@ -1,16 +1,27 @@
 'use client'
 
+import Link from 'next/link'
 import { useEffect, useRef, useState } from 'react'
 import EnableNotifications from '../../_components/EnableNotifications'
+import SecurityChat from '../../_components/SecurityChat'
+import { GOLD, GOLD_HI, INK, INK_DIM, INK_MUTE as INK_MUTED } from '@/lib/marketingTheme'
+import { grainOverlay, lightPool, litCard, litCardInner } from '@/lib/atmosphere'
 
-const GOLD = '#d4a333'
-const GOLD_HI = '#f0c24a'
-const INK = '#f5f5f7'
-const INK_DIM = '#b8b8bf'
-const INK_MUTED = '#8a8a90'
+// The boarding pass.
+//
+// This was the last rider-facing page still running its own private palette
+// and flat #0a0a0b rectangles, months after the rest of the site moved to
+// marketingTheme + atmosphere — so the one page a rider stares at while
+// standing outside a bar was also the one that looked least like the company.
+// It now uses the same tokens, the same lit plates and the same grain as
+// everything else.
+//
+// It was also missing the route. The page already loaded groups.schedule to
+// find the pickup stop and discarded the rest, so a paying rider could not see
+// which bars the night hits. That list is the second thing on the page now,
+// under the pickup and above the QR.
+
 const BG = '#0a0a0b'
-const SURFACE = '#15151a'
-const LINE = 'rgba(255,255,255,0.08)'
 const GREEN = '#6fbf7f'
 
 export default function TicketView({
@@ -19,14 +30,21 @@ export default function TicketView({
   ticketUrl,
   riderName,
   eventName,
+  brand = 'Brew Loop',
+  eventsHref = '/events',
   eventDate,
   pickupTime,
   pickupSpot,
+  stops = [],
+  barsHref = '/bars',
+  trackHref = '/track',
   isPaid,
   isVoided,
   waiverSigned,
   contactId,
   checkedInAt,
+  supportPhone = '+16362661801',
+  supportPhoneDisplay = '(636) 266-1801',
 }) {
   const wakeLockRef = useRef(null)
   const [shareSupported, setShareSupported] = useState(false)
@@ -72,10 +90,10 @@ export default function TicketView({
   }, [])
 
   async function onShare() {
-    const text = `${riderName} — Brew Loop ticket\n${ticketUrl}`
+    const text = `${riderName} — ${brand} ticket\n${ticketUrl}`
     if (navigator.share) {
       try {
-        await navigator.share({ title: 'Brew Loop ticket', text, url: ticketUrl })
+        await navigator.share({ title: `${brand} ticket`, text, url: ticketUrl })
       } catch {}
     } else if (navigator.clipboard) {
       try {
@@ -110,12 +128,12 @@ export default function TicketView({
           </h1>
           <p style={{ color: INK_DIM, fontSize: 14, lineHeight: 1.5, margin: 0 }}>
             It&apos;s no longer valid for boarding. If you think this was a mistake, text us at{' '}
-            <a href="sms:+16362661801" style={{ color: GOLD, textDecoration: 'none' }}>
-              (636) 266-1801
+            <a href={`sms:${supportPhone}`} style={{ color: GOLD, textDecoration: 'none' }}>
+              {supportPhoneDisplay}
             </a>
             .
           </p>
-          <a href="/events" style={primaryBtn}>Browse upcoming Loops</a>
+          <a href={eventsHref} style={primaryBtn}>Browse upcoming Loops</a>
         </div>
       </div>
     )
@@ -124,6 +142,8 @@ export default function TicketView({
   return (
     <div
       style={{
+        position: 'relative',
+        overflow: 'hidden',
         minHeight: '100dvh',
         background: BG,
         color: INK,
@@ -133,7 +153,13 @@ export default function TicketView({
         alignItems: 'center',
       }}
     >
-      <div style={{ maxWidth: 460, width: '100%', display: 'grid', gap: 18 }}>
+      {/* Same depth treatment as the rest of the site. Both layers are inert
+          and sit under the content, so nothing here can intercept the tap that
+          shares a ticket or the scan of the QR. */}
+      <div aria-hidden style={{ position: 'absolute', inset: 0, background: lightPool('top', 0.16), pointerEvents: 'none' }} />
+      <div aria-hidden style={{ ...grainOverlay, pointerEvents: 'none' }} />
+
+      <div style={{ position: 'relative', maxWidth: 460, width: '100%', display: 'grid', gap: 18 }}>
         <header style={{ textAlign: 'center', paddingTop: 8 }}>
           <div
             style={{
@@ -144,7 +170,7 @@ export default function TicketView({
               fontWeight: 700,
             }}
           >
-            Brew Loop · Boarding pass
+            {brand} · Boarding pass
           </div>
           <h1 style={{ color: INK, fontSize: 22, fontWeight: 700, margin: '6px 0 0' }}>
             {riderName}
@@ -186,6 +212,71 @@ export default function TicketView({
                 {timeLabel}{dateLabel ? ` · ${dateLabel}` : ''}
               </div>
             )}
+          </div>
+        )}
+
+        {/* The route. A rider with a ticket already knows they're going out —
+            what they don't know is where. Times are the scheduled ARRIVAL at
+            each stop; the route rotates weekend to weekend, so this is the
+            night's own schedule and never the static bar directory. */}
+        {stops.length > 0 && (
+          <div style={litCard({ radius: 16 })}>
+            <div style={litCardInner({ radius: 15, pad: 0 })}>
+              <div style={{ padding: '14px 16px 10px', display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', gap: 10 }}>
+                <span style={{ color: GOLD, fontSize: 11, letterSpacing: '0.18em', textTransform: 'uppercase', fontWeight: 700 }}>
+                  Tonight&apos;s route
+                </span>
+                <Link href={trackHref} style={{ color: INK_DIM, fontSize: 12, textDecoration: 'none' }}>
+                  Track the shuttle &rarr;
+                </Link>
+              </div>
+
+              <ol style={{ listStyle: 'none', margin: 0, padding: '0 16px 6px' }}>
+                {stops.map(stop => {
+                  const label = (
+                    <>
+                      <span style={{ color: INK, fontSize: 15, fontWeight: stop.isPickup ? 700 : 600 }}>
+                        {stop.name}
+                      </span>
+                      {stop.isPickup && (
+                        <span style={{ color: GOLD, fontSize: 10, letterSpacing: '0.16em', textTransform: 'uppercase', fontWeight: 700, marginLeft: 8 }}>
+                          Your pickup
+                        </span>
+                      )}
+                    </>
+                  )
+                  return (
+                    <li key={`${stop.order}-${stop.name}`} style={{ display: 'flex', gap: 12, alignItems: 'flex-start', padding: '9px 0' }}>
+                      <span aria-hidden style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', flexShrink: 0, alignSelf: 'stretch' }}>
+                        <span style={{
+                          width: 9, height: 9, borderRadius: 999, marginTop: 6,
+                          background: stop.isPickup ? GOLD : 'transparent',
+                          border: `1.5px solid ${stop.isPickup ? GOLD : 'rgba(255,255,255,0.28)'}`,
+                        }} />
+                        {stop.order < stops.length - 1 && (
+                          <span style={{ flex: 1, width: 1.5, minHeight: 14, background: 'rgba(255,255,255,0.12)', marginTop: 3 }} />
+                        )}
+                      </span>
+                      <span style={{ flex: 1, minWidth: 0 }}>
+                        {stop.slug
+                          ? <Link href={`${barsHref}/${stop.slug}`} style={{ textDecoration: 'none' }}>{label}</Link>
+                          : label}
+                      </span>
+                      {stop.time && (
+                        <span style={{ color: INK_DIM, fontSize: 13, whiteSpace: 'nowrap', marginTop: 1 }}>
+                          {formatTime(stop.time)}
+                        </span>
+                      )}
+                    </li>
+                  )
+                })}
+              </ol>
+
+              <p style={{ color: INK_MUTED, fontSize: 12, lineHeight: 1.5, margin: 0, padding: '4px 16px 14px' }}>
+                About an hour and 15 minutes at each stop. You&apos;ll get a text roughly 10 minutes
+                before the shuttle leaves. The Loop brings you back to where you were picked up.
+              </p>
+            </div>
           </div>
         )}
 
@@ -263,6 +354,8 @@ export default function TicketView({
         </div>
 
         <EnableNotifications contactId={contactId} />
+
+        {isPaid && contactId && <SecurityChat code={code} />}
 
         {brightHint && (
           <p style={{ color: INK_MUTED, fontSize: 12, textAlign: 'center', margin: 0 }}>
@@ -346,19 +439,6 @@ const primaryBtn = {
   cursor: 'pointer',
   width: '100%',
   boxShadow: '0 10px 30px rgba(212,163,51,0.25)',
-}
-
-const ghostBtn = {
-  padding: '14px 20px',
-  borderRadius: 12,
-  background: SURFACE,
-  color: INK,
-  border: `1px solid ${LINE}`,
-  fontWeight: 600,
-  fontSize: 14,
-  textDecoration: 'none',
-  textAlign: 'center',
-  display: 'block',
 }
 
 function formatDate(iso) {
