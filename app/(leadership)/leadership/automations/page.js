@@ -9,11 +9,13 @@ export const dynamic = 'force-dynamic'
 export const metadata = { title: 'Automations · Leadership' }
 
 const ACCENT = '#d4a333'
+const ACCENT_TXT = '#8a5f0a'
 const ACCENT_HI = '#f0c24a'
-const SURFACE = '#15151a'
-const BORDER = 'rgba(255,255,255,0.08)'
-const INK = '#f5f5f7'
-const INK_DIM = '#9c9ca3'
+const ACCENT_HI_TXT = '#8a5f0a'
+const SURFACE = '#fdfaf3'
+const BORDER = 'rgba(23,19,15,0.08)'
+const INK = '#17130f'
+const INK_DIM = '#6e6154'
 
 // Toggleable automations: each is gated by a DB row and short-circuits its
 // code path when off. Source of truth for the keys is lib/automationSettings.
@@ -143,7 +145,7 @@ export default async function AutomationsPage({ searchParams }) {
       color: INK,
     }}>
       <header style={{ marginBottom: 18 }}>
-        <div style={{ color: ACCENT, fontSize: 11, letterSpacing: '0.18em', textTransform: 'uppercase', fontWeight: 700 }}>
+        <div style={{ color: ACCENT_TXT, fontSize: 11, letterSpacing: '0.18em', textTransform: 'uppercase', fontWeight: 700 }}>
           Leadership · Automations
         </div>
         <h1 style={{ fontSize: 22, margin: '4px 0 6px', fontWeight: 700 }}>What runs by itself</h1>
@@ -156,12 +158,12 @@ export default async function AutomationsPage({ searchParams }) {
             padding: '10px 12px',
             background: 'rgba(248,113,113,0.10)',
             border: '1px solid rgba(248,113,113,0.35)',
-            color: '#fca5a5',
+            color: '#b3311f',
             borderRadius: 8,
             fontSize: 12,
             lineHeight: 1.5,
           }}>
-            <strong>automation_settings table not found.</strong> Toggles below show defaults but flips won&rsquo;t persist until the migration runs. Paste <code style={{ color: '#ffd5d5' }}>sql/029_automation_settings.sql</code> into the Supabase SQL editor.
+            <strong>automation_settings table not found.</strong> Toggles below show defaults but flips won&rsquo;t persist until the migration runs. Paste <code style={{ color: '#b3311f' }}>sql/029_automation_settings.sql</code> into the Supabase SQL editor.
           </div>
         )}
       </header>
@@ -244,7 +246,7 @@ function ToggleSection({ title, rows, flags, meta, action }) {
       overflow: 'hidden',
     }}>
       <div style={{ padding: '10px 14px', borderBottom: `1px solid ${BORDER}` }}>
-        <div style={{ color: ACCENT, fontSize: 11, letterSpacing: '0.16em', textTransform: 'uppercase', fontWeight: 700 }}>
+        <div style={{ color: ACCENT_TXT, fontSize: 11, letterSpacing: '0.16em', textTransform: 'uppercase', fontWeight: 700 }}>
           {title}
         </div>
       </div>
@@ -285,7 +287,7 @@ function ToggleRow({ row, enabled, meta, action, first }) {
           </div>
         )}
         {meta?.updated_at && (
-          <div style={{ color: '#6e6e75', fontSize: 10, marginTop: 4, letterSpacing: '0.04em' }}>
+          <div style={{ color: '#7d7060', fontSize: 10, marginTop: 4, letterSpacing: '0.04em' }}>
             Last flipped {new Date(meta.updated_at).toLocaleString('en-US', { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' })}
             {meta.updated_by ? ` · ${meta.updated_by.split('@')[0]}` : ''}
           </div>
@@ -316,7 +318,7 @@ function Switch({ enabled }) {
         width: 56,
         height: 30,
         borderRadius: 999,
-        background: enabled ? 'linear-gradient(180deg, #f0c24a, #d4a333)' : 'rgba(255,255,255,0.08)',
+        background: enabled ? 'linear-gradient(180deg, #f0c24a, #d4a333)' : 'rgba(23,19,15,0.08)',
         border: enabled ? '1px solid rgba(212,163,51,0.7)' : `1px solid ${BORDER}`,
         cursor: 'pointer',
         boxShadow: enabled ? '0 0 12px rgba(212,163,51,0.45)' : 'none',
@@ -333,11 +335,11 @@ function Switch({ enabled }) {
           width: 22,
           height: 22,
           borderRadius: '50%',
-          background: enabled ? '#0a0a0b' : '#c8c8cc',
+          background: enabled ? '#faf5ea' : '#f3ecdd',
           transition: 'left 0.15s',
           fontSize: 10,
           fontWeight: 800,
-          color: enabled ? '#d4a333' : '#0a0a0b',
+          color: enabled ? '#8a5f0a' : '#231903',
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center',
@@ -360,7 +362,7 @@ function ReadOnlySection({ title, rows }) {
       opacity: 0.95,
     }}>
       <div style={{ padding: '10px 14px', borderBottom: `1px solid ${BORDER}`, display: 'flex', alignItems: 'baseline', gap: 10 }}>
-        <div style={{ color: ACCENT, fontSize: 11, letterSpacing: '0.16em', textTransform: 'uppercase', fontWeight: 700 }}>
+        <div style={{ color: ACCENT_TXT, fontSize: 11, letterSpacing: '0.16em', textTransform: 'uppercase', fontWeight: 700 }}>
           {title}
         </div>
         <div style={{ color: INK_DIM, fontSize: 10, letterSpacing: '0.12em', textTransform: 'uppercase', fontWeight: 600 }}>
@@ -403,11 +405,11 @@ function ReadOnlyRow({ row, first }) {
 
 function StatusBadge({ status }) {
   const palette = {
-    ON:     { bg: 'rgba(212,163,51,0.18)', border: 'rgba(212,163,51,0.55)', color: ACCENT_HI },
-    OFF:    { bg: 'rgba(255,255,255,0.04)', border: BORDER, color: INK_DIM },
-    MANUAL: { bg: 'rgba(99,179,237,0.14)',  border: 'rgba(99,179,237,0.4)', color: '#9bd0ff' },
-    STRIPE: { bg: 'rgba(255,255,255,0.04)', border: BORDER, color: INK_DIM },
-  }[status] || { bg: 'rgba(255,255,255,0.04)', border: BORDER, color: INK_DIM }
+    ON:     { bg: 'rgba(212,163,51,0.18)', border: 'rgba(212,163,51,0.55)', color: ACCENT_HI_TXT },
+    OFF:    { bg: 'rgba(23,19,15,0.04)', border: BORDER, color: INK_DIM },
+    MANUAL: { bg: 'rgba(99,179,237,0.14)',  border: 'rgba(99,179,237,0.4)', color: '#2457b8' },
+    STRIPE: { bg: 'rgba(23,19,15,0.04)', border: BORDER, color: INK_DIM },
+  }[status] || { bg: 'rgba(23,19,15,0.04)', border: BORDER, color: INK_DIM }
 
   return (
     <span style={{
@@ -440,7 +442,7 @@ function ActivityCard({ webhooks, alerts }) {
       borderRadius: 12,
       padding: 14,
     }}>
-      <div style={{ color: ACCENT, fontSize: 11, letterSpacing: '0.16em', textTransform: 'uppercase', fontWeight: 700, marginBottom: 10 }}>
+      <div style={{ color: ACCENT_TXT, fontSize: 11, letterSpacing: '0.16em', textTransform: 'uppercase', fontWeight: 700, marginBottom: 10 }}>
         Last 30 days
       </div>
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))', gap: 10 }}>
@@ -450,16 +452,16 @@ function ActivityCard({ webhooks, alerts }) {
         <Stat label="Alerts (error+)" value={alertErrors} tone={alertErrors > 0 ? 'err' : 'ok'} />
       </div>
       <div style={{ color: INK_DIM, fontSize: 11, marginTop: 10 }}>
-        Detail at <a href="/leadership/alerts" style={{ color: ACCENT_HI, textDecoration: 'none' }}>/leadership/alerts</a>.
+        Detail at <a href="/leadership/alerts" style={{ color: ACCENT_HI_TXT, textDecoration: 'none' }}>/leadership/alerts</a>.
       </div>
     </section>
   )
 }
 
 function Stat({ label, value, tone }) {
-  const color = tone === 'err' ? '#f87171' : tone === 'ok' ? ACCENT_HI : INK_DIM
+  const color = tone === 'err' ? '#b3311f' : tone === 'ok' ? ACCENT_HI_TXT : INK_DIM
   return (
-    <div style={{ background: '#0e0e12', border: `1px solid ${BORDER}`, borderRadius: 10, padding: 10 }}>
+    <div style={{ background: '#ffffff', border: `1px solid ${BORDER}`, borderRadius: 10, padding: 10 }}>
       <div style={{ color: INK_DIM, fontSize: 10, letterSpacing: '0.16em', textTransform: 'uppercase', fontWeight: 700 }}>{label}</div>
       <div style={{ color, fontSize: 22, fontWeight: 800, fontVariantNumeric: 'tabular-nums', marginTop: 2 }}>{value}</div>
     </div>

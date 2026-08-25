@@ -78,8 +78,8 @@ export default function BroadcastModal({ contacts, onClose }) {
         style={{
           width: '100%',
           maxWidth: 560,
-          background: 'linear-gradient(180deg, #16161c, #121216)',
-          border: '1px solid #2a2a31',
+          background: 'linear-gradient(180deg, #ffffff, #fdfaf3)',
+          border: '1px solid #e8ddc8',
           borderRadius: 14,
           padding: '18px 18px 20px',
           boxShadow: '0 30px 80px rgba(0,0,0,0.6)',
@@ -91,7 +91,7 @@ export default function BroadcastModal({ contacts, onClose }) {
             fontSize: 11,
             letterSpacing: '0.22em',
             textTransform: 'uppercase',
-            color: '#d4a333',
+            color: '#8a5f0a',
             margin: 0,
           }}>
             Broadcast SMS
@@ -99,14 +99,14 @@ export default function BroadcastModal({ contacts, onClose }) {
           <button
             onClick={onClose}
             aria-label="Close"
-            style={{ background: 'none', color: '#9c9ca3', border: 0, fontSize: 22, cursor: 'pointer', padding: 4, lineHeight: 1 }}
+            style={{ background: 'none', color: '#6e6154', border: 0, fontSize: 22, cursor: 'pointer', padding: 4, lineHeight: 1 }}
           >
             ×
           </button>
         </div>
 
-        <div style={{ color: '#e8e8ea', fontSize: 15, marginBottom: 12 }}>
-          To <span style={{ color: '#f0c24a', fontWeight: 700 }}>{contacts.length}</span> recipient{contacts.length === 1 ? '' : 's'}
+        <div style={{ color: '#17130f', fontSize: 15, marginBottom: 12 }}>
+          To <span style={{ color: '#8a5f0a', fontWeight: 700 }}>{contacts.length}</span> recipient{contacts.length === 1 ? '' : 's'}
         </div>
 
         {results ? (
@@ -114,8 +114,8 @@ export default function BroadcastModal({ contacts, onClose }) {
         ) : (
           <>
             <label style={{ display: 'grid', gap: 6, marginBottom: 12 }}>
-              <span style={{ color: '#9c9ca3', fontSize: 12 }}>
-                Message · use <code style={{ fontFamily: "'JetBrains Mono', monospace", color: '#d4a333' }}>{'{{first_name}}'}</code> for personalization
+              <span style={{ color: '#6e6154', fontSize: 12 }}>
+                Message · use <code style={{ fontFamily: "'JetBrains Mono', monospace", color: '#8a5f0a' }}>{'{{first_name}}'}</code> for personalization
               </span>
               <textarea
                 value={body}
@@ -126,9 +126,9 @@ export default function BroadcastModal({ contacts, onClose }) {
                   width: '100%',
                   padding: '12px 12px',
                   borderRadius: 8,
-                  border: '1px solid #2a2a31',
-                  background: '#0a0a0b',
-                  color: '#f5f5f7',
+                  border: '1px solid #e8ddc8',
+                  background: '#faf5ea',
+                  color: '#17130f',
                   fontSize: 15,
                   lineHeight: 1.5,
                   resize: 'vertical',
@@ -143,20 +143,20 @@ export default function BroadcastModal({ contacts, onClose }) {
               <div
                 style={{
                   padding: '12px 14px',
-                  background: '#1a1a22',
-                  border: '1px dashed #2a2a31',
+                  background: '#f3ecdd',
+                  border: '1px dashed #e8ddc8',
                   borderRadius: 8,
                   marginBottom: 14,
                 }}
               >
-                <div style={{ color: '#9c9ca3', fontSize: 11, letterSpacing: '0.15em', textTransform: 'uppercase', fontWeight: 600, marginBottom: 6 }}>
+                <div style={{ color: '#6e6154', fontSize: 11, letterSpacing: '0.15em', textTransform: 'uppercase', fontWeight: 600, marginBottom: 6 }}>
                   Preview for {displayName(contacts[0])}
                 </div>
-                <div style={{ color: '#f5f5f7', fontSize: 14, whiteSpace: 'pre-wrap' }}>{preview}</div>
+                <div style={{ color: '#17130f', fontSize: 14, whiteSpace: 'pre-wrap' }}>{preview}</div>
               </div>
             )}
 
-            <label style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 10, color: '#c8c8cc', fontSize: 13 }}>
+            <label style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 10, color: '#3b322a', fontSize: 13 }}>
               <input
                 type="checkbox"
                 checked={alsoPush}
@@ -166,26 +166,26 @@ export default function BroadcastModal({ contacts, onClose }) {
             </label>
             {alsoPush && (
               <label style={{ display: 'grid', gap: 4, marginBottom: 12 }}>
-                <span style={{ color: '#9c9ca3', fontSize: 12 }}>Push title (line 1)</span>
+                <span style={{ color: '#6e6154', fontSize: 12 }}>Push title (line 1)</span>
                 <input
                   value={title}
                   onChange={e => setTitle(e.target.value)}
                   style={{
                     padding: '8px 10px',
                     borderRadius: 8,
-                    border: '1px solid #2a2a31',
-                    background: '#0a0a0b',
-                    color: '#f5f5f7',
+                    border: '1px solid #e8ddc8',
+                    background: '#faf5ea',
+                    color: '#17130f',
                     fontSize: 14,
                   }}
                 />
               </label>
             )}
 
-            <div style={{ color: '#6f6f76', fontSize: 12, marginBottom: 12 }}>
+            <div style={{ color: '#7d7060', fontSize: 12, marginBottom: 12 }}>
               Each recipient gets their own SMS. Sends are spaced ~130ms apart.
               {contacts.some(c => !c.phone) && (
-                <div style={{ color: '#e07a7a', marginTop: 4 }}>
+                <div style={{ color: '#b3311f', marginTop: 4 }}>
                   ⚠ {contacts.filter(c => !c.phone).length} selected recipient(s) have no phone number — they&apos;ll fail.
                 </div>
               )}
@@ -196,7 +196,7 @@ export default function BroadcastModal({ contacts, onClose }) {
                 onClick={onClose}
                 disabled={sending}
                 className="btn-subtle"
-                style={{ padding: '10px 18px', borderRadius: 8, border: '1px solid #2a2a31', background: 'transparent', color: '#c8c8cc', fontSize: 13, fontWeight: 600, cursor: 'pointer' }}
+                style={{ padding: '10px 18px', borderRadius: 8, border: '1px solid #e8ddc8', background: 'transparent', color: '#3b322a', fontSize: 13, fontWeight: 600, cursor: 'pointer' }}
               >
                 Cancel
               </button>
@@ -207,8 +207,8 @@ export default function BroadcastModal({ contacts, onClose }) {
                   padding: '10px 22px',
                   borderRadius: 8,
                   border: 0,
-                  background: valid ? 'linear-gradient(180deg, #f0c24a, #d4a333)' : '#2a2a31',
-                  color: valid ? '#0a0a0b' : '#6f6f76',
+                  background: valid ? 'linear-gradient(180deg, #f0c24a, #d4a333)' : '#e8ddc8',
+                  color: valid ? '#231903' : '#7d7060',
                   fontSize: 13,
                   fontWeight: 700,
                   letterSpacing: '0.05em',
@@ -239,10 +239,10 @@ function Results({ results, onClose }) {
           marginBottom: 14,
         }}
       >
-        <div style={{ color: '#f5f5f7', fontWeight: 700, fontSize: 16, marginBottom: 4 }}>
+        <div style={{ color: '#17130f', fontWeight: 700, fontSize: 16, marginBottom: 4 }}>
           {failed === 0 ? `Sent to ${sent}` : `Sent to ${sent}, ${failed} failed`}
         </div>
-        <div style={{ color: '#9c9ca3', fontSize: 13 }}>
+        <div style={{ color: '#6e6154', fontSize: 13 }}>
           {failed === 0 ? 'All recipients received their personalized SMS.' : 'Failures listed below.'}
         </div>
       </div>
@@ -254,15 +254,15 @@ function Results({ results, onClose }) {
               key={e.contactId}
               style={{
                 padding: '8px 12px',
-                borderBottom: '1px solid #1e1e23',
+                borderBottom: '1px solid #e8ddc8',
                 fontSize: 13,
                 display: 'flex',
                 justifyContent: 'space-between',
                 gap: 10,
               }}
             >
-              <span style={{ color: '#f5f5f7' }}>{e.name}</span>
-              <span style={{ color: '#e07a7a', fontFamily: "'JetBrains Mono', monospace", fontSize: 11 }}>
+              <span style={{ color: '#17130f' }}>{e.name}</span>
+              <span style={{ color: '#b3311f', fontFamily: "'JetBrains Mono', monospace", fontSize: 11 }}>
                 {e.error}
               </span>
             </div>
@@ -278,7 +278,7 @@ function Results({ results, onClose }) {
             borderRadius: 8,
             border: 0,
             background: 'linear-gradient(180deg, #f0c24a, #d4a333)',
-            color: '#0a0a0b',
+            color: '#231903',
             fontSize: 13,
             fontWeight: 700,
             letterSpacing: '0.05em',

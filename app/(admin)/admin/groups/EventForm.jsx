@@ -3,8 +3,9 @@
 import { useRef, useState } from 'react'
 
 const ACCENT = '#d4a333'
-const SURFACE = '#15151a'
-const BORDER = '#2a2a31'
+const ACCENT_TXT = '#8a5f0a'
+const SURFACE = '#fdfaf3'
+const BORDER = '#e8ddc8'
 
 const DEFAULT_TICKET_TYPES = [
   { name: 'Stop 1: Angry Ginger', stop_index: 0, price_cents: 2500 },
@@ -121,7 +122,7 @@ export default function EventForm({ mode = 'create', initialEvent = null, initia
         <Field label="Description (optional)" value={event.description || ''} onChange={v => patchEvent({ description: v })} placeholder="Sponsored by ..." />
         <Row>
           <Field label="Capacity (optional)" type="number" value={event.capacity || ''} onChange={v => patchEvent({ capacity: v })} placeholder="e.g. 30" />
-          <label style={{ display: 'grid', gap: 4, fontSize: 12, color: '#9c9ca3' }}>
+          <label style={{ display: 'grid', gap: 4, fontSize: 12, color: '#6e6154' }}>
             Status
             <select value={event.status} onChange={e => patchEvent({ status: e.target.value })} style={input}>
               <option value="on_sale">On sale</option>
@@ -138,7 +139,7 @@ export default function EventForm({ mode = 'create', initialEvent = null, initia
           {ticketTypes.map((t, idx) => (
             <div key={idx} style={{
               display: 'grid', gap: 8, padding: 10,
-              background: '#0e0e12', border: `1px solid ${BORDER}`, borderRadius: 10,
+              background: '#ffffff', border: `1px solid ${BORDER}`, borderRadius: 10,
             }}>
               <Row>
                 <Field label="Name" value={t.name} onChange={v => patchTT(idx, { name: v })} />
@@ -149,7 +150,7 @@ export default function EventForm({ mode = 'create', initialEvent = null, initia
                 <Field label="Capacity (opt.)" type="number" value={t.capacity || ''} onChange={v => patchTT(idx, { capacity: v })} />
               </Row>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                <label style={{ fontSize: 13, color: '#bbb', display: 'flex', alignItems: 'center', gap: 6 }}>
+                <label style={{ fontSize: 13, color: '#6e6154', display: 'flex', alignItems: 'center', gap: 6 }}>
                   <input type="checkbox" checked={t.active !== false} onChange={e => patchTT(idx, { active: e.target.checked })} />
                   Active
                 </label>
@@ -162,13 +163,13 @@ export default function EventForm({ mode = 'create', initialEvent = null, initia
       </Card>
 
       {error && (
-        <div style={{ padding: 10, background: '#3a1a1a', border: '1px solid #f87171', borderRadius: 8, color: '#f87171', fontSize: 13 }}>
+        <div style={{ padding: 10, background: '#fdeae6', border: '1px solid #d8543f', borderRadius: 8, color: '#b3311f', fontSize: 13 }}>
           {error}
         </div>
       )}
 
       <button type="submit" disabled={submitting || !event.name || !event.event_date} style={{
-        background: ACCENT, color: '#0a0a0b', border: 0, padding: '12px 20px',
+        background: ACCENT, color: '#231903', border: 0, padding: '12px 20px',
         borderRadius: 10, fontWeight: 700, fontSize: 15,
         opacity: submitting || !event.name || !event.event_date ? 0.5 : 1,
         cursor: submitting ? 'not-allowed' : 'pointer',
@@ -182,7 +183,7 @@ export default function EventForm({ mode = 'create', initialEvent = null, initia
 function Card({ title, children }) {
   return (
     <section style={{ background: SURFACE, border: `1px solid ${BORDER}`, borderRadius: 12, padding: 14, display: 'grid', gap: 10 }}>
-      <h2 style={{ fontSize: 13, color: ACCENT, margin: 0, letterSpacing: '0.08em', textTransform: 'uppercase' }}>{title}</h2>
+      <h2 style={{ fontSize: 13, color: ACCENT_TXT, margin: 0, letterSpacing: '0.08em', textTransform: 'uppercase' }}>{title}</h2>
       {children}
     </section>
   )
@@ -194,7 +195,7 @@ function Row({ children }) {
 
 function Field({ label, value, onChange, type = 'text', placeholder }) {
   return (
-    <label style={{ display: 'grid', gap: 4, fontSize: 12, color: '#9c9ca3' }}>
+    <label style={{ display: 'grid', gap: 4, fontSize: 12, color: '#6e6154' }}>
       {label}
       <input type={type} value={value} onChange={e => onChange(e.target.value)} placeholder={placeholder} style={input} />
     </label>
@@ -223,7 +224,7 @@ function PickerField({ label, type, value, onChange, placeholder, format }) {
   }
 
   return (
-    <label style={{ display: 'grid', gap: 4, fontSize: 12, color: '#9c9ca3' }}>
+    <label style={{ display: 'grid', gap: 4, fontSize: 12, color: '#6e6154' }}>
       {label}
       <button
         type="button"
@@ -232,7 +233,7 @@ function PickerField({ label, type, value, onChange, placeholder, format }) {
           ...input,
           textAlign: 'left',
           cursor: 'pointer',
-          color: empty ? '#6f6f76' : '#fff',
+          color: empty ? '#7d7060' : '#17130f',
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'space-between',
@@ -240,7 +241,7 @@ function PickerField({ label, type, value, onChange, placeholder, format }) {
         }}
       >
         <span>{display || placeholder}</span>
-        <span aria-hidden style={{ color: ACCENT, fontSize: 14 }}>
+        <span aria-hidden style={{ color: ACCENT_TXT, fontSize: 14 }}>
           {type === 'time' ? '⏱' : '📅'}
         </span>
       </button>
@@ -286,9 +287,9 @@ function formatTimeLabel(hhmm) {
 }
 
 const input = {
-  background: '#0a0a0b',
-  border: '1px solid #2a2a31',
-  color: '#fff',
+  background: '#faf5ea',
+  border: '1px solid #e8ddc8',
+  color: '#17130f',
   padding: '10px 12px',
   borderRadius: 8,
   fontSize: 14,
@@ -298,8 +299,8 @@ const input = {
 
 const btnGhost = {
   background: 'transparent',
-  border: '1px solid #2a2a31',
-  color: '#d4a333',
+  border: '1px solid #e8ddc8',
+  color: '#8a5f0a',
   padding: '8px 12px',
   borderRadius: 8,
   fontSize: 13,

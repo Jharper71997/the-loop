@@ -81,8 +81,8 @@ export default async function PassesPage() {
           columns={columns}
           rows={rows}
           rowKey={r => r.key}
-          empty={<div style={{ color: '#9c9ca3', fontSize: 13, padding: '20px 0' }}>
-            No Loop Passes sold yet. Riders subscribe at <span style={{ color: '#d4a333' }}>/pass</span>.
+          empty={<div style={{ color: '#6e6154', fontSize: 13, padding: '20px 0' }}>
+            No Loop Passes sold yet. Riders subscribe at <span style={{ color: '#8a5f0a' }}>/pass</span>.
           </div>}
         />
       </div>
@@ -92,15 +92,15 @@ export default async function PassesPage() {
 
 const mainStyle = {
   minHeight: '100vh',
-  background: '#0a0a0b',
-  color: '#e8e8ea',
+  background: '#faf5ea',
+  color: '#17130f',
   padding: '24px 16px calc(48px + env(safe-area-inset-bottom))',
   paddingLeft: 'max(16px, env(safe-area-inset-left))',
   paddingRight: 'max(16px, env(safe-area-inset-right))',
   fontFamily: 'inherit',
 }
 const backLink = {
-  color: '#9c9ca3', fontSize: 11, letterSpacing: '0.18em', textTransform: 'uppercase',
+  color: '#6e6154', fontSize: 11, letterSpacing: '0.18em', textTransform: 'uppercase',
   textDecoration: 'none', display: 'inline-block', marginBottom: 18,
 }
 const headerRow = {
@@ -108,6 +108,6 @@ const headerRow = {
   gap: 12, flexWrap: 'wrap', marginBottom: 18,
 }
 const h1Style = {
-  color: '#e8e8ea', fontFamily: '-apple-system, "Segoe UI", Roboto, sans-serif',
+  color: '#17130f', fontFamily: '-apple-system, "Segoe UI", Roboto, sans-serif',
   fontSize: 24, fontWeight: 700, letterSpacing: '-0.01em', margin: 0,
 }

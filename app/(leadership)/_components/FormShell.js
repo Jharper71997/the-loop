@@ -7,15 +7,15 @@ export default function FormShell({ title, subtitle, backTo, children }) {
   return (
     <main style={{
       minHeight: '100vh',
-      background: '#0a0a0b',
-      color: '#e8e8ea',
+      background: '#faf5ea',
+      color: '#17130f',
       padding: '24px 16px 48px',
       fontFamily: FONT_BODY,
     }}>
       <div style={{ maxWidth: 560, margin: '0 auto' }}>
         {backTo && (
           <a href={backTo} style={{
-            color: '#9c9ca3',
+            color: '#6e6154',
             fontSize: 13,
             fontWeight: 500,
             textDecoration: 'none',
@@ -26,7 +26,7 @@ export default function FormShell({ title, subtitle, backTo, children }) {
           </a>
         )}
         <h1 style={{
-          color: '#e8e8ea',
+          color: '#17130f',
           fontFamily: FONT_BODY,
           fontSize: 24,
           fontWeight: 700,
@@ -37,7 +37,7 @@ export default function FormShell({ title, subtitle, backTo, children }) {
         </h1>
         {subtitle && (
           <p style={{
-            color: '#9c9ca3',
+            color: '#6e6154',
             fontSize: 13,
             margin: '0 0 22px 0',
           }}>
@@ -45,8 +45,8 @@ export default function FormShell({ title, subtitle, backTo, children }) {
           </p>
         )}
         <div style={{
-          background: '#121216',
-          border: '1px solid #2a2a31',
+          background: '#ffffff',
+          border: '1px solid #e8ddc8',
           borderRadius: 8,
           padding: '20px 22px',
         }}>
@@ -61,14 +61,14 @@ export function Field({ label, name, type = 'text', placeholder, defaultValue, r
   return (
     <label style={{ display: 'block', marginBottom: 14 }}>
       <div style={{
-        color: '#9c9ca3',
+        color: '#6e6154',
         fontSize: 11,
         fontWeight: 600,
         letterSpacing: '0.04em',
         textTransform: 'uppercase',
         marginBottom: 6,
       }}>
-        {label} {required && <span style={{ color: '#d4a333' }}>*</span>}
+        {label} {required && <span style={{ color: '#8a5f0a' }}>*</span>}
       </div>
       <input
         type={type}
@@ -81,9 +81,9 @@ export function Field({ label, name, type = 'text', placeholder, defaultValue, r
         max={max}
         autoFocus={autoFocus}
         style={{
-          background: '#0d0d10',
-          border: '1px solid #2a2a31',
-          color: '#e8e8ea',
+          background: '#ffffff',
+          border: '1px solid #e8ddc8',
+          color: '#17130f',
           fontFamily: type === 'number' ? FONT_NUM : FONT_BODY,
           fontSize: 14,
           padding: '10px 12px',
@@ -95,7 +95,7 @@ export function Field({ label, name, type = 'text', placeholder, defaultValue, r
       />
       {hint && (
         <div style={{
-          color: '#6f6f76',
+          color: '#7d7060',
           fontSize: 11,
           marginTop: 4,
         }}>
@@ -110,23 +110,23 @@ export function Select({ label, name, options, defaultValue, required = false, h
   return (
     <label style={{ display: 'block', marginBottom: 14 }}>
       <div style={{
-        color: '#9c9ca3',
+        color: '#6e6154',
         fontSize: 11,
         fontWeight: 600,
         letterSpacing: '0.04em',
         textTransform: 'uppercase',
         marginBottom: 6,
       }}>
-        {label} {required && <span style={{ color: '#d4a333' }}>*</span>}
+        {label} {required && <span style={{ color: '#8a5f0a' }}>*</span>}
       </div>
       <select
         name={name}
         defaultValue={defaultValue}
         required={required}
         style={{
-          background: '#0d0d10',
-          border: '1px solid #2a2a31',
-          color: '#e8e8ea',
+          background: '#ffffff',
+          border: '1px solid #e8ddc8',
+          color: '#17130f',
           fontFamily: FONT_BODY,
           fontSize: 14,
           padding: '10px 12px',
@@ -140,7 +140,7 @@ export function Select({ label, name, options, defaultValue, required = false, h
         ))}
       </select>
       {hint && (
-        <div style={{ color: '#6f6f76', fontSize: 11, marginTop: 4 }}>
+        <div style={{ color: '#7d7060', fontSize: 11, marginTop: 4 }}>
           {hint}
         </div>
       )}
@@ -152,7 +152,7 @@ export function Textarea({ label, name, placeholder, defaultValue, required = fa
   return (
     <label style={{ display: 'block', marginBottom: 14 }}>
       <div style={{
-        color: '#9c9ca3',
+        color: '#6e6154',
         fontSize: 11,
         fontWeight: 600,
         letterSpacing: '0.04em',
@@ -168,9 +168,9 @@ export function Textarea({ label, name, placeholder, defaultValue, required = fa
         required={required}
         rows={rows}
         style={{
-          background: '#0d0d10',
-          border: '1px solid #2a2a31',
-          color: '#e8e8ea',
+          background: '#ffffff',
+          border: '1px solid #e8ddc8',
+          color: '#17130f',
           fontFamily: FONT_BODY,
           fontSize: 14,
           padding: '10px 12px',
@@ -188,7 +188,7 @@ export function SubmitButton({ children = 'Save' }) {
   return (
     <button type="submit" style={{
       background: '#d4a333',
-      color: '#0a0a0b',
+      color: '#231903',
       border: 'none',
       fontFamily: FONT_BODY,
       fontSize: 14,

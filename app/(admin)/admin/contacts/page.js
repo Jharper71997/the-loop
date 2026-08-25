@@ -242,15 +242,15 @@ export default function Contacts() {
         onChange={e => setSearch(e.target.value)}
       />
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', margin: '4px 0 16px', gap: 12 }}>
-        <span style={{ color: '#888', fontSize: '13px' }}>
+        <span style={{ color: '#6e6154', fontSize: '13px' }}>
           {enriched.length} contact{enriched.length === 1 ? '' : 's'}
-          {checkedCount > 0 && <span style={{ color: '#f0c24a' }}> · {checkedCount} selected</span>}
+          {checkedCount > 0 && <span style={{ color: '#8a5f0a' }}> · {checkedCount} selected</span>}
         </span>
         {enriched.length > 0 && (
           <button
             onClick={toggleAllVisible}
             style={{
-              background: 'none', color: '#9c9ca3', border: '1px solid #2a2a31',
+              background: 'none', color: '#6e6154', border: '1px solid #e8ddc8',
               padding: '4px 10px', borderRadius: 6, fontSize: 11,
               letterSpacing: '0.08em', textTransform: 'uppercase', cursor: 'pointer',
             }}
@@ -260,7 +260,7 @@ export default function Contacts() {
         )}
       </div>
 
-      <div style={{ background: '#121215', borderRadius: '12px', border: '1px solid #1e1e23', overflow: 'hidden' }}>
+      <div style={{ background: '#ffffff', borderRadius: '12px', border: '1px solid #e8ddc8', overflow: 'hidden' }}>
         {enriched.map((c, idx) => {
           const rides = c.past.length
           const hasUpcoming = c.upcoming.length > 0
@@ -271,7 +271,7 @@ export default function Contacts() {
               onClick={() => setSelected(c)}
               style={{
                 padding: '12px 14px',
-                borderTop: idx === 0 ? 'none' : '1px solid #1a1a1f',
+                borderTop: idx === 0 ? 'none' : '1px solid #f3ecdd',
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'space-between',
@@ -292,13 +292,13 @@ export default function Contacts() {
                 />
               </label>
               <div style={{ minWidth: 0, flex: 1 }}>
-                <p style={{ fontSize: '14px', fontWeight: 500, color: '#e8e8ea' }}>
+                <p style={{ fontSize: '14px', fontWeight: 500, color: '#17130f' }}>
                   {c.first_name} {c.last_name}
                 </p>
-                <p style={{ fontSize: '12px', color: '#6f6f76', marginTop: '2px' }}>
+                <p style={{ fontSize: '12px', color: '#7d7060', marginTop: '2px' }}>
                   {c.phone}
                   {c.past[0]?.event_date && (
-                    <span style={{ color: '#55555c' }}> · last {formatEventDate(c.past[0].event_date)}</span>
+                    <span style={{ color: '#7d7060' }}> · last {formatEventDate(c.past[0].event_date)}</span>
                   )}
                 </p>
               </div>
@@ -315,7 +315,7 @@ export default function Contacts() {
       </div>
 
       {enriched.length === 0 && (
-        <p style={{ color: '#aaa', textAlign: 'center', marginTop: '40px' }}>
+        <p style={{ color: '#6e6154', textAlign: 'center', marginTop: '40px' }}>
           {search ? 'No contacts match that search.' : 'No contacts yet.'}
         </p>
       )}

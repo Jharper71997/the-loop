@@ -3,11 +3,12 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 
 const GOLD = '#d4a333'
+const GOLD_TXT = '#8a5f0a'
 const GOLD_HI = '#f0c24a'
-const INK = '#f5f5f7'
-const INK_DIM = '#b8b8bf'
-const SURFACE = '#15151a'
-const LINE = 'rgba(255,255,255,0.08)'
+const INK = '#17130f'
+const INK_DIM = '#3b322a'
+const SURFACE = '#fdfaf3'
+const LINE = 'rgba(23,19,15,0.08)'
 
 // Security's side: a list of tonight's rider threads, tap to open and reply.
 // Near-live via polling (threads 6s, open thread 4s).
@@ -83,7 +84,7 @@ export default function SecurityMessages({ onUnreadChange }) {
       <div style={{ background: SURFACE, border: `1px solid ${LINE}`, borderRadius: 14, overflow: 'hidden' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '12px 14px', borderBottom: `1px solid ${LINE}` }}>
           <button type="button" onClick={() => { setActive(null); setMessages([]); loadThreads() }}
-            style={{ background: 'none', border: 0, color: GOLD, fontSize: 14, cursor: 'pointer', fontWeight: 600 }}>
+            style={{ background: 'none', border: 0, color: GOLD_TXT, fontSize: 14, cursor: 'pointer', fontWeight: 600 }}>
             ← Back
           </button>
           <div style={{ color: INK, fontWeight: 700, fontSize: 15 }}>{active.name || 'Rider'}</div>
@@ -102,10 +103,10 @@ export default function SecurityMessages({ onUnreadChange }) {
             onChange={e => setInput(e.target.value)}
             onKeyDown={e => { if (e.key === 'Enter') send() }}
             placeholder="Reply…"
-            style={{ flex: 1, background: '#0a0a0b', border: `1px solid ${LINE}`, color: INK, padding: '10px 12px', borderRadius: 10, fontSize: 14, outline: 'none' }}
+            style={{ flex: 1, background: '#faf5ea', border: `1px solid ${LINE}`, color: INK, padding: '10px 12px', borderRadius: 10, fontSize: 14, outline: 'none' }}
           />
           <button type="button" onClick={send} disabled={sending || !input.trim()}
-            style={{ background: `linear-gradient(180deg, ${GOLD_HI}, ${GOLD})`, color: '#0a0a0b', border: 0, padding: '0 16px', borderRadius: 10, fontWeight: 700, fontSize: 14, cursor: sending || !input.trim() ? 'default' : 'pointer', opacity: !input.trim() ? 0.5 : 1 }}>
+            style={{ background: `linear-gradient(180deg, ${GOLD_HI}, ${GOLD})`, color: '#231903', border: 0, padding: '0 16px', borderRadius: 10, fontWeight: 700, fontSize: 14, cursor: sending || !input.trim() ? 'default' : 'pointer', opacity: !input.trim() ? 0.5 : 1 }}>
             Send
           </button>
         </div>
@@ -139,7 +140,7 @@ export default function SecurityMessages({ onUnreadChange }) {
             </div>
           </div>
           {t.unread > 0 && (
-            <span style={{ background: GOLD, color: '#0a0a0b', fontWeight: 800, fontSize: 12, borderRadius: 999, minWidth: 22, height: 22, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', padding: '0 6px' }}>
+            <span style={{ background: GOLD, color: '#231903', fontWeight: 800, fontSize: 12, borderRadius: 999, minWidth: 22, height: 22, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', padding: '0 6px' }}>
               {t.unread}
             </span>
           )}
@@ -155,13 +156,13 @@ function Bubble({ mine, body, at, who }) {
       <div style={{ maxWidth: '80%' }}>
         <div style={{
           padding: '8px 12px', borderRadius: 12,
-          background: mine ? 'rgba(212,163,51,0.16)' : 'rgba(255,255,255,0.06)',
+          background: mine ? 'rgba(212,163,51,0.16)' : 'rgba(23,19,15,0.06)',
           border: `1px solid ${mine ? 'rgba(212,163,51,0.35)' : LINE}`,
           color: INK, fontSize: 14, lineHeight: 1.35, whiteSpace: 'pre-wrap', wordBreak: 'break-word',
         }}>
           {body}
         </div>
-        <div style={{ color: '#6f6f76', fontSize: 10, marginTop: 2, textAlign: mine ? 'right' : 'left' }}>
+        <div style={{ color: '#7d7060', fontSize: 10, marginTop: 2, textAlign: mine ? 'right' : 'left' }}>
           {who} · {fmt(at)}
         </div>
       </div>

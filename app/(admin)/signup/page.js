@@ -10,10 +10,10 @@ import Link from 'next/link'
 export default function Signup() {
   return (
     <main style={{ maxWidth: '400px', margin: '80px auto', padding: '0 16px' }}>
-      <h1 style={{ textAlign: 'center', marginBottom: '32px', color: '#d4a333' }}>The Loop</h1>
+      <h1 style={{ textAlign: 'center', marginBottom: '32px', color: '#8a5f0a' }}>The Loop</h1>
       <div className="card">
         <h3 style={{ marginBottom: '12px' }}>Staff access only</h3>
-        <p style={{ fontSize: 14, lineHeight: 1.5, marginBottom: 16, color: '#c8c8cc' }}>
+        <p style={{ fontSize: 14, lineHeight: 1.5, marginBottom: 16, color: '#3b322a' }}>
           Accounts for the ops console are set up by Jacob. If you're a driver or
           door staff and need access, ask Jacob to add your email, then sign in.
         </p>

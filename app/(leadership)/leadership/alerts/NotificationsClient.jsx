@@ -4,8 +4,8 @@ import { useMemo, useState } from 'react'
 import { supabase } from '@/lib/supabase'
 
 const KIND_COLORS = {
-  webhook_error: '#f87171',
-  finalize_failed: '#f87171',
+  webhook_error: '#d8543f',
+  finalize_failed: '#d8543f',
   sms_failed: '#f0c24a',
   email_failed: '#f0c24a',
   push_failed: '#f0c24a',
@@ -52,7 +52,7 @@ export default function NotificationsClient({ initial }) {
             <div style={{ display: 'flex', justifyContent: 'space-between', gap: 10, alignItems: 'flex-start' }}>
               <div style={{ minWidth: 0 }}>
                 <div style={{
-                  color: KIND_COLORS[r.kind] || '#d4a333',
+                  color: KIND_COLORS[r.kind] || '#8a5f0a',
                   fontSize: 11,
                   letterSpacing: '0.08em',
                   textTransform: 'uppercase',
@@ -61,17 +61,17 @@ export default function NotificationsClient({ initial }) {
                 }}>
                   {r.kind} · {r.severity} · {formatTime(r.created_at)}
                 </div>
-                <p style={{ margin: 0, color: '#e8e8ea', fontSize: 14, fontWeight: 600 }}>
+                <p style={{ margin: 0, color: '#17130f', fontSize: 14, fontWeight: 600 }}>
                   {r.subject || '(no subject)'}
                 </p>
                 {r.body && (
                   <pre style={{
                     margin: '8px 0 0',
                     padding: 10,
-                    background: '#0e0e12',
-                    border: '1px solid #1e1e23',
+                    background: '#ffffff',
+                    border: '1px solid #e8ddc8',
                     borderRadius: 6,
-                    color: '#bbb',
+                    color: '#6e6154',
                     fontSize: 12,
                     whiteSpace: 'pre-wrap',
                     fontFamily: 'ui-monospace, monospace',
@@ -79,7 +79,7 @@ export default function NotificationsClient({ initial }) {
                   }}>{r.body}</pre>
                 )}
                 {r.context && (
-                  <details style={{ marginTop: 8, color: '#8a8a90', fontSize: 11 }}>
+                  <details style={{ marginTop: 8, color: '#6e6154', fontSize: 11 }}>
                     <summary style={{ cursor: 'pointer' }}>Context</summary>
                     <pre style={{ margin: '6px 0 0', fontFamily: 'ui-monospace, monospace', whiteSpace: 'pre-wrap' }}>
                       {JSON.stringify(r.context, null, 2)}
@@ -92,15 +92,15 @@ export default function NotificationsClient({ initial }) {
                   <span className="chip" style={{ fontSize: 10 }}>Emailed</span>
                 )}
                 {r.resolved_at ? (
-                  <span className="chip" style={{ fontSize: 10, color: '#6fbf7f', borderColor: '#6fbf7f' }}>Resolved</span>
+                  <span className="chip" style={{ fontSize: 10, color: '#0f7a4e', borderColor: '#2fa36b' }}>Resolved</span>
                 ) : (
                   <button
                     type="button"
                     onClick={() => markResolved(r.id)}
                     style={{
-                      background: '#1c1c22',
-                      color: '#d4a333',
-                      border: '1px solid #2a2a2f',
+                      background: '#f3ecdd',
+                      color: '#8a5f0a',
+                      border: '1px solid #e8ddc8',
                       padding: '6px 10px',
                       borderRadius: 6,
                       fontSize: 11,
@@ -127,8 +127,8 @@ function FilterButton({ active, onClick, children }) {
       onClick={onClick}
       style={{
         background: active ? '#d4a333' : 'transparent',
-        color: active ? '#0a0a0b' : '#c8c8cc',
-        border: '1px solid #2a2a31',
+        color: active ? '#231903' : '#3b322a',
+        border: '1px solid #e8ddc8',
         padding: '5px 10px',
         borderRadius: 6,
         fontSize: 11,

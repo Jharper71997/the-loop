@@ -155,7 +155,7 @@ export default async function MerchOrdersPage() {
           <h1 style={h1Style}>Merch orders</h1>
         </div>
 
-        <p style={{ color: '#9c9ca3', fontSize: 13, lineHeight: 1.5, margin: '0 0 18px', maxWidth: 640 }}>
+        <p style={{ color: '#6e6154', fontSize: 13, lineHeight: 1.5, margin: '0 0 18px', maxWidth: 640 }}>
           Paid orders waiting on us. Ship the mail ones, carry the shuttle ones out on Friday,
           then mark them done so they stop showing up here.
         </p>
@@ -181,7 +181,7 @@ export default async function MerchOrdersPage() {
                   <div style={cardTop}>
                     <div>
                       <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
-                        <span style={{ color: '#e8e8ea', fontSize: 16, fontWeight: 700 }}>
+                        <span style={{ color: '#17130f', fontSize: 16, fontWeight: 700 }}>
                           {o.buyer_name || o.buyer_email || '(unknown buyer)'}
                         </span>
                         <StatusBadge
@@ -189,13 +189,13 @@ export default async function MerchOrdersPage() {
                           tone={shuttle ? 'gold' : 'blue'}
                         />
                       </div>
-                      <div style={{ color: '#6b6b72', fontSize: 12, marginTop: 4 }}>
+                      <div style={{ color: '#7d7060', fontSize: 12, marginTop: 4 }}>
                         Paid {fmtDate(o.paid_at)}
                         {o.buyer_email ? ` · ${o.buyer_email}` : ''}
                         {o.buyer_phone ? ` · ${o.buyer_phone}` : ''}
                       </div>
                     </div>
-                    <div style={{ color: '#e8e8ea', fontSize: 17, fontWeight: 700, whiteSpace: 'nowrap' }}>
+                    <div style={{ color: '#17130f', fontSize: 17, fontWeight: 700, whiteSpace: 'nowrap' }}>
                       {money(o.total_cents ?? o.subtotal_cents)}
                     </div>
                   </div>
@@ -204,9 +204,9 @@ export default async function MerchOrdersPage() {
                     <div>
                       <div style={cardLabel}>Pack</div>
                       {(o.merch_order_items || []).map((i, n) => (
-                        <div key={n} style={{ color: '#e8e8ea', fontSize: 14.5, padding: '3px 0' }}>
+                        <div key={n} style={{ color: '#17130f', fontSize: 14.5, padding: '3px 0' }}>
                           {i.name}
-                          {i.quantity > 1 && <span style={{ color: '#9c9ca3' }}> × {i.quantity}</span>}
+                          {i.quantity > 1 && <span style={{ color: '#6e6154' }}> × {i.quantity}</span>}
                         </div>
                       ))}
                     </div>
@@ -214,15 +214,15 @@ export default async function MerchOrdersPage() {
                     <div>
                       <div style={cardLabel}>{shuttle ? 'Handover' : 'Ship to'}</div>
                       {shuttle ? (
-                        <div style={{ color: '#e8e8ea', fontSize: 14, lineHeight: 1.55 }}>
+                        <div style={{ color: '#17130f', fontSize: 14, lineHeight: 1.55 }}>
                           Riding with us. Put it on the bus with their name on it.
                         </div>
                       ) : lines.length ? (
-                        <div style={{ color: '#e8e8ea', fontSize: 14, lineHeight: 1.55 }}>
+                        <div style={{ color: '#17130f', fontSize: 14, lineHeight: 1.55 }}>
                           {lines.map((l, n) => <div key={n}>{l}</div>)}
                         </div>
                       ) : (
-                        <div style={{ color: '#c44a3a', fontSize: 13.5, lineHeight: 1.55 }}>
+                        <div style={{ color: '#b3311f', fontSize: 13.5, lineHeight: 1.55 }}>
                           No address on this order. Email them before shipping anything.
                         </div>
                       )}
@@ -248,7 +248,7 @@ export default async function MerchOrdersPage() {
           columns={columns}
           rows={rows}
           rowKey={r => r.key}
-          empty={<div style={{ color: '#9c9ca3', fontSize: 13, padding: '20px 0' }}>
+          empty={<div style={{ color: '#6e6154', fontSize: 13, padding: '20px 0' }}>
             No completed merch orders yet.
           </div>}
         />
@@ -259,15 +259,15 @@ export default async function MerchOrdersPage() {
 
 const mainStyle = {
   minHeight: '100vh',
-  background: '#0a0a0b',
-  color: '#e8e8ea',
+  background: '#faf5ea',
+  color: '#17130f',
   padding: '24px 16px calc(48px + env(safe-area-inset-bottom))',
   paddingLeft: 'max(16px, env(safe-area-inset-left))',
   paddingRight: 'max(16px, env(safe-area-inset-right))',
   fontFamily: 'inherit',
 }
 const backLink = {
-  color: '#9c9ca3', fontSize: 11, letterSpacing: '0.18em', textTransform: 'uppercase',
+  color: '#6e6154', fontSize: 11, letterSpacing: '0.18em', textTransform: 'uppercase',
   textDecoration: 'none', display: 'inline-block', marginBottom: 18,
 }
 const headerRow = {
@@ -275,49 +275,49 @@ const headerRow = {
   gap: 12, flexWrap: 'wrap', marginBottom: 8,
 }
 const h1Style = {
-  color: '#e8e8ea', fontFamily: '-apple-system, "Segoe UI", Roboto, sans-serif',
+  color: '#17130f', fontFamily: '-apple-system, "Segoe UI", Roboto, sans-serif',
   fontSize: 24, fontWeight: 700, letterSpacing: '-0.01em', margin: 0,
 }
 const h2Style = {
-  color: '#9c9ca3', fontSize: 11, letterSpacing: '0.18em', textTransform: 'uppercase',
+  color: '#6e6154', fontSize: 11, letterSpacing: '0.18em', textTransform: 'uppercase',
   fontWeight: 700, margin: '0 0 12px',
 }
 const card = {
-  background: 'linear-gradient(180deg, #121216, #0d0d10)',
-  border: '1px solid #2a2a31', borderRadius: 12, padding: '16px 18px',
+  background: 'linear-gradient(180deg, #ffffff, #fdfaf3)',
+  border: '1px solid #e8ddc8', borderRadius: 12, padding: '16px 18px',
 }
 const cardTop = {
   display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start',
-  gap: 12, paddingBottom: 14, borderBottom: '1px solid #2a2a31',
+  gap: 12, paddingBottom: 14, borderBottom: '1px solid #e8ddc8',
 }
 const cardCols = {
   display: 'grid', gap: 18, gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))',
   padding: '14px 0',
 }
 const cardLabel = {
-  color: '#6b6b72', fontSize: 10, letterSpacing: '0.18em', textTransform: 'uppercase',
+  color: '#7d7060', fontSize: 10, letterSpacing: '0.18em', textTransform: 'uppercase',
   fontWeight: 700, marginBottom: 6,
 }
 const fulfillRow = {
   display: 'flex', gap: 8, flexWrap: 'wrap', alignItems: 'center',
-  paddingTop: 14, borderTop: '1px solid #2a2a31',
+  paddingTop: 14, borderTop: '1px solid #e8ddc8',
 }
 const trackingInput = {
-  flex: '1 1 200px', minWidth: 0, background: '#0a0a0b', color: '#e8e8ea',
-  border: '1px solid #2a2a31', borderRadius: 8, padding: '10px 12px',
+  flex: '1 1 200px', minWidth: 0, background: '#faf5ea', color: '#17130f',
+  border: '1px solid #e8ddc8', borderRadius: 8, padding: '10px 12px',
   fontSize: 14, fontFamily: 'inherit',
 }
 const fulfillBtn = {
-  background: '#d4a333', color: '#0a0a0b', border: 'none', borderRadius: 8,
+  background: '#d4a333', color: '#231903', border: 'none', borderRadius: 8,
   padding: '10px 18px', fontSize: 14, fontWeight: 700, cursor: 'pointer',
   fontFamily: 'inherit',
 }
 const undoBtn = {
-  background: 'transparent', color: '#6b6b72', border: '1px solid #2a2a31',
+  background: 'transparent', color: '#7d7060', border: '1px solid #e8ddc8',
   borderRadius: 6, padding: '4px 10px', fontSize: 11, cursor: 'pointer',
   fontFamily: 'inherit',
 }
 const emptyQueue = {
-  border: '1px dashed #2a2a31', borderRadius: 12, padding: '26px 18px',
-  color: '#6b6b72', fontSize: 14, textAlign: 'center', marginBottom: 34,
+  border: '1px dashed #e8ddc8', borderRadius: 12, padding: '26px 18px',
+  color: '#7d7060', fontSize: 14, textAlign: 'center', marginBottom: 34,
 }

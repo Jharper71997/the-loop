@@ -4,6 +4,7 @@ import { useState } from 'react'
 import { personalize } from '@/lib/personalize'
 
 const ACCENT = '#d4a333'
+const ACCENT_TXT = '#8a5f0a'
 
 // Per-rider 1:1 text composer.
 //
@@ -19,8 +20,8 @@ export default function SmsButton({ contact, label = 'Text' }) {
   if (!contact?.phone) {
     return (
       <span title="No phone on file" style={{
-        fontSize: 11, color: '#6f6f76', padding: '2px 8px',
-        border: '1px solid #2a2a31', borderRadius: 999,
+        fontSize: 11, color: '#7d7060', padding: '2px 8px',
+        border: '1px solid #e8ddc8', borderRadius: 999,
       }}>
         no phone
       </span>
@@ -53,7 +54,7 @@ export default function SmsButton({ contact, label = 'Text' }) {
   if (!open) {
     return (
       <button onClick={() => setOpen(true)} style={{
-        fontSize: 11, color: ACCENT, background: 'transparent',
+        fontSize: 11, color: ACCENT_TXT, background: 'transparent',
         border: `1px solid ${ACCENT}`, padding: '2px 10px',
         borderRadius: 999, cursor: 'pointer',
       }}>
@@ -65,31 +66,31 @@ export default function SmsButton({ contact, label = 'Text' }) {
   return (
     <div onClick={e => e.stopPropagation()} style={{
       display: 'grid', gap: 6, padding: 8,
-      background: '#0a0a0b', border: `1px solid ${ACCENT}`, borderRadius: 8,
+      background: '#faf5ea', border: `1px solid ${ACCENT}`, borderRadius: 8,
       minWidth: 240,
     }}>
-      <div style={{ fontSize: 11, color: '#9c9ca3' }}>To {contact.first_name} ({contact.phone})</div>
+      <div style={{ fontSize: 11, color: '#6e6154' }}>To {contact.first_name} ({contact.phone})</div>
       <textarea
         value={message}
         onChange={e => setMessage(e.target.value)}
         placeholder="Hey {first_name}…"
         rows={2}
         style={{
-          background: '#15151a', border: '1px solid #2a2a31', color: '#fff',
+          background: '#fdfaf3', border: '1px solid #e8ddc8', color: '#17130f',
           padding: '6px 8px', borderRadius: 6, fontSize: 12, fontFamily: 'inherit', resize: 'vertical',
         }}
       />
       <div style={{ display: 'flex', gap: 6, justifyContent: 'space-between', alignItems: 'center' }}>
         <button onClick={() => { setOpen(false); setMessage(''); setResult(null) }} style={{
-          fontSize: 11, color: '#9c9ca3', background: 'transparent', border: 0, cursor: 'pointer',
+          fontSize: 11, color: '#6e6154', background: 'transparent', border: 0, cursor: 'pointer',
         }}>Cancel</button>
         {result && (
-          <span style={{ fontSize: 11, color: result === 'sent' ? '#10b981' : '#f87171' }}>
+          <span style={{ fontSize: 11, color: result === 'sent' ? '#0f7a4e' : '#b3311f' }}>
             {result === 'sent' ? '✓ Sent' : result}
           </span>
         )}
         <button onClick={send} disabled={sending || !message.trim()} style={{
-          fontSize: 11, color: '#0a0a0b', background: ACCENT, border: 0,
+          fontSize: 11, color: '#231903', background: ACCENT, border: 0,
           padding: '4px 10px', borderRadius: 6, fontWeight: 700,
           opacity: sending || !message.trim() ? 0.4 : 1, cursor: sending ? 'wait' : 'pointer',
         }}>

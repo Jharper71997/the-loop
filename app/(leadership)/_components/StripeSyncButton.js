@@ -45,7 +45,7 @@ export default function StripeSyncButton() {
         disabled={busy}
         style={{
           background: 'transparent',
-          color: '#8b85ff',
+          color: '#4b3fd1',
           border: '1px solid rgba(99,91,255,0.45)',
           fontFamily: '-apple-system, "Segoe UI", Roboto, sans-serif',
           fontSize: 13,
@@ -61,7 +61,7 @@ export default function StripeSyncButton() {
       {msg && (
         <span style={{
           fontSize: 12,
-          color: msg.kind === 'ok' ? '#3fb27f' : '#c44a3a',
+          color: msg.kind === 'ok' ? '#0f7a4e' : '#b3311f',
         }}>
           {msg.text}
         </span>

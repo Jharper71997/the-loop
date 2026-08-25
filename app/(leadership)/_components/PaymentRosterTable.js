@@ -25,7 +25,7 @@ export default function PaymentRosterTable({ entityLabel, rows, empty }) {
       render: r => (
         <div>
           <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
-            <Link href={r.href} style={{ fontWeight: 600, color: '#e8e8ea', textDecoration: 'none' }}>{r.name}</Link>
+            <Link href={r.href} style={{ fontWeight: 600, color: '#17130f', textDecoration: 'none' }}>{r.name}</Link>
             {r.paidMethodLabel && (
               <StatusBadge label={`✓ ${r.paidMethodLabel}`} tone="green" bordered title={`Paid this month via ${r.paidMethodLabel}`} />
             )}
@@ -33,7 +33,7 @@ export default function PaymentRosterTable({ entityLabel, rows, empty }) {
               <StatusBadge label="Stripe sub" tone="purple" bordered title="Active Stripe subscription · auto-charges on anniversary" />
             )}
           </div>
-          {r.subtitle && <div style={{ fontSize: 11, color: '#9c9ca3', marginTop: 2 }}>{r.subtitle}</div>}
+          {r.subtitle && <div style={{ fontSize: 11, color: '#6e6154', marginTop: 2 }}>{r.subtitle}</div>}
         </div>
       ),
     },
@@ -52,17 +52,17 @@ export default function PaymentRosterTable({ entityLabel, rows, empty }) {
     {
       key: 'lastPayment', header: 'Last Payment',
       render: r => r.lastPayment ? (
-        <span style={{ color: '#9c9ca3' }}>
+        <span style={{ color: '#6e6154' }}>
           {formatCents(r.lastPayment.amount_cents)} · {new Date(r.lastPayment.paid_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
         </span>
-      ) : <span style={{ color: '#9c9ca3' }}>—</span>,
+      ) : <span style={{ color: '#6e6154' }}>—</span>,
     },
     {
       key: 'actions', header: 'Actions', align: 'right',
       render: r => (
         <div style={{ display: 'inline-flex', gap: 6, alignItems: 'center' }}>
           {r.markPaidAction && <MarkPaidButton action={r.markPaidAction} />}
-          <Link href={r.newPaymentHref} style={{ color: '#d4a333', fontSize: 11, fontWeight: 600, textDecoration: 'none' }}>+ Payment</Link>
+          <Link href={r.newPaymentHref} style={{ color: '#8a5f0a', fontSize: 11, fontWeight: 600, textDecoration: 'none' }}>+ Payment</Link>
         </div>
       ),
     },
@@ -73,13 +73,13 @@ export default function PaymentRosterTable({ entityLabel, rows, empty }) {
 
 function ThisMonthCell({ paid, owed, active, fee }) {
   if (!active || !fee) {
-    return <span style={{ color: '#6f6f76', fontSize: 11 }}>—</span>
+    return <span style={{ color: '#7d7060', fontSize: 11 }}>—</span>
   }
   if (owed === 0 && paid > 0) {
-    return <span style={{ color: '#3fb27f', fontSize: 11, letterSpacing: '0.04em' }}>✓ Paid {formatCents(paid)}</span>
+    return <span style={{ color: '#0f7a4e', fontSize: 11, letterSpacing: '0.04em' }}>✓ Paid {formatCents(paid)}</span>
   }
   if (owed > 0 && paid > 0) {
-    return <span style={{ color: '#d4a333', fontSize: 11, letterSpacing: '0.04em' }}>Partial · {formatCents(paid)} of {formatCents(fee)}</span>
+    return <span style={{ color: '#8a5f0a', fontSize: 11, letterSpacing: '0.04em' }}>Partial · {formatCents(paid)} of {formatCents(fee)}</span>
   }
-  return <span style={{ color: '#c44a3a', fontSize: 11, letterSpacing: '0.04em' }}>Owes {formatCents(owed)}</span>
+  return <span style={{ color: '#b3311f', fontSize: 11, letterSpacing: '0.04em' }}>Owes {formatCents(owed)}</span>
 }

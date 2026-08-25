@@ -9,8 +9,8 @@ export const dynamic = 'force-dynamic'
 const FONT_BODY = '-apple-system, "Segoe UI", Roboto, sans-serif'
 
 const ROLE_STYLE = {
-  driver:   { bg: 'rgba(212,163,51,0.15)', fg: '#d4a333', border: 'rgba(212,163,51,0.35)' },
-  security: { bg: 'rgba(122,162,255,0.15)', fg: '#7aa2ff', border: 'rgba(122,162,255,0.35)' },
+  driver:   { bg: 'rgba(212,163,51,0.15)', fg: '#8a5f0a', border: 'rgba(212,163,51,0.35)' },
+  security: { bg: 'rgba(122,162,255,0.15)', fg: '#2457b8', border: 'rgba(122,162,255,0.35)' },
 }
 
 async function addShift(formData) {
@@ -104,14 +104,14 @@ export default async function LeadershipSchedulePage({ searchParams }) {
   return (
     <main style={{
       minHeight: '100vh',
-      background: '#0a0a0b',
-      color: '#e8e8ea',
+      background: '#faf5ea',
+      color: '#17130f',
       padding: '24px 16px 48px',
       fontFamily: FONT_BODY,
     }}>
       <div style={{ maxWidth: 1100, margin: '0 auto' }}>
         <a href="/leadership" style={{
-          color: '#9c9ca3',
+          color: '#6e6154',
           fontSize: 13,
           textDecoration: 'none',
           display: 'inline-block',
@@ -142,10 +142,10 @@ export default async function LeadershipSchedulePage({ searchParams }) {
               target="_blank"
               rel="noreferrer"
               style={{
-                color: '#9c9ca3',
+                color: '#6e6154',
                 fontSize: 12,
                 textDecoration: 'none',
-                border: '1px solid #2a2a31',
+                border: '1px solid #e8ddc8',
                 padding: '6px 12px',
                 borderRadius: 6,
               }}
@@ -154,7 +154,7 @@ export default async function LeadershipSchedulePage({ searchParams }) {
             </a>
           )}
         </div>
-        <p style={{ color: '#9c9ca3', fontSize: 13, margin: '4px 0 22px 0' }}>
+        <p style={{ color: '#6e6154', fontSize: 13, margin: '4px 0 22px 0' }}>
           Drivers + door security, Friday & Saturday nights.{' '}
           {gcalConfigured()
             ? 'Each shift you add is pushed to the shared Google Calendar.'
@@ -165,7 +165,7 @@ export default async function LeadershipSchedulePage({ searchParams }) {
           <div style={{
             background: 'rgba(196,74,58,0.15)',
             border: '1px solid rgba(196,74,58,0.4)',
-            color: '#f4b8ad',
+            color: '#b3311f',
             padding: '8px 12px',
             borderRadius: 6,
             fontSize: 13,
@@ -184,7 +184,7 @@ export default async function LeadershipSchedulePage({ searchParams }) {
               alignItems: 'baseline',
               gap: 10,
               marginBottom: 10,
-              borderBottom: '1px solid #2a2a31',
+              borderBottom: '1px solid #e8ddc8',
               paddingBottom: 6,
             }}>
               <h2 style={{
@@ -208,8 +208,8 @@ export default async function LeadershipSchedulePage({ searchParams }) {
                 const slots = byDate[date] || { driver: [], security: [] }
                 return (
                   <div key={date} style={{
-                    background: '#121216',
-                    border: '1px solid #2a2a31',
+                    background: '#ffffff',
+                    border: '1px solid #e8ddc8',
                     borderRadius: 8,
                     padding: '14px 16px',
                   }}>
@@ -220,14 +220,14 @@ export default async function LeadershipSchedulePage({ searchParams }) {
                       marginBottom: 10,
                     }}>
                       <div style={{ fontSize: 14, fontWeight: 600 }}>
-                        {n.label} <span style={{ color: '#6f6f76', fontWeight: 400 }}>· {date}</span>
+                        {n.label} <span style={{ color: '#7d7060', fontWeight: 400 }}>· {date}</span>
                       </div>
                     </div>
 
                     {ROLES.map(r => (
                       <div key={r.key} style={{ marginBottom: 10 }}>
                         <div style={{
-                          color: '#9c9ca3',
+                          color: '#6e6154',
                           fontSize: 11,
                           fontWeight: 600,
                           letterSpacing: '0.04em',
@@ -237,7 +237,7 @@ export default async function LeadershipSchedulePage({ searchParams }) {
                           {r.label}
                         </div>
                         {(slots[r.key] || []).length === 0 ? (
-                          <div style={{ color: '#6f6f76', fontSize: 12, padding: '4px 0' }}>
+                          <div style={{ color: '#7d7060', fontSize: 12, padding: '4px 0' }}>
                             None assigned
                           </div>
                         ) : (
@@ -254,7 +254,7 @@ export default async function LeadershipSchedulePage({ searchParams }) {
                       <summary style={{
                         cursor: 'pointer',
                         fontSize: 12,
-                        color: '#d4a333',
+                        color: '#8a5f0a',
                         userSelect: 'none',
                       }}>
                         + Assign someone
@@ -342,7 +342,7 @@ function ShiftPill({ shift }) {
 }
 
 const fieldLabel = {
-  color: '#9c9ca3',
+  color: '#6e6154',
   fontSize: 11,
   fontWeight: 600,
   letterSpacing: '0.04em',
@@ -350,9 +350,9 @@ const fieldLabel = {
   margin: '8px 0 4px 0',
 }
 const inputStyle = {
-  background: '#0d0d10',
-  border: '1px solid #2a2a31',
-  color: '#e8e8ea',
+  background: '#ffffff',
+  border: '1px solid #e8ddc8',
+  color: '#17130f',
   fontFamily: FONT_BODY,
   fontSize: 13,
   padding: '8px 10px',
@@ -363,7 +363,7 @@ const inputStyle = {
 }
 const submitButton = {
   background: '#d4a333',
-  color: '#0a0a0b',
+  color: '#231903',
   border: 'none',
   fontFamily: FONT_BODY,
   fontSize: 13,

@@ -7,8 +7,8 @@ export const dynamic = 'force-dynamic'
 const FONT_BODY = '-apple-system, "Segoe UI", Roboto, sans-serif'
 
 const ROLE_STYLE = {
-  driver:   { bg: 'rgba(212,163,51,0.15)', fg: '#d4a333', border: 'rgba(212,163,51,0.35)' },
-  security: { bg: 'rgba(122,162,255,0.15)', fg: '#7aa2ff', border: 'rgba(122,162,255,0.35)' },
+  driver:   { bg: 'rgba(212,163,51,0.15)', fg: '#8a5f0a', border: 'rgba(212,163,51,0.35)' },
+  security: { bg: 'rgba(122,162,255,0.15)', fg: '#2457b8', border: 'rgba(122,162,255,0.35)' },
 }
 
 export default async function AdminSchedulePage() {
@@ -27,8 +27,8 @@ export default async function AdminSchedulePage() {
   return (
     <main style={{
       minHeight: '100vh',
-      background: '#0a0a0b',
-      color: '#e8e8ea',
+      background: '#faf5ea',
+      color: '#17130f',
       padding: '20px 14px 48px',
       fontFamily: FONT_BODY,
     }}>
@@ -50,10 +50,10 @@ export default async function AdminSchedulePage() {
               target="_blank"
               rel="noreferrer"
               style={{
-                color: '#9c9ca3',
+                color: '#6e6154',
                 fontSize: 12,
                 textDecoration: 'none',
-                border: '1px solid #2a2a31',
+                border: '1px solid #e8ddc8',
                 padding: '6px 12px',
                 borderRadius: 6,
               }}
@@ -62,7 +62,7 @@ export default async function AdminSchedulePage() {
             </a>
           )}
         </div>
-        <p style={{ color: '#9c9ca3', fontSize: 13, margin: '4px 0 22px 0' }}>
+        <p style={{ color: '#6e6154', fontSize: 13, margin: '4px 0 22px 0' }}>
           Drivers + door security for upcoming weekends. Leadership manages this.
         </p>
 
@@ -78,16 +78,16 @@ export default async function AdminSchedulePage() {
                 fontWeight: 600,
                 letterSpacing: '0.06em',
                 textTransform: 'uppercase',
-                color: '#e8e8ea',
+                color: '#17130f',
                 marginBottom: 8,
-                borderBottom: '1px solid #2a2a31',
+                borderBottom: '1px solid #e8ddc8',
                 paddingBottom: 6,
               }}>
                 {w.label}
               </div>
 
               {empty ? (
-                <div style={{ color: '#6f6f76', fontSize: 13, padding: '6px 0' }}>
+                <div style={{ color: '#7d7060', fontSize: 13, padding: '6px 0' }}>
                   Not scheduled yet.
                 </div>
               ) : (
@@ -102,21 +102,21 @@ export default async function AdminSchedulePage() {
                     const nightEmpty = slots.driver.length === 0 && slots.security.length === 0
                     return (
                       <div key={date} style={{
-                        background: '#121216',
-                        border: '1px solid #2a2a31',
+                        background: '#ffffff',
+                        border: '1px solid #e8ddc8',
                         borderRadius: 8,
                         padding: '12px 14px',
                       }}>
                         <div style={{ fontSize: 13, fontWeight: 600, marginBottom: 8 }}>
-                          {n.label} <span style={{ color: '#6f6f76', fontWeight: 400 }}>· {date}</span>
+                          {n.label} <span style={{ color: '#7d7060', fontWeight: 400 }}>· {date}</span>
                         </div>
                         {nightEmpty ? (
-                          <div style={{ color: '#6f6f76', fontSize: 12 }}>—</div>
+                          <div style={{ color: '#7d7060', fontSize: 12 }}>—</div>
                         ) : ROLES.map(r => (
                           (slots[r.key] || []).length > 0 && (
                             <div key={r.key} style={{ marginBottom: 6 }}>
                               <div style={{
-                                color: '#9c9ca3',
+                                color: '#6e6154',
                                 fontSize: 11,
                                 fontWeight: 600,
                                 letterSpacing: '0.04em',

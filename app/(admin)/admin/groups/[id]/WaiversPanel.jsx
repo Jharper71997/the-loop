@@ -46,7 +46,7 @@ export default function WaiversPanel({ groupId, members }) {
 
       <div style={{ display: 'flex', alignItems: 'baseline', gap: 16, marginTop: 6 }}>
         <div>
-          <div className="stat">{signed}<span style={{ color: '#6f6f76' }}>/{total}</span></div>
+          <div className="stat">{signed}<span style={{ color: '#7d7060' }}>/{total}</span></div>
           <div className="stat-label">Signed</div>
         </div>
         <div style={{ flex: 1 }} />
@@ -77,8 +77,8 @@ export default function WaiversPanel({ groupId, members }) {
             {unsigned.map(m => (
               <div key={m.id} className="row" style={{
                 padding: '8px 10px',
-                background: '#0e0e12',
-                border: '1px solid #1e1e23',
+                background: '#ffffff',
+                border: '1px solid #e8ddc8',
                 borderRadius: 6,
                 fontSize: 13,
               }}>

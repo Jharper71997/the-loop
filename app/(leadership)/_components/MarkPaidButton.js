@@ -9,7 +9,7 @@ export default function MarkPaidButton({ action, label = 'Mark paid' }) {
     <form action={action} style={{ margin: 0, display: 'inline' }}>
       <button type="submit" style={{
         background: 'transparent',
-        color: '#3fb27f',
+        color: '#0f7a4e',
         border: '1px solid rgba(63,178,127,0.45)',
         fontFamily: '-apple-system, "Segoe UI", Roboto, sans-serif',
         fontSize: 11,

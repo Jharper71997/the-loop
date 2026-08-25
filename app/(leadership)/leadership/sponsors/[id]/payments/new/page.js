@@ -87,7 +87,7 @@ export default async function NewSponsorPaymentPage({ params, searchParams }) {
         <div style={{
           background: 'rgba(196,74,58,0.15)',
           border: '1px solid rgba(196,74,58,0.4)',
-          color: '#f4b8ad',
+          color: '#b3311f',
           padding: '8px 12px',
           borderRadius: 6,
           fontSize: 12,

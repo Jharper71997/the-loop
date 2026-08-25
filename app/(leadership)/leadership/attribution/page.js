@@ -126,7 +126,7 @@ export default async function AttributionPage({ searchParams }) {
       render: r => (
         <div>
           <div style={{ fontWeight: 600 }}>{r.label || r.code}</div>
-          <div style={{ fontSize: 10, color: '#9c9ca3', marginTop: 2 }}>{r.code}</div>
+          <div style={{ fontSize: 10, color: '#6e6154', marginTop: 2 }}>{r.code}</div>
         </div>
       ),
     },
@@ -137,8 +137,8 @@ export default async function AttributionPage({ searchParams }) {
         : <StatusBadge label="sponsor" tone="purple" />,
     },
     { key: 'scans', header: 'Scans', align: 'right', mono: true, render: r => r.scans },
-    { key: 'buyers', header: 'Buyers', align: 'right', mono: true, render: r => <span style={{ color: r.buyers > 0 ? '#3fb27f' : '#6f6f76' }}>{r.buyers}</span> },
-    { key: 'conv', header: 'Conv', align: 'right', mono: true, render: r => <span style={{ color: '#9c9ca3' }}>{r.scans > 0 ? `${Math.round((r.buyers / r.scans) * 100)}%` : '—'}</span> },
+    { key: 'buyers', header: 'Buyers', align: 'right', mono: true, render: r => <span style={{ color: r.buyers > 0 ? '#0f7a4e' : '#7d7060' }}>{r.buyers}</span> },
+    { key: 'conv', header: 'Conv', align: 'right', mono: true, render: r => <span style={{ color: '#6e6154' }}>{r.scans > 0 ? `${Math.round((r.buyers / r.scans) * 100)}%` : '—'}</span> },
     { key: 'gross', header: 'Gross', align: 'right', mono: true, render: r => (r.gross > 0 ? formatCents(r.gross) : '—') },
   ]
 
@@ -149,7 +149,7 @@ export default async function AttributionPage({ searchParams }) {
       render: o => new Date(o.paid_at).toLocaleString('en-US', { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' }),
     },
     { key: 'buyer', header: 'Buyer', render: o => o.buyer_name || '—' },
-    { key: 'email', header: 'Email', hideOnMobile: true, render: o => <span style={{ color: '#9c9ca3' }}>{o.buyer_email || '—'}</span> },
+    { key: 'email', header: 'Email', hideOnMobile: true, render: o => <span style={{ color: '#6e6154' }}>{o.buyer_email || '—'}</span> },
     {
       key: 'from', header: 'From',
       render: o => {
@@ -158,7 +158,7 @@ export default async function AttributionPage({ searchParams }) {
         return (
           <div>
             <div style={{ fontSize: 12 }}>{qc?.label || code}</div>
-            <div style={{ fontSize: 10, color: '#9c9ca3' }}>{code}</div>
+            <div style={{ fontSize: 10, color: '#6e6154' }}>{code}</div>
           </div>
         )
       },
@@ -169,8 +169,8 @@ export default async function AttributionPage({ searchParams }) {
   return (
     <main style={{
       minHeight: '100vh',
-      background: '#0a0a0b',
-      color: '#e8e8ea',
+      background: '#faf5ea',
+      color: '#17130f',
       padding: '24px 16px calc(48px + env(safe-area-inset-bottom))',
       paddingLeft: 'max(16px, env(safe-area-inset-left))',
       paddingRight: 'max(16px, env(safe-area-inset-right))',
@@ -182,7 +182,7 @@ export default async function AttributionPage({ searchParams }) {
           gap: 12, flexWrap: 'wrap', marginBottom: 18,
         }}>
           <h1 style={{
-            color: '#e8e8ea',
+            color: '#17130f',
             fontFamily: '-apple-system, "Segoe UI", Roboto, sans-serif',
             fontSize: 24, fontWeight: 700, letterSpacing: '-0.01em', margin: 0,
           }}>
@@ -205,11 +205,11 @@ export default async function AttributionPage({ searchParams }) {
           columns={flyerColumns}
           rows={rows}
           rowKey={r => r.id}
-          empty={<div style={{ color: '#9c9ca3', fontSize: 13, padding: '16px 2px' }}>No bar/sponsor QR codes registered. Run register-qr-codes.sql first.</div>}
+          empty={<div style={{ color: '#6e6154', fontSize: 13, padding: '16px 2px' }}>No bar/sponsor QR codes registered. Run register-qr-codes.sql first.</div>}
         />
 
         <h2 style={{
-          color: '#e8e8ea',
+          color: '#17130f',
           fontFamily: '-apple-system, "Segoe UI", Roboto, sans-serif',
           fontSize: 16, fontWeight: 700, margin: '4px 0 10px',
         }}>
@@ -221,7 +221,7 @@ export default async function AttributionPage({ searchParams }) {
             columns={buyerColumns}
             rows={buyerRows}
             rowKey={o => o.id}
-            empty={<div style={{ color: '#9c9ca3', fontSize: 13, padding: '16px 2px' }}>No attributed orders for {bounds.label} yet.</div>}
+            empty={<div style={{ color: '#6e6154', fontSize: 13, padding: '16px 2px' }}>No attributed orders for {bounds.label} yet.</div>}
           />
         </ShowMore>
       </div>
@@ -233,16 +233,16 @@ function MonthPicker({ label, value, prev, next }) {
   return (
     <form style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
       <Link href={`/leadership/attribution?month=${prev}`} style={navBtn} aria-label="Previous month">‹</Link>
-      <span style={{ color: '#e8e8ea', fontSize: 13, fontWeight: 600, minWidth: 110, textAlign: 'center' }}>{label}</span>
+      <span style={{ color: '#17130f', fontSize: 13, fontWeight: 600, minWidth: 110, textAlign: 'center' }}>{label}</span>
       <Link href={`/leadership/attribution?month=${next}`} style={navBtn} aria-label="Next month">›</Link>
       <input type="month" name="month" defaultValue={value}
         style={{
-          background: '#0d0d10', color: '#e8e8ea',
-          border: '1px solid #2a2a31', borderRadius: 6, padding: '6px 10px',
+          background: '#ffffff', color: '#17130f',
+          border: '1px solid #e8ddc8', borderRadius: 6, padding: '6px 10px',
           fontFamily: 'inherit', fontSize: 12,
         }} />
       <button type="submit" style={{
-        background: '#d4a333', color: '#0a0a0b', border: 'none', borderRadius: 6,
+        background: '#d4a333', color: '#231903', border: 'none', borderRadius: 6,
         padding: '6px 12px', fontWeight: 700, fontSize: 12, cursor: 'pointer',
       }}>Go</button>
     </form>
@@ -250,8 +250,8 @@ function MonthPicker({ label, value, prev, next }) {
 }
 
 const navBtn = {
-  background: '#0d0d10', color: '#e8e8ea',
-  border: '1px solid #2a2a31', borderRadius: 6,
+  background: '#ffffff', color: '#17130f',
+  border: '1px solid #e8ddc8', borderRadius: 6,
   padding: '4px 10px', fontSize: 14, textDecoration: 'none',
   fontWeight: 700,
 }

@@ -4,17 +4,17 @@
 // unknown = grey + "no data" copy in note.
 
 const STATUS_COLORS = {
-  green:   { dot: '#3fb27f', glow: 'rgba(63,178,127,0.35)',  border: 'rgba(63,178,127,0.25)' },
+  green:   { dot: '#2fa36b', glow: 'rgba(63,178,127,0.35)',  border: 'rgba(63,178,127,0.25)' },
   yellow:  { dot: '#d4a333', glow: 'rgba(212,163,51,0.35)',  border: 'rgba(212,163,51,0.3)'  },
-  red:     { dot: '#c44a3a', glow: 'rgba(196,74,58,0.35)',   border: 'rgba(196,74,58,0.3)'   },
-  unknown: { dot: '#6f6f76', glow: 'rgba(111,111,118,0.25)', border: '#2a2a31' },
+  red:     { dot: '#d8543f', glow: 'rgba(196,74,58,0.35)',   border: 'rgba(196,74,58,0.3)'   },
+  unknown: { dot: '#7d7060', glow: 'rgba(111,111,118,0.25)', border: '#e8ddc8' },
 }
 
 export default function MetricCard({ label, value, target, status = 'unknown', drillTo, note }) {
   const colors = STATUS_COLORS[status] || STATUS_COLORS.unknown
   const wrapper = (
     <div style={{
-      background: '#121216',
+      background: '#ffffff',
       border: `1px solid ${colors.border}`,
       borderRadius: 8,
       padding: '14px 16px',
@@ -32,7 +32,7 @@ export default function MetricCard({ label, value, target, status = 'unknown', d
         gap: 8,
       }}>
         <span style={{
-          color: '#9c9ca3',
+          color: '#6e6154',
           fontFamily: '-apple-system, "Segoe UI", Roboto, sans-serif',
           fontSize: 11,
           fontWeight: 600,
@@ -49,7 +49,7 @@ export default function MetricCard({ label, value, target, status = 'unknown', d
       </div>
 
       <div style={{
-        color: status === 'unknown' ? '#6f6f76' : '#e8e8ea',
+        color: status === 'unknown' ? '#7d7060' : '#17130f',
         fontFamily: '"JetBrains Mono", ui-monospace, monospace',
         fontSize: 26,
         fontWeight: 600,
@@ -62,7 +62,7 @@ export default function MetricCard({ label, value, target, status = 'unknown', d
 
       {target && (
         <div style={{
-          color: '#9c9ca3',
+          color: '#6e6154',
           fontFamily: '-apple-system, "Segoe UI", Roboto, sans-serif',
           fontSize: 11,
           fontWeight: 500,
@@ -73,7 +73,7 @@ export default function MetricCard({ label, value, target, status = 'unknown', d
 
       {note && (
         <div style={{
-          color: '#9c9ca3',
+          color: '#6e6154',
           fontFamily: '-apple-system, "Segoe UI", Roboto, sans-serif',
           fontSize: 11,
           marginTop: 2,

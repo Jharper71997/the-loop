@@ -6,10 +6,13 @@ import DataTable from '@/app/(leadership)/_components/DataTable'
 import ShowMore from '@/app/(leadership)/_components/ShowMore'
 
 const ACCENT = '#d4a333'
-const INK = '#f5f5f7'
-const INK_DIM = '#9c9ca3'
-const RED = '#e07a7a'
-const GREEN = '#6fbf7f'
+const ACCENT_TXT = '#8a5f0a'
+const INK = '#17130f'
+const INK_DIM = '#6e6154'
+const RED = '#d8543f'
+const RED_TXT = '#b3311f'
+const GREEN = '#2fa36b'
+const GREEN_TXT = '#0f7a4e'
 
 export default function RosterView({ items, ticketTypes }) {
   const router = useRouter()
@@ -63,7 +66,7 @@ export default function RosterView({ items, ticketTypes }) {
       render: it => {
         const ph = it.contact?.phone || it.rider_phone
         return ph
-          ? <a href={`tel:${ph}`} style={{ color: ACCENT, textDecoration: 'none' }}>{ph}</a>
+          ? <a href={`tel:${ph}`} style={{ color: ACCENT_TXT, textDecoration: 'none' }}>{ph}</a>
           : <span style={{ color: INK_DIM }}>—</span>
       },
     },
@@ -74,20 +77,20 @@ export default function RosterView({ items, ticketTypes }) {
     {
       key: 'paid', header: 'Paid',
       render: it => it.order?.status === 'paid'
-        ? <Pill color={GREEN} bg="rgba(111,191,127,0.12)" label="Paid" />
-        : <Pill color={ACCENT} bg="rgba(212,163,51,0.12)" label="Pending" />,
+        ? <Pill color={GREEN_TXT} bg="#0f7a4e" label="Paid" />
+        : <Pill color={ACCENT_TXT} bg="#8a5f0a" label="Pending" />,
     },
     {
       key: 'waiver', header: 'Waiver',
       render: it => it.contact?.has_signed_waiver
-        ? <Pill color={GREEN} bg="rgba(111,191,127,0.12)" label="Waiver" />
-        : <Pill color={ACCENT} bg="rgba(212,163,51,0.12)" label="No waiver" />,
+        ? <Pill color={GREEN_TXT} bg="#0f7a4e" label="Waiver" />
+        : <Pill color={ACCENT_TXT} bg="#8a5f0a" label="No waiver" />,
     },
     {
       key: 'checkin', header: 'Check-in',
       render: it => it.checked_in_at
-        ? <Pill color={GREEN} bg="rgba(111,191,127,0.12)" label="Checked in" />
-        : <Pill color={INK_DIM} bg="rgba(255,255,255,0.04)" label="Not in" />,
+        ? <Pill color={GREEN_TXT} bg="#0f7a4e" label="Checked in" />
+        : <Pill color={INK_DIM} bg="#17130f" label="Not in" />,
     },
     {
       key: 'action', header: 'Action', align: 'right',
@@ -102,8 +105,8 @@ export default function RosterView({ items, ticketTypes }) {
           disabled={voidingId === it.id}
           style={{
             background: 'transparent',
-            color: RED,
-            border: '1px solid #5c2a2a',
+            color: RED_TXT,
+            border: '1px solid #f7cfc6',
             padding: '6px 12px',
             borderRadius: 6,
             fontSize: 11,
@@ -131,7 +134,7 @@ export default function RosterView({ items, ticketTypes }) {
         rowKey={it => it.id}
         empty={(
           <div style={{
-            background: '#15151a', border: '1px solid #2a2a31', borderRadius: 12,
+            background: '#fdfaf3', border: '1px solid #e8ddc8', borderRadius: 12,
             padding: 24, textAlign: 'center', color: INK_DIM, fontSize: 14,
           }}>
             No riders on this Loop yet.

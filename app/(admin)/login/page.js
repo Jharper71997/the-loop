@@ -28,7 +28,7 @@ function LoginInner() {
 
   return (
     <main style={{ maxWidth: '400px', margin: '80px auto', padding: '0 16px' }}>
-      <h1 style={{ textAlign: 'center', marginBottom: '32px', color: '#d4a333' }}>The Loop</h1>
+      <h1 style={{ textAlign: 'center', marginBottom: '32px', color: '#8a5f0a' }}>The Loop</h1>
       <form className="card" onSubmit={handleLogin}>
         <h3 style={{ marginBottom: '12px' }}>Staff Login</h3>
         <input
@@ -45,13 +45,13 @@ function LoginInner() {
           value={password}
           onChange={e => setPassword(e.target.value)}
         />
-        {error && <p style={{ color: '#e07a7a', fontSize: '13px', marginBottom: '8px' }}>{error}</p>}
+        {error && <p style={{ color: '#b3311f', fontSize: '13px', marginBottom: '8px' }}>{error}</p>}
         <button className="btn-primary" type="submit" disabled={submitting}>
           {submitting ? 'Signing in…' : 'Sign in'}
         </button>
-        <p style={{ fontSize: 13, color: '#9c9ca3', marginTop: 16, textAlign: 'center' }}>
+        <p style={{ fontSize: 13, color: '#6e6154', marginTop: 16, textAlign: 'center' }}>
           New here?{' '}
-          <Link href="/signup" style={{ color: '#d4a333' }}>Create an account</Link>
+          <Link href="/signup" style={{ color: '#8a5f0a' }}>Create an account</Link>
         </p>
       </form>
     </main>

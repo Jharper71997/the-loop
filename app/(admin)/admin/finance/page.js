@@ -5,8 +5,9 @@ import { supabase } from '@/lib/supabase'
 import { useBusiness } from '../../_components/BusinessProvider'
 
 const ACCENT = '#d4a333'
-const SURFACE = '#15151a'
-const BORDER = '#2a2a31'
+const ACCENT_TXT = '#8a5f0a'
+const SURFACE = '#fdfaf3'
+const BORDER = '#e8ddc8'
 const LS_KEY = 'the-loop:proforma:v1'
 
 const DEFAULT_PROFORMA = {
@@ -70,14 +71,14 @@ export default function Finance() {
   }, [summary, data])
 
   return (
-    <main style={{ maxWidth: 1100, margin: '0 auto', padding: '20px 16px', minHeight: '100vh', color: '#fff' }}>
+    <main style={{ maxWidth: 1100, margin: '0 auto', padding: '20px 16px', minHeight: '100vh', color: '#17130f' }}>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: 16 }}>
-        <h1 style={{ fontSize: 28, color: ACCENT, margin: 0 }}>Finance</h1>
+        <h1 style={{ fontSize: 28, color: ACCENT_TXT, margin: 0 }}>Finance</h1>
         <button onClick={refresh} style={ghostBtn}>Refresh</button>
       </div>
 
-      {loading && <p style={{ color: '#9c9ca3' }}>Loading…</p>}
-      {error && <Card style={{ borderColor: '#f87171' }}><span style={{ color: '#f87171' }}>{error}</span></Card>}
+      {loading && <p style={{ color: '#6e6154' }}>Loading…</p>}
+      {error && <Card style={{ borderColor: '#d8543f' }}><span style={{ color: '#b3311f' }}>{error}</span></Card>}
 
       {summary && data && (
         <>
@@ -104,11 +105,11 @@ export default function Finance() {
               <Stat label="Upcoming revenue" value={`$${fmt(summary.upcomingRevenue)}`} />
               <Stat label="Refunded" value={`$${fmt(summary.refunded)}`} />
             </Stats3>
-            <p style={{ color: '#9c9ca3', fontSize: 12, margin: '8px 0 0' }}>
+            <p style={{ color: '#6e6154', fontSize: 12, margin: '8px 0 0' }}>
               Avg last 4 nights: {Math.round(summary.avgPast4Riders || 0)} riders · ${fmt(summary.avgPast4Revenue || 0)}
             </p>
             {summary.native?.orderCount > 0 && (
-              <p style={{ color: '#9c9ca3', fontSize: 12, margin: '4px 0 0' }}>
+              <p style={{ color: '#6e6154', fontSize: 12, margin: '4px 0 0' }}>
                 Native orders: {summary.native.orderCount} · ${fmt(summary.native.pastRevenue + summary.native.upcomingRevenue)}
               </p>
             )}
@@ -126,16 +127,16 @@ export default function Finance() {
                 <div key={s.id} style={listRow}>
                   <div>
                     <strong>{s.name}</strong>
-                    <span style={{ color: '#9c9ca3', fontSize: 12, marginLeft: 6 }}>{s.tier || '—'}</span>
+                    <span style={{ color: '#6e6154', fontSize: 12, marginLeft: 6 }}>{s.tier || '—'}</span>
                   </div>
                   <div style={{ textAlign: 'right', fontSize: 13 }}>
-                    <div style={{ color: ACCENT }}>${fmt(s.amount_paid || 0)} / ${fmt(s.amount_committed || 0)}</div>
-                    <div style={{ color: '#9c9ca3', fontSize: 11 }}>{s.status || 'pending'}</div>
+                    <div style={{ color: ACCENT_TXT }}>${fmt(s.amount_paid || 0)} / ${fmt(s.amount_committed || 0)}</div>
+                    <div style={{ color: '#6e6154', fontSize: 11 }}>{s.status || 'pending'}</div>
                   </div>
                 </div>
               ))}
               {(!data.sponsors || data.sponsors.length === 0) && (
-                <div style={{ color: '#9c9ca3', fontSize: 13 }}>No sponsors yet. Add via SQL or Sponsors page.</div>
+                <div style={{ color: '#6e6154', fontSize: 13 }}>No sponsors yet. Add via SQL or Sponsors page.</div>
               )}
             </div>
           </Section>
@@ -151,7 +152,7 @@ export default function Finance() {
                 <ExpenseRow key={e.id} e={e} groups={groups} onChange={refresh} />
               ))}
               {(!data.expenses || data.expenses.length === 0) && (
-                <div style={{ color: '#9c9ca3', fontSize: 13 }}>No expenses logged yet.</div>
+                <div style={{ color: '#6e6154', fontSize: 13 }}>No expenses logged yet.</div>
               )}
             </div>
           </Section>
@@ -159,7 +160,7 @@ export default function Finance() {
           {/* Profit per Loop */}
           <Section title="Profit per Loop">
             {(data.perLoop || []).length === 0 && (
-              <div style={{ color: '#9c9ca3', fontSize: 13 }}>
+              <div style={{ color: '#6e6154', fontSize: 13 }}>
                 No data yet — once orders + expenses are tagged to Loops, they show here.
               </div>
             )}
@@ -169,14 +170,14 @@ export default function Finance() {
                 return (
                   <div key={l.id} style={listRow}>
                     <div>
-                      <div style={{ fontSize: 11, color: '#9c9ca3' }}>{l.event_date}</div>
+                      <div style={{ fontSize: 11, color: '#6e6154' }}>{l.event_date}</div>
                       <strong>{l.name}</strong>
-                      <div style={{ fontSize: 11, color: '#9c9ca3', marginTop: 2 }}>{l.tickets} tickets</div>
+                      <div style={{ fontSize: 11, color: '#6e6154', marginTop: 2 }}>{l.tickets} tickets</div>
                     </div>
                     <div style={{ textAlign: 'right', fontSize: 13 }}>
-                      <div style={{ color: '#10b981' }}>+${fmt(l.revenue / 100)}</div>
-                      <div style={{ color: '#f87171' }}>−${fmt(l.expenses / 100)}</div>
-                      <div style={{ color: profit >= 0 ? ACCENT : '#f87171', fontWeight: 700, marginTop: 2 }}>
+                      <div style={{ color: '#0f7a4e' }}>+${fmt(l.revenue / 100)}</div>
+                      <div style={{ color: '#b3311f' }}>−${fmt(l.expenses / 100)}</div>
+                      <div style={{ color: profit >= 0 ? ACCENT_TXT : '#b3311f', fontWeight: 700, marginTop: 2 }}>
                         ${fmt(profit / 100)}
                       </div>
                     </div>
@@ -208,7 +209,7 @@ function fmt(n) {
 function Section({ title, children }) {
   return (
     <section style={{ background: SURFACE, border: `1px solid ${BORDER}`, borderRadius: 12, padding: 14, display: 'grid', gap: 10, marginBottom: 14 }}>
-      <h2 style={{ fontSize: 12, color: ACCENT, margin: 0, letterSpacing: '0.08em', textTransform: 'uppercase' }}>{title}</h2>
+      <h2 style={{ fontSize: 12, color: ACCENT_TXT, margin: 0, letterSpacing: '0.08em', textTransform: 'uppercase' }}>{title}</h2>
       {children}
     </section>
   )
@@ -222,12 +223,12 @@ function Stat({ label, value, highlight }) {
   return (
     <div style={{
       padding: 10,
-      background: '#0e0e12',
+      background: '#ffffff',
       border: highlight ? `1px solid ${ACCENT}` : `1px solid ${BORDER}`,
       borderRadius: 8,
     }}>
-      <div style={{ fontSize: 10, color: '#9c9ca3', textTransform: 'uppercase', letterSpacing: '0.06em' }}>{label}</div>
-      <div style={{ fontSize: 18, fontWeight: 700, color: highlight ? ACCENT : '#fff', marginTop: 2 }}>{value}</div>
+      <div style={{ fontSize: 10, color: '#6e6154', textTransform: 'uppercase', letterSpacing: '0.06em' }}>{label}</div>
+      <div style={{ fontSize: 18, fontWeight: 700, color: highlight ? ACCENT_TXT : '#17130f', marginTop: 2 }}>{value}</div>
     </div>
   )
 }
@@ -241,7 +242,7 @@ const listRow = {
   justifyContent: 'space-between',
   alignItems: 'center',
   padding: 10,
-  background: '#0e0e12',
+  background: '#ffffff',
   border: `1px solid ${BORDER}`,
   borderRadius: 8,
   fontSize: 13,
@@ -250,7 +251,7 @@ const listRow = {
 const ghostBtn = {
   background: 'transparent',
   border: `1px solid ${BORDER}`,
-  color: ACCENT,
+  color: ACCENT_TXT,
   padding: '6px 10px',
   borderRadius: 8,
   fontSize: 12,
@@ -282,7 +283,7 @@ function AddBankForm({ onAdded }) {
     <form onSubmit={submit} style={{ display: 'flex', gap: 6, alignItems: 'flex-end' }}>
       <input value={account} onChange={e => setAccount(e.target.value)} placeholder="Account" style={input} />
       <input value={balance} onChange={e => setBalance(e.target.value)} placeholder="Balance ($)" type="number" step="0.01" style={input} />
-      <button type="submit" disabled={busy} style={{ ...ghostBtn, color: '#0a0a0b', background: ACCENT, borderColor: ACCENT }}>
+      <button type="submit" disabled={busy} style={{ ...ghostBtn, color: '#231903', background: ACCENT, borderColor: ACCENT }}>
         {busy ? 'Saving…' : 'Update'}
       </button>
     </form>
@@ -299,10 +300,10 @@ function BankRow({ b, onChange }) {
     <div style={listRow}>
       <div>
         <strong>{b.account_name}</strong>
-        <div style={{ fontSize: 11, color: '#9c9ca3' }}>as of {new Date(b.as_of).toLocaleDateString()}</div>
+        <div style={{ fontSize: 11, color: '#6e6154' }}>as of {new Date(b.as_of).toLocaleDateString()}</div>
       </div>
       <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
-        <span style={{ color: ACCENT, fontWeight: 600 }}>${fmt(b.balance_cents / 100)}</span>
+        <span style={{ color: ACCENT_TXT, fontWeight: 600 }}>${fmt(b.balance_cents / 100)}</span>
         <button onClick={del} style={ghostBtn}>×</button>
       </div>
     </div>
@@ -351,7 +352,7 @@ function AddExpenseForm({ groups, onAdded }) {
         <option value="">— No Loop —</option>
         {groups.map(g => <option key={g.id} value={g.id}>{g.event_date} · {g.name}</option>)}
       </select>
-      <button type="submit" disabled={busy} style={{ ...ghostBtn, color: '#0a0a0b', background: ACCENT, borderColor: ACCENT }}>
+      <button type="submit" disabled={busy} style={{ ...ghostBtn, color: '#231903', background: ACCENT, borderColor: ACCENT }}>
         {busy ? 'Adding…' : 'Add'}
       </button>
     </form>
@@ -369,13 +370,13 @@ function ExpenseRow({ e, groups, onChange }) {
     <div style={listRow}>
       <div>
         <strong style={{ textTransform: 'capitalize' }}>{e.category.replace(/_/g, ' ')}</strong>
-        {e.vendor && <span style={{ color: '#9c9ca3', fontSize: 12, marginLeft: 6 }}>{e.vendor}</span>}
-        <div style={{ fontSize: 11, color: '#9c9ca3', marginTop: 2 }}>
+        {e.vendor && <span style={{ color: '#6e6154', fontSize: 12, marginLeft: 6 }}>{e.vendor}</span>}
+        <div style={{ fontSize: 11, color: '#6e6154', marginTop: 2 }}>
           {e.expense_date}{group ? ` · ${group.name}` : ''}
         </div>
       </div>
       <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
-        <span style={{ color: '#f87171', fontWeight: 600 }}>−${fmt(e.amount_cents / 100)}</span>
+        <span style={{ color: '#b3311f', fontWeight: 600 }}>−${fmt(e.amount_cents / 100)}</span>
         <button onClick={del} style={ghostBtn}>×</button>
       </div>
     </div>
@@ -383,9 +384,9 @@ function ExpenseRow({ e, groups, onChange }) {
 }
 
 const input = {
-  background: '#0a0a0b',
+  background: '#faf5ea',
   border: `1px solid ${BORDER}`,
-  color: '#fff',
+  color: '#17130f',
   padding: '8px 10px',
   borderRadius: 6,
   fontSize: 13,
@@ -440,7 +441,7 @@ function Proforma({ pro, setPro }) {
 
 function Lbl({ label, children }) {
   return (
-    <label style={{ display: 'grid', gap: 4, fontSize: 11, color: '#9c9ca3' }}>
+    <label style={{ display: 'grid', gap: 4, fontSize: 11, color: '#6e6154' }}>
       {label}
       {children}
     </label>

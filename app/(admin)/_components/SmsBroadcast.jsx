@@ -4,8 +4,9 @@ import { useMemo, useState } from 'react'
 import { personalize } from '@/lib/personalize'
 
 const ACCENT = '#d4a333'
-const SURFACE = '#15151a'
-const BORDER = '#2a2a31'
+const ACCENT_TXT = '#8a5f0a'
+const SURFACE = '#fdfaf3'
+const BORDER = '#e8ddc8'
 
 // Reusable broadcast composer.
 //
@@ -74,18 +75,18 @@ export default function SmsBroadcast({ recipients = [], stops = null, title = 'T
       background: SURFACE, border: `1px solid ${ACCENT}`, borderRadius: 12, padding: 14, display: 'grid', gap: 10,
     }}>
       <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between' }}>
-        <h2 style={{ fontSize: 13, color: ACCENT, margin: 0, letterSpacing: '0.08em', textTransform: 'uppercase' }}>{title}</h2>
-        <span style={{ fontSize: 11, color: '#9c9ca3' }}>
+        <h2 style={{ fontSize: 13, color: ACCENT_TXT, margin: 0, letterSpacing: '0.08em', textTransform: 'uppercase' }}>{title}</h2>
+        <span style={{ fontSize: 11, color: '#6e6154' }}>
           {targets.length} of {recipients.length} have a phone
         </span>
       </div>
 
       {recipients.length === 0 && (
-        <p style={{ color: '#9c9ca3', margin: 0, fontSize: 13 }}>No riders to text.</p>
+        <p style={{ color: '#6e6154', margin: 0, fontSize: 13 }}>No riders to text.</p>
       )}
 
       {noPhones && (
-        <p style={{ color: '#facc15', margin: 0, fontSize: 13 }}>None of these riders have a phone on file.</p>
+        <p style={{ color: '#8a5f0a', margin: 0, fontSize: 13 }}>None of these riders have a phone on file.</p>
       )}
 
       {recipients.length > 0 && !noPhones && (
@@ -111,13 +112,13 @@ export default function SmsBroadcast({ recipients = [], stops = null, title = 'T
             rows={3}
             style={{ ...input, fontFamily: 'inherit', resize: 'vertical' }}
           />
-          <div style={{ fontSize: 11, color: '#6f6f76' }}>
+          <div style={{ fontSize: 11, color: '#7d7060' }}>
             Use <code>{'{first_name}'}</code> to personalize.
           </div>
 
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 10 }}>
             {result ? (
-              <span style={{ color: result.failed === 0 ? '#10b981' : '#facc15', fontSize: 13 }}>
+              <span style={{ color: result.failed === 0 ? '#0f7a4e' : '#8a5f0a', fontSize: 13 }}>
                 Sent {result.sent}
                 {result.unreachable > 0 ? ` · ${result.unreachable} unreachable` : ''}
                 {result.failed > 0 ? ` · ${result.failed} failed` : ''}
@@ -128,7 +129,7 @@ export default function SmsBroadcast({ recipients = [], stops = null, title = 'T
               onClick={send}
               disabled={sending || !message.trim() || !targets.length}
               style={{
-                background: ACCENT, color: '#0a0a0b', border: 0,
+                background: ACCENT, color: '#231903', border: 0,
                 padding: '8px 16px', borderRadius: 8, fontWeight: 700, fontSize: 13,
                 opacity: sending || !message.trim() || !targets.length ? 0.4 : 1,
                 cursor: sending ? 'wait' : 'pointer',
@@ -144,9 +145,9 @@ export default function SmsBroadcast({ recipients = [], stops = null, title = 'T
 }
 
 const input = {
-  background: '#0a0a0b',
+  background: '#faf5ea',
   border: `1px solid ${BORDER}`,
-  color: '#fff',
+  color: '#17130f',
   padding: '8px 10px',
   borderRadius: 8,
   fontSize: 13,

@@ -155,7 +155,7 @@ export default async function ExpenseImportPage({ searchParams }) {
         <div style={{
           background: 'rgba(196,74,58,0.15)',
           border: '1px solid rgba(196,74,58,0.4)',
-          color: '#f4b8ad',
+          color: '#b3311f',
           padding: '8px 12px',
           borderRadius: 6,
           fontSize: 12,
@@ -170,7 +170,7 @@ export default async function ExpenseImportPage({ searchParams }) {
         <div style={{
           background: 'rgba(212,163,51,0.1)',
           border: '1px solid rgba(212,163,51,0.3)',
-          color: '#d4a333',
+          color: '#8a5f0a',
           padding: '8px 12px',
           borderRadius: 6,
           fontSize: 11,
@@ -189,7 +189,7 @@ export default async function ExpenseImportPage({ searchParams }) {
           required
         />
         <div style={{
-          borderTop: '1px solid #2a2a31',
+          borderTop: '1px solid #e8ddc8',
           margin: '14px 0 8px',
           paddingTop: 14,
         }}>

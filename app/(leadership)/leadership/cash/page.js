@@ -18,14 +18,14 @@ export default async function CashPage() {
   return (
     <main style={{
       minHeight: '100vh',
-      background: '#0a0a0b',
-      color: '#e8e8ea',
+      background: '#faf5ea',
+      color: '#17130f',
       padding: '24px 16px 48px',
       fontFamily: 'inherit',
     }}>
       <div style={{ maxWidth: 900, margin: '0 auto' }}>
         <a href="/leadership/income" style={{
-          color: '#9c9ca3',
+          color: '#6e6154',
           fontSize: 11,
           letterSpacing: '0.18em',
           textTransform: 'uppercase',
@@ -38,7 +38,7 @@ export default async function CashPage() {
 
         <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', flexWrap: 'wrap', gap: 12, marginBottom: 24 }}>
           <h1 style={{
-            color: '#e8e8ea',
+            color: '#17130f',
             fontFamily: '-apple-system, "Segoe UI", Roboto, sans-serif',
             fontSize: 24,
             fontWeight: 700,
@@ -49,7 +49,7 @@ export default async function CashPage() {
           </h1>
           <a href="/leadership/cash/new" style={{
             background: 'linear-gradient(180deg, #f0c24a, #d4a333)',
-            color: '#0a0a0b',
+            color: '#231903',
             fontFamily: 'inherit',
             fontSize: 11,
             fontWeight: 700,
@@ -65,17 +65,17 @@ export default async function CashPage() {
         </div>
 
         <div style={{
-          background: 'linear-gradient(180deg, #121216, #0d0d10)',
-          border: '1px solid #2a2a31',
+          background: 'linear-gradient(180deg, #ffffff, #fdfaf3)',
+          border: '1px solid #e8ddc8',
           borderRadius: 8,
           padding: '20px 22px',
           marginBottom: 22,
         }}>
-          <div style={{ color: '#9c9ca3', fontSize: 10, letterSpacing: '0.18em', textTransform: 'uppercase', marginBottom: 6 }}>
+          <div style={{ color: '#6e6154', fontSize: 10, letterSpacing: '0.18em', textTransform: 'uppercase', marginBottom: 6 }}>
             Latest Balance
           </div>
           <div style={{
-            color: latest ? '#e8e8ea' : '#6f6f76',
+            color: latest ? '#17130f' : '#7d7060',
             fontFamily: '"JetBrains Mono", ui-monospace, monospace',
             fontSize: 36,
             fontWeight: 800,
@@ -84,12 +84,12 @@ export default async function CashPage() {
             {latest ? formatCents(latest.balance_cents) : '—'}
           </div>
           {latest && (
-            <div style={{ color: '#9c9ca3', fontSize: 11, marginTop: 8, letterSpacing: '0.04em' }}>
+            <div style={{ color: '#6e6154', fontSize: 11, marginTop: 8, letterSpacing: '0.04em' }}>
               {latest.account_name} · {new Date(latest.as_of).toLocaleString('en-US', { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' })}
               {delta != null && (
                 <>
                   {' · '}
-                  <span style={{ color: delta >= 0 ? '#3fb27f' : '#c44a3a' }}>
+                  <span style={{ color: delta >= 0 ? '#0f7a4e' : '#b3311f' }}>
                     {delta >= 0 ? '+' : ''}{formatCents(delta)} vs prior
                   </span>
                 </>
@@ -99,27 +99,27 @@ export default async function CashPage() {
         </div>
 
         <h2 style={{
-          color: '#e8e8ea',
+          color: '#17130f',
           fontFamily: '-apple-system, "Segoe UI", Roboto, sans-serif',
           fontSize: 13,
           fontWeight: 600,
           letterSpacing: '0.06em',
           textTransform: 'uppercase',
           margin: '0 0 12px 0',
-          borderBottom: '1px solid #2a2a31',
+          borderBottom: '1px solid #e8ddc8',
           paddingBottom: 6,
         }}>
           History
         </h2>
 
         {(history || []).length === 0 ? (
-          <div style={{ color: '#9c9ca3', fontSize: 13, padding: '20px 0' }}>
-            No balance entries yet. <a href="/leadership/cash/new" style={{ color: '#d4a333' }}>Record the first one.</a>
+          <div style={{ color: '#6e6154', fontSize: 13, padding: '20px 0' }}>
+            No balance entries yet. <a href="/leadership/cash/new" style={{ color: '#8a5f0a' }}>Record the first one.</a>
           </div>
         ) : (
           <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13 }}>
             <thead>
-              <tr style={{ borderBottom: '1px solid #2a2a31' }}>
+              <tr style={{ borderBottom: '1px solid #e8ddc8' }}>
                 <th style={th}>Date</th>
                 <th style={th}>Account</th>
                 <th style={{ ...th, textAlign: 'right' }}>Balance</th>
@@ -128,11 +128,11 @@ export default async function CashPage() {
             </thead>
             <tbody>
               {history.map(row => (
-                <tr key={row.id} style={{ borderBottom: '1px solid #2a2a31' }}>
+                <tr key={row.id} style={{ borderBottom: '1px solid #e8ddc8' }}>
                   <td style={td}>{new Date(row.as_of).toLocaleString('en-US', { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' })}</td>
                   <td style={td}>{row.account_name}</td>
                   <td style={{ ...td, textAlign: 'right', fontFamily: '"JetBrains Mono", ui-monospace, monospace', fontWeight: 700 }}>{formatCents(row.balance_cents)}</td>
-                  <td style={{ ...td, color: '#9c9ca3' }}>{row.notes || ''}</td>
+                  <td style={{ ...td, color: '#6e6154' }}>{row.notes || ''}</td>
                 </tr>
               ))}
             </tbody>
@@ -146,7 +146,7 @@ export default async function CashPage() {
 const th = {
   textAlign: 'left',
   padding: '8px 6px',
-  color: '#9c9ca3',
+  color: '#6e6154',
   fontSize: 10,
   fontWeight: 600,
   letterSpacing: '0.18em',
@@ -154,5 +154,5 @@ const th = {
 }
 const td = {
   padding: '10px 6px',
-  color: '#e8e8ea',
+  color: '#17130f',
 }

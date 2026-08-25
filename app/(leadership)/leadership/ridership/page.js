@@ -91,8 +91,8 @@ export default async function RidershipPage() {
     {
       key: 'waitlist', header: 'Waitlist', mono: true, align: 'right',
       render: r => r.waitlist > 0
-        ? <span style={{ color: '#d4a333', fontWeight: 700 }}>{r.waitlist}</span>
-        : <span style={{ color: '#6f6f76' }}>0</span>,
+        ? <span style={{ color: '#8a5f0a', fontWeight: 700 }}>{r.waitlist}</span>
+        : <span style={{ color: '#7d7060' }}>0</span>,
     },
   ]
 
@@ -105,7 +105,7 @@ export default async function RidershipPage() {
           <h1 style={h1Style}>Ridership by bar</h1>
         </div>
 
-        <p style={{ color: '#9c9ca3', fontSize: 13, margin: '0 0 18px', maxWidth: 640, fontFamily: '-apple-system, "Segoe UI", Roboto, sans-serif' }}>
+        <p style={{ color: '#6e6154', fontSize: 13, margin: '0 0 18px', maxWidth: 640, fontFamily: '-apple-system, "Segoe UI", Roboto, sans-serif' }}>
           Riders delivered to each partner bar (all paid loops, founder tests excluded) plus
           the sold-out waitlist demand you couldn&rsquo;t serve — the renewal/expansion signal.
         </p>
@@ -120,7 +120,7 @@ export default async function RidershipPage() {
           columns={columns}
           rows={rows}
           rowKey={r => r.key}
-          empty={<div style={{ color: '#9c9ca3', fontSize: 13, padding: '20px 0' }}>No paid rides recorded yet.</div>}
+          empty={<div style={{ color: '#6e6154', fontSize: 13, padding: '20px 0' }}>No paid rides recorded yet.</div>}
         />
       </div>
     </main>
@@ -129,15 +129,15 @@ export default async function RidershipPage() {
 
 const mainStyle = {
   minHeight: '100vh',
-  background: '#0a0a0b',
-  color: '#e8e8ea',
+  background: '#faf5ea',
+  color: '#17130f',
   padding: '24px 16px calc(48px + env(safe-area-inset-bottom))',
   paddingLeft: 'max(16px, env(safe-area-inset-left))',
   paddingRight: 'max(16px, env(safe-area-inset-right))',
   fontFamily: 'inherit',
 }
 const backLink = {
-  color: '#9c9ca3', fontSize: 11, letterSpacing: '0.18em', textTransform: 'uppercase',
+  color: '#6e6154', fontSize: 11, letterSpacing: '0.18em', textTransform: 'uppercase',
   textDecoration: 'none', display: 'inline-block', marginBottom: 18,
 }
 const headerRow = {
@@ -145,6 +145,6 @@ const headerRow = {
   gap: 12, flexWrap: 'wrap', marginBottom: 18,
 }
 const h1Style = {
-  color: '#e8e8ea', fontFamily: '-apple-system, "Segoe UI", Roboto, sans-serif',
+  color: '#17130f', fontFamily: '-apple-system, "Segoe UI", Roboto, sans-serif',
   fontSize: 24, fontWeight: 700, letterSpacing: '-0.01em', margin: 0,
 }

@@ -4,11 +4,12 @@ import { useRef, useState } from 'react'
 import { useRouter } from 'next/navigation'
 
 const ACCENT = '#d4a333'
+const ACCENT_TXT = '#8a5f0a'
 const ACCENT_HI = '#f0c24a'
-const SURFACE = '#15151a'
-const BORDER = '#2a2a31'
-const INK = '#f5f5f7'
-const INK_DIM = '#9c9ca3'
+const SURFACE = '#fdfaf3'
+const BORDER = '#e8ddc8'
+const INK = '#17130f'
+const INK_DIM = '#6e6154'
 
 export default function EditView({ group, event }) {
   const router = useRouter()
@@ -193,7 +194,7 @@ export default function EditView({ group, event }) {
           background: 'rgba(255,80,80,0.08)',
           border: '1px solid rgba(255,80,80,0.32)',
           borderRadius: 8,
-          color: '#ff8b8b',
+          color: '#b3311f',
           fontSize: 13,
         }}>
           {error}
@@ -214,7 +215,7 @@ export default function EditView({ group, event }) {
           {saving ? 'Saving…' : event?.id ? 'Save changes' : 'Create event'}
         </button>
         {savedAt && !saving && (
-          <span style={{ color: '#6fbf7f', fontSize: 12, fontWeight: 600 }}>
+          <span style={{ color: '#0f7a4e', fontSize: 12, fontWeight: 600 }}>
             ✓ Saved
           </span>
         )}
@@ -250,7 +251,7 @@ function Section({ title, children }) {
     }}>
       <h2 style={{
         fontSize: 11,
-        color: ACCENT,
+        color: ACCENT_TXT,
         margin: 0,
         letterSpacing: '0.22em',
         textTransform: 'uppercase',
@@ -303,7 +304,7 @@ function PickerButton({ type, value, onChange, placeholder, format }) {
           ...inputStyle,
           textAlign: 'left',
           cursor: 'pointer',
-          color: empty ? '#6f6f76' : INK,
+          color: empty ? '#7d7060' : INK,
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'space-between',
@@ -311,7 +312,7 @@ function PickerButton({ type, value, onChange, placeholder, format }) {
         }}
       >
         <span>{display || placeholder}</span>
-        <span aria-hidden style={{ color: ACCENT, fontSize: 14 }}>
+        <span aria-hidden style={{ color: ACCENT_TXT, fontSize: 14 }}>
           {type === 'time' ? '⏱' : '📅'}
         </span>
       </button>
@@ -357,7 +358,7 @@ function formatTime(hhmm) {
 
 const inputStyle = {
   width: '100%',
-  background: '#0a0a0b',
+  background: '#faf5ea',
   border: `1px solid ${BORDER}`,
   color: INK,
   padding: '12px 14px',
@@ -369,7 +370,7 @@ const inputStyle = {
 
 const primaryBtn = {
   background: `linear-gradient(180deg, ${ACCENT_HI}, ${ACCENT})`,
-  color: '#0a0a0b',
+  color: '#231903',
   border: 0,
   padding: '12px 22px',
   borderRadius: 10,

@@ -108,8 +108,8 @@ export default function NavBar() {
 
   return (
     <nav className="admin-nav" style={{
-      background: 'linear-gradient(180deg, #0d0d10, #0a0a0b)',
-      borderBottom: '1px solid #2a2a31',
+      background: 'linear-gradient(180deg, #ffffff, #faf5ea)',
+      borderBottom: '1px solid #e8ddc8',
       boxShadow: '0 1px 0 rgba(212,163,51,0.25), 0 8px 24px rgba(0,0,0,0.5)',
       position: 'sticky',
       top: 0,
@@ -125,7 +125,7 @@ export default function NavBar() {
         paddingRight: 'max(14px, env(safe-area-inset-right))',
       }}>
         <a href={base} style={{
-          color: '#d4a333',
+          color: '#8a5f0a',
           fontFamily: "'Orbitron', system-ui, sans-serif",
           fontWeight: 900,
           fontSize: '14px',
@@ -139,7 +139,7 @@ export default function NavBar() {
         </a>
 
         <span className="admin-nav-divider" style={{
-          width: 1, height: 18, background: '#2a2a31', flexShrink: 0,
+          width: 1, height: 18, background: '#e8ddc8', flexShrink: 0,
         }} />
 
         {/* Tabs — inline on desktop, hidden on mobile (moved into hamburger menu) */}
@@ -155,9 +155,9 @@ export default function NavBar() {
             onFocus={() => setOpen(true)}
             placeholder="> search riders"
             style={{
-              background: 'linear-gradient(180deg, #121216, #0d0d10)',
-              border: '1px solid #2a2a31',
-              color: '#e8e8ea',
+              background: 'linear-gradient(180deg, #ffffff, #fdfaf3)',
+              border: '1px solid #e8ddc8',
+              color: '#17130f',
               fontFamily: "'JetBrains Mono', ui-monospace, monospace",
               padding: '6px 10px',
               borderRadius: 6,
@@ -173,8 +173,8 @@ export default function NavBar() {
               top: '100%',
               right: 0,
               marginTop: 6,
-              background: 'linear-gradient(180deg, #121216, #0d0d10)',
-              border: '1px solid #2a2a31',
+              background: 'linear-gradient(180deg, #ffffff, #fdfaf3)',
+              border: '1px solid #e8ddc8',
               borderRadius: 8,
               padding: 4,
               minWidth: 240,
@@ -191,7 +191,7 @@ export default function NavBar() {
                     padding: '8px 10px',
                     borderRadius: 4,
                     textDecoration: 'none',
-                    color: '#e8e8ea',
+                    color: '#17130f',
                     fontSize: 13,
                     borderLeft: '2px solid transparent',
                   }}
@@ -207,7 +207,7 @@ export default function NavBar() {
                   <div style={{ fontWeight: 600 }}>{r.first_name} {r.last_name}</div>
                   <div style={{
                     fontSize: 11,
-                    color: '#9c9ca3',
+                    color: '#6e6154',
                     fontFamily: "'JetBrains Mono', ui-monospace, monospace",
                     letterSpacing: '0.04em',
                   }}>{r.phone || r.email}</div>
@@ -218,7 +218,7 @@ export default function NavBar() {
 
           {isLeader && otherConsoles.map(c => (
             <a key={c.base} className="admin-nav-cross" href={c.base} style={{
-              color: '#9c9ca3',
+              color: '#6e6154',
               fontFamily: "'JetBrains Mono', ui-monospace, monospace",
               fontSize: '10px',
               fontWeight: 700,
@@ -226,7 +226,7 @@ export default function NavBar() {
               textTransform: 'uppercase',
               textDecoration: 'none',
               whiteSpace: 'nowrap',
-              border: '1px solid #2a2a31',
+              border: '1px solid #e8ddc8',
               borderRadius: 6,
               padding: '6px 9px',
             }}>
@@ -236,7 +236,7 @@ export default function NavBar() {
 
           {email && (
             <span className="admin-nav-email" style={{
-              color: '#d4a333',
+              color: '#8a5f0a',
               fontFamily: "'JetBrains Mono', ui-monospace, monospace",
               fontSize: '10px',
               fontWeight: 600,
@@ -256,7 +256,7 @@ export default function NavBar() {
           )}
           <button className="admin-nav-signout-desktop" onClick={signOut} style={{
             background: 'none',
-            color: '#6f6f76',
+            color: '#7d7060',
             fontFamily: "'JetBrains Mono', ui-monospace, monospace",
             fontSize: '10px',
             fontWeight: 600,
@@ -277,8 +277,8 @@ export default function NavBar() {
             onClick={() => setMenuOpen(o => !o)}
             style={{
               display: 'none',
-              background: 'linear-gradient(180deg, #121216, #0d0d10)',
-              border: '1px solid #2a2a31',
+              background: 'linear-gradient(180deg, #ffffff, #fdfaf3)',
+              border: '1px solid #e8ddc8',
               borderRadius: 8,
               padding: 0,
               width: 40,
@@ -352,7 +352,7 @@ function AdminMobileMenu({ pathname, links, base, email, search, setSearch, resu
         position: 'fixed',
         inset: 0,
         top: 'calc(env(safe-area-inset-top) + 61px)',
-        background: '#0a0a0b',
+        background: '#faf5ea',
         zIndex: 25,
         overflowY: 'auto',
         WebkitOverflowScrolling: 'touch',
@@ -364,7 +364,7 @@ function AdminMobileMenu({ pathname, links, base, email, search, setSearch, resu
         padding: '0 18px 14px',
         paddingLeft: 'max(18px, env(safe-area-inset-left))',
         paddingRight: 'max(18px, env(safe-area-inset-right))',
-        borderBottom: '1px solid #16161c',
+        borderBottom: '1px solid #fdfaf3',
         marginBottom: 6,
       }}>
         <input
@@ -372,9 +372,9 @@ function AdminMobileMenu({ pathname, links, base, email, search, setSearch, resu
           onChange={e => setSearch(e.target.value)}
           placeholder="> search riders"
           style={{
-            background: 'linear-gradient(180deg, #121216, #0d0d10)',
-            border: '1px solid #2a2a31',
-            color: '#e8e8ea',
+            background: 'linear-gradient(180deg, #ffffff, #fdfaf3)',
+            border: '1px solid #e8ddc8',
+            color: '#17130f',
             fontFamily: "'JetBrains Mono', ui-monospace, monospace",
             padding: '12px 14px',
             borderRadius: 8,
@@ -396,16 +396,16 @@ function AdminMobileMenu({ pathname, links, base, email, search, setSearch, resu
                   padding: '10px 12px',
                   borderRadius: 6,
                   textDecoration: 'none',
-                  color: '#e8e8ea',
+                  color: '#17130f',
                   fontSize: 14,
-                  borderLeft: '2px solid #2a2a31',
+                  borderLeft: '2px solid #e8ddc8',
                   marginBottom: 4,
                 }}
               >
                 <div style={{ fontWeight: 600 }}>{r.first_name} {r.last_name}</div>
                 <div style={{
                   fontSize: 12,
-                  color: '#9c9ca3',
+                  color: '#6e6154',
                   fontFamily: "'JetBrains Mono', ui-monospace, monospace",
                 }}>{r.phone || r.email}</div>
               </a>
@@ -429,13 +429,13 @@ function AdminMobileMenu({ pathname, links, base, email, search, setSearch, resu
               paddingLeft: 'max(22px, env(safe-area-inset-left))',
               paddingRight: 'max(22px, env(safe-area-inset-right))',
               textDecoration: 'none',
-              color: active ? '#d4a333' : '#e8e8ea',
+              color: active ? '#8a5f0a' : '#17130f',
               fontFamily: "'Orbitron', system-ui, sans-serif",
               fontSize: 15,
               fontWeight: 700,
               letterSpacing: '0.18em',
               textTransform: 'uppercase',
-              borderBottom: '1px solid #16161c',
+              borderBottom: '1px solid #fdfaf3',
             }}
           >
             {link.label}
@@ -460,17 +460,17 @@ function AdminMobileMenu({ pathname, links, base, email, search, setSearch, resu
             paddingLeft: 'max(22px, env(safe-area-inset-left))',
             paddingRight: 'max(22px, env(safe-area-inset-right))',
             textDecoration: 'none',
-            color: '#9c9ca3',
+            color: '#6e6154',
             fontFamily: "'Orbitron', system-ui, sans-serif",
             fontSize: 14,
             fontWeight: 700,
             letterSpacing: '0.18em',
             textTransform: 'uppercase',
-            borderBottom: '1px solid #16161c',
+            borderBottom: '1px solid #fdfaf3',
           }}
         >
           {c.label}
-          <span style={{ color: '#d4a333' }}>&rsaquo;</span>
+          <span style={{ color: '#8a5f0a' }}>&rsaquo;</span>
         </a>
       ))}
 
@@ -484,7 +484,7 @@ function AdminMobileMenu({ pathname, links, base, email, search, setSearch, resu
       }}>
         {email && (
           <span style={{
-            color: '#6f6f76',
+            color: '#7d7060',
             fontFamily: "'JetBrains Mono', ui-monospace, monospace",
             fontSize: 12,
             letterSpacing: '0.04em',
@@ -494,14 +494,14 @@ function AdminMobileMenu({ pathname, links, base, email, search, setSearch, resu
         )}
         <button onClick={onSignOut} style={{
           background: 'none',
-          color: '#9c9ca3',
+          color: '#6e6154',
           fontFamily: "'JetBrains Mono', ui-monospace, monospace",
           fontSize: 12,
           fontWeight: 600,
           letterSpacing: '0.18em',
           textTransform: 'uppercase',
           padding: '10px 16px',
-          border: '1px solid #2a2a31',
+          border: '1px solid #e8ddc8',
           borderRadius: 8,
           cursor: 'pointer',
         }}>
@@ -522,7 +522,7 @@ function Tabs({ pathname, links, base }) {
             key={l.href}
             href={l.href}
             style={{
-              color: active ? '#0a0a0b' : '#c8c8cc',
+              color: active ? '#231903' : '#3b322a',
               background: active ? 'linear-gradient(180deg, #f0c24a, #d4a333)' : 'transparent',
               textDecoration: 'none',
               fontFamily: "'JetBrains Mono', ui-monospace, monospace",

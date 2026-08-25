@@ -10,10 +10,10 @@ const FONT_BODY = '-apple-system, "Segoe UI", Roboto, sans-serif'
 
 // How the active loop reads at a glance.
 const STATE = {
-  upcoming:   { tone: '#9c9ca3', dot: '#9c9ca3', label: 'Next loop',   pulse: false },
-  pre_pickup: { tone: '#d4a333', dot: '#d4a333', label: 'Boarding soon', pulse: true },
-  in_progress:{ tone: '#3fb27f', dot: '#3fb27f', label: 'On the road',  pulse: true },
-  wrapping:   { tone: '#d4a333', dot: '#d4a333', label: 'Wrapping up',  pulse: true },
+  upcoming:   { tone: '#6e6154', dot: '#6e6154', label: 'Next loop',   pulse: false },
+  pre_pickup: { tone: '#8a5f0a', dot: '#d4a333', label: 'Boarding soon', pulse: true },
+  in_progress:{ tone: '#0f7a4e', dot: '#2fa36b', label: 'On the road',  pulse: true },
+  wrapping:   { tone: '#8a5f0a', dot: '#d4a333', label: 'Wrapping up',  pulse: true },
 }
 
 function fmtDate(iso) {
@@ -31,7 +31,7 @@ export default async function LeadershipScoreboard() {
 
   return (
     <main style={{
-      minHeight: '100vh', background: '#0a0a0b', color: '#e8e8ea',
+      minHeight: '100vh', background: '#faf5ea', color: '#17130f',
       padding: '24px 16px calc(48px + env(safe-area-inset-bottom))',
       paddingLeft: 'max(16px, env(safe-area-inset-left))',
       paddingRight: 'max(16px, env(safe-area-inset-right))',
@@ -39,7 +39,10 @@ export default async function LeadershipScoreboard() {
     }}>
       <div style={{ maxWidth: 1000, margin: '0 auto' }}>
         <header style={{ marginBottom: 22 }}>
-          <h1 style={{ fontSize: 26, fontWeight: 700, letterSpacing: '-0.01em', margin: 0 }}>Scoreboard</h1>
+          <h1 style={{ fontSize: 26, fontWeight: 800, letterSpacing: '-0.02em', margin: 0 }}>Back office</h1>
+          <p style={{ color: '#6e6154', fontSize: 13.5, margin: '4px 0 0' }}>
+            The week so far, and every page that isn&apos;t about tonight.
+          </p>
           {/* Faster heartbeat than the old 60s so it actually feels live. */}
           <LiveStamp renderedAt={renderedAt} intervalMs={20000} />
         </header>
@@ -54,18 +57,14 @@ export default async function LeadershipScoreboard() {
           <StatCard label="Active bars" value={week.activeBars} tone="ink" mono />
         </div>
 
-        <div style={{ display: 'flex', gap: 14, flexWrap: 'wrap', marginTop: 22 }}>
-          <Detail href="/leadership/income" label="Income detail" />
-          <Detail href="/leadership/ridership" label="Ridership by bar" />
-          <Detail href="/leadership/passes" label="Loop Pass" />
-          <Detail href="/leadership/referrals" label="Referrals" />
-          <Detail href="/leadership/comps" label="Free / comped rides" />
-        </div>
+        <Directory />
 
         <style>{`
           @keyframes leadpulse { 0%,100% { opacity: 1; transform: scale(1); } 50% { opacity: 0.35; transform: scale(0.82); } }
           @media (max-width: 760px) { .lead-grid { grid-template-columns: repeat(2, 1fr) !important; } }
           @media (max-width: 380px) { .lead-grid { grid-template-columns: 1fr !important; } }
+          @media (max-width: 900px) { .dir-grid { grid-template-columns: repeat(2, 1fr) !important; } }
+          @media (max-width: 560px) { .dir-grid { grid-template-columns: 1fr !important; } }
         `}</style>
       </div>
     </main>
@@ -76,8 +75,8 @@ function LiveTonight({ live }) {
   if (!live) {
     return (
       <div style={{
-        background: 'linear-gradient(180deg, #121216, #0d0d10)', border: '1px solid #2a2a31',
-        borderRadius: 12, padding: '18px 20px', color: '#9c9ca3', fontSize: 14, marginBottom: 4,
+        background: 'linear-gradient(180deg, #ffffff, #fdfaf3)', border: '1px solid #e8ddc8',
+        borderRadius: 12, padding: '18px 20px', color: '#6e6154', fontSize: 14, marginBottom: 4,
       }}>
         No loop running right now. The next scheduled loop shows here once it&rsquo;s set up.
       </div>
@@ -106,7 +105,7 @@ function LiveTonight({ live }) {
   return (
     <Link href="/admin" style={{ textDecoration: 'none', color: 'inherit', display: 'block' }}>
       <div style={{
-        background: 'linear-gradient(180deg, #15151c, #101015)',
+        background: 'linear-gradient(180deg, #ffffff, #fdfaf3)',
         border: `1px solid ${s.tone}55`,
         borderRadius: 14,
         padding: '18px 20px',
@@ -121,18 +120,18 @@ function LiveTonight({ live }) {
           <span style={{ color: s.tone, fontSize: 11, fontWeight: 700, letterSpacing: '0.18em', textTransform: 'uppercase' }}>
             {isUpcoming ? 'Next loop' : 'Live now'}
           </span>
-          <span style={{ marginLeft: 'auto', color: '#6f6f76', fontSize: 12 }}>Tap for ops →</span>
+          <span style={{ marginLeft: 'auto', color: '#7d7060', fontSize: 12 }}>Tap for ops →</span>
         </div>
 
         <div style={{ display: 'flex', alignItems: 'baseline', gap: 12, flexWrap: 'wrap' }}>
           <h2 style={{ margin: 0, fontSize: 20, fontWeight: 700 }}>{live.name}</h2>
           <span style={{ color: s.tone, fontSize: 13, fontWeight: 600 }}>{s.label}</span>
         </div>
-        {where && <div style={{ color: '#c8c8cc', fontSize: 14, marginTop: 4 }}>{where}</div>}
+        {where && <div style={{ color: '#3b322a', fontSize: 14, marginTop: 4 }}>{where}</div>}
 
         <div style={{ display: 'flex', gap: 26, marginTop: 14, flexWrap: 'wrap' }}>
-          <LiveStat label={isUpcoming ? 'Pre-sold' : 'Collected'} value={formatCents(live.revenueCents)} tone="#3fb27f" />
-          <LiveStat label="Riders booked" value={live.riders} tone="#e8e8ea" />
+          <LiveStat label={isUpcoming ? 'Pre-sold' : 'Collected'} value={formatCents(live.revenueCents)} tone="#2fa36b" />
+          <LiveStat label="Riders booked" value={live.riders} tone="#17130f" />
           {live.waitlist > 0 && <LiveStat label="On waitlist" value={live.waitlist} tone="#d4a333" />}
           {live.stopCount > 0 && (
             <LiveStat
@@ -140,7 +139,7 @@ function LiveTonight({ live }) {
               value={live.state === 'in_progress' && live.currentStopIndex != null
                 ? `${live.currentStopIndex + 1}/${live.stopCount}`
                 : live.stopCount}
-              tone="#9c9ca3"
+              tone="#6e6154"
             />
           )}
         </div>
@@ -155,20 +154,93 @@ function LiveStat({ label, value, tone }) {
       <div style={{ fontFamily: '"JetBrains Mono", ui-monospace, monospace', fontSize: 26, fontWeight: 800, color: tone, lineHeight: 1.1 }}>
         {value}
       </div>
-      <div style={{ color: '#9c9ca3', fontSize: 10, letterSpacing: '0.16em', textTransform: 'uppercase', marginTop: 3 }}>
+      <div style={{ color: '#6e6154', fontSize: 10, letterSpacing: '0.16em', textTransform: 'uppercase', marginTop: 3 }}>
         {label}
       </div>
     </div>
   )
 }
 
-function Detail({ href, label }) {
+// The sidebar carries six entries now, all of them about running a night. That
+// left every back-office page without a link, so they live here instead: one
+// index, grouped by the question it answers. Nothing was deleted and no URL
+// moved — this is the door they are all behind.
+const GROUPS = [
+  {
+    title: 'Money',
+    items: [
+      ['/leadership/income', 'Income'],
+      ['/leadership/expenses', 'Expenses'],
+      ['/leadership/cash', 'Cash on hand'],
+      ['/leadership/merch', 'Merch'],
+      ['/leadership/profit-first', 'Profit First'],
+      ['/admin/finance', 'Ledger entries'],
+    ],
+  },
+  {
+    title: 'Bars & sponsors',
+    items: [
+      ['/leadership/bars', 'Bars'],
+      ['/leadership/sponsors', 'Sponsors'],
+      ['/leadership/comps', 'Free / comped rides'],
+    ],
+  },
+  {
+    title: 'Riders',
+    items: [
+      ['/leadership/ridership', 'Ridership by bar'],
+      ['/leadership/feedback', 'Feedback'],
+      ['/leadership/leaderboard', 'Leaderboard'],
+      ['/leadership/referrals', 'Referrals'],
+      ['/leadership/passes', 'Loop Pass'],
+    ],
+  },
+  {
+    title: 'Loops & season',
+    items: [
+      ['/leadership/loops', 'Loop P&L'],
+      ['/leadership/schedule', 'Season'],
+      ['/leadership/drivers', 'Drivers'],
+      ['/leadership/drivers/route-log', 'Route log'],
+    ],
+  },
+  {
+    title: 'Setup',
+    items: [
+      ['/leadership/automations', 'Automations'],
+      ['/leadership/alerts', 'Alerts'],
+      ['/leadership/attribution', 'Flyer tracking'],
+    ],
+  },
+]
+
+function Directory() {
   return (
-    <Link href={href} style={{
-      color: '#9c9ca3', fontSize: 13, textDecoration: 'none',
-      borderBottom: '1px solid #2a2a31', paddingBottom: 2,
+    <div className="dir-grid" style={{
+      display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 12, marginTop: 26,
     }}>
-      {label} →
-    </Link>
+      {GROUPS.map(g => (
+        <div key={g.title} style={{
+          background: '#ffffff', border: '1px solid #e8ddc8', borderRadius: 12, padding: '14px 16px 16px',
+        }}>
+          <div style={{
+            color: '#8a5f0a', fontSize: 10, fontWeight: 800,
+            letterSpacing: '0.18em', textTransform: 'uppercase', marginBottom: 10,
+          }}>
+            {g.title}
+          </div>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+            {g.items.map(([href, label]) => (
+              <Link key={href} href={href} style={{
+                color: '#3b322a', fontSize: 13.5, fontWeight: 600, textDecoration: 'none',
+                padding: '7px 8px', borderRadius: 8, display: 'block',
+              }}>
+                {label}
+              </Link>
+            ))}
+          </div>
+        </div>
+      ))}
+    </div>
   )
 }

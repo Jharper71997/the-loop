@@ -14,11 +14,11 @@ export default function LiveStamp({ renderedAt, intervalMs, style }) {
       <span style={{ display: 'inline-flex', alignItems: 'center', gap: 7 }}>
         <span style={{
           width: 7, height: 7, borderRadius: '50%',
-          background: refreshing ? '#d4a333' : '#3fb27f',
+          background: refreshing ? '#d4a333' : '#2fa36b',
           boxShadow: `0 0 8px ${refreshing ? 'rgba(212,163,51,0.6)' : 'rgba(63,178,127,0.55)'}`,
           transition: 'background 0.2s',
         }} />
-        <span style={{ color: '#9c9ca3', fontSize: 13, fontFamily: FONT_BODY }}>
+        <span style={{ color: '#6e6154', fontSize: 13, fontFamily: FONT_BODY }}>
           {refreshing ? 'Refreshing…' : `Updated ${ago(now - renderedAt)}`}
         </span>
       </span>
@@ -27,8 +27,8 @@ export default function LiveStamp({ renderedAt, intervalMs, style }) {
         disabled={refreshing}
         style={{
           background: 'none',
-          border: '1px solid #2a2a31',
-          color: '#9c9ca3',
+          border: '1px solid #e8ddc8',
+          color: '#6e6154',
           fontFamily: FONT_BODY,
           fontSize: 12,
           fontWeight: 500,
