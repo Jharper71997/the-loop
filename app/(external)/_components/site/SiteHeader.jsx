@@ -6,6 +6,7 @@
 // so it feels native to the app.
 
 import { useEffect, useState } from 'react'
+import { createPortal } from 'react-dom'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { brandFor } from '@/lib/businessConfig'
@@ -19,7 +20,11 @@ export default function SiteHeader() {
   const pathname = usePathname() || '/'
   const [scrolled, setScrolled] = useState(false)
   const [open, setOpen] = useState(false)
+  // The drawer is portalled to <body>, which only exists after mount.
+  const [mounted, setMounted] = useState(false)
   const { count } = useCart()
+
+  useEffect(() => { setMounted(true) }, [])
 
   useEffect(() => {
     const onScroll = () => setScrolled(window.scrollY > 4)
@@ -130,8 +135,13 @@ export default function SiteHeader() {
         </div>
       </nav>
 
-      {/* Mobile drawer */}
-      {open && (
+      {/* Mobile drawer. Portalled to <body> on purpose: this header sets a
+          backdrop-filter, and that makes it the containing block for any
+          position:fixed descendant. Rendered in place, the overlay's inset:0
+          resolved against the 64px header instead of the viewport, so the
+          panel was 64px tall and its links painted over the hero with no
+          background behind them. */}
+      {mounted && open && createPortal((
         <div style={overlay} onClick={() => setOpen(false)}>
           <div style={drawer} onClick={e => e.stopPropagation()} role="dialog" aria-label="Menu">
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
@@ -153,7 +163,7 @@ export default function SiteHeader() {
             </Link>
           </div>
         </div>
-      )}
+      ), document.body)}
 
       <style>{`
         .bl-desktop-nav { display: none; }
@@ -192,7 +202,7 @@ function Logo({ size = 40 }) {
 const brandLink = { display: 'inline-flex', alignItems: 'center', gap: 10, textDecoration: 'none', flex: '0 0 auto' }
 const iconButton = {
   display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
-  width: 40, height: 40, borderRadius: 10, background: 'transparent',
+  width: 44, height: 44, borderRadius: 10, background: 'transparent',
   border: `1px solid ${LINE}`, cursor: 'pointer', color: INK,
 }
 const cartBadge = {
@@ -205,10 +215,13 @@ const overlay = {
   backdropFilter: 'blur(2px)', WebkitBackdropFilter: 'blur(2px)',
 }
 const drawer = {
-  position: 'absolute', top: 0, right: 0, height: '100%', width: 'min(84vw, 320px)',
+  position: 'absolute', top: 0, right: 0, height: '100%', width: 'min(86vw, 340px)',
   background: '#1e1e22', borderLeft: `1px solid ${LINE_HI}`,
-  padding: 'calc(16px + env(safe-area-inset-top)) 18px 24px',
+  padding: 'calc(16px + env(safe-area-inset-top)) 18px calc(24px + env(safe-area-inset-bottom))',
   display: 'flex', flexDirection: 'column', gap: 2,
+  // A short phone in landscape can run the list past the fold; let it scroll
+  // rather than hiding the Book a seat CTA off the bottom.
+  overflowY: 'auto', WebkitOverflowScrolling: 'touch',
 }
 function drawerLink(active) {
   return {

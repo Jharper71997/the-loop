@@ -417,7 +417,7 @@ function Closer() {
 
         {/* Sponsor strip — quiet, at the very bottom where a B2B ask belongs */}
         <div style={{ marginTop: 'clamp(56px, 8vw, 92px)' }}>
-          <div style={{ color: INK_MUTE, fontSize: 11, letterSpacing: '0.2em', textTransform: 'uppercase', fontWeight: 700 }}>
+          <div style={{ color: INK_MUTE, fontSize: 12.5, letterSpacing: '0.2em', textTransform: 'uppercase', fontWeight: 700 }}>
             Backed by Jacksonville businesses
           </div>
           <div className="bl-sponsors">
