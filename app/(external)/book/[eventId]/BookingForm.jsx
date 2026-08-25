@@ -283,7 +283,7 @@ export default function BookingForm({ eventId, eventName, ticketTypes, addons = 
   }
 
   return (
-    <form onSubmit={onSubmit} style={{ display: 'grid', gap: 16 }}>
+    <form onSubmit={onSubmit} className="bk-form-fields" style={{ display: 'grid', gap: 18 }}>
       <Section title="Your info">
         <Row>
           <Field label="First name" value={buyer.first_name} onChange={v => setBuyer(b => ({ ...b, first_name: v }))} />
@@ -305,50 +305,77 @@ export default function BookingForm({ eventId, eventName, ticketTypes, addons = 
           {riders.map((r, idx) => {
             const tt = ticketTypes.find(t => t.id === r.ticket_type_id)
             return (
+              /* No box. A rider is a passage of the section, marked by a
+                 gold rail and a rule above it - not a card inside a card. */
               <div key={idx} style={{
-                padding: 12,
-                background: '#0e0e12',
-                border: `1px solid ${BORDER}`,
-                borderRadius: 10,
                 display: 'grid',
-                gap: 8,
+                gap: 12,
+                paddingLeft: 16,
+                paddingTop: idx === 0 ? 0 : 20,
+                borderLeft: `2px solid ${idx === 0 ? 'rgba(212,163,51,0.55)' : 'rgba(255,255,255,0.10)'}`,
+                borderTop: idx === 0 ? 0 : '1px solid rgba(255,255,255,0.07)',
+                marginLeft: 2,
               }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                  <strong style={{ color: ACCENT, fontSize: 13 }}>Rider {idx + 1}</strong>
+                  <strong style={{ color: ACCENT, fontSize: 11, letterSpacing: '0.2em', textTransform: 'uppercase', fontWeight: 800 }}>Rider {idx + 1}</strong>
                   {idx > 0 && (
                     <button type="button" onClick={() => removeRider(idx)} style={btnGhost}>Remove</button>
                   )}
                 </div>
 
-                <select
-                  value={r.ticket_type_id}
-                  onChange={e => updateRider(idx, { ticket_type_id: e.target.value })}
-                  style={input}
-                >
-                  {ticketTypes.map(t => (
-                    <option key={t.id} value={t.id} disabled={t.remaining === 0}>
-                      {ticketLabel(t)}
-                    </option>
-                  ))}
-                </select>
                 {(() => {
-                  const t = ticketTypes.find(x => x.id === r.ticket_type_id)
-                  if (!t) return null
+                  const sel = ticketTypes.find(x => x.id === r.ticket_type_id)
+                  // A walk-on ticket is not tied to a stop, so for those this
+                  // select really is just the ticket and the bar is asked
+                  // separately below. For every normal ticket type it IS the
+                  // pickup bar, and has to say so.
+                  const walkOn = needsPickup(sel)
                   return (
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: 12, color: '#9c9ca3', marginTop: -2, gap: 8 }}>
-                      <span>
-                        {t.pickup_time ? (
-                          <>Pickup at <strong style={{ color: ACCENT, fontWeight: 700 }}>{formatPickupTime(t.pickup_time)}</strong></>
-                        ) : null}
+                    <label style={{ display: 'grid', gap: 7 }}>
+                      <span style={{ fontSize: 14, color: '#f5f5f7', fontWeight: 700 }}>
+                        {walkOn ? 'Which ticket?' : 'Where should we pick you up?'}
                       </span>
-                      <RemainingBadge remaining={t.remaining} />
-                    </div>
+                      {!walkOn && (
+                        <span style={{ fontSize: 12.5, color: '#9c9ca3', lineHeight: 1.5, marginTop: -3 }}>
+                          Pick the bar you&rsquo;ll already be at. You can ride between every bar on the
+                          route from there, and the last loop brings you back to this one.
+                        </span>
+                      )}
+                      <select
+                        value={r.ticket_type_id}
+                        onChange={e => updateRider(idx, { ticket_type_id: e.target.value })}
+                        style={input}
+                      >
+                        {ticketTypes.map(t => (
+                          <option key={t.id} value={t.id} disabled={t.remaining === 0}>
+                            {ticketLabel(t)}
+                          </option>
+                        ))}
+                      </select>
+                      {sel && (
+                        <span style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: 12.5, color: '#9c9ca3', gap: 8 }}>
+                          <span>
+                            {!walkOn && sel.pickup_time ? (
+                              <>Be at <strong style={{ color: '#f5f5f7', fontWeight: 700 }}>{sel.name}</strong>{' '}
+                              for <strong style={{ color: ACCENT, fontWeight: 700 }}>{formatPickupTime(sel.pickup_time)}</strong>.</>
+                            ) : null}
+                          </span>
+                          <RemainingBadge remaining={sel.remaining} />
+                        </span>
+                      )}
+                    </label>
                   )
                 })()}
 
                 {needsPickup(ticketTypes.find(x => x.id === r.ticket_type_id)) && (
-                  <label style={{ display: 'grid', gap: 4, fontSize: 12, color: '#9c9ca3' }}>
-                    Pickup bar <span style={{ color: ACCENT, fontWeight: 700 }}>(required)</span>
+                  <label style={{ display: 'grid', gap: 7 }}>
+                    <span style={{ fontSize: 14, color: '#f5f5f7', fontWeight: 700 }}>
+                      Where should we pick you up? <span style={{ color: ACCENT }}>*</span>
+                    </span>
+                    <span style={{ fontSize: 12.5, color: '#9c9ca3', lineHeight: 1.5, marginTop: -3 }}>
+                      Pick the bar you&rsquo;ll already be at. You can ride between every bar on the
+                      route from there, and the last loop brings you back to this one.
+                    </span>
                     <select
                       value={r.pickup_stop_index}
                       onChange={e => updateRider(idx, { pickup_stop_index: e.target.value })}
@@ -412,7 +439,7 @@ export default function BookingForm({ eventId, eventName, ticketTypes, addons = 
                       </>
                     )}
 
-                    <div style={{ display: 'grid', gap: 8, padding: 12, background: '#15151a', borderRadius: 8, marginTop: 4 }}>
+                    <div style={{ display: 'grid', gap: 10, paddingTop: 14, marginTop: 4, borderTop: '1px solid rgba(255,255,255,0.07)' }}>
                       <strong style={{ fontSize: 11, color: ACCENT, letterSpacing: '0.08em', textTransform: 'uppercase' }}>
                         Waiver for this rider
                       </strong>
@@ -580,43 +607,95 @@ export default function BookingForm({ eventId, eventName, ticketTypes, addons = 
         </div>
       )}
 
+      {/* The destination. It was the same grey box at the same weight as
+          every other grey box, so the end of the page looked like the middle
+          of it. Gold-lit, bigger number, clearly where this is going. */}
       <div style={{
-        padding: 16,
-        background: SURFACE,
-        border: `1px solid ${BORDER}`,
-        borderRadius: 12,
+        padding: 'clamp(20px, 3vw, 26px)',
+        background: 'linear-gradient(180deg, rgba(212,163,51,0.10), rgba(212,163,51,0.02) 60%), #1b1b21',
+        border: '1px solid rgba(212,163,51,0.28)',
+        borderRadius: 18,
         display: 'grid',
-        gap: 12,
+        gap: 14,
+        boxShadow: '0 22px 50px rgba(0,0,0,0.45)',
       }}>
         <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between' }}>
-          <span style={{ fontSize: 12, color: '#9c9ca3', textTransform: 'uppercase', letterSpacing: '0.08em' }}>Total</span>
-          <span style={{ fontSize: 26, fontWeight: 700, color: ACCENT, letterSpacing: '-0.01em' }}>
+          <span style={{ fontSize: 11, color: '#a6a6ae', textTransform: 'uppercase', letterSpacing: '0.2em', fontWeight: 700 }}>Total</span>
+          <span style={{ fontSize: 'clamp(30px, 4vw, 38px)', fontWeight: 800, color: ACCENT, letterSpacing: '-0.03em', lineHeight: 1 }}>
             ${(totalCents / 100).toFixed(2)}
           </span>
         </div>
+        {/* The disabled state used to be #3a2f15 on #7a6a3a - a muddy brown
+            bar with unreadable text that looked like a broken button rather
+            than a form waiting to be filled in. It is a neutral, legible
+            "not yet" now, and the line underneath says what it is waiting for
+            instead of leaving the rider to guess. The `disabled` condition
+            itself is unchanged: this is a live checkout and the styling pass
+            does not touch what gates the payment. */}
         <button
           type="submit"
           disabled={!formValid || submitting}
           style={{
-            background: formValid && !submitting ? ACCENT : '#3a2f15',
-            color: formValid && !submitting ? '#0a0a0b' : '#7a6a3a',
-            border: 0,
-            padding: '14px 20px',
-            borderRadius: 10,
-            fontWeight: 700,
+            background: formValid && !submitting
+              ? 'linear-gradient(180deg, #f0c24a, #d4a333)'
+              : 'rgba(255,255,255,0.05)',
+            color: formValid && !submitting ? '#0a0a0b' : '#8a8a92',
+            border: formValid && !submitting ? '1px solid transparent' : '1px solid rgba(255,255,255,0.12)',
+            padding: '15px 20px',
+            borderRadius: 12,
+            fontWeight: 800,
             fontSize: 16,
-            letterSpacing: '0.02em',
+            letterSpacing: '0.01em',
             cursor: formValid && !submitting ? 'pointer' : 'not-allowed',
             width: '100%',
-            transition: 'background 120ms ease',
+            boxShadow: formValid && !submitting ? '0 10px 28px rgba(212,163,51,0.28)' : 'none',
+            transition: 'background 160ms ease, box-shadow 160ms ease, color 160ms ease',
           }}
         >
           {submitting ? 'Loading…' : `Pay $${(totalCents / 100).toFixed(2)}`}
         </button>
+        {!formValid && !submitting && (
+          <div style={{ fontSize: 12, color: '#8a8a92', textAlign: 'center', lineHeight: 1.45 }}>
+            Add your details, pick a pickup bar, and sign the waiver to continue.
+          </div>
+        )}
         <div style={{ fontSize: 11, color: '#777', textAlign: 'center' }}>
           Secure checkout powered by Stripe
         </div>
       </div>
+
+      <style>{`
+        /* Only what an inline style object cannot express. The base look of
+           these controls lives in the input style object above, because inline
+           wins over a stylesheet and splitting it would make the two fight. */
+        .bk-form-fields input::placeholder { color: #6a6a73; }
+        .bk-form-fields input:focus-visible,
+        .bk-form-fields select:focus-visible,
+        .bk-form-fields textarea:focus-visible,
+        .bk-form-fields button:focus-visible {
+          outline: none;
+          border-color: rgba(212,163,51,0.7);
+          box-shadow: 0 0 0 3px rgba(212,163,51,0.18);
+        }
+        .bk-form-fields select {
+          background: #21212a;
+          border: 1px solid rgba(255,255,255,0.14);
+          color: #f5f5f7;
+          padding: 12px 13px;
+          border-radius: 10px;
+          font-size: 16px;
+          width: 100%;
+          box-sizing: border-box;
+        }
+        /* These buttons set their background inline, and inline beats any
+           selector - so this needs !important or it silently does nothing.
+           Scoped to hover only, and never to the submit button, which owns
+           its own gold treatment. */
+        .bk-form-fields button:not(:disabled):not([type="submit"]):hover {
+          border-color: rgba(212,163,51,0.45) !important;
+          background: rgba(212,163,51,0.08) !important;
+        }
+      `}</style>
     </form>
   )
 }
@@ -680,20 +759,43 @@ function mintToken() {
 
 function Section({ title, children }) {
   return (
-    <section style={{ background: SURFACE, border: `1px solid ${BORDER}`, borderRadius: 12, padding: 14, display: 'grid', gap: 10 }}>
-      <h2 style={{ fontSize: 13, color: ACCENT, margin: 0, letterSpacing: '0.08em', textTransform: 'uppercase' }}>{title}</h2>
+    <section style={{
+      // The ONE card level on this form. Lit along the top edge like every
+      // other surface on the site, and nothing inside it is allowed to be a
+      // box as well - that stacking is what made this page look like a form.
+      background: `linear-gradient(180deg, rgba(255,255,255,0.05), rgba(255,255,255,0) 42%), ${SURFACE}`,
+      border: `1px solid ${BORDER}`,
+      borderRadius: 18,
+      padding: 'clamp(20px, 3vw, 28px)',
+      display: 'grid',
+      gap: 16,
+      boxShadow: '0 20px 44px rgba(0,0,0,0.38)',
+    }}>
+      {/* A real heading, not a 11px gold caps label. The whole page was set
+          at one size, so nothing led the eye anywhere. */}
+      <h2 style={{
+        fontSize: 'clamp(17px, 2.2vw, 20px)', color: '#f5f5f7', margin: 0,
+        letterSpacing: '-0.015em', fontWeight: 800, display: 'flex',
+        alignItems: 'center', gap: 10,
+      }}>
+        <span aria-hidden style={{
+          width: 4, height: 17, borderRadius: 2, flex: '0 0 auto',
+          background: `linear-gradient(180deg, ${ACCENT}, rgba(212,163,51,0.25))`,
+        }} />
+        {title}
+      </h2>
       {children}
     </section>
   )
 }
 
 function Row({ children }) {
-  return <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>{children}</div>
+  return <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>{children}</div>
 }
 
 function Field({ label, value, onChange, type = 'text' }) {
   return (
-    <label style={{ display: 'grid', gap: 4, fontSize: 12, color: '#9c9ca3' }}>
+    <label style={{ display: 'grid', gap: 7, fontSize: 12.5, color: '#a6a6ae', fontWeight: 600 }}>
       {label}
       <input type={type} value={value} onChange={e => onChange(e.target.value)} style={input} />
     </label>
@@ -864,23 +966,35 @@ function RadioRow({ name, checked, onChange, label }) {
   )
 }
 
+// Inline, because inline beats the stylesheet - so the BASE look has to live
+// here and the sheet below only handles what inline styles cannot express
+// (:focus-visible, ::placeholder, the select arrow).
+// 16px is not an aesthetic choice: iOS Safari zooms the whole viewport when a
+// focused input is under 16px, which on a checkout form throws the rider's
+// layout around mid-purchase.
 const input = {
-  background: '#0a0a0b',
-  border: '1px solid #2a2a31',
-  color: '#fff',
-  padding: '10px 12px',
-  borderRadius: 8,
-  fontSize: 14,
+  // A lifted fill, not a black hole. Against the section surface these used to
+  // read as punched-out voids in a row, which is most of why a plain four-field
+  // block looked so grim.
+  background: 'rgba(255,255,255,0.05)',
+  border: '1px solid rgba(255,255,255,0.14)',
+  color: '#f5f5f7',
+  padding: '12px 13px',
+  borderRadius: 10,
+  fontSize: 16,
   width: '100%',
   boxSizing: 'border-box',
+  transition: 'border-color .18s ease, box-shadow .18s ease',
 }
 
 const btnGhost = {
-  background: 'transparent',
-  border: '1px solid #2a2a31',
-  color: '#d4a333',
-  padding: '8px 12px',
-  borderRadius: 8,
-  fontSize: 13,
+  background: 'rgba(255,255,255,0.03)',
+  border: '1px solid rgba(255,255,255,0.14)',
+  color: '#f0c24a',
+  padding: '12px 14px',
+  borderRadius: 10,
+  fontSize: 14,
+  fontWeight: 700,
   cursor: 'pointer',
+  transition: 'border-color .2s ease, background .2s ease',
 }

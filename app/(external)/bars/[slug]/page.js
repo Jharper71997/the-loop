@@ -1,6 +1,7 @@
 import { notFound } from 'next/navigation'
 import { BARS, getBar } from '@/lib/bars'
 import BarDetailBody from '../../_components/BarDetailBody'
+import { OG_IMAGES } from '@/lib/socialMeta'
 
 export function generateStaticParams() {
   return BARS.map(b => ({ slug: b.slug }))
@@ -17,8 +18,11 @@ export async function generateMetadata({ params }) {
     title: bar.name,
     description: desc,
     alternates: { canonical: url },
-    openGraph: { title: `${bar.name} — Jville Brew Loop`, description: desc, url },
-    twitter: { title: `${bar.name} — Jville Brew Loop`, description: desc },
+    // The generic share card, not the bar's own sign: the signs are square-ish
+    // logos that a 1.91:1 card crops into fragments, and several are white
+    // artwork on transparency that renders on black in a feed.
+    openGraph: { images: OG_IMAGES, title: `${bar.name} — Jville Brew Loop`, description: desc, url },
+    twitter: { images: OG_IMAGES, title: `${bar.name} — Jville Brew Loop`, description: desc },
   }
 }
 

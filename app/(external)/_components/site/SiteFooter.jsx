@@ -3,7 +3,8 @@
 
 import Link from 'next/link'
 import { brandFor } from '@/lib/businessConfig'
-import { PRIMARY_CTA, SOCIALS, CONTACT } from './nav'
+import { PRIMARY_CTA, CONTACT } from './nav'
+import SocialLinks from './SocialLinks'
 import { INK, INK_DIM, INK_MUTE, LINE } from '@/lib/marketingTheme'
 
 const cfg = brandFor('brew')
@@ -24,10 +25,7 @@ export default function SiteFooter() {
             <p style={{ color: INK_DIM, fontSize: 13.5, lineHeight: 1.6, margin: '14px 0 16px', maxWidth: 280 }}>
               Jacksonville&rsquo;s weekend bar-hop shuttle. Loop the best bars all night so nobody has to be the one who drives.
             </p>
-            <div style={{ display: 'flex', gap: 10 }}>
-              <SocialIcon href={SOCIALS.instagram} label="Instagram" kind="instagram" />
-              <SocialIcon href={SOCIALS.facebook} label="Facebook" kind="facebook" />
-            </div>
+            <SocialLinks />
           </div>
 
           {/* Two columns, no link in both: the website, then the app you use on
@@ -82,24 +80,6 @@ function FooterCol({ title, links }) {
   )
 }
 
-function SocialIcon({ href, label, kind }) {
-  return (
-    <a href={href} aria-label={label} target="_blank" rel="noopener noreferrer" style={socialBtn}>
-      {kind === 'instagram' ? (
-        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8}>
-          <rect x="3" y="3" width="18" height="18" rx="5" />
-          <circle cx="12" cy="12" r="4" />
-          <circle cx="17.4" cy="6.6" r="1" fill="currentColor" stroke="none" />
-        </svg>
-      ) : (
-        <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor">
-          <path d="M14 9h3V6h-3c-2.2 0-4 1.8-4 4v2H7v3h3v6h3v-6h3l1-3h-4v-2c0-.6.4-1 1-1z" />
-        </svg>
-      )}
-    </a>
-  )
-}
-
 const colTitle = {
   color: INK, fontSize: 12, fontWeight: 800, letterSpacing: '0.14em',
   textTransform: 'uppercase', marginBottom: 12,
@@ -107,9 +87,4 @@ const colTitle = {
 const footerLink = {
   display: 'block', color: INK_DIM, fontSize: 14, textDecoration: 'none',
   padding: '6px 0', lineHeight: 1.3,
-}
-const socialBtn = {
-  display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
-  width: 38, height: 38, borderRadius: 10, border: `1px solid ${LINE}`,
-  color: INK_DIM, textDecoration: 'none',
 }

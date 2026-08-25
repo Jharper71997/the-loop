@@ -15,6 +15,7 @@ import TabBar from '../TabBar'
 import LiveStatusStrip from '../LiveStatusStrip'
 import SiteHeader from './SiteHeader'
 import SiteFooter from './SiteFooter'
+import { SITE_MOTION_CSS } from '@/lib/motion'
 
 export default function RiderChrome({ children }) {
   const pathname = usePathname() || '/'
@@ -25,6 +26,10 @@ export default function RiderChrome({ children }) {
     <CartProvider>
       {isBrew ? (
         <>
+          {/* Scroll motion, defined once for the whole website rather than per
+              page — see lib/motion.js. Brew only: Surf and Marines keep the app
+              chrome and stay byte-for-byte unchanged. */}
+          <style>{SITE_MOTION_CSS}</style>
           <SiteHeader />
           <LiveStatusStrip />
           {children}

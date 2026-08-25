@@ -8,6 +8,7 @@ import {
   primaryCtaLg, ghostCta,
 } from '@/lib/marketingTheme'
 import { litCard, litCardInner } from '@/lib/atmosphere'
+import { OG_IMAGES } from '@/lib/socialMeta'
 
 export const metadata = {
   title: 'Sponsors & Partners',
@@ -15,6 +16,7 @@ export const metadata = {
     'Put your brand in front of the Jville Brew Loop. Sponsor a weekend, host a pickup, or become a featured partner for the Friday and Saturday night bar-hop crowd in Jacksonville.',
   alternates: { canonical: '/sponsors' },
   openGraph: {
+    images: OG_IMAGES,
     title: 'Sponsor the Jville Brew Loop',
     description: 'Get your brand in front of Jacksonville’s weekend bar-hop crowd. Sponsor a weekend, host a pickup, or become a featured partner.',
     url: '/sponsors',

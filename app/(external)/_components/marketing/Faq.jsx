@@ -6,11 +6,18 @@
 // makes a site feel like it was assembled by different people.
 //
 // Content always comes from lib/riderInfo.js; this is only the shape.
+//
+// `tone` follows the band it is dropped into. The landing page's questions now
+// sit on a light band (see lib/marketingTheme.js on why the merch section went
+// to paper), and every colour in here was a hardcoded white-on-dark value — so
+// the FAQ has to be told which end of the value scale it is on or it renders
+// invisible. Ink on paper, not a theme: pass tone="paper" from a light band.
 
-export default function Faq({ items = [], columns = true }) {
+export default function Faq({ items = [], columns = true, tone = 'dark' }) {
+  const paper = tone === 'paper'
   return (
     <>
-      <div className={columns ? 'bl-faq bl-faq-2' : 'bl-faq'}>
+      <div className={[columns ? 'bl-faq bl-faq-2' : 'bl-faq', paper ? 'bl-faq-paper' : ''].filter(Boolean).join(' ')}>
         {items.map((it, i) => (
           <details key={i} className="bl-faq-item">
             <summary>
@@ -45,6 +52,15 @@ export default function Faq({ items = [], columns = true }) {
           color: #b8b8bf; font-size: 14.5px; line-height: 1.62;
           margin: 10px 0 0; padding-right: 30px;
         }
+
+        /* Light band. The hover colour has to change too: GOLD_HI is a
+           highlight against black and nearly white against cream, so on paper
+           the hover uses GOLD_INK, the text-weight gold. */
+        .bl-faq-paper .bl-faq-item { border-bottom-color: rgba(23,23,26,0.12); }
+        .bl-faq-paper .bl-faq-item summary { color: #16161a; }
+        .bl-faq-paper .bl-faq-item summary:hover { color: #8a6410; }
+        .bl-faq-paper .bl-faq-plus { color: #8a6410; }
+        .bl-faq-paper .bl-faq-item p { color: #4d4d57; }
       `}</style>
     </>
   )

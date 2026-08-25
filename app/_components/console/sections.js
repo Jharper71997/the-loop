@@ -77,11 +77,12 @@ export const SECTIONS = [
     label: 'Money',
     icon: 'dollar',
     leadership: true,
-    match: ['/leadership/expenses', '/leadership/cash', '/leadership/profit-first', '/admin/finance'],
+    match: ['/leadership/expenses', '/leadership/cash', '/leadership/profit-first', '/leadership/merch', '/admin/finance'],
     tabs: [
       { href: '/leadership/income', label: 'Overview', leadership: true },
       { href: '/leadership/expenses', label: 'Expenses', leadership: true },
       { href: '/leadership/cash', label: 'Cash', leadership: true },
+      { href: '/leadership/merch', label: 'Merch', leadership: true },
       { href: '/leadership/profit-first', label: 'Profit First', leadership: true },
       { href: '/admin/finance', label: 'Entries', leadership: true },
     ],

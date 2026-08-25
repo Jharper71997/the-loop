@@ -19,43 +19,47 @@ const APPLY = process.argv.includes('--apply')
 
 // source date -> { dest date, new TT event id, date label for names, optional
 // schedule override, optional per-stop capacity. }
-// Weekend of Aug 7 / Aug 8 2026. Clones last weekend's Jul 31 (Fri) / Aug 1
-// (Sat) brew nights with the IDENTICAL route (Jacob, 2026-08-05). ttEventId
-// holds the already-created Ticket Tailor occurrence (ev_) ids for this
-// weekend. Jacob chose dual-channel on 2026-08-05, so both series get published
-// and linked. NOTE the known hole: a published TT event runs its OWN separate
-// 13-per-stop counter that is blind to native /book sales, so the two channels
-// can jointly oversell a stop (see project_the_loop_stop_capacity).
-//   Fri Aug 7 -> ev_8816400 (series es_2345303)
-//   Sat Aug 8 -> ev_8816401 (series es_2345304)
-// capacity: Friday's SOURCE rows (Jul 31) still have capacity NULL = UNCAPPED,
-// because set-stop-capacity.js only touched future events on 2026-08-01. Pin 13
-// explicitly so the clone can't inherit the oversell hole.
+// The rest of August 2026 — Aug 14/15, 21/22, 28/29 — built in one pass
+// (Jacob, 2026-08-11: "build the brew loop weekends like last weekend for this
+// month"). Every Friday clones Fri Aug 7 and every Saturday clones Sat Aug 8,
+// so all three weekends run the IDENTICAL route to last weekend.
+// Dual-channel again (Jacob, 2026-08-11) even though TT issued 0 tickets for
+// Aug 7/8. The six ev_ ids below were created 2026-08-11 as new occurrences on
+// the SAME two series as last weekend — es_2345303 (Fri) and es_2345304 (Sat) —
+// rather than as fresh series, so the bars, times, $20 price and 13-seat
+// quantities carry over untouched. NOTE the known hole: a published TT event
+// runs its OWN separate 13-per-stop counter that is blind to native /book
+// sales, so the two channels can jointly oversell a stop (see
+// project_the_loop_stop_capacity). Set ttEventId back to null to go native-only.
+// capacity: pinned to 13 explicitly. NULL capacity means UNCAPPED, so never
+// rely on the source rows carrying a cap.
+const FRI_ROUTE = [
+  { name: 'Angry Ginger', start_time: '19:30' },
+  { name: "Shirley V's", start_time: '19:45' },
+  { name: 'Unhinged', start_time: '20:00' },
+  { name: 'Archies Pub', start_time: '20:15' },
+  { name: 'Hideaway Lounge', start_time: '20:35' },
+]
+// Saturday swapped Archies Pub -> Brassa Tacos & Taps at the 20:00 slot on
+// 2026-08-19 (Jacob). Archies keeps its Friday 20:15 stop, so it stays on the
+// Loop — it is only off Saturdays. Applied to the already-built Aug 22 and
+// Aug 29 groups by scripts/swap-saturday-brassa.js; this array carries it
+// forward to every Saturday built from here on.
+const SAT_ROUTE = [
+  { name: 'Angry Ginger', start_time: '19:30' },
+  { name: 'Twin Ravens', start_time: '19:45' },
+  { name: 'Brassa Tacos & Taps', start_time: '20:00' },
+  { name: 'Black Rose', start_time: '20:15' },
+  { name: 'Hideaway Lounge', start_time: '20:35' },
+]
+
 const PLAN = [
-  {
-    from: '2026-07-31', to: '2026-08-07', ttEventId: 'ev_8816400',
-    label: 'Fri, Aug 7',
-    capacity: 13,
-    schedule: [
-      { name: 'Angry Ginger', start_time: '19:30' },
-      { name: "Shirley V's", start_time: '19:45' },
-      { name: 'Unhinged', start_time: '20:00' },
-      { name: 'Archies Pub', start_time: '20:15' },
-      { name: 'Hideaway Lounge', start_time: '20:35' },
-    ],
-  },
-  {
-    from: '2026-08-01', to: '2026-08-08', ttEventId: 'ev_8816401',
-    label: 'Sat, Aug 8',
-    capacity: 13,
-    schedule: [
-      { name: 'Angry Ginger', start_time: '19:30' },
-      { name: 'Twin Ravens', start_time: '19:45' },
-      { name: 'Archies Pub', start_time: '20:00' },
-      { name: 'Black Rose', start_time: '20:15' },
-      { name: 'Hideaway Lounge', start_time: '20:35' },
-    ],
-  },
+  { from: '2026-08-07', to: '2026-08-14', ttEventId: 'ev_8859419', label: 'Fri, Aug 14', capacity: 13, schedule: FRI_ROUTE },
+  { from: '2026-08-08', to: '2026-08-15', ttEventId: 'ev_8859422', label: 'Sat, Aug 15', capacity: 13, schedule: SAT_ROUTE },
+  { from: '2026-08-07', to: '2026-08-21', ttEventId: 'ev_8859420', label: 'Fri, Aug 21', capacity: 13, schedule: FRI_ROUTE },
+  { from: '2026-08-08', to: '2026-08-22', ttEventId: 'ev_8859423', label: 'Sat, Aug 22', capacity: 13, schedule: SAT_ROUTE },
+  { from: '2026-08-07', to: '2026-08-28', ttEventId: 'ev_8859421', label: 'Fri, Aug 28', capacity: 13, schedule: FRI_ROUTE },
+  { from: '2026-08-08', to: '2026-08-29', ttEventId: 'ev_8859424', label: 'Sat, Aug 29', capacity: 13, schedule: SAT_ROUTE },
 ]
 
 // Replace the "— Fri, May 29" date suffix with this weekend's label. Splits

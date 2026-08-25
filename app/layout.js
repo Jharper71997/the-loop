@@ -1,32 +1,8 @@
 import './globals.css'
 import { isLoopSite } from '@/lib/site'
+import { SITE_URL } from '@/lib/siteUrl'
+import { OG_IMAGES } from '@/lib/socialMeta'
 
-// Resolve the public origin defensively — if someone sets APP_URL on Vercel
-// to a value missing the protocol (e.g. "jvillebrewloop.com"), `new URL(...)`
-// here throws at module load and every route in the app 500s. Fall back
-// rather than crashing the world.
-function resolveSiteUrl() {
-  // The standalone Loop site is a different domain, so it must never fall back
-  // to the Brew marketing origin. VERCEL_URL is injected on every deploy, which
-  // keeps previews honest until APP_URL is set on the project.
-  const fallback = isLoopSite
-    ? (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : 'http://localhost:3000')
-    : 'https://jvillebrewloop.com'
-  const raw = process.env.APP_URL || process.env.NEXT_PUBLIC_APP_URL || fallback
-  const trimmed = raw.replace(/\/$/, '')
-  try {
-    return new URL(trimmed).origin
-  } catch {
-    const guess = `https://${trimmed.replace(/^https?:\/\//, '')}`
-    try {
-      return new URL(guess).origin
-    } catch {
-      return 'https://jvillebrewloop.com'
-    }
-  }
-}
-
-const SITE_URL = resolveSiteUrl()
 
 // The root layout wraps every business, so its defaults have to match whichever
 // site this deployment is. On the Loop domain a shared Brew title would leak
@@ -66,11 +42,17 @@ export const metadata = {
     description: M.socialDescription,
     url: SITE_URL,
     locale: 'en_US',
+    // Brew only. The share card is a photograph of the BREW shuttle with Brew
+    // pricing on it, and the Loop is a different service on its own domain for
+    // riders largely under 21 — putting a bar-hop card on its links would be
+    // worse than having no card at all.
+    ...(isLoopSite ? null : { images: OG_IMAGES }),
   },
   twitter: {
     card: 'summary_large_image',
     title: M.socialTitle,
     description: M.socialDescription,
+    ...(isLoopSite ? null : { images: OG_IMAGES }),
   },
   robots: { index: true, follow: true },
 }

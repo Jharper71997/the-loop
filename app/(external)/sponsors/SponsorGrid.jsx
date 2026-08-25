@@ -52,19 +52,31 @@ function SponsorCard({ s }) {
         <span
           style={{
             flex: '0 0 auto',
-            width: 66,
-            height: 66,
-            borderRadius: 14,
-            background: '#f5f3ee',
-            display: 'grid',
-            placeItems: 'center',
-            padding: 9,
+            width: 96,
+            height: 72,
+            borderRadius: 12,
+            // WHITE, not cream. Nearly all of this artwork is drawn on white,
+            // so an off-white plate leaves a visible rectangle inside the tile
+            // around every logo. Landscape, because most of these are
+            // wordmarks and a square plate wastes the width they need.
+            background: '#fff',
+            // Flex, not grid: a grid auto row sizes to the image and the
+            // image's height:100% then resolves against itself, overflowing
+            // the plate. A flex container's content height is definite.
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            padding: '9px 11px',
             overflow: 'hidden',
             boxShadow: 'inset 0 0 0 1px rgba(0,0,0,0.06)',
           }}
         >
           {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src={s.logo} alt={s.name} loading="lazy" style={{ maxWidth: '100%', maxHeight: '100%', objectFit: 'contain' }} />
+          {/* Explicit 100%/100% + contain, never max-width/max-height: on a
+              centred grid item the percentage max-height has no definite box
+              to resolve against, so a square logo overflows a landscape plate
+              and gets clipped. */}
+          <img src={s.logo} alt={s.name} loading="lazy" style={{ width: '100%', height: '100%', objectFit: 'contain' }} />
         </span>
         {s.tag ? (
           <span

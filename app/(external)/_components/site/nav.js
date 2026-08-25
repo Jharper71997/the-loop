@@ -58,8 +58,12 @@ export const CONTACT = {
 // /events is in here too: it's where "Book a seat" lands, so a first-time
 // visitor is mid-purchase there. Pitching an app install before they've bought
 // anything is the wrong ask at the wrong moment.
-const MARKETING_EXACT = new Set(['/', '/about', '/bars', '/merch', '/cart', '/sponsors', '/contact', '/events'])
-const MARKETING_PREFIXES = ['/merch/', '/bars/']
+// /book and /book/<id> were missed when that rule was written, which is worse:
+// the banner is fixed to the bottom of the viewport, so on the checkout page it
+// sat ON TOP of the waiver signature and the Pay button. Someone mid-payment is
+// the last person to interrupt with an install prompt.
+const MARKETING_EXACT = new Set(['/', '/about', '/bars', '/merch', '/cart', '/sponsors', '/contact', '/events', '/book'])
+const MARKETING_PREFIXES = ['/merch/', '/bars/', '/book/']
 
 export function isMarketingPath(pathname) {
   const p = (pathname || '/').split('?')[0].split('#')[0]

@@ -6,12 +6,22 @@
 // rectangles` on one flat black fill. Nothing looked more important than
 // anything else, so nothing guided you anywhere.
 //
-// Now FOUR sections, each with a genuinely different texture and job:
+// Now FIVE beats, each with a genuinely different texture and job:
 //
-//   1. HERO       photograph + scrim + grain           → what this is, book it
-//   2. THE NIGHT  asymmetric timeline + shuttle render → how it works
-//   3. THE BARS   photo mosaic of real bar signage     → where it goes (colour)
-//   4. THE GEAR   merch photography + closing CTA      → wear it / book it
+//   1. HERO       pinned footage + scrim + grain         → what this is, book it
+//   2. TICKER     a gold marquee of the offer            → colour, and a pulse
+//   3. THE NIGHT  timeline + shuttle photo, ON PAPER     → how it works
+//   4. THE BARS   pinned rail of real signage, dark      → where it goes
+//   5. THE GEAR   merch cutouts ON PAPER + questions     → wear it / book it
+//      CLOSER     dark, gold, one ask                    → book it
+//
+// THE VALUE RHYTHM IS THE POINT (Jacob, 2026-08-25 — "can we make it brighter,
+// i dont want it all black"). Bands alternate dark/light, and which way each
+// one goes is decided by ITS ARTWORK, never by mood: the hero is night footage
+// and the bar signs have black baked into them, so those stay dark; the merch
+// shots are cutouts of people in black apparel and the timeline is pure type,
+// so those go to paper where they finally have something to sit against. See
+// the light-surface block in lib/marketingTheme.js.
 //
 // One CTA wording throughout: "Book a seat". Not "Buy Tickets" here and "Book"
 // there. Depth comes from lib/atmosphere.js, copy from lib/riderInfo.js.
@@ -23,24 +33,33 @@ import { PUBLIC_PARTNER_BARS, PARTNER_BAR_COUNT } from '@/lib/bars'
 import { SPONSORS } from '@/lib/sponsors'
 import { STEPS, FAQ, LANDING_FAQ_COUNT } from '@/lib/riderInfo'
 import {
-  GOLD, GOLD_HI, INK, INK_DIM, INK_MUTE, LINE, LINE_HI, MAX_W,
-  primaryCtaLg, ghostCta, eyebrow, pulseDot,
+  GOLD, GOLD_HI, GOLD_INK, INK, INK_DIM, INK_MUTE, LINE_HI, MAX_W,
+  ON_PAPER, ON_PAPER_DIM, PAPER_HI, PAPER_LINE,
+  primaryCtaLg, ghostCtaPaper, eyebrow, pulseDot,
 } from '@/lib/marketingTheme'
 import {
   TONES, grainOverlay, lightPool, photoScrim,
-  litCard, litCardInner, fadeRule,
+  paperCard, paperWash, paperGrain,
 } from '@/lib/atmosphere'
-import BarTiles from './BarTiles'
+import { revealGroup } from '@/lib/motion'
+import BrewJsonLd from '../site/BrewJsonLd'
+import SocialLinks from '../site/SocialLinks'
+import BarRail from './BarRail'
+import Ticker from './Ticker'
 import Faq from './Faq'
 
 const LANDING_FAQ = FAQ.slice(0, LANDING_FAQ_COUNT)
 
-// Bar tiles are uniform on purpose. Two attempts at an uneven bento left dead
-// black space under the short tiles (row heights get driven by the tallest
-// cell, and a contained logo doesn't fill a tall box). The variety comes from
-// the ARTWORK — seven signs in seven different colours — not from the frames.
-// A consistent frame around inconsistent art reads as a collection; the
-// reverse reads as a bug. See ./BarTiles.jsx.
+// Stated as plainly as it can be stated, and derived — the bar count comes from
+// the database, never typed into a string.
+const TICKER_ITEMS = [
+  `${PARTNER_BAR_COUNT} partner bars`,
+  'One shuttle all night',
+  '$20 a seat',
+  'Back where you started',
+  'Tracked live',
+  'Strictly 21+',
+]
 
 const MERCH_SHOTS = [
   { src: '/brand/merch/hoodie-4.png', label: 'Hoodie', price: '$55' },
@@ -54,11 +73,15 @@ export default function BrewLanding({ loops = [] }) {
   return (
     <main className="site-main" style={{ background: TONES.base }}>
       <Hero next={next} />
+      <Ticker items={TICKER_ITEMS} label="What a seat gets you" />
       <TheNight />
       <TheBars />
       <TheGear />
       <Closer />
       <LandingStyles />
+      {/* Structured data: tells Google the Instagram and Facebook accounts are
+          this same business. Rendered once, on the page that ranks. */}
+      <BrewJsonLd />
     </main>
   )
 }
@@ -68,7 +91,13 @@ export default function BrewLanding({ loops = [] }) {
 
 function Hero({ next }) {
   return (
-    <section style={{ position: 'relative', overflow: 'hidden', background: TONES.void }}>
+    /* The pin wrapper is inert until the browser can actually drive an
+       animation from scroll position — see lib/motion.js. Without support it
+       has no height of its own and the hero lays out exactly as it always did;
+       with support it runs 150vh, the hero sticks for the difference, and the
+       next section rides up over it. */
+    <div className="bl-hero-pin">
+    <section className="bl-hero" style={{ overflow: 'hidden', background: TONES.void }}>
       {/* Real footage of the shuttle. The poster paints instantly (and is the
           whole story on reduced-motion / slow connections), the video fades in
           over it once it can play. Muted + playsInline are REQUIRED for autoplay
@@ -94,7 +123,7 @@ function Hero({ next }) {
       <div aria-hidden style={{ position: 'absolute', inset: 0, background: photoScrim }} />
       <div aria-hidden style={grainOverlay} />
 
-      <div style={{ position: 'relative', maxWidth: MAX_W, margin: '0 auto', padding: 'clamp(72px, 12vw, 148px) 24px clamp(56px, 8vw, 104px)' }}>
+      <div className="bl-hero-copy" style={{ position: 'relative', width: '100%', maxWidth: MAX_W, margin: '0 auto', padding: 'clamp(72px, 12vw, 148px) 24px clamp(56px, 8vw, 104px)' }}>
         <div style={{ maxWidth: 720 }}>
           <span style={heroPill}>
             <span style={pulseDot} /> Jacksonville&rsquo;s weekend bar-hop shuttle
@@ -133,7 +162,18 @@ function Hero({ next }) {
           </div>
         </div>
       </div>
+
+      {/* Only rendered as visible where the pin exists — an instruction to
+          scroll is noise on a hero that doesn't hold. */}
+      <div aria-hidden className="bl-scroll-cue">
+        <span>
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
+            <path d="M12 5v14M19 12l-7 7-7-7" />
+          </svg>
+        </span>
+      </div>
     </section>
+    </div>
   )
 }
 
@@ -156,36 +196,46 @@ function NextLoopChip({ next }) {
   )
 }
 
-/* ============================= 2. THE NIGHT ============================== */
+/* ============================= 3. THE NIGHT ============================== */
 /* Asymmetric: a vertical timeline on the left, the shuttle floating right.  */
 /* Deliberately NOT three matching cards in a row.                           */
+/*                                                                           */
+/* ON PAPER. This band is type and one photograph — it has no artwork that   */
+/* needs a dark field, and it is the page's first real breath after the hero */
+/* holds you for 150vh. Every colour in here is the light-band token, NOT    */
+/* INK/GOLD_HI: those are white-ish and vanish on cream. Nothing renders     */
+/* white-on-white by accident because there is no theme switch to forget —   */
+/* the tokens are named for the surface they belong to.                      */
 
 function TheNight() {
   return (
-    <section style={{ position: 'relative', background: TONES.raised, overflow: 'hidden' }}>
-      <div aria-hidden style={{ position: 'absolute', inset: 0, background: lightPool('top-right', 0.15) }} />
-      <div aria-hidden style={grainOverlay} />
+    <section style={{ position: 'relative', background: TONES.paper, overflow: 'hidden' }}>
+      <div aria-hidden style={{ position: 'absolute', inset: 0, background: paperWash('top-right', 0.22) }} />
+      <div aria-hidden style={paperGrain} />
 
       <div className="bl-night" style={{ position: 'relative', maxWidth: MAX_W, margin: '0 auto', padding: 'clamp(64px, 9vw, 112px) 24px' }}>
         <div>
-          <div style={eyebrow}>How a night runs</div>
-          <h2 className="bl-h2" style={sectionH2}>
+          <div style={{ ...eyebrow, color: GOLD_INK }}>How a night runs</div>
+          <h2 className="bl-h2" style={{ ...sectionH2, color: ON_PAPER }}>
             Three steps, then<br />the night is handled.
           </h2>
 
-          {/* Timeline — one continuous gold line threading the steps */}
-          <ol style={{ listStyle: 'none', margin: '40px 0 0', padding: 0, position: 'relative' }}>
+          {/* Timeline — one continuous gold line threading the steps. The
+              steps stagger themselves in as the band comes up; the group
+              helper does the choreography so there is no per-item timing to
+              keep in sync. */}
+          <ol {...revealGroup()} style={{ listStyle: 'none', margin: '40px 0 0', padding: 0, position: 'relative' }}>
             {STEPS.map((s, i) => {
               const last = i === STEPS.length - 1
               return (
                 <li key={s.n} style={{ display: 'flex', gap: 20, alignItems: 'stretch' }}>
                   <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', flex: '0 0 auto' }}>
-                    <span style={timelineNum}>{s.n}</span>
-                    {!last && <span aria-hidden style={{ width: 2, flex: 1, minHeight: 30, background: `linear-gradient(180deg, ${GOLD}, rgba(212,163,51,0.12))` }} />}
+                    <span style={timelineNumPaper}>{s.n}</span>
+                    {!last && <span aria-hidden style={{ width: 2, flex: 1, minHeight: 30, background: `linear-gradient(180deg, ${GOLD}, rgba(212,163,51,0.22))` }} />}
                   </div>
                   <div style={{ paddingBottom: last ? 0 : 34, maxWidth: 460 }}>
-                    <h3 style={{ color: INK, fontSize: 'clamp(19px, 2.4vw, 23px)', fontWeight: 800, margin: 0, letterSpacing: '-0.01em' }}>{s.title}</h3>
-                    <p style={{ color: INK_DIM, fontSize: 15.5, lineHeight: 1.6, margin: '9px 0 0' }}>{s.sub}</p>
+                    <h3 style={{ color: ON_PAPER, fontSize: 'clamp(19px, 2.4vw, 23px)', fontWeight: 800, margin: 0, letterSpacing: '-0.01em' }}>{s.title}</h3>
+                    <p style={{ color: ON_PAPER_DIM, fontSize: 15.5, lineHeight: 1.6, margin: '9px 0 0' }}>{s.sub}</p>
                   </div>
                 </li>
               )
@@ -194,37 +244,37 @@ function TheNight() {
 
           <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap', marginTop: 40 }}>
             <Link href="/events" style={{ ...primaryCtaLg, padding: '15px 26px' }}>Book a seat</Link>
-            <Link href="/about" style={{ ...ghostCta, padding: '15px 24px' }}>Read the full rundown</Link>
+            <Link href="/about" style={{ ...ghostCtaPaper, padding: '15px 24px' }}>Read the full rundown</Link>
           </div>
         </div>
 
         {/* Shuttle + price, floating */}
         <div className="bl-night-aside">
-          <div style={{ position: 'relative' }}>
-            <div aria-hidden style={{
-              position: 'absolute', inset: '-8% -6%', borderRadius: '50%',
-              background: 'radial-gradient(50% 50% at 50% 50%, rgba(212,163,51,0.22), transparent 70%)',
-              filter: 'blur(8px)',
-            }} />
+          {/* This was a stock all-black bus render floated on the panel with
+              mixBlendMode:'screen' — a vehicle nobody riding the Loop has ever
+              seen. It's now a frame from Jacob's own footage of the actual
+              shuttle on a Jacksonville street: white over black, BAR HOP
+              SHUTTLE in gold, the roundel in the window. A white-over-black
+              vehicle on paper is the shot at its best; on the old dark panel
+              the black lower body had nothing to separate it from the page. */}
+          <div style={{ ...paperCard({ radius: 20 }), overflow: 'hidden' }}>
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img
               src="/brand/photos/shuttle.jpg"
-              alt="The Jville Brew Loop shuttle"
-              style={{ position: 'relative', width: '100%', display: 'block', mixBlendMode: 'screen' }}
+              alt="The Jville Brew Loop shuttle parked on a street in downtown Jacksonville"
+              style={{ width: '100%', display: 'block', aspectRatio: '16 / 9', objectFit: 'cover', borderRadius: 19 }}
             />
           </div>
 
-          <div style={{ ...litCard({ radius: 20 }), marginTop: 8 }}>
-            <div style={litCardInner({ radius: 19, pad: 26 })}>
-              <div style={{ display: 'flex', alignItems: 'baseline', gap: 9 }}>
-                <span style={{ color: GOLD_HI, fontSize: 'clamp(40px, 6vw, 54px)', fontWeight: 800, letterSpacing: '-0.03em', lineHeight: 1 }}>$20</span>
-                <span style={{ color: INK_DIM, fontSize: 16, fontWeight: 600 }}>a seat</span>
-              </div>
-              <p style={{ color: INK_DIM, fontSize: 14.5, lineHeight: 1.55, margin: '12px 0 0' }}>
-                Covers your whole night. No surge, no per-ride math, and it brings you back
-                to the same spot you started.
-              </p>
+          <div style={{ ...paperCard({ radius: 20 }), padding: 26 }}>
+            <div style={{ display: 'flex', alignItems: 'baseline', gap: 9 }}>
+              <span style={{ color: ON_PAPER, fontSize: 'clamp(40px, 6vw, 54px)', fontWeight: 800, letterSpacing: '-0.03em', lineHeight: 1 }}>$20</span>
+              <span style={{ color: ON_PAPER_DIM, fontSize: 16, fontWeight: 600 }}>a seat</span>
             </div>
+            <p style={{ color: ON_PAPER_DIM, fontSize: 14.5, lineHeight: 1.55, margin: '12px 0 0' }}>
+              Covers your whole night. No surge, no per-ride math, and it brings you back
+              to the same spot you started.
+            </p>
           </div>
         </div>
       </div>
@@ -232,27 +282,43 @@ function TheNight() {
   )
 }
 
-/* ============================== 3. THE BARS ============================== */
-/* The colour moment. Real signage, uneven tiles, no text cards.             */
+/* ============================== 4. THE BARS ============================== */
+/* The colour moment — real signage, and the page's one showcase.            */
+/*                                                                           */
+/* STAYS DARK, and that is a decision rather than an oversight: half of these */
+/* signs have black baked into the image (Black Rose, Unhinged, Brassa), so   */
+/* on a light band they read as black rectangles stuck on a cream wall. The   */
+/* artwork picks the tone.                                                   */
+/*                                                                           */
+/* NOTE the missing `overflow: hidden` on this section. It used to be here    */
+/* and it CANNOT come back: overflow:hidden on any ancestor makes that        */
+/* ancestor the scrollport for `position: sticky` and for `view-timeline`, so */
+/* the pinned rail inside would simply never pin and never move. The light    */
+/* pool it was containing is `inset: 0` and doesn't overflow anyway.          */
 
 function TheBars() {
   return (
-    <section style={{ position: 'relative', background: TONES.void, overflow: 'hidden' }}>
-      <hr style={fadeRule} />
-      <div aria-hidden style={{ position: 'absolute', inset: 0, background: lightPool('top-left', 0.1) }} />
+    /* `raised`, not `void`. The card plates went near-black so the signs with
+       black baked into them would blend into their own frames — which means
+       the BAND has to be the lighter of the two or the posters disappear into
+       it. Dark section, lit stage, black objects on it. */
+    <section style={{ position: 'relative', background: TONES.raised }}>
+      <div aria-hidden style={{ position: 'absolute', inset: 0, background: lightPool('top-left', 0.2) }} />
+      <div aria-hidden style={{ position: 'absolute', inset: 0, background: lightPool('right', 0.12) }} />
 
-      <div style={{ position: 'relative', maxWidth: MAX_W, margin: '0 auto', padding: 'clamp(64px, 9vw, 112px) 24px' }}>
-        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 20, alignItems: 'flex-end', justifyContent: 'space-between' }}>
-          <div style={{ maxWidth: 560 }}>
-            <div style={eyebrow}>Where it goes</div>
-            <h2 className="bl-h2" style={sectionH2}>The best spots in town, on one route.</h2>
-          </div>
-          <Link href="/bars" style={{ ...ghostCta, padding: '13px 22px' }}>All {PARTNER_BAR_COUNT} bars</Link>
-        </div>
+      {/* Full bleed on purpose — the rail travels the width of the screen, and
+          it carries its own heading so the label stays on screen while it's
+          pinned. */}
+      <div style={{ position: 'relative' }}>
+        <BarRail
+          bars={PUBLIC_PARTNER_BARS}
+          eyebrow="Where it goes"
+          title="The best spots in town, on one route."
+        />
+      </div>
 
-        <BarTiles bars={PUBLIC_PARTNER_BARS} />
-
-        <p style={{ color: INK_MUTE, fontSize: 14, lineHeight: 1.6, margin: '22px 0 0', maxWidth: 620 }}>
+      <div style={{ position: 'relative', maxWidth: MAX_W, margin: '0 auto', padding: '0 24px clamp(64px, 9vw, 112px)' }}>
+        <p style={{ color: INK_MUTE, fontSize: 14, lineHeight: 1.6, margin: '26px 0 0', maxWidth: 620 }}>
           The route rotates weekend to weekend, and Friday can differ from Saturday. The night
           you book always lists its exact stops.
         </p>
@@ -261,36 +327,43 @@ function TheBars() {
   )
 }
 
-/* ============================== 4. THE GEAR ============================== */
+/* ============================== 5. THE GEAR ============================== */
 /* Merch as real photography, plus the questions people still have.          */
+/*                                                                           */
+/* ON PAPER, and this is the band that most needed it. The shots are          */
+/* transparent cutouts of people wearing BLACK apparel: on the old near-black */
+/* panel the garment melted into the background and left the gold chest badge */
+/* floating on nothing, which is why the merch never looked like it was for   */
+/* sale. On paper the garment has an edge and the badge reads as printed on   */
+/* fabric. The tiles are `contain`, not `cover` — cover was cropping the      */
+/* models to a horizontal band through the torso.                            */
 
 function TheGear() {
   return (
-    <section style={{ position: 'relative', background: TONES.panel, overflow: 'hidden' }}>
-      <hr style={fadeRule} />
-      <div aria-hidden style={{ position: 'absolute', inset: 0, background: lightPool('right', 0.12) }} />
-      <div aria-hidden style={grainOverlay} />
+    <section style={{ position: 'relative', background: TONES.paper, overflow: 'hidden' }}>
+      <div aria-hidden style={{ position: 'absolute', inset: 0, background: paperWash('left', 0.18) }} />
+      <div aria-hidden style={paperGrain} />
 
       <div style={{ position: 'relative', maxWidth: MAX_W, margin: '0 auto', padding: 'clamp(64px, 9vw, 112px) 24px' }}>
         <div style={{ display: 'flex', flexWrap: 'wrap', gap: 20, alignItems: 'flex-end', justifyContent: 'space-between' }}>
           <div style={{ maxWidth: 560 }}>
-            <div style={eyebrow}>Merch</div>
-            <h2 className="bl-h2" style={sectionH2}>Wear the gold badge.</h2>
-            <p style={{ color: INK_DIM, fontSize: 'clamp(15px, 2vw, 17px)', lineHeight: 1.55, margin: '14px 0 0' }}>
+            <div style={{ ...eyebrow, color: GOLD_INK }}>Merch</div>
+            <h2 className="bl-h2" style={{ ...sectionH2, color: ON_PAPER }}>Wear the gold badge.</h2>
+            <p style={{ color: ON_PAPER_DIM, fontSize: 'clamp(15px, 2vw, 17px)', lineHeight: 1.55, margin: '14px 0 0' }}>
               Black-and-gold Brew Loop gear. Ships to your door, or grab it on the shuttle.
             </p>
           </div>
-          <Link href="/merch" style={{ ...ghostCta, padding: '13px 22px' }}>Shop merch</Link>
+          <Link href="/merch" style={{ ...ghostCtaPaper, padding: '13px 22px' }}>Shop merch</Link>
         </div>
 
-        <div className="bl-merch">
+        <div className="bl-merch" {...revealGroup()}>
           {MERCH_SHOTS.map((m, i) => (
             <Link key={i} href="/merch" className="bl-merch-tile">
               {/* eslint-disable-next-line @next/next/no-img-element */}
               <img src={m.src} alt={m.label} loading="lazy" />
               <span className="bl-merch-meta">
-                <span style={{ color: INK, fontSize: 14.5, fontWeight: 700 }}>{m.label}</span>
-                <span style={{ color: GOLD_HI, fontSize: 14.5, fontWeight: 800 }}>{m.price}</span>
+                <span style={{ color: ON_PAPER, fontSize: 14.5, fontWeight: 700 }}>{m.label}</span>
+                <span style={{ color: GOLD_INK, fontSize: 14.5, fontWeight: 800 }}>{m.price}</span>
               </span>
             </Link>
           ))}
@@ -298,10 +371,10 @@ function TheGear() {
 
         {/* Remaining questions — compact, two columns, not a stack of fat cards */}
         <div style={{ marginTop: 'clamp(48px, 7vw, 80px)' }}>
-          <div style={eyebrow}>Before you book</div>
-          <Faq items={LANDING_FAQ} />
+          <div style={{ ...eyebrow, color: GOLD_INK }}>Before you book</div>
+          <Faq items={LANDING_FAQ} tone="paper" />
           <p style={{ margin: '18px 0 0' }}>
-            <Link href="/about#faq" style={{ color: GOLD_HI, fontWeight: 700, fontSize: 14.5, textDecoration: 'none' }}>
+            <Link href="/about#faq" style={{ color: GOLD_INK, fontWeight: 700, fontSize: 14.5, textDecoration: 'none' }}>
               All {FAQ.length}{' '}questions &rarr;
             </Link>
           </p>
@@ -316,7 +389,7 @@ function TheGear() {
 function Closer() {
   return (
     <section style={{ position: 'relative', background: TONES.void, overflow: 'hidden' }}>
-      <div aria-hidden style={{ position: 'absolute', inset: 0, background: lightPool('bottom', 0.2) }} />
+      <div aria-hidden style={{ position: 'absolute', inset: 0, background: lightPool('bottom', 0.24) }} />
       <div aria-hidden style={grainOverlay} />
 
       <div style={{ position: 'relative', maxWidth: MAX_W, margin: '0 auto', padding: 'clamp(64px, 9vw, 108px) 24px', textAlign: 'center' }}>
@@ -328,6 +401,18 @@ function Closer() {
         </p>
         <div style={{ marginTop: 30 }}>
           <Link href="/events" style={{ ...primaryCtaLg, padding: '17px 34px', fontSize: 17 }}>Book a seat</Link>
+        </div>
+
+        {/* Follow. The socials were only reachable from the footer and
+            /contact, which is the wrong place for them: the weekend lineup
+            gets posted to Instagram before it exists anywhere else, so the
+            ask belongs next to the booking button for the people who came,
+            read the whole page, and aren't ready to buy tonight. */}
+        <div style={{ marginTop: 34, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 13 }}>
+          <div style={{ color: INK_MUTE, fontSize: 12, letterSpacing: '0.18em', textTransform: 'uppercase', fontWeight: 700 }}>
+            New dates drop on Instagram first
+          </div>
+          <SocialLinks size={44} />
         </div>
 
         {/* Sponsor strip — quiet, at the very bottom where a B2B ask belongs */}
@@ -367,13 +452,17 @@ const heroPill = {
   letterSpacing: '0.14em', textTransform: 'uppercase',
 }
 
-const timelineNum = {
+// The step marker on a light band. Brand gold is only ~2.3:1 on paper, so the
+// numeral itself is GOLD_INK; the gold stays as the ring and the wash, where
+// it's decoration and contrast doesn't apply.
+const timelineNumPaper = {
   flex: '0 0 auto', width: 44, height: 44, borderRadius: 13,
-  border: `1px solid rgba(212,163,51,0.45)`,
-  background: 'linear-gradient(160deg, rgba(212,163,51,0.18), rgba(212,163,51,0.04))',
-  color: GOLD_HI, fontSize: 15, fontWeight: 800,
+  border: `1px solid rgba(212,163,51,0.7)`,
+  background: 'linear-gradient(160deg, rgba(212,163,51,0.28), rgba(212,163,51,0.10))',
+  color: GOLD_INK, fontSize: 15, fontWeight: 800,
   display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
 }
+
 
 function LandingStyles() {
   return (
@@ -393,47 +482,102 @@ function LandingStyles() {
         .bl-hero-video { display: none; }
       }
 
-      /* --- section 2: asymmetric split --- */
+      /* --- section 3: asymmetric split --- */
       .bl-night { display: grid; grid-template-columns: 1fr; gap: 48px; }
       .bl-night-aside { display: grid; gap: 16px; align-content: start; }
       @media (min-width: 940px) {
         .bl-night { grid-template-columns: 1.15fr 0.85fr; gap: 72px; align-items: center; }
       }
 
-      /* Bar tiles live in ./BarTiles.jsx — shared with /bars and /about. */
+      /* The bar rail lives in ./BarRail.jsx — landing only. The grid it
+         replaced here, BarTiles.jsx, still serves /bars and /about. */
 
-      /* --- section 4: merch --- */
+      /* --- section 5: merch, on paper --- */
       .bl-merch {
         display: grid; grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
         gap: 14px; margin-top: 38px;
       }
       .bl-merch-tile {
         position: relative; display: block; border-radius: 16px; overflow: hidden;
-        background: linear-gradient(180deg, #232329, #191920);
-        border: 1px solid rgba(255,255,255,0.07); text-decoration: none;
-        transition: transform .35s cubic-bezier(.2,.7,.3,1), border-color .35s;
+        background: ${PAPER_HI};
+        border: 1px solid ${PAPER_LINE}; text-decoration: none;
+        box-shadow: 0 2px 4px rgba(23,23,26,0.04), 0 16px 34px rgba(23,23,26,0.09);
+        transition: transform .35s cubic-bezier(.2,.7,.3,1), border-color .35s, box-shadow .35s;
       }
-      .bl-merch-tile:hover { transform: translateY(-4px); border-color: rgba(212,163,51,0.45); }
-      .bl-merch-tile img { width: 100%; height: 250px; object-fit: cover; display: block; }
+      .bl-merch-tile:hover {
+        transform: translateY(-5px);
+        border-color: rgba(212,163,51,0.6);
+        box-shadow: 0 6px 10px rgba(23,23,26,0.05), 0 24px 46px rgba(23,23,26,0.13);
+      }
+      /* CONTAIN, not cover. These are full-length cutouts on transparency —
+         cover cropped them to a band across the chest. */
+      .bl-merch-tile img {
+        width: 100%; height: 260px; object-fit: contain; display: block;
+        padding: 14px 14px 0; box-sizing: border-box;
+      }
       .bl-merch-meta {
         display: flex; align-items: center; justify-content: space-between;
-        padding: 13px 16px; border-top: 1px solid rgba(255,255,255,0.06);
+        padding: 13px 16px; border-top: 1px solid ${PAPER_LINE};
       }
 
-      /* FAQ styling lives in ./Faq.jsx — shared with /about. */
+      /* FAQ styling lives in ./Faq.jsx — shared with /about, tone-aware. */
 
-      /* --- sponsor strip --- */
+      /* --- sponsor wall ---
+         Was eleven 62px cream squares at 72% opacity, which Jacob called out
+         2026-08-25. Three separate things were wrong with it and all three are
+         fixed here:
+
+         1. SIZE. At 62px square none of these logos were legible — most of them
+            are a wordmark, and a wordmark you can't read is just a smudge. The
+            plate is landscape now and big enough to read the name in the art.
+         2. PLATE COLOUR. Cream (#f4f2ec) fought every logo. Almost all of this
+            artwork is drawn on WHITE, so a cream plate put a visible off-white
+            rectangle inside each tile. Pure white makes those logos blend into
+            their plate entirely; the two that are drawn on black (Dragon's
+            Brew, Dream Entertainment) read as dark badges, which is what they
+            actually are. Same principle as the bar signs, other direction.
+         3. OPACITY. They were dimmed to .72. These are businesses paying to be
+            on this page — do not fade them out to make the layout calmer. */
+      /* 730px caps the row at six, so eleven sponsors break 6 + 5. Wider and
+         it was seven and four, which reads as a leftover row not a wall. */
       .bl-sponsors {
-        display: flex; flex-wrap: wrap; gap: 10px; justify-content: center;
-        margin: 20px auto 22px; max-width: 900px;
+        display: flex; flex-wrap: wrap; gap: 12px; justify-content: center;
+        margin: 24px auto 26px; max-width: 730px;
       }
       .bl-sponsor {
-        width: 62px; height: 62px; border-radius: 12px; background: #f4f2ec;
-        display: grid; place-items: center; padding: 8px; overflow: hidden;
-        opacity: .72; transition: opacity .3s, transform .3s;
+        /* Nearly square, because the ARTWORK is: eight of these eleven logos
+           are 1:1 lockups, not wordmarks. On the landscape plate this started
+           out as, a square logo contained down to 54px and sat in a pool of
+           white. Size the plate to the art you actually have. */
+        width: 110px; height: 100px; border-radius: 12px; background: #fff;
+        /* FLEX, not grid. As a grid the single auto row sized itself to the
+           image (grid-template-rows computed to 104px), so the image's own
+           height: 100% resolved against the image — circular — and every
+           square logo overflowed the 78px plate and got sliced by
+           overflow: hidden. A flex container's content height is definite, so
+           the percentage has something real to resolve against. */
+        display: flex; align-items: center; justify-content: center;
+        padding: 12px; overflow: hidden;
+        border: 1px solid rgba(255,255,255,0.10);
+        box-shadow: 0 10px 24px rgba(0,0,0,0.35);
+        transition: transform .3s cubic-bezier(.2,.7,.3,1), box-shadow .3s;
       }
-      .bl-sponsor:hover { opacity: 1; transform: translateY(-3px); }
-      .bl-sponsor img { max-width: 100%; max-height: 100%; object-fit: contain; }
+      .bl-sponsor:hover {
+        transform: translateY(-4px);
+        box-shadow: 0 18px 38px rgba(0,0,0,0.5);
+      }
+      /* width/height 100% + contain, NOT max-width/max-height.
+         A percentage max-height does not bind on a centred grid item — the item box
+         is content-sized, so the percentage has nothing definite to resolve
+         against and every square logo rendered at its full 104px width inside
+         a 78px plate, where overflow: hidden sliced the top and bottom off
+         it. That bug was already here at the old 62px size and was invisible
+         only because a square logo in a square plate can't overflow. Sizing
+         the box explicitly and letting object-fit letterbox always works. */
+      .bl-sponsor img { width: 100%; height: 100%; object-fit: contain; }
+      @media (max-width: 560px) {
+        .bl-sponsor { width: 94px; height: 86px; padding: 10px; }
+      }
     `}</style>
   )
 }

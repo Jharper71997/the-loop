@@ -7,6 +7,7 @@ import {
   GOLD_HI, INK, INK_DIM, INK_MUTE, LINE,
 } from '@/lib/marketingTheme'
 import { litCard, litCardInner } from '@/lib/atmosphere'
+import { OG_IMAGES } from '@/lib/socialMeta'
 
 export const metadata = {
   title: 'Contact',
@@ -14,6 +15,7 @@ export const metadata = {
     'Questions about riding the Jville Brew Loop, booking a group, sponsoring a weekend, or putting your bar on the route? Send us a message.',
   alternates: { canonical: '/contact' },
   openGraph: {
+    images: OG_IMAGES,
     title: 'Contact the Jville Brew Loop',
     description: 'Riders, groups, sponsors, and partner bars — one inbox, real answers.',
     url: '/contact',

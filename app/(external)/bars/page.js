@@ -2,8 +2,12 @@ import Link from 'next/link'
 import { PUBLIC_PARTNER_BARS, PARTNER_BAR_COUNT } from '@/lib/bars'
 import { PageHero, Band, Head, Closer } from '../_components/marketing/PageShell'
 import BarTiles from '../_components/marketing/BarTiles'
-import { GOLD_HI, INK, INK_DIM, INK_MUTE, primaryCtaLg, ghostCta } from '@/lib/marketingTheme'
-import { litCard, litCardInner } from '@/lib/atmosphere'
+import {
+  GOLD_HI, GOLD_INK, ON_PAPER, ON_PAPER_DIM, ON_PAPER_MUTE,
+  primaryCtaLg, ghostCta,
+} from '@/lib/marketingTheme'
+import { paperCard } from '@/lib/atmosphere'
+import { OG_IMAGES } from '@/lib/socialMeta'
 
 // Brew partner-bar index. (Surf/Marines keep their own /surfcity/bars +
 // /marines/bars redirects — only Brew gets this page.)
@@ -17,6 +21,7 @@ export const metadata = {
     'The partner bars on the Jville Brew Loop. Ride the shuttle between Jacksonville’s best spots all night, nobody drives between stops.',
   alternates: { canonical: '/bars' },
   openGraph: {
+    images: OG_IMAGES,
     title: 'Brew Loop Partner Bars',
     description: 'The best spots in Jacksonville, on one route. Ride the Loop between them all night.',
     url: '/bars',
@@ -66,22 +71,23 @@ export default function BarsIndex() {
         <BarTiles bars={PUBLIC_PARTNER_BARS} showBlurb min={250} />
       </Band>
 
-      {/* How the route actually behaves — the questions the grid raises */}
-      <Band tone="raised" light="right" strength={0.12} rule>
-        <Head kicker="About the route" title="Three things worth knowing." />
+      {/* How the route actually behaves — the questions the grid raises.
+          ON PAPER: this band is pure type, and it's what breaks up a page that
+          otherwise runs dark hero / dark tiles / dark closer. Everything inside
+          has to carry the ON_PAPER tokens itself — see the note on Band. */}
+      <Band tone="paper" light="right" strength={0.2} grain rule>
+        <Head kicker="About the route" title="Three things worth knowing." tone="paper" />
         <div style={{ display: 'grid', gap: 14, gridTemplateColumns: 'repeat(auto-fit, minmax(270px, 1fr))', marginTop: 36 }}>
           {ROUTE_NOTES.map(n => (
-            <div key={n.t} style={litCard({ radius: 18 })}>
-              <div style={litCardInner({ radius: 17, pad: 24 })}>
-                <div style={{ color: INK, fontSize: 17.5, fontWeight: 800, letterSpacing: '-0.01em' }}>{n.t}</div>
-                <p style={{ color: INK_DIM, fontSize: 14.5, lineHeight: 1.62, margin: '10px 0 0' }}>{n.d}</p>
-              </div>
+            <div key={n.t} style={{ ...paperCard({ radius: 18 }), padding: 24 }}>
+              <div style={{ color: ON_PAPER, fontSize: 17.5, fontWeight: 800, letterSpacing: '-0.01em' }}>{n.t}</div>
+              <p style={{ color: ON_PAPER_DIM, fontSize: 14.5, lineHeight: 1.62, margin: '10px 0 0' }}>{n.d}</p>
             </div>
           ))}
         </div>
-        <p style={{ color: INK_MUTE, fontSize: 14, lineHeight: 1.6, margin: '26px 0 0', maxWidth: 640 }}>
+        <p style={{ color: ON_PAPER_MUTE, fontSize: 14, lineHeight: 1.6, margin: '26px 0 0', maxWidth: 640 }}>
           Run a bar in Jacksonville and want on the route?{' '}
-          <Link href="/contact?topic=bar" style={{ color: GOLD_HI, fontWeight: 700, textDecoration: 'none' }}>
+          <Link href="/contact?topic=bar" style={{ color: GOLD_INK, fontWeight: 700, textDecoration: 'none' }}>
             Tell us about your spot &rarr;
           </Link>
         </p>

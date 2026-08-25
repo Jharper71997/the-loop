@@ -6,10 +6,12 @@ import { PageHero, Band, Head, Closer, h2, kickerStyle } from '../_components/ma
 import BarTiles from '../_components/marketing/BarTiles'
 import Faq from '../_components/marketing/Faq'
 import {
-  GOLD, GOLD_HI, INK, INK_DIM, INK_MUTE,
+  GOLD, GOLD_HI, GOLD_INK, INK_DIM,
+  ON_PAPER, ON_PAPER_DIM, ON_PAPER_MUTE,
   primaryCtaLg, ghostCta,
 } from '@/lib/marketingTheme'
 import { litCard, litCardInner } from '@/lib/atmosphere'
+import { OG_IMAGES } from '@/lib/socialMeta'
 
 // The full "how it works" reference. The landing page pitches and shows the top
 // questions; this page is where a rider who wants the whole picture lands. Both
@@ -24,11 +26,13 @@ export const metadata = {
     'How a night on the Jville Brew Loop actually runs: book a seat, get to your first bar, then hop the shuttle between Jacksonville’s best spots all night without anyone driving.',
   alternates: { canonical: '/about' },
   openGraph: {
+    images: OG_IMAGES,
     title: 'How the Jville Brew Loop works',
     description: 'Book a seat, get to your first bar, hop the shuttle all night. Nobody drives between stops.',
     url: '/about',
   },
   twitter: {
+    images: OG_IMAGES,
     title: 'How the Jville Brew Loop works',
     description: 'Book a seat, get to your first bar, hop the shuttle all night. Nobody drives between stops.',
   },
@@ -72,11 +76,16 @@ export default function AboutPage() {
 
       {/* The three steps — same timeline the landing page uses, plus the detail
           paragraph that only lives here. */}
-      <Band tone="base" light="top-right" strength={0.14} grain rule>
+      {/* ON PAPER, matching the same three steps on the landing page. This is
+          pure type with no artwork that needs a dark field, and it is what
+          keeps /about from running hero-to-closer as one long dark wall.
+          Every colour below is an ON_PAPER token — see the note on Band. */}
+      <Band tone="paper" light="top-right" strength={0.22} grain rule>
         <Head
           kicker="How a night runs"
           title="Three steps, then the night is handled."
           sub="It’s a tracked, scheduled route — not hop-on / hop-off — with your bar-hopping built into the timetable."
+          tone="paper"
         />
 
         <ol style={{ listStyle: 'none', margin: '44px 0 0', padding: 0 }}>
@@ -86,14 +95,14 @@ export default function AboutPage() {
               <li key={s.n} style={{ display: 'flex', gap: 20, alignItems: 'stretch' }}>
                 <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', flex: '0 0 auto' }}>
                   <span style={timelineNum}>{s.n}</span>
-                  {!last && <span aria-hidden style={{ width: 2, flex: 1, minHeight: 30, background: `linear-gradient(180deg, ${GOLD}, rgba(212,163,51,0.12))` }} />}
+                  {!last && <span aria-hidden style={{ width: 2, flex: 1, minHeight: 30, background: `linear-gradient(180deg, ${GOLD}, rgba(212,163,51,0.22))` }} />}
                 </div>
                 <div style={{ paddingBottom: last ? 0 : 38, display: 'grid', gap: 'clamp(6px, 3vw, 40px)', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', alignItems: 'start', flex: 1 }}>
                   <div>
-                    <h3 style={{ color: INK, fontSize: 'clamp(19px, 2.4vw, 23px)', fontWeight: 800, margin: 0, letterSpacing: '-0.01em' }}>{s.title}</h3>
-                    <p style={{ color: INK_DIM, fontSize: 15.5, lineHeight: 1.6, margin: '9px 0 0', maxWidth: 460 }}>{s.sub}</p>
+                    <h3 style={{ color: ON_PAPER, fontSize: 'clamp(19px, 2.4vw, 23px)', fontWeight: 800, margin: 0, letterSpacing: '-0.01em' }}>{s.title}</h3>
+                    <p style={{ color: ON_PAPER_DIM, fontSize: 15.5, lineHeight: 1.6, margin: '9px 0 0', maxWidth: 460 }}>{s.sub}</p>
                   </div>
-                  <p style={{ color: INK_MUTE, fontSize: 14.5, lineHeight: 1.7, margin: 0, paddingTop: 3, maxWidth: 480 }}>{s.detail}</p>
+                  <p style={{ color: ON_PAPER_MUTE, fontSize: 14.5, lineHeight: 1.7, margin: 0, paddingTop: 3, maxWidth: 480 }}>{s.detail}</p>
                 </div>
               </li>
             )
@@ -142,13 +151,13 @@ export default function AboutPage() {
       </Band>
 
       {/* The canonical FAQ — the landing page shows the top few and links here */}
-      <Band tone="panel" light="right" strength={0.12} grain rule id="faq">
-        <Head kicker="FAQ" title="Questions riders ask." />
-        <Faq items={FAQ} />
-        <p style={{ color: INK_MUTE, fontSize: 14.5, lineHeight: 1.6, margin: '26px 0 0' }}>
+      <Band tone="paper" light="right" strength={0.2} grain rule id="faq">
+        <Head kicker="FAQ" title="Questions riders ask." tone="paper" />
+        <Faq items={FAQ} tone="paper" />
+        <p style={{ color: ON_PAPER_MUTE, fontSize: 14.5, lineHeight: 1.6, margin: '26px 0 0' }}>
           Still stuck?{' '}
-          <Link href="/contact" style={{ color: GOLD_HI, fontWeight: 700, textDecoration: 'none' }}>Send us a message</Link>
-          {' '}or call <a href={`tel:${CONTACT.phone}`} style={{ color: GOLD_HI, fontWeight: 700, textDecoration: 'none' }}>{CONTACT.phoneDisplay}</a>.
+          <Link href="/contact" style={{ color: GOLD_INK, fontWeight: 700, textDecoration: 'none' }}>Send us a message</Link>
+          {' '}or call <a href={`tel:${CONTACT.phone}`} style={{ color: GOLD_INK, fontWeight: 700, textDecoration: 'none' }}>{CONTACT.phoneDisplay}</a>.
         </p>
       </Band>
 
@@ -165,10 +174,13 @@ const cap = s => s.charAt(0).toUpperCase() + s.slice(1)
 
 const prose = { color: INK_DIM, fontSize: 'clamp(15px, 2vw, 16.5px)', lineHeight: 1.7, margin: 0 }
 
+// The step marker sits on a paper band. Brand gold is only ~2.3:1 on cream so
+// the numeral is GOLD_INK; the gold stays as the ring and the wash, where it's
+// decoration and contrast doesn't apply.
 const timelineNum = {
   flex: '0 0 auto', width: 44, height: 44, borderRadius: 13,
-  border: '1px solid rgba(212,163,51,0.45)',
-  background: 'linear-gradient(160deg, rgba(212,163,51,0.18), rgba(212,163,51,0.04))',
-  color: GOLD_HI, fontSize: 15, fontWeight: 800,
+  border: '1px solid rgba(212,163,51,0.7)',
+  background: 'linear-gradient(160deg, rgba(212,163,51,0.28), rgba(212,163,51,0.10))',
+  color: GOLD_INK, fontSize: 15, fontWeight: 800,
   display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
 }

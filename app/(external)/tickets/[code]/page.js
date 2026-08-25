@@ -4,6 +4,7 @@ import { supabaseAdmin } from '@/lib/supabaseAdmin'
 import { contactHasSignedCurrent } from '@/lib/waiver'
 import { appUrl } from '@/lib/stripe'
 import { brandFor, prefixLink } from '@/lib/businessConfig'
+import { getBar, getBarByName } from '@/lib/bars'
 import TicketView from './TicketView'
 
 export const runtime = 'nodejs'
@@ -64,6 +65,32 @@ export default async function TicketPage({ params }) {
   const pickupSpot = firstStop?.name || null
   const pickupTimeFromStop = firstStop?.start_time || null
 
+  // The whole route, not just the first stop. We were already loading
+  // groups.schedule to find the pickup and then throwing the rest away, so a
+  // rider holding a boarding pass could not see which bars the night actually
+  // visits — the one thing they most want to know once the seat is bought.
+  //
+  // Stop names come from the schedule (which Ticket Tailor sync matches on and
+  // must not be renamed), so resolve them through getBar for display only: the
+  // same bar was reading as two different places depending on the page. Surf
+  // and Marines schedules aren't in the Brew bar directory, so an unresolved
+  // stop keeps its schedule name rather than disappearing.
+  const isBrew = !event?.kind || event.kind === 'brew'
+  const stops = (event?.group?.schedule || [])
+    .filter(st => st && (st.name || st.slug))
+    .map((st, i) => {
+      // Only Brew stops resolve — getBar reads the Brew directory, and a Surf
+      // or Marines bar sharing a name must never link to a Brew bar page.
+      const bar = isBrew ? ((st.slug && getBar(st.slug)) || getBarByName(st.name)) : null
+      return {
+        order: i,
+        name: bar?.name || st.name,
+        slug: bar?.slug || null,
+        time: st.start_time || null,
+        isPickup: i === 0,
+      }
+    })
+
   // Waiver status — show the rider whether they still need to sign before
   // pickup. We render a deep link to /waiver/<contactId> right on the ticket.
   let waiverSigned = false
@@ -99,6 +126,9 @@ export default async function TicketPage({ params }) {
       eventDate={event?.event_date || null}
       pickupTime={pickupTimeFromStop || event?.pickup_time || null}
       pickupSpot={pickupSpot}
+      stops={stops}
+      barsHref={prefixLink('/bars', event?.kind)}
+      trackHref={cfg.trackPath}
       isPaid={isPaid}
       isVoided={isVoided}
       waiverSigned={waiverSigned}

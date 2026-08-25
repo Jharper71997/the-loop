@@ -5,6 +5,7 @@ import { fmtPrice } from '../../_components/merch/MerchBody'
 import MerchGallery from '../../_components/merch/MerchGallery'
 import AddToCart from './AddToCart'
 import { GOLD, INK, INK_DIM, MAX_W } from '@/lib/marketingTheme'
+import { OG_IMAGES } from '@/lib/socialMeta'
 
 export const dynamic = 'force-dynamic'
 
@@ -16,7 +17,10 @@ export async function generateMetadata({ params }) {
     title: product.name,
     description: product.description || `${product.name} — Jville Brew Loop merch.`,
     alternates: { canonical: `/merch/${product.slug}` },
-    openGraph: { title: `${product.name} · Brew Loop Merch`, description: product.description || '', url: `/merch/${product.slug}` },
+    // Deliberately the generic card rather than the product shot: the merch
+    // images are cutouts of BLACK apparel on transparency, and transparency
+    // flattens to black in a social feed — the hoodie would vanish.
+    openGraph: { images: OG_IMAGES, title: `${product.name} · Brew Loop Merch`, description: product.description || '', url: `/merch/${product.slug}` },
   }
 }
 

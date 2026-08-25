@@ -1,7 +1,5 @@
-// Pull lapsed riders from orders table: rode before but not in last 8 weeks.
-// node scripts/lapsed-riders.js
-
-const fs = require('fs'); const path = require('path')
+// Find lapsed brew loop riders (rode before but not in last 8 weeks)
+const fs = require('fs'), path = require('path')
 const envText = fs.readFileSync(path.join(__dirname, '..', '.env.local'), 'utf8')
 for (const line of envText.split(/\r?\n/)) {
   const m = line.match(/^([A-Z0-9_]+)=(.*)$/)
@@ -11,64 +9,46 @@ const { createClient } = require('@supabase/supabase-js')
 const sb = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL, process.env.SUPABASE_SERVICE_KEY, { auth: { persistSession: false } })
 
 const FOUNDERS = ['jacob harper', 'richard flowers', 'lydia harper', 'alyssa flowers']
-const CUTOFF_DATE = new Date('2026-04-23') // 8 weeks before 2026-06-17
+// 8 weeks before 2026-08-18
+const CUTOFF = '2026-06-23'
 
-async function main() {
-  const { data: orders, error } = await sb
+async function run() {
+  const { data, error } = await sb
     .from('orders')
-    .select('id, buyer_name, buyer_email, buyer_phone, paid_at, event_id, total_cents, status')
-    .in('status', ['paid', 'completed'])
-    .not('buyer_name', 'is', null)
-  if (error) throw error
+    .select('id, buyer_name, buyer_email, buyer_phone, paid_at, status, events!inner(kind, event_date)')
+    .eq('events.kind', 'brew')
+    .eq('status', 'paid')
+    .gte('paid_at', '2026-01-01')
+    .order('paid_at', { ascending: false })
+  if (error) { console.error(JSON.stringify(error)); process.exit(1) }
 
-  console.log('Total paid orders:', orders.length)
-
-  const real = orders.filter(o => !FOUNDERS.includes((o.buyer_name || '').trim().toLowerCase()))
-
-  const byRider = {}
-  for (const o of real) {
-    const key = (o.buyer_email || o.buyer_phone || o.buyer_name || '').trim().toLowerCase()
+  const byEmail = new Map()
+  for (const o of data) {
+    const nameLower = (o.buyer_name || '').toLowerCase()
+    if (FOUNDERS.some(f => nameLower.includes(f.split(' ')[0]))) continue
+    const key = (o.buyer_email || '').toLowerCase().trim() || (o.buyer_name || '').toLowerCase().trim()
     if (!key) continue
-    if (!byRider[key]) byRider[key] = { name: o.buyer_name, email: o.buyer_email || '', phone: o.buyer_phone || '', orders: [] }
-    byRider[key].orders.push(o)
+    if (!byEmail.has(key)) {
+      byEmail.set(key, { name: o.buyer_name, email: o.buyer_email, phone: o.buyer_phone, dates: [] })
+    }
+    const rec = byEmail.get(key)
+    const d = (o.events && o.events.event_date) ? o.events.event_date : (o.paid_at || '').slice(0, 10)
+    if (d) rec.dates.push(d)
   }
 
-  const riders = Object.values(byRider)
-  console.log('Unique riders:', riders.length)
-
   const lapsed = []
-  for (const r of riders) {
-    const dates = r.orders.map(o => new Date(o.paid_at)).sort((a,b) => b - a)
-    const mostRecent = dates[0]
-    const rideCount = r.orders.length
-    if (mostRecent < CUTOFF_DATE) {
-      lapsed.push({
-        name: r.name,
-        email: r.email,
-        phone: r.phone,
-        rideCount,
-        lastRide: mostRecent.toISOString().split('T')[0],
-        firstRide: dates[dates.length-1].toISOString().split('T')[0],
-        isRepeat: rideCount >= 2
-      })
+  for (const [, r] of byEmail) {
+    const sorted = [...new Set(r.dates)].sort()
+    const lastDate = sorted[sorted.length - 1] || ''
+    if (lastDate && lastDate < CUTOFF) {
+      lapsed.push({ name: r.name, email: r.email, phone: r.phone, rideCount: sorted.length, lastDate, allDates: sorted })
     }
   }
 
-  lapsed.sort((a, b) => {
-    if (b.isRepeat !== a.isRepeat) return b.isRepeat ? 1 : -1
-    return b.rideCount - a.rideCount
-  })
-
-  console.log('\nLapsed (last ride before 2026-04-23):', lapsed.length)
-  console.log('  Repeat (2+):', lapsed.filter(r => r.isRepeat).length)
-  console.log('  One-time:', lapsed.filter(r => !r.isRepeat).length)
-  console.log('\nTop lapsed:')
-  lapsed.slice(0, 30).forEach(r => {
-    console.log(` [${r.isRepeat?'REPEAT':'once'}] ${r.name} | rides:${r.rideCount} | last:${r.lastRide} | phone:${r.phone||'none'} | email:${r.email||'none'}`)
-  })
-
-  const out = 'C:/Users/jacob/OneDrive/Desktop/lapsed-riders.json'
+  lapsed.sort((a, b) => b.rideCount - a.rideCount || b.lastDate.localeCompare(a.lastDate))
+  const out = path.join('C:/Users/jacob/agent-ops/reports', 'lapsed-riders-2026-08-18.json')
   fs.writeFileSync(out, JSON.stringify(lapsed, null, 2))
-  console.log('\nWrote', lapsed.length, 'riders to', out)
+  console.log(`${lapsed.length} lapsed riders -> ${out}`)
+  lapsed.slice(0, 20).forEach(r => console.log(`  ${r.name} | rides:${r.rideCount} last:${r.lastDate} | ${r.email || r.phone || 'no contact'}`))
 }
-main().catch(e => { console.error('ERROR:', e.message || e); process.exit(1) })
+run().catch(e => { console.error(e); process.exit(1) })

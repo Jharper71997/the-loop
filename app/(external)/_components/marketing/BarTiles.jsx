@@ -11,6 +11,7 @@
 
 import Link from 'next/link'
 import { tileScrim } from '@/lib/atmosphere'
+import { revealGroup } from '@/lib/motion'
 
 // Bars whose image is a real photograph (framed scenery) rather than a sign.
 const PHOTO_BARS = new Set(['hideaway'])
@@ -18,7 +19,7 @@ const PHOTO_BARS = new Set(['hideaway'])
 export default function BarTiles({ bars = [], showBlurb = false, min = 210 }) {
   return (
     <>
-      <div className="bl-mosaic" style={{ gridTemplateColumns: `repeat(auto-fit, minmax(${min}px, 1fr))` }}>
+      <div className="bl-mosaic" {...revealGroup()} style={{ gridTemplateColumns: `repeat(auto-fit, minmax(${min}px, 1fr))` }}>
         {bars.map(b => {
           const isPhoto = PHOTO_BARS.has(b.slug)
           return (
@@ -46,19 +47,24 @@ export default function BarTiles({ bars = [], showBlurb = false, min = 210 }) {
         .bl-tile {
           position: relative; overflow: hidden; border-radius: 16px;
           text-decoration: none; display: flex; flex-direction: column;
-          background: linear-gradient(170deg, #232329, #191920);
-          border: 1px solid rgba(255,255,255,0.07);
+          background: linear-gradient(170deg, #26262e, #1b1b22);
+          border: 1px solid rgba(255,255,255,0.08);
           transition: transform .35s cubic-bezier(.2,.7,.3,1), border-color .35s;
         }
         .bl-tile:hover { transform: translateY(-4px); border-color: rgba(212,163,51,0.45); }
         .bl-tile:hover .bl-tile-art img { transform: scale(1.04); }
 
+        /* The plate is DARKER than the tile around it on purpose. Several of
+           these signs are photographed with black baked into the image (Black
+           Rose, Unhinged, Brassa) — on a plate lighter than that black, the
+           sign reads as a hard rectangle pasted inside the tile. Near-black
+           lets them blend; the gold pooling keeps it from being a flat hole. */
         .bl-tile-art {
           position: relative; display: block; width: 100%;
           aspect-ratio: 16 / 10; overflow: hidden;
           background:
-            radial-gradient(70% 70% at 50% 40%, rgba(212,163,51,0.10), transparent 70%),
-            #1b1b20;
+            radial-gradient(78% 62% at 50% 32%, rgba(212,163,51,0.16), transparent 72%),
+            linear-gradient(180deg, #17171d, #0d0d11);
         }
         .bl-tile-art img {
           width: 100%; height: 100%; display: block; padding: 12px;

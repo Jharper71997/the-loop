@@ -121,6 +121,37 @@ export default function BarDetailBody({ bar, business = 'brew' }) {
         </div>
       </Band>
 
+      {/* Their own photos, when we have them. The sign shows you what to look
+          for; this shows you what the room is actually like. Only Brassa has
+          these today, so the band is skipped entirely rather than rendering an
+          empty shell. */}
+      {bar.photos?.length > 0 && (
+        <Band tone="base" light="right" strength={0.1} grain rule>
+          <Head kicker="Inside" title={`A look at ${bar.name}.`} />
+          <div className="bd-gallery">
+            {bar.photos.map(photo => (
+              <div key={photo.src} style={litCard({ radius: 20 })}>
+                <div style={{ ...litCardInner({ radius: 19, pad: 0 }), overflow: 'hidden' }}>
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img
+                    src={photo.src}
+                    alt={photo.alt || ''}
+                    loading="lazy"
+                    style={{ width: '100%', height: '100%', objectFit: 'cover', aspectRatio: '4 / 5', display: 'block' }}
+                  />
+                </div>
+              </div>
+            ))}
+          </div>
+          <style>{`
+            .bd-gallery {
+              display: grid; gap: 16px; margin-top: 36px;
+              grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+            }
+          `}</style>
+        </Band>
+      )}
+
       {/* The rest of the route (Brew only — BarTiles links to /bars/[slug]) */}
       {others.length > 0 && (
         <Band tone="base" light="top-left" strength={0.1} grain rule>

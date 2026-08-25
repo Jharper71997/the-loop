@@ -17,9 +17,14 @@
 
 import Link from 'next/link'
 import {
-  GOLD_HI, INK, INK_DIM, INK_MUTE, LINE_HI, MAX_W,
+  GOLD_HI, GOLD_INK, INK, INK_DIM, INK_MUTE, LINE_HI, MAX_W,
+  ON_PAPER, ON_PAPER_DIM,
 } from '@/lib/marketingTheme'
-import { TONES, grainOverlay, lightPool, photoScrim, fadeRule } from '@/lib/atmosphere'
+import {
+  TONES, isPaper, grainOverlay, lightPool, photoScrim, fadeRule,
+  paperWash, paperGrain, paperRule,
+} from '@/lib/atmosphere'
+import { reveal, parallax } from '@/lib/motion'
 
 /* ================================= HERO ================================== */
 /* Same construction as the landing hero: an image carries the section, the
@@ -40,6 +45,7 @@ export function PageHero({
       {image ? (
         <div
           aria-hidden
+          {...parallax}
           style={{
             position: 'absolute', inset: 0,
             backgroundImage: `url(${image})`,
@@ -109,6 +115,16 @@ export function PageHero({
 /* Consecutive sections must not be the same value — that was what made the
    old pages read as one endless box. `tone` + `light` vary the room.         */
 
+// `tone="paper"` flips the band to the light end of the rhythm — see the
+// light-surface block in lib/marketingTheme.js for why the site alternates
+// rather than picking one. The three atmosphere layers all have to swap with
+// it (a white-alpha glow is invisible on cream, an overlay grain turns it
+// chalky, a white-alpha rule disappears), which is what this handles.
+//
+// What it CANNOT do is recolour the children: they set their own text with
+// inline styles, and inline beats any class. A band that goes paper has to
+// hand its own contents the ON_PAPER tokens and pass tone="paper" down to
+// <Head> as well, or it renders white on cream.
 export function Band({
   tone = 'base',
   light = null,
@@ -120,18 +136,30 @@ export function Band({
   width = MAX_W,
   tight = false,
 }) {
+  const paper = isPaper(tone)
   return (
     <section
       id={id}
       style={{ position: 'relative', overflow: 'hidden', background: TONES[tone] || TONES.base, scrollMarginTop: 72 }}
     >
-      {rule && <hr style={fadeRule} />}
-      {light && <div aria-hidden style={{ position: 'absolute', inset: 0, background: lightPool(light, strength) }} />}
-      {grain && <div aria-hidden style={grainOverlay} />}
-      <div style={{
-        position: 'relative', maxWidth: width, margin: '0 auto',
-        padding: tight ? 'clamp(40px, 6vw, 68px) 24px' : 'clamp(56px, 8vw, 100px) 24px',
-      }}>
+      {rule && <hr style={paper ? paperRule : fadeRule} />}
+      {light && (
+        <div
+          aria-hidden
+          style={{
+            position: 'absolute', inset: 0,
+            background: paper ? paperWash(light, Math.max(strength, 0.18)) : lightPool(light, strength),
+          }}
+        />
+      )}
+      {grain && <div aria-hidden style={paper ? paperGrain : grainOverlay} />}
+      <div
+        {...reveal()}
+        style={{
+          position: 'relative', maxWidth: width, margin: '0 auto',
+          padding: tight ? 'clamp(40px, 6vw, 68px) 24px' : 'clamp(56px, 8vw, 100px) 24px',
+        }}
+      >
         {children}
       </div>
     </section>
@@ -140,14 +168,18 @@ export function Band({
 
 /* ================================= HEAD ================================== */
 
-export function Head({ kicker, title, sub, aside }) {
+// `tone` must match the Band this sits in. It is passed rather than inferred
+// because Head is a sibling of the band's other children, not a wrapper — see
+// the note on Band.
+export function Head({ kicker, title, sub, aside, tone = 'dark' }) {
+  const paper = isPaper(tone)
   return (
     <div style={{ display: 'flex', flexWrap: 'wrap', gap: 20, alignItems: 'flex-end', justifyContent: 'space-between' }}>
       <div style={{ maxWidth: 620 }}>
-        {kicker && <div style={kickerStyle}>{kicker}</div>}
-        <h2 style={h2}>{title}</h2>
+        {kicker && <div style={paper ? { ...kickerStyle, color: GOLD_INK } : kickerStyle}>{kicker}</div>}
+        <h2 style={paper ? { ...h2, color: ON_PAPER } : h2}>{title}</h2>
         {sub && (
-          <p style={{ color: INK_DIM, fontSize: 'clamp(15px, 2vw, 17px)', lineHeight: 1.6, margin: '14px 0 0' }}>
+          <p style={{ color: paper ? ON_PAPER_DIM : INK_DIM, fontSize: 'clamp(15px, 2vw, 17px)', lineHeight: 1.6, margin: '14px 0 0' }}>
             {sub}
           </p>
         )}

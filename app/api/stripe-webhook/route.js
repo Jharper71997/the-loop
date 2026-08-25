@@ -7,6 +7,8 @@ import { recordAlert } from '@/lib/alerts'
 import { syncTtForEvent } from '@/lib/ticketTailorSync'
 import { stripe as stripeLib } from '@/lib/stripe'
 import { mapSubStatus } from '@/lib/loopPass'
+import { sendEmail } from '@/lib/email'
+import { merchOrderHtml, merchOrderText } from '@/lib/emailTemplates'
 
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
@@ -177,6 +179,32 @@ async function resolvePromoCode(session) {
     }
     return null
   } catch { return null }
+}
+
+// Which shipping option the buyer picked, as the human label they saw. This is
+// the whole difference between "put it in the mail" and "hand it to them on the
+// shuttle", so fulfillment is guesswork without it. The rates are created inline
+// (shipping_rate_data), so the session only carries the rate ID and we have to
+// go get the name. Falls back to the amount — $0 is the shuttle — because a
+// missing label must never cost us the distinction. Never throws.
+async function resolveShippingMethod(session) {
+  const cost = session.shipping_cost
+  if (!cost) return null
+  try {
+    const rate = cost.shipping_rate
+    if (rate) {
+      if (typeof rate === 'object' && rate.display_name) return rate.display_name
+      const id = typeof rate === 'string' ? rate : rate?.id
+      if (id) {
+        const full = await stripeLib.shippingRates.retrieve(id)
+        if (full?.display_name) return full.display_name
+      }
+    }
+  } catch { /* fall through to the amount */ }
+  const amt = cost.amount_total
+  if (amt === 0) return 'Grab it on the shuttle'
+  if (Number.isInteger(amt)) return 'Standard shipping'
+  return null
 }
 
 async function handleCheckoutCompleted(supabase, session) {
@@ -365,6 +393,7 @@ async function handleMerchCheckout(supabase, session) {
   if (!order) throw new Error(`merch order ${merchOrderId} not found`)
   if (order.status === 'paid' || order.status === 'fulfilled') return
 
+  const shippingMethod = await resolveShippingMethod(session)
   const cust = session.customer_details || null
   // Stripe renamed session.shipping_details → collected_information.shipping_details
   // across API versions; read whichever this version provides.
@@ -373,20 +402,44 @@ async function handleMerchCheckout(supabase, session) {
     || session.shipping
     || null
 
+  const patch = {
+    status: 'paid',
+    paid_at: new Date().toISOString(),
+    stripe_payment_intent_id: session.payment_intent || null,
+    total_cents: Number.isInteger(session.amount_total) ? session.amount_total : null,
+    shipping_cents: session.shipping_cost?.amount_total ?? session.total_details?.amount_shipping ?? null,
+    shipping_method: shippingMethod,
+    buyer_email: cust?.email || null,
+    buyer_name: (ship?.name || cust?.name) || null,
+    buyer_phone: cust?.phone || null,
+    shipping_address: (ship?.address || cust?.address) || null,
+  }
+
   await supabase
     .from('merch_orders')
-    .update({
-      status: 'paid',
-      paid_at: new Date().toISOString(),
-      stripe_payment_intent_id: session.payment_intent || null,
-      total_cents: Number.isInteger(session.amount_total) ? session.amount_total : null,
-      shipping_cents: session.shipping_cost?.amount_total ?? session.total_details?.amount_shipping ?? null,
-      buyer_email: cust?.email || null,
-      buyer_name: (ship?.name || cust?.name) || null,
-      buyer_phone: cust?.phone || null,
-      shipping_address: (ship?.address || cust?.address) || null,
-    })
+    .update(patch)
     .eq('id', order.id)
+
+  // Confirmation email. Deliberately AFTER the row is settled and deliberately
+  // swallowed: a Resend outage must never fail the webhook, because Stripe
+  // would retry it and the money is already captured. Worst case the buyer
+  // gets no email and the order is still correct in the table.
+  try {
+    const { data: items } = await supabase
+      .from('merch_order_items')
+      .select('name, unit_price_cents, quantity')
+      .eq('merch_order_id', order.id)
+    if (patch.buyer_email) {
+      await sendEmail({
+        to: patch.buyer_email,
+        subject: 'Your Brew Loop order is confirmed',
+        html: merchOrderHtml({ order: patch, items: items || [] }),
+        text: merchOrderText({ order: patch, items: items || [] }),
+      })
+    }
+  } catch (err) {
+    console.error('[merch] confirmation email failed', err)
+  }
 }
 
 async function handleRefund(supabase, obj) {
