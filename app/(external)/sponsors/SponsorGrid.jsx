@@ -103,6 +103,13 @@ function SponsorCard({ s }) {
       <div style={{ marginTop: 18, flex: '1 1 auto' }}>
         <div style={{ color: INK, fontSize: 17.5, fontWeight: 800, letterSpacing: '-0.015em' }}>{s.name}</div>
         <p style={{ color: INK_DIM, fontSize: 14, lineHeight: 1.55, margin: '8px 0 0' }}>{s.blurb}</p>
+        {/* The longer version, taken from each sponsor's own site. Dimmer and
+            a step smaller so the one-line blurb still leads the card. */}
+        {s.description && (
+          <p style={{ color: INK_DIM, opacity: 0.78, fontSize: 13, lineHeight: 1.6, margin: '10px 0 0' }}>
+            {s.description}
+          </p>
+        )}
       </div>
 
       {/* Visit CTA */}
