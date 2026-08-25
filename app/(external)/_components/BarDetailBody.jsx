@@ -5,7 +5,7 @@ import PlaceholderArt from './PlaceholderArt'
 import { Band, Head } from './marketing/PageShell'
 import BarTiles from './marketing/BarTiles'
 import { litCard, litCardInner, lightPool, grainOverlay } from '@/lib/atmosphere'
-import { GOLD, GOLD_HI, INK, INK_DIM, INK_MUTE, MAX_W, primaryCtaLg, ghostCta } from '@/lib/marketingTheme'
+import { GOLD, GOLD_HI, INK, INK_DIM, INK_MUTE, MAX_W, ON_PAPER_DIM, primaryCtaLg, ghostCta } from '@/lib/marketingTheme'
 
 // Shared partner-bar detail body for Brew ('/bars/[slug]') and Surf City
 // ('/surfcity/bars/[slug]'). Takes the resolved bar + business so links are
@@ -98,6 +98,27 @@ export default function BarDetailBody({ bar, business = 'brew' }) {
           }
         `}</style>
       </section>
+
+      {/* The venue in its own right, written from each bar's own site and
+          listing. Only the Brew partner bars carry a description; Surf and
+          Marines stops have none and fall straight through to the generic
+          cards below. */}
+      {bar.description && (
+        <Band tone="paper" light="right" strength={0.2} grain rule>
+          <Head kicker="The place" title={`About ${bar.name}.`} tone="paper" />
+          <p
+            style={{
+              color: ON_PAPER_DIM,
+              fontSize: 'clamp(16px, 1.8vw, 19px)',
+              lineHeight: 1.65,
+              margin: '26px 0 0',
+              maxWidth: 720,
+            }}
+          >
+            {bar.description}
+          </p>
+        </Band>
+      )}
 
       {/* What a stop here is actually like */}
       <Band tone="raised" light="left" strength={0.12} rule>
