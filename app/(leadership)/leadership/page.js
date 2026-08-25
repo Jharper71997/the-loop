@@ -16,17 +16,60 @@ const STATE = {
   wrapping:   { tone: '#8a5f0a', dot: '#d4a333', label: 'Wrapping up',  pulse: true },
 }
 
+// Bar and sponsor subscriptions bill monthly through Stripe, but whatever used
+// to copy them into sponsor_payments / bar_payments stopped: newest rows are
+// 2026-05-28 and 2026-06-14, while Stripe kept collecting. Until that is fixed
+// the Money pages will show partners as unpaid months after they paid, so say
+// so here rather than let the tables be read as truth.
+function SyncWarning({ sync }) {
+  if (!sync?.stale) return null
+  const parts = []
+  if (sync.sponsorAgeDays != null) parts.push(`sponsors ${sync.sponsorAgeDays}d`)
+  if (sync.barAgeDays != null) parts.push(`bars ${sync.barAgeDays}d`)
+  return (
+    <div style={{
+      background: '#fdeae6', border: '1px solid #d8543f', borderRadius: 10,
+      padding: '12px 14px', marginBottom: 16, fontSize: 13.5, color: '#b3311f',
+    }}>
+      <strong style={{ fontWeight: 800 }}>Bar and sponsor payments have stopped syncing from Stripe.</strong>
+      {' '}Last recorded {parts.join(', ')} ago, but Stripe is still charging them monthly. Money in (right) is read
+      straight from Stripe and is correct; the Bars, Sponsors and Money pages are not, and will show partners as
+      unpaid until this is reconnected.
+    </div>
+  )
+}
+
+// "Fri Aug 21 + Sat Aug 22" — a weekend reads as its nights, not as a range.
+function nightsLabel(dates) {
+  if (!dates || !dates.length) return ''
+  return dates.map(fmtDate).join(' + ')
+}
+
+// A balance nobody has updated since May is not "cash on hand", it is a number
+// from May. Say how old it is so it can't quietly pass for current.
+function cashHint({ cashCents, cashAsOf, cashAgeDays }) {
+  if (cashCents == null) return 'never recorded — add it in Money → Cash on hand'
+  if (cashAsOf == null) return 'date unknown'
+  const age = cashAgeDays == null ? '' : ` · ${cashAgeDays} days old`
+  return `as of ${fmtDate(cashAsOf)}${age}`
+}
+
 function fmtDate(iso) {
   if (!iso) return ''
   try {
-    return new Date(`${iso}T12:00:00-05:00`).toLocaleDateString('en-US', {
+    // Loop dates are bare YYYY-MM-DD and want noon ET so they can't slip a day.
+    // A bank balance is already a full timestamp — pinning noon onto it produced
+    // an invalid date, which the catch below quietly rendered as raw ISO.
+    const d = String(iso).length > 10 ? new Date(iso) : new Date(`${iso}T12:00:00-05:00`)
+    if (Number.isNaN(d.getTime())) return iso
+    return d.toLocaleDateString('en-US', {
       weekday: 'short', month: 'short', day: 'numeric', timeZone: 'America/Indiana/Indianapolis',
     })
   } catch { return iso }
 }
 
 export default async function LeadershipScoreboard() {
-  const { live, week } = await getLeadershipHome()
+  const { live, weekend, money, sync } = await getLeadershipHome()
   const renderedAt = await serverNow()
 
   return (
@@ -47,14 +90,52 @@ export default async function LeadershipScoreboard() {
           <LiveStamp renderedAt={renderedAt} intervalMs={20000} />
         </header>
 
+        <SyncWarning sync={sync} />
+
         <LiveTonight live={live} />
 
+        {/* Weekend-shaped, not calendar-shaped. The Loop runs Fri + Sat, so a
+            Mon-to-Sun window reads zero five days out of seven — which is what
+            made this page look broken on a Tuesday. */}
         <div className="lead-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 12, marginTop: live ? 24 : 0 }}>
-          <StatCard label="Revenue this week" value={formatCents(week.revenueCents)} tone="ok" mono />
-          <StatCard label="Riders this week" value={week.riders.toLocaleString('en-US')} tone="gold" mono />
-          <StatCard label="Cash on hand" value={formatCents(week.cashCents)} tone="ink" mono
-            hint={week.cashAsOf ? `as of ${fmtDate(week.cashAsOf)}` : 'add at /leadership/cash'} />
-          <StatCard label="Active bars" value={week.activeBars} tone="ink" mono />
+          <StatCard
+            label="Riders last weekend"
+            value={weekend.last.riders.toLocaleString('en-US')}
+            tone={weekend.last.riders ? 'gold' : 'dim'}
+            hint={nightsLabel(weekend.last.dates) || 'no loop on record'}
+            mono
+          />
+          <StatCard
+            label="Money in · 30 days"
+            value={money.ok ? formatCents(money.grossCents) : '—'}
+            tone={money.ok ? (money.grossCents ? 'ok' : 'dim') : 'err'}
+            hint={
+              money.ok
+                ? `subscriptions ${formatCents(money.subsCents)} · tickets ${formatCents(money.ticketsCents)} · Stripe only, not Ticket Tailor`
+                : 'Stripe did not answer — no number is better than a wrong one'
+            }
+            mono
+          />
+          <StatCard
+            label="Sold this weekend"
+            value={weekend.coming.riders.toLocaleString('en-US')}
+            tone={weekend.coming.riders ? 'gold' : 'err'}
+            hint={
+              weekend.coming.dates.length
+                ? (weekend.coming.riders
+                    ? `${nightsLabel(weekend.coming.dates)} · ${formatCents(weekend.coming.revenueCents)} booked`
+                    : `nothing sold yet for ${nightsLabel(weekend.coming.dates)}`)
+                : 'no loop on the books — build one in Loops'
+            }
+            mono
+          />
+          <StatCard
+            label="Cash on hand"
+            value={formatCents(weekend.cashCents)}
+            tone={weekend.cashAgeDays != null && weekend.cashAgeDays > 45 ? 'err' : 'ink'}
+            hint={cashHint(weekend)}
+            mono
+          />
         </div>
 
         <Directory />

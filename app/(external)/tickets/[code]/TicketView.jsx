@@ -262,7 +262,7 @@ export default function TicketView({
                           ? <Link href={`${barsHref}/${stop.slug}`} style={{ textDecoration: 'none' }}>{label}</Link>
                           : label}
                       </span>
-                      {stop.time && (
+                      {stop.time && stop.isPickup && (
                         <span style={{ color: INK_DIM, fontSize: 13, whiteSpace: 'nowrap', marginTop: 1 }}>
                           {formatTime(stop.time)}
                         </span>

@@ -2,6 +2,7 @@ import { supabaseAdmin } from '@/lib/supabaseAdmin'
 import { serverNow } from '@/lib/serverNow'
 import { operationalDateInTZ, nowInTZ, currentStopIndex, formatStopTime } from '@/lib/schedule'
 import { getActiveBusiness } from '@/lib/businessServer'
+import { resolveActiveLoop } from '@/lib/activeLoop'
 import TonightClient from './TonightClient'
 
 export const dynamic = 'force-dynamic'
@@ -13,43 +14,26 @@ export default async function TonightPage() {
   const today = operationalDateInTZ()
   const now = nowInTZ()
 
-  // Show every OPEN loop (not yet closed out) regardless of date, so a loop
-  // that ran last night stays here until staff press "Close out loop".
-  const { data: groups } = await supabase
-    .from('groups')
-    .select(`
-      id, name, event_date, pickup_time, schedule, tt_event_id, closed_out_at,
-      group_members (
-        id, current_stop_index,
-        contacts ( id, first_name, last_name, phone, has_signed_waiver )
-      )
-    `)
-    .eq('kind', business)   // active console's business (Brew /admin, Surf /surf, Marines /loop)
-    .is('closed_out_at', null)
-    .order('event_date', { ascending: true })
-    .limit(12)
-
-  const openGroups = groups || []
-  const todayGroup = openGroups.find(g => g.event_date === today) || null
+  // Which loop is on top is resolved against today rather than against the
+  // first N open rows — see lib/activeLoop.js for the three weeks of August
+  // this screen spent showing the Friday Aug 7 loop.
+  //
   // A loop that already ran but hasn't been closed out stays the active loop so
   // staff can finish reporting / messaging / waivers until they close it out.
-  const ranOpenGroup = !todayGroup
-    ? openGroups
-        .filter(g => g.event_date && g.event_date < today)
-        .sort((a, b) => (b.event_date || '').localeCompare(a.event_date || ''))[0] || null
-    : null
-  const nextGroup = (!todayGroup && !ranOpenGroup)
-    ? openGroups
-        .filter(g => !g.event_date || g.event_date > today)
-        .sort((a, b) => (a.event_date || '').localeCompare(b.event_date || ''))[0] || null
-    : null
+  const { todayGroup, ranGroup: ranOpenGroup, nextGroup, activeGroup, upcomingGroups } =
+    await resolveActiveLoop(supabase, {
+      business,   // active console's business (Brew /admin, Surf /surf, Marines /loop)
+      select: `
+        id, name, event_date, pickup_time, schedule, tt_event_id, closed_out_at,
+        group_members (
+          id, current_stop_index,
+          contacts ( id, first_name, last_name, phone, has_signed_waiver )
+        )
+      `,
+    })
 
   let state = 'none'
-  let activeGroup = todayGroup || ranOpenGroup || nextGroup
   let currentIdx = -1
-
-  // Everything else still open that isn't the one we're rendering on top.
-  const upcomingGroups = openGroups.filter(g => g.id !== activeGroup?.id).slice(0, 5)
 
   if (todayGroup) {
     const schedule = Array.isArray(todayGroup.schedule) ? todayGroup.schedule : []

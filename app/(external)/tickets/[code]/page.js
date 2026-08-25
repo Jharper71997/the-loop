@@ -31,6 +31,8 @@ export default async function TicketPage({ params }) {
       rider_first_name,
       rider_last_name,
       contact_id,
+      stop_index,
+      pickup_stop_index,
       checked_in_at,
       voided_at,
       claim_token,
@@ -58,12 +60,29 @@ export default async function TicketPage({ params }) {
   // "Surf City" whether opened at /tickets/<code> or /surfcity/tickets/<code>.
   const cfg = brandFor(event?.kind)
 
-  // First stop on the route is the pickup location. groups.schedule shape:
-  // [{ name, start_time }]. Empty/missing schedule → fall back to whatever
-  // event.pickup_time we already had.
-  const firstStop = event?.group?.schedule?.[0] || null
+  // The rider's OWN pickup, not the route's first stop. This page used to
+  // hardcode schedule[0], so every rider who chose any bar other than the
+  // first was handed a pass naming the wrong bar at the wrong time — while
+  // checkout, /api/claim, the approach alert and the confirmation SMS all
+  // resolved it correctly. Same rule they use: a per-bar ticket's stop_index
+  // wins, else a walk-on's chosen pickup_stop_index.
+  const schedule = event?.group?.schedule || []
+  const pickupIndex = Number.isInteger(item.stop_index) ? item.stop_index
+    : (Number.isInteger(item.pickup_stop_index) ? item.pickup_stop_index : null)
+  // Legacy passes carry neither index. Falling back to stop 0 is what this
+  // page has always done and is still the only available guess for them.
+  const effectivePickupIndex = pickupIndex != null && schedule[pickupIndex] ? pickupIndex : 0
+  const firstStop = schedule[effectivePickupIndex] || null
   const pickupSpot = firstStop?.name || null
   const pickupTimeFromStop = firstStop?.start_time || null
+  // Only this rider's OWN stop time goes on the pass. On older events every
+  // stop except the first carries an empty start_time, and the old fallback to
+  // event.pickup_time therefore handed a Hideaway rider the 7:30 that belongs
+  // to Angry Ginger. The event-wide time is only true for stop 0, so anyone
+  // else gets no time rather than a wrong one — TicketView already renders the
+  // pickup bar without a time when this is null.
+  const pickupTime = pickupTimeFromStop
+    || (effectivePickupIndex === 0 ? (event?.pickup_time || null) : null)
 
   // The whole route, not just the first stop. We were already loading
   // groups.schedule to find the pickup and then throwing the rest away, so a
@@ -87,7 +106,7 @@ export default async function TicketPage({ params }) {
         name: bar?.name || st.name,
         slug: bar?.slug || null,
         time: st.start_time || null,
-        isPickup: i === 0,
+        isPickup: i === effectivePickupIndex,
       }
     })
 
@@ -124,7 +143,7 @@ export default async function TicketPage({ params }) {
       brand={cfg.shortBrand}
       eventsHref={prefixLink('/events', event?.kind)}
       eventDate={event?.event_date || null}
-      pickupTime={pickupTimeFromStop || event?.pickup_time || null}
+      pickupTime={pickupTime}
       pickupSpot={pickupSpot}
       stops={stops}
       barsHref={prefixLink('/bars', event?.kind)}
