@@ -16,6 +16,29 @@ const STATE = {
   wrapping:   { tone: '#8a5f0a', dot: '#d4a333', label: 'Wrapping up',  pulse: true },
 }
 
+// Bar and sponsor subscriptions bill monthly through Stripe, but whatever used
+// to copy them into sponsor_payments / bar_payments stopped: newest rows are
+// 2026-05-28 and 2026-06-14, while Stripe kept collecting. Until that is fixed
+// the Money pages will show partners as unpaid months after they paid, so say
+// so here rather than let the tables be read as truth.
+function SyncWarning({ sync }) {
+  if (!sync?.stale) return null
+  const parts = []
+  if (sync.sponsorAgeDays != null) parts.push(`sponsors ${sync.sponsorAgeDays}d`)
+  if (sync.barAgeDays != null) parts.push(`bars ${sync.barAgeDays}d`)
+  return (
+    <div style={{
+      background: '#fdeae6', border: '1px solid #d8543f', borderRadius: 10,
+      padding: '12px 14px', marginBottom: 16, fontSize: 13.5, color: '#b3311f',
+    }}>
+      <strong style={{ fontWeight: 800 }}>Bar and sponsor payments have stopped syncing from Stripe.</strong>
+      {' '}Last recorded {parts.join(', ')} ago, but Stripe is still charging them monthly. Money in (right) is read
+      straight from Stripe and is correct; the Bars, Sponsors and Money pages are not, and will show partners as
+      unpaid until this is reconnected.
+    </div>
+  )
+}
+
 // "Fri Aug 21 + Sat Aug 22" — a weekend reads as its nights, not as a range.
 function nightsLabel(dates) {
   if (!dates || !dates.length) return ''
@@ -46,7 +69,7 @@ function fmtDate(iso) {
 }
 
 export default async function LeadershipScoreboard() {
-  const { live, weekend } = await getLeadershipHome()
+  const { live, weekend, money, sync } = await getLeadershipHome()
   const renderedAt = await serverNow()
 
   return (
@@ -67,6 +90,8 @@ export default async function LeadershipScoreboard() {
           <LiveStamp renderedAt={renderedAt} intervalMs={20000} />
         </header>
 
+        <SyncWarning sync={sync} />
+
         <LiveTonight live={live} />
 
         {/* Weekend-shaped, not calendar-shaped. The Loop runs Fri + Sat, so a
@@ -81,10 +106,14 @@ export default async function LeadershipScoreboard() {
             mono
           />
           <StatCard
-            label="Revenue last weekend"
-            value={formatCents(weekend.last.revenueCents)}
-            tone={weekend.last.revenueCents ? 'ok' : 'dim'}
-            hint="tickets only — bar and sponsor money is in Money"
+            label="Money in · 30 days"
+            value={money.ok ? formatCents(money.grossCents) : '—'}
+            tone={money.ok ? (money.grossCents ? 'ok' : 'dim') : 'err'}
+            hint={
+              money.ok
+                ? `subscriptions ${formatCents(money.subsCents)} · tickets ${formatCents(money.ticketsCents)} · Stripe only, not Ticket Tailor`
+                : 'Stripe did not answer — no number is better than a wrong one'
+            }
             mono
           />
           <StatCard
@@ -94,7 +123,7 @@ export default async function LeadershipScoreboard() {
             hint={
               weekend.coming.dates.length
                 ? (weekend.coming.riders
-                    ? `${nightsLabel(weekend.coming.dates)} · ${formatCents(weekend.coming.revenueCents)}`
+                    ? `${nightsLabel(weekend.coming.dates)} · ${formatCents(weekend.coming.revenueCents)} booked`
                     : `nothing sold yet for ${nightsLabel(weekend.coming.dates)}`)
                 : 'no loop on the books — build one in Loops'
             }
