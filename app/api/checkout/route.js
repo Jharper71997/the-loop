@@ -99,7 +99,7 @@ async function handleCheckout(req) {
 
   const { data: event } = await supabase
     .from('events')
-    .select('id, name, event_date, pickup_time, status, group_id, kind, is_private')
+    .select('id, name, event_date, pickup_time, status, group_id, kind, is_private, access_token')
     .eq('id', event_id)
     .maybeSingle()
   if (!event) return Response.json({ error: 'event not found' }, { status: 404 })
