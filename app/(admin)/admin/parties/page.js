@@ -18,7 +18,9 @@ export const dynamic = 'force-dynamic'
 //
 // Everything else on this page is reference.
 
-export default async function PartiesPage() {
+export default async function PartiesPage({ searchParams }) {
+  const sp = await searchParams
+  const deleted = sp?.saved === 'deleted'
   const sb = supabaseAdmin()
 
   const partiesRes = await sb
@@ -79,6 +81,16 @@ export default async function PartiesPage() {
     <main style={page}>
       <div style={{ maxWidth: 1100, margin: '0 auto' }}>
         <Link href="/admin" style={backLink}>← Console</Link>
+
+        {deleted && (
+          <div style={{
+            background: 'rgba(63,178,127,0.12)', border: '1px solid rgba(63,178,127,0.4)',
+            color: '#0f7a4e', fontSize: 13, fontWeight: 600, padding: '10px 12px',
+            borderRadius: 6, margin: '14px 0 0',
+          }}>
+            Party deleted. Its link no longer works.
+          </div>
+        )}
 
         <div style={{ display: 'flex', flexWrap: 'wrap', gap: 16, alignItems: 'flex-end', justifyContent: 'space-between', margin: '10px 0 6px' }}>
           <div>
