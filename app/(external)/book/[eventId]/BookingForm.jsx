@@ -7,7 +7,16 @@ const ACCENT = '#d4a333'
 const SURFACE = '#15151a'
 const BORDER = '#2a2a31'
 
-export default function BookingForm({ eventId, eventName, ticketTypes, addons = [], stops = [], waiver }) {
+// fareLabel / fareHint let a caller relabel the ticket chooser. The defaults
+// are the public loop's words, where a ticket IS a pickup bar and the rider has
+// to be told to pick the one they will already be at. On a private party that
+// is nonsense — the shuttle collects them from their own front door — so
+// /party/[token] passes its own copy rather than asking a charter organizer
+// which bar they would like to be picked up at.
+export default function BookingForm({
+  eventId, eventName, ticketTypes, addons = [], stops = [], waiver,
+  fareLabel = null, fareHint = null,
+}) {
   // A walk-on ticket type carries no bar (stop_index null). When the rider picks
   // one we make them choose a pickup bar from the night's list so the driver and
   // security know where to get them.
@@ -330,28 +339,43 @@ export default function BookingForm({ eventId, eventName, ticketTypes, addons = 
                   // separately below. For every normal ticket type it IS the
                   // pickup bar, and has to say so.
                   const walkOn = needsPickup(sel)
+                  const label = fareLabel || (walkOn ? 'Which ticket?' : 'Where should we pick you up?')
+                  const hint = fareLabel
+                    ? fareHint
+                    : (walkOn ? null : 'Pick the bar you’ll already be at. You can ride between every bar on the route from there, and the last loop brings you back to this one.')
+                  // One fare is not a choice. Rendering it as a dropdown of one
+                  // asks the rider to make a decision that does not exist.
+                  const onlyFare = ticketTypes.length === 1 ? ticketTypes[0] : null
                   return (
                     <label style={{ display: 'grid', gap: 7 }}>
                       <span style={{ fontSize: 14, color: '#f5f5f7', fontWeight: 700 }}>
-                        {walkOn ? 'Which ticket?' : 'Where should we pick you up?'}
+                        {label}
                       </span>
-                      {!walkOn && (
+                      {hint && (
                         <span style={{ fontSize: 12.5, color: '#9c9ca3', lineHeight: 1.5, marginTop: -3 }}>
-                          Pick the bar you&rsquo;ll already be at. You can ride between every bar on the
-                          route from there, and the last loop brings you back to this one.
+                          {hint}
                         </span>
                       )}
-                      <select
-                        value={r.ticket_type_id}
-                        onChange={e => updateRider(idx, { ticket_type_id: e.target.value })}
-                        style={input}
-                      >
-                        {ticketTypes.map(t => (
-                          <option key={t.id} value={t.id} disabled={t.remaining === 0}>
-                            {ticketLabel(t)}
-                          </option>
-                        ))}
-                      </select>
+                      {onlyFare ? (
+                        <span style={{
+                          ...input, display: 'flex', alignItems: 'center',
+                          justifyContent: 'space-between', gap: 10,
+                        }}>
+                          <span style={{ fontWeight: 700 }}>{ticketLabel(onlyFare)}</span>
+                        </span>
+                      ) : (
+                        <select
+                          value={r.ticket_type_id}
+                          onChange={e => updateRider(idx, { ticket_type_id: e.target.value })}
+                          style={input}
+                        >
+                          {ticketTypes.map(t => (
+                            <option key={t.id} value={t.id} disabled={t.remaining === 0}>
+                              {ticketLabel(t)}
+                            </option>
+                          ))}
+                        </select>
+                      )}
                       {sel && (
                         <span style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: 12.5, color: '#9c9ca3', gap: 8 }}>
                           <span>

@@ -1,12 +1,22 @@
 import { notFound } from 'next/navigation'
 import { supabaseAdmin } from '@/lib/supabaseAdmin'
 import { getCurrentWaiverVersion } from '@/lib/waiver'
-import { getPartyByToken, partyPriceCents, hasRoute, fmtMoney, fmtTime, fmtEventDate } from '@/lib/parties'
+import { capacityForTicketType } from '@/lib/capacity'
+import { getPartyByToken, partyPriceCents, priceCaption, isPerPerson, hasRoute, fmtMoney, fmtTime, fmtEventDate } from '@/lib/parties'
 import { GOLD, INK, INK_DIM, INK_MUTE, MAX_W, eyebrow } from '@/lib/marketingTheme'
 import { TONES, grainOverlay, lightPool, photoScrim, litCard, litCardInner } from '@/lib/atmosphere'
 import BookingForm from '../../book/[eventId]/BookingForm'
 
 export const dynamic = 'force-dynamic'
+
+// How long a pending order holds a seat before /api/checkout self-heals and
+// releases it. Seats counted as taken must use the same window the API does,
+// or the page and the server disagree about whether the bus is full.
+const PENDING_HOLD_MS = 15 * 60 * 1000
+
+function pendingHoldCutoff() {
+  return new Date(Date.now() - PENDING_HOLD_MS).toISOString()
+}
 
 // The whole point of this page is that it is not findable. Nothing links to it,
 // it is absent from the sitemap, /robots.js disallows /party/, and this tag is
@@ -35,6 +45,7 @@ export default async function PartyPage({ params }) {
 
   const { event, schedule, fares } = party
   const priceCents = partyPriceCents(fares)
+  const perPerson = isPerPerson(event)
   const routeBuilt = hasRoute(schedule)
 
   // Pickup time comes off the first stop once the route exists, because that is
@@ -50,10 +61,37 @@ export default async function PartyPage({ params }) {
   // Party fares carry stop_index null, so this lookup normally yields nothing
   // — it is here only for a party built by hand against a real stop. The
   // itinerary in the aside is what actually tells the group when to be where.
-  const ticketTypes = fares.map(f => ({
-    ...f,
-    pickup_time: Number.isFinite(f.stop_index) ? (schedule[f.stop_index] || {}).start_time || null : null,
-    remaining: null,
+  //
+  // Seats left matters on a per-person party and only there. A flat party is
+  // one organizer buying in one order against an uncapped fare, so there is
+  // nothing to count; a per-person party is independent buyers who cannot see
+  // each other, and the cap on its fare is the only thing between them and an
+  // oversold bus. Counting here mirrors the server-side check in
+  // /api/checkout, so what the page promises is what the API will honour.
+  const pendingCutoff = pendingHoldCutoff()
+  const ticketTypes = await Promise.all(fares.map(async f => {
+    const base = {
+      ...f,
+      pickup_time: Number.isFinite(f.stop_index) ? (schedule[f.stop_index] || {}).start_time || null : null,
+    }
+    const cap = capacityForTicketType(f)
+    if (cap == null) return { ...base, remaining: null }
+    try {
+      const sel = 'id, orders!inner(id, event_id, status, created_at)'
+      const [{ count: paid }, { count: pending }] = await Promise.all([
+        sb.from('order_items').select(sel, { count: 'exact', head: true })
+          .eq('orders.event_id', event.id).is('voided_at', null)
+          .eq('orders.status', 'paid').eq('ticket_type_id', f.id),
+        sb.from('order_items').select(sel, { count: 'exact', head: true })
+          .eq('orders.event_id', event.id).is('voided_at', null)
+          .eq('orders.status', 'pending').gte('orders.created_at', pendingCutoff)
+          .eq('ticket_type_id', f.id),
+      ])
+      return { ...base, remaining: Math.max(0, cap - ((paid || 0) + (pending || 0))) }
+    } catch (err) {
+      console.error('[party] remaining count failed', f.id, err)
+      return { ...base, remaining: null }
+    }
   }))
 
   let waiver = null
@@ -107,7 +145,7 @@ export default async function PartyPage({ params }) {
               {fmtMoney(priceCents)}
             </span>
             <span style={{ color: INK_MUTE, fontSize: 14, fontWeight: 600 }}>
-              the whole shuttle, not per person
+              {priceCaption(event)}
             </span>
           </div>
         </div>
@@ -122,6 +160,13 @@ export default async function PartyPage({ params }) {
               eventName={event.name}
               ticketTypes={ticketTypes}
               addons={[]}
+              /* The default copy here asks which BAR to be collected at, which
+                 is the public loop's question. A party is collected from its
+                 own pickup, so the chooser is just the ticket. */
+              fareLabel={perPerson ? 'Your seat' : 'Which ticket?'}
+              fareHint={perPerson
+                ? 'Add a rider below for everyone you are paying for. You can sign for them, or send each of them a link to sign their own waiver.'
+                : 'Take the whole-shuttle seat yourself, then add a guest seat for each person riding with you.'}
               /* Deliberately empty. Party fares carry stop_index null (the only
                  thing that keeps a party uncapped past the shuttle's 13-seat
                  per-stop limit), which BookingForm reads as "walk-on" and
@@ -182,7 +227,11 @@ export default async function PartyPage({ params }) {
                 <ul className="bk-facts">
                   <li>The shuttle is yours for the night, nobody else is on it</li>
                   <li>We pick you up wherever you want to start</li>
-                  <li>One person pays, everyone else gets a link to sign their own waiver</li>
+                  {perPerson ? (
+                    <li>Pay for yourself, or for a few people and sign for them</li>
+                  ) : (
+                    <li>One person pays, everyone else gets a link to sign their own waiver</li>
+                  )}
                   <li>Name the bars, or let us build the route</li>
                   <li>Track the shuttle live all night</li>
                   <li>Strictly 21+, every rider</li>

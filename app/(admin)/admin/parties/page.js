@@ -3,7 +3,7 @@ import { supabaseAdmin } from '@/lib/supabaseAdmin'
 import StatCard from '@/app/(leadership)/_components/StatCard'
 import StatusBadge from '@/app/(leadership)/_components/StatusBadge'
 import DataTable from '@/app/(leadership)/_components/DataTable'
-import { partyUrl, partyPriceCents, hasRoute, fmtMoney, fmtEventDate, ORGANIZER_FARE } from '@/lib/parties'
+import { partyUrl, partyPriceCents, hasRoute, isPerPerson, fmtMoney, fmtEventDate, ORGANIZER_FARE } from '@/lib/parties'
 import CopyLink from './CopyLink'
 
 export const metadata = { title: 'Private parties' }
@@ -23,7 +23,7 @@ export default async function PartiesPage() {
 
   const partiesRes = await sb
     .from('events')
-    .select('id, name, event_date, capacity, access_token, status, created_at, group_id, ticket_types(name, price_cents, active), groups(schedule)')
+    .select('id, name, event_date, capacity, access_token, status, created_at, group_id, party_pricing, ticket_types(name, price_cents, active), groups(schedule)')
     .eq('is_private', true)
     .order('event_date', { ascending: false })
     .limit(200)
@@ -62,6 +62,7 @@ export default async function PartiesPage() {
       date: p.event_date,
       upcoming: !!p.event_date && p.event_date >= today,
       quoted: partyPriceCents(fares),
+      perPerson: isPerPerson(p),
       collected: paid.cents,
       riders: paid.riders,
       token: p.access_token,
@@ -106,10 +107,18 @@ export default async function PartiesPage() {
                 <Link href={`/admin/parties/${r.id}`} style={rowLink}>{r.name}</Link>
               ) },
               { key: 'date', header: 'Date', render: r => fmtEventDate(r.date, { weekday: 'short', month: 'short', day: 'numeric' }) },
-              { key: 'quoted', header: 'Quoted', mono: true, render: r => fmtMoney(r.quoted) },
+              { key: 'quoted', header: 'Price', mono: true, render: r => (
+                <span>
+                  {fmtMoney(r.quoted)}
+                  <br />
+                  <span style={{ fontSize: 10.5, color: '#8a7b68', letterSpacing: '0.06em', textTransform: 'uppercase' }}>
+                    {r.perPerson ? 'per person' : 'whole shuttle'}
+                  </span>
+                </span>
+              ) },
               { key: 'collected', header: 'Collected', mono: true, render: r => r.collected > 0
                 ? <span style={{ color: '#0f7a4e', fontWeight: 700 }}>{fmtMoney(r.collected)}</span>
-                : <StatusBadge label="unpaid" tone="grey" /> },
+                : <StatusBadge label={r.perPerson ? 'no seats sold' : 'unpaid'} tone="grey" /> },
               { key: 'riders', header: 'Riders', mono: true, render: r => r.riders || '—' },
               { key: 'route', header: 'Route', render: r => r.routeBuilt
                 ? <StatusBadge label="built" tone="green" />
@@ -127,9 +136,12 @@ export default async function PartiesPage() {
         <p style={footNote}>
           A party is an ordinary event with <code style={code}>is_private</code> set, so it
           rides the same checkout, waiver, claim links and boarding passes as a Friday
-          loop — it is simply never listed. The organizer buys the
-          &ldquo;{ORGANIZER_FARE}&rdquo; seat at the flat price you quoted, and every
-          guest rides on a $0 seat with their own waiver link.
+          loop — it is simply never listed. <strong>Whole shuttle</strong>: the organizer
+          buys the &ldquo;{ORGANIZER_FARE}&rdquo; seat at the flat price you quoted and
+          every guest rides on a $0 seat with their own waiver link.{' '}
+          <strong>Per person</strong>: one priced seat the group buys as many times as
+          they need, individually or several at a time — capped at the max riders you
+          set, because independent buyers cannot see each other&rsquo;s orders.
         </p>
       </div>
     </main>
