@@ -12,7 +12,7 @@ export const dynamic = 'force-dynamic'
 // they are deliberately independent:
 //
 //   1. The row lands in party_requests. This is the durable copy — it is what
-//      /leadership/parties works off, and it is what turns into a party.
+//      /admin/parties works off, and it is what turns into a party.
 //   2. We get an email.
 //
 // The DB write is the one that must not be lost, so a failed email still
@@ -85,7 +85,7 @@ export async function POST(req) {
       to: CONTACT.email,
       replyTo: email || undefined,
       subject: `Private party request — ${name}, ${partySize} riders${requestedDate ? ` on ${requestedDate}` : ''}`,
-      text: `${rows.map(([k, v]) => `${k}: ${v}`).join('\n')}\n\n${notes || '(no notes)'}\n\nBuild it: /leadership/parties`,
+      text: `${rows.map(([k, v]) => `${k}: ${v}`).join('\n')}\n\n${notes || '(no notes)'}\n\nBuild it: /admin/parties`,
       html: `
         <div style="font-family:system-ui,-apple-system,Segoe UI,sans-serif;font-size:15px;line-height:1.5;color:#111">
           <p style="margin:0 0 14px"><strong>Private party request</strong></p>

@@ -1,7 +1,7 @@
 import { redirect } from 'next/navigation'
 import { revalidatePath } from 'next/cache'
 import { supabaseAdmin } from '@/lib/supabaseAdmin'
-import FormShell, { Field, Textarea, SubmitButton } from '../../../_components/FormShell'
+import FormShell, { Field, Textarea, SubmitButton } from '@/app/(leadership)/_components/FormShell'
 import { mintPartyToken, ORGANIZER_FARE, GUEST_FARE, fmtEventDate } from '@/lib/parties'
 
 export const dynamic = 'force-dynamic'
@@ -12,7 +12,7 @@ export const dynamic = 'force-dynamic'
 // ROUTE, an event that points at it, and the two fares. The route itself is
 // left empty here on purpose — we sell the night first and plan it after, so
 // the builder stays four fields instead of an itinerary editor nobody has the
-// answers for yet. /leadership/parties/[id] is where the route gets built.
+// answers for yet. /admin/parties/[id] is where the route gets built.
 
 async function createParty(formData) {
   'use server'
@@ -22,7 +22,7 @@ async function createParty(formData) {
   const priceRaw = Number.parseFloat(formData.get('price'))
   const requestId = str(formData.get('request_id')) || null
 
-  const back = `/leadership/parties/new${requestId ? `?request=${requestId}` : ''}`
+  const back = `/admin/parties/new${requestId ? `?request=${requestId}` : ''}`
   if (!name) redirect(`${back}${requestId ? '&' : '?'}error=name_required`)
   if (!/^\d{4}-\d{2}-\d{2}$/.test(eventDate)) redirect(`${back}${requestId ? '&' : '?'}error=date_required`)
   if (!Number.isFinite(priceRaw) || priceRaw <= 0) redirect(`${back}${requestId ? '&' : '?'}error=price_required`)
@@ -83,7 +83,7 @@ async function createParty(formData) {
   ])
   if (fErr) {
     console.error('[parties/new] ticket_types insert failed', fErr)
-    redirect(`/leadership/parties/${event.id}?error=fares_failed`)
+    redirect(`/admin/parties/${event.id}?error=fares_failed`)
   }
 
   // Close the loop on the request that started it, so the desk stops showing
@@ -96,8 +96,8 @@ async function createParty(formData) {
     if (rErr) console.error('[parties/new] request link failed', rErr)
   }
 
-  revalidatePath('/leadership/parties')
-  redirect(`/leadership/parties/${event.id}?created=1`)
+  revalidatePath('/admin/parties')
+  redirect(`/admin/parties/${event.id}?created=1`)
 }
 
 const ERRORS = {
@@ -134,7 +134,7 @@ export default async function NewPartyPage({ searchParams }) {
     <FormShell
       title="Build a party"
       subtitle="Creates the private booking link. Nothing about this party appears on /events."
-      backTo="/leadership/parties"
+      backTo="/admin/parties"
     >
       {error && (
         <div style={errBox} role="alert">{error}</div>

@@ -14,6 +14,7 @@
 //   Door    — scanning riders in            (security)
 //   Driver  — the screen in the bus         (driver)
 //   Riders  — look somebody up, text them
+//   Parties — quote a private night, mint its link   (party)
 //
 // Everything else — money, bars, sponsors, season, automations, all of it — is
 // one entry, Back office, and only leadership sees it. Nothing was deleted and
@@ -70,6 +71,14 @@ export const SECTIONS = [
     blurb: 'Look someone up',
   },
   {
+    key: 'parties',
+    href: '/admin/parties',
+    label: 'Parties',
+    icon: 'key',
+    party: true,
+    blurb: 'Private nights',
+  },
+  {
     key: 'office',
     href: '/leadership',
     label: 'Back office',
@@ -111,5 +120,6 @@ function allowed(entry, roles = {}) {
   if (entry.leadership && !roles.isLeader) return false
   if (entry.security && !(roles.isSec || roles.isLeader)) return false
   if (entry.driver && !(roles.isDrv || roles.isLeader)) return false
+  if (entry.party && !(roles.isParty || roles.isLeader)) return false
   return true
 }

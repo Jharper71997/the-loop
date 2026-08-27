@@ -1,12 +1,12 @@
 import Link from 'next/link'
 import { supabaseAdmin } from '@/lib/supabaseAdmin'
-import StatCard from '../../_components/StatCard'
-import StatusBadge from '../../_components/StatusBadge'
-import DataTable from '../../_components/DataTable'
+import StatCard from '@/app/(leadership)/_components/StatCard'
+import StatusBadge from '@/app/(leadership)/_components/StatusBadge'
+import DataTable from '@/app/(leadership)/_components/DataTable'
 import { partyUrl, partyPriceCents, hasRoute, fmtMoney, fmtEventDate, ORGANIZER_FARE } from '@/lib/parties'
 import CopyLink from './CopyLink'
 
-export const metadata = { title: 'Private parties — The Loop' }
+export const metadata = { title: 'Private parties' }
 export const dynamic = 'force-dynamic'
 
 // The private-party desk. Two questions, in the order they cost money:
@@ -33,8 +33,8 @@ export default async function PartiesPage() {
       .limit(200),
   ])
 
-  if (requestsRes.error) console.error('[leadership/parties] requests', requestsRes.error)
-  if (partiesRes.error) console.error('[leadership/parties] parties', partiesRes.error)
+  if (requestsRes.error) console.error('[admin/parties] requests', requestsRes.error)
+  if (partiesRes.error) console.error('[admin/parties] parties', partiesRes.error)
 
   const requests = requestsRes.data || []
   const parties = partiesRes.data || []
@@ -86,7 +86,7 @@ export default async function PartiesPage() {
   return (
     <main style={page}>
       <div style={{ maxWidth: 1100, margin: '0 auto' }}>
-        <Link href="/leadership" style={backLink}>← Back</Link>
+        <Link href="/admin" style={backLink}>← Console</Link>
 
         <div style={{ display: 'flex', flexWrap: 'wrap', gap: 16, alignItems: 'flex-end', justifyContent: 'space-between', margin: '10px 0 6px' }}>
           <div>
@@ -96,7 +96,7 @@ export default async function PartiesPage() {
               on /events — the only way in is the link you send them.
             </p>
           </div>
-          <Link href="/leadership/parties/new" style={primaryBtn}>Build a party</Link>
+          <Link href="/admin/parties/new" style={primaryBtn}>Build a party</Link>
         </div>
 
         <div style={statRow}>
@@ -125,8 +125,8 @@ export default async function PartiesPage() {
                 <StatusBadge label={r.status} tone={r.status === 'new' ? 'red' : r.status === 'booked' ? 'green' : 'gold'} />
               ) },
               { key: 'go', header: '', render: r => r.event_id
-                ? <Link href={`/leadership/parties/${r.event_id}`} style={rowLink}>Open party</Link>
-                : <Link href={`/leadership/parties/new?request=${r.id}`} style={rowLink}>Build →</Link> },
+                ? <Link href={`/admin/parties/${r.event_id}`} style={rowLink}>Open party</Link>
+                : <Link href={`/admin/parties/new?request=${r.id}`} style={rowLink}>Build →</Link> },
             ]}
             rows={openRequests}
             rowKey={r => r.id}
@@ -153,7 +153,7 @@ export default async function PartiesPage() {
           <DataTable
             columns={[
               { key: 'name', header: 'Party', primary: true, render: r => (
-                <Link href={`/leadership/parties/${r.id}`} style={rowLink}>{r.name}</Link>
+                <Link href={`/admin/parties/${r.id}`} style={rowLink}>{r.name}</Link>
               ) },
               { key: 'date', header: 'Date', render: r => fmtEventDate(r.date, { weekday: 'short', month: 'short', day: 'numeric' }) },
               { key: 'quoted', header: 'Quoted', mono: true, render: r => fmtMoney(r.quoted) },

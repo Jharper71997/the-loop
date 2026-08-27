@@ -6,6 +6,8 @@ import {
   isSecurityPath,
   isDriver,
   isDriverPath,
+  isPartyBuilder,
+  isPartyPath,
   canCheckIn,
   isStaff,
   isConsolePath,
@@ -337,6 +339,13 @@ export async function middleware(req) {
   }
 
   if (isDriverPath(path) && !isDriver(user.email)) {
+    return goTo('/admin')
+  }
+
+  // The party desk mints live payment links, so it gets its own allowlist on
+  // top of being staff — the console is open to drivers and door staff, and a
+  // charter link is a price somebody typed that a customer will be charged.
+  if (isPartyPath(path) && !isPartyBuilder(user.email)) {
     return goTo('/admin')
   }
 

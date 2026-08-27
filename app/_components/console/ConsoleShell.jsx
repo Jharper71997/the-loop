@@ -4,7 +4,7 @@ import { useEffect, useState } from 'react'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { supabase } from '@/lib/supabase'
-import { isLeadership, isSecurity, isDriver } from '@/lib/roles'
+import { isLeadership, isSecurity, isDriver, isPartyBuilder } from '@/lib/roles'
 import { sectionForPath, visibleSections } from './sections'
 import { T } from './theme'
 
@@ -27,6 +27,8 @@ const ICONS = {
   scan: 'M3 8V6a2 2 0 0 1 2-2h2M17 4h2a2 2 0 0 1 2 2v2M21 16v2a2 2 0 0 1-2 2h-2M7 20H5a2 2 0 0 1-2-2v-2M3 12h18',
   wheel: 'M12 21a9 9 0 1 0 0-18 9 9 0 0 0 0 18Z M12 15a3 3 0 1 0 0-6 3 3 0 0 0 0 6Z M12 3v6m-6.5 9L10 14m4 0 4.5 4',
   search: 'M11 19a8 8 0 1 0 0-16 8 8 0 0 0 0 16Z M21 21l-4.3-4.3',
+  // A private party IS its link, so the desk that mints them gets a key.
+  key: 'M15.5 4a4.5 4.5 0 1 0 0 9 4.5 4.5 0 0 0 0-9Z M12.3 11.7 3.5 20.5 M6.5 17.5l2.5 2.5',
   gear: 'M12 15.5a3.5 3.5 0 1 0 0-7 3.5 3.5 0 0 0 0 7Z M19.4 15a1.7 1.7 0 0 0 .3 1.9l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.9-.3 1.7 1.7 0 0 0-1 1.5v.2a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.9.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.9 1.7 1.7 0 0 0-1.5-1H2a2 2 0 1 1 0-4h.1A1.7 1.7 0 0 0 3.6 9a1.7 1.7 0 0 0-.3-1.9l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.9.3H8a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.9-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.9V9a1.7 1.7 0 0 0 1.5 1h.2a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1Z',
 }
 
@@ -184,6 +186,7 @@ export default function ConsoleShell({ children }) {
     isLeader: isLeadership(email),
     isSec: isSecurity(email),
     isDrv: isDriver(email),
+    isParty: isPartyBuilder(email),
   }
 
   const sections = visibleSections(roles)

@@ -2,15 +2,15 @@ import Link from 'next/link'
 import { notFound, redirect } from 'next/navigation'
 import { revalidatePath } from 'next/cache'
 import { supabaseAdmin } from '@/lib/supabaseAdmin'
-import StatCard from '../../../_components/StatCard'
-import StatusBadge from '../../../_components/StatusBadge'
-import DataTable from '../../../_components/DataTable'
+import StatCard from '@/app/(leadership)/_components/StatCard'
+import StatusBadge from '@/app/(leadership)/_components/StatusBadge'
+import DataTable from '@/app/(leadership)/_components/DataTable'
 import { PUBLIC_PARTNER_BARS } from '@/lib/bars'
 import { partyUrl, partyPriceCents, mintPartyToken, fmtMoney, fmtTime, fmtEventDate } from '@/lib/parties'
 import CopyLink from '../CopyLink'
 
 export const dynamic = 'force-dynamic'
-export const metadata = { title: 'Party — The Loop' }
+export const metadata = { title: 'Party' }
 
 // How many stop rows the route builder offers. Eight covers the whole partner
 // list plus a start and a finish; empty rows are dropped on save, so an
@@ -27,7 +27,7 @@ async function saveRoute(formData) {
   const sb = supabaseAdmin()
   const { data: ev } = await sb.from('events').select('id, group_id, is_private').eq('id', eventId).maybeSingle()
   if (!ev?.group_id || !ev.is_private) {
-    redirect(`/leadership/parties/${eventId}?error=no_group`)
+    redirect(`/admin/parties/${eventId}?error=no_group`)
   }
 
   // Empty rows are how a route gets shortened: someone clears stop 4 and
@@ -43,8 +43,8 @@ async function saveRoute(formData) {
 
   const { error } = await sb.from('groups').update({ schedule }).eq('id', ev.group_id)
   if (error) {
-    console.error('[parties/route] save failed', error)
-    redirect(`/leadership/parties/${eventId}?error=route_failed`)
+    console.error('[admin/parties/route] save failed', error)
+    redirect(`/admin/parties/${eventId}?error=route_failed`)
   }
 
   // The first stop is when the night actually starts, so keep the event's own
@@ -56,9 +56,9 @@ async function saveRoute(formData) {
     await sb.from('groups').update({ pickup_time: first.start_time }).eq('id', ev.group_id)
   }
 
-  revalidatePath(`/leadership/parties/${eventId}`)
-  revalidatePath('/leadership/parties')
-  redirect(`/leadership/parties/${eventId}?saved=route`)
+  revalidatePath(`/admin/parties/${eventId}`)
+  revalidatePath('/admin/parties')
+  redirect(`/admin/parties/${eventId}?saved=route`)
 }
 
 async function rotateToken(formData) {
@@ -67,15 +67,15 @@ async function rotateToken(formData) {
   if (!eventId) return
   const sb = supabaseAdmin()
   const { data: ev } = await sb.from('events').select('id, name, is_private').eq('id', eventId).maybeSingle()
-  if (!ev?.is_private) redirect('/leadership/parties')
+  if (!ev?.is_private) redirect('/admin/parties')
 
   // Killing a leaked link. The old token stops resolving the moment this
   // writes, which is the entire point — anyone holding it gets the same 404 as
   // a stranger. Only do this before they have paid, or you have just 404'd a
   // customer who is trying to reach their own booking page.
   await sb.from('events').update({ access_token: mintPartyToken(ev.name) }).eq('id', eventId)
-  revalidatePath(`/leadership/parties/${eventId}`)
-  redirect(`/leadership/parties/${eventId}?saved=token`)
+  revalidatePath(`/admin/parties/${eventId}`)
+  redirect(`/admin/parties/${eventId}?saved=token`)
 }
 
 async function setStatus(formData) {
@@ -85,8 +85,8 @@ async function setStatus(formData) {
   if (!eventId || !['on_sale', 'draft'].includes(status)) return
   const sb = supabaseAdmin()
   await sb.from('events').update({ status }).eq('id', eventId).eq('is_private', true)
-  revalidatePath(`/leadership/parties/${eventId}`)
-  redirect(`/leadership/parties/${eventId}?saved=status`)
+  revalidatePath(`/admin/parties/${eventId}`)
+  redirect(`/admin/parties/${eventId}?saved=status`)
 }
 
 /* --------------------------------- page --------------------------------- */
@@ -138,7 +138,7 @@ export default async function PartyDetailPage({ params, searchParams }) {
   return (
     <main style={page}>
       <div style={{ maxWidth: 1000, margin: '0 auto' }}>
-        <Link href="/leadership/parties" style={backLink}>← All parties</Link>
+        <Link href="/admin/parties" style={backLink}>← All parties</Link>
 
         <h1 style={h1}>{event.name}</h1>
         <p style={sub}>
