@@ -233,7 +233,11 @@ export default async function PartyPage({ params }) {
                     <li>One person pays, everyone else gets a link to sign their own waiver</li>
                   )}
                   <li>Name the bars, or let us build the route</li>
-                  <li>Track the shuttle live all night</li>
+                  <li>
+                    <a href={`/party/${event.access_token}/track`} style={{ color: GOLD, fontWeight: 700, textDecoration: 'none' }}>
+                      Track your shuttle live on the night
+                    </a>
+                  </li>
                   <li>Strictly 21+, every rider</li>
                 </ul>
               </div>

@@ -104,6 +104,10 @@ async function loadNextStop(admin, groupId) {
       .select('id, group_id')
       .eq('status', 'on_sale')
       .eq('kind', 'brew')
+      // Same reason as lib/trackLoop: with no group_id this is the PUBLIC
+      // "where is the bus" card, and a private party must never become the
+      // loop it reports on. A charter passes its own group_id explicitly.
+      .eq('is_private', false)
       .gte('event_date', today)
       .order('event_date', { ascending: true })
       .limit(1)

@@ -36,7 +36,7 @@ export default function TrackBody({ data, business = 'brew' }) {
           )}
         </header>
 
-        <TrackMap stops={data.stops} eventDate={data.eventDate} fallbackCenter={fallbackCenter} />
+        <TrackMap stops={data.stops} eventDate={data.eventDate} fallbackCenter={fallbackCenter} groupId={data.groupId || null} />
 
         <CohortRoll />
 

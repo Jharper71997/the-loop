@@ -11,7 +11,10 @@ const INK_DIM = '#b8b8bf'
 const SURFACE = '#15151a'
 const LINE = 'rgba(255,255,255,0.08)'
 
-export default function TrackMap({ stops = [], eventDate = null, fallbackCenter }) {
+// groupId scopes the live-position lookup to ONE loop. Without it the API
+// answers with the next public loop, which is right for /track and wrong for a
+// private party — a charter rider would watch the Friday bus instead of theirs.
+export default function TrackMap({ stops = [], eventDate = null, fallbackCenter, groupId = null }) {
   const containerRef = useRef(null)
   const stateRef = useRef({ map: null, L: null, shuttleMarker: null, stopMarkers: [] })
   const [shuttle, setShuttle] = useState(null)
@@ -93,7 +96,10 @@ export default function TrackMap({ stops = [], eventDate = null, fallbackCenter 
 
     async function poll() {
       try {
-        const res = await fetch('/api/shuttle/current', { cache: 'no-store' })
+        const res = await fetch(
+          groupId ? `/api/shuttle/current?group_id=${encodeURIComponent(groupId)}` : '/api/shuttle/current',
+          { cache: 'no-store' },
+        )
         if (!res.ok) return
         const json = await res.json()
         if (cancelled) return
@@ -117,7 +123,9 @@ export default function TrackMap({ stops = [], eventDate = null, fallbackCenter 
       clearInterval(timer)
       document.removeEventListener('visibilitychange', onVis)
     }
-  }, [])
+    // groupId is fixed for a given mount, but it belongs here: the poll URL is
+    // built from it, and a stale closure would quietly track the wrong bus.
+  }, [groupId])
 
   // Drop / update the shuttle marker as positions come in.
   useEffect(() => {
