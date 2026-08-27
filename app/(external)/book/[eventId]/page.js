@@ -50,7 +50,7 @@ export default async function EventBookingPage({ params }) {
   try {
     const r = await supabase
       .from('events')
-      .select('id, name, event_date, pickup_time, description, status, cover_image_url, group_id, kind')
+      .select('id, name, event_date, pickup_time, description, status, cover_image_url, group_id, kind, is_private')
       .eq('id', eventId)
       .maybeSingle()
     event = r.data
@@ -60,6 +60,12 @@ export default async function EventBookingPage({ params }) {
   }
   if (eventErr) console.error('[book/eventId] event lookup error', eventErr)
   if (!event || event.status !== 'on_sale') notFound()
+
+  // A private party is reachable at /party/<token> and nowhere else. Leaving
+  // it bookable by raw event id would mean the secret token is only as private
+  // as the UUID beside it in a screenshot, a Stripe receipt, or the admin URL
+  // bar — so this route refuses it outright.
+  if (event.is_private) notFound()
 
   // The Loop (Marines): the buy form is Marines-only. Bounce anyone who hasn't
   // cleared DoD-ID verification to /marines/verify (the API enforces this too;

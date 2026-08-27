@@ -12,6 +12,9 @@ const BASE = (
 const DISALLOW = [
   '/admin', '/leadership', '/surf', '/loop', '/driver', '/security',
   '/api/', '/cart', '/my-tickets', '/tickets/', '/waiver/', '/c/',
+  // A booked private party. /parties (the public pitch) stays indexed; the
+  // token pages under it are handed out one at a time and must not be crawled.
+  '/party/',
 ]
 
 export default function robots() {

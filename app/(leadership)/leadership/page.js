@@ -280,6 +280,7 @@ const GROUPS = [
     title: 'Loops & season',
     items: [
       ['/leadership/loops', 'Loop P&L'],
+      ['/leadership/parties', 'Private parties'],
       ['/leadership/schedule', 'Season'],
       ['/leadership/drivers', 'Drivers'],
       ['/leadership/drivers/route-log', 'Route log'],

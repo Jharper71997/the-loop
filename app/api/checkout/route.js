@@ -99,7 +99,7 @@ async function handleCheckout(req) {
 
   const { data: event } = await supabase
     .from('events')
-    .select('id, name, event_date, pickup_time, status, group_id, kind')
+    .select('id, name, event_date, pickup_time, status, group_id, kind, is_private')
     .eq('id', event_id)
     .maybeSingle()
   if (!event) return Response.json({ error: 'event not found' }, { status: 404 })
@@ -155,7 +155,16 @@ async function handleCheckout(req) {
     const tt = ttById.get(r.ticket_type_id)
     if (!tt || tt.stop_index != null) return null
     const raw = Number(r.pickup_stop_index)
-    return Number.isInteger(raw) && raw >= 0 && raw < scheduleLen ? raw : null
+    if (Number.isInteger(raw) && raw >= 0 && raw < scheduleLen) return raw
+    // A private party boards as one group at the first stop of its own route,
+    // so there is no "which bar do you want picking you up at" question to ask
+    // it — and its fares carry stop_index null on purpose, because that is the
+    // only thing keeping a party uncapped past the shuttle's 13-seat per-stop
+    // limit (see lib/capacity.js). Without this default those two facts
+    // collide: every party whose route we had already built would reject the
+    // organizer's payment with pickup_required for a picker they never saw.
+    if (event.is_private && scheduleLen > 0) return 0
+    return null
   }
   for (const r of riders) {
     const tt = ttById.get(r.ticket_type_id)

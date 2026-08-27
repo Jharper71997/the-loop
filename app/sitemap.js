@@ -16,7 +16,9 @@ export default function sitemap() {
   const entries = isLoopSite
     ? ['', '/events', '/track']
     : (() => {
-        const marketing = ['', '/events', '/bars', '/merch', '/sponsors', '/about', '/contact', '/track']
+        // /parties is the public pitch for private outings. The parties
+        // themselves live at /party/<token> and are never listed anywhere.
+        const marketing = ['', '/events', '/bars', '/parties', '/merch', '/sponsors', '/about', '/contact', '/track']
         const otherLoops = ['/surfcity', '/marines']
         const bars = PUBLIC_PARTNER_BARS.map(b => `/bars/${b.slug}`)
         return [...marketing, ...bars, ...otherLoops]
