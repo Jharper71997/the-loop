@@ -116,7 +116,7 @@ export default async function PartiesPage() {
                 : <StatusBadge label="not built" tone={r.collected > 0 ? 'red' : 'grey'} /> },
               { key: 'link', header: 'Link', render: r => r.token
                 ? <CopyLink url={partyUrl(r.token)} />
-                : <StatusBadge label="no link" tone="red" title="Built before tokens existed — open it to mint one." /> },
+                : <StatusBadge label="no link" tone="red" title="This party has no link yet. Open it and create one." /> },
             ]}
             rows={partyRows}
             rowKey={r => r.id}

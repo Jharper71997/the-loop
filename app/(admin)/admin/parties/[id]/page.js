@@ -151,7 +151,7 @@ export default async function PartyDetailPage({ params, searchParams }) {
 
         {created && <Banner tone="ok">Party built. Send them the link below.</Banner>}
         {saved === 'route' && <Banner tone="ok">Route saved. It is on their page now.</Banner>}
-        {saved === 'token' && <Banner tone="ok">New link minted. The old one is dead.</Banner>}
+        {saved === 'token' && <Banner tone="ok">New link created. The old one stopped working immediately.</Banner>}
         {saved === 'status' && <Banner tone="ok">Status updated.</Banner>}
         {error && <Banner tone="err">{ERRORS[error] || 'Something went wrong.'}</Banner>}
 
@@ -175,14 +175,16 @@ export default async function PartyDetailPage({ params, searchParams }) {
             </>
           ) : (
             <p style={{ color: '#b3311f', fontSize: 13, margin: 0 }}>
-              This party has no token — it predates the private-party build. Mint one below.
+              This party has no link yet. Create one below and it becomes reachable.
             </p>
           )}
 
           <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, marginTop: 14 }}>
             <form action={rotateToken}>
               <input type="hidden" name="event_id" value={event.id} />
-              <button type="submit" style={smallBtn}>{url ? 'Mint a new link' : 'Mint a link'}</button>
+              <button type="submit" style={url ? dangerBtn : smallBtn}>
+                {url ? 'Replace link (kills the old one)' : 'Create the link'}
+              </button>
             </form>
             <form action={setStatus}>
               <input type="hidden" name="event_id" value={event.id} />
@@ -303,6 +305,7 @@ const linkCard = { background: 'linear-gradient(180deg, #ffffff, #fdfaf3)', bord
 const urlCode = { fontFamily: '"JetBrains Mono", ui-monospace, monospace', fontSize: 12.5, background: '#efe6d4', padding: '7px 10px', borderRadius: 6, wordBreak: 'break-all' }
 const ghostBtn = { background: '#fff', border: '1px solid #e8ddc8', color: '#3b322a', fontSize: 12, fontWeight: 700, padding: '5px 10px', borderRadius: 6, textDecoration: 'none' }
 const smallBtn = { background: '#fff', border: '1px solid #e8ddc8', color: '#6e6154', fontSize: 12, fontWeight: 600, padding: '6px 11px', borderRadius: 6, cursor: 'pointer', fontFamily: 'inherit' }
+const dangerBtn = { ...smallBtn, color: '#b3311f', border: '1px solid rgba(196,74,58,0.4)' }
 const routeCard = { background: '#fff', border: '1px solid #e8ddc8', borderRadius: 8, padding: '16px 18px' }
 const stopRow = { display: 'flex', alignItems: 'center', gap: 10, marginBottom: 8 }
 const stopNum = { color: '#8a7b68', fontSize: 11, fontWeight: 800, width: 14, flex: '0 0 auto', fontFamily: '"JetBrains Mono", ui-monospace, monospace' }

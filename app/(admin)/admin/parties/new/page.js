@@ -160,7 +160,7 @@ export default async function NewPartyPage({ searchParams }) {
           placeholder="We’ll grab you at the house, and there’s a food stop at Clovehitch."
         />
 
-        <SubmitButton>Build it and mint the link</SubmitButton>
+        <SubmitButton>Build it and create the link</SubmitButton>
       </form>
     </FormShell>
   )
