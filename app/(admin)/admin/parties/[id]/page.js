@@ -204,8 +204,11 @@ export default async function PartyDetailPage({ params, searchParams }) {
         {/* The route. This is the thing we promised to build for them. */}
         <h2 style={h2}>Their route</h2>
         <p style={sectionSub}>
-          Leave a row blank to drop that stop. The first time you enter becomes the
-          party&rsquo;s pickup time. This shows up on their page the moment you save.
+          Stop 1 is the pickup and can be anywhere they want — a house, an Airbnb, a
+          hotel lobby — so type a real address, not just a bar. Partner bars
+          autocomplete, but nothing here is limited to them. Leave a row blank to drop
+          that stop. The first time you enter becomes the party&rsquo;s pickup time.
+          This shows up on their page the moment you save.
         </p>
 
         <form action={saveRoute} style={routeCard}>
@@ -223,7 +226,7 @@ export default async function PartyDetailPage({ params, searchParams }) {
                   name={`stop_name_${i}`}
                   list="party-bars"
                   defaultValue={stop.name || ''}
-                  placeholder={i === 0 ? 'Pickup (bar or address)' : 'Stop'}
+                  placeholder={i === 0 ? 'Pickup — any address they want' : 'Stop'}
                   style={stopInput}
                 />
                 <input

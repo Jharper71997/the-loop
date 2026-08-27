@@ -16,10 +16,13 @@
 //  - "Sponsors" left the main nav entirely. It's a B2B ask in a rider nav; it
 //    lives in the footer and at the bottom of the landing page now.
 //  - /about is "How It Works" in every single place — nav, footer, <title>.
+// Private parties are deliberately absent. Jacob, 2026-08-27: nobody browsing
+// the site should be able to find them — a private night is sold by a link we
+// hand out, not advertised. The booking page lives at /party/<token> and is
+// unlinked, unlisted, noindexed and robots-disallowed.
 export const NAV_LINKS = [
   { href: '/about', label: 'How It Works' },
   { href: '/bars', label: 'Partner Bars' },
-  { href: '/parties', label: 'Private Parties' },
   { href: '/merch', label: 'Merch' },
   { href: '/sponsors', label: 'Sponsors' },
 ]
@@ -63,7 +66,7 @@ export const CONTACT = {
 // the banner is fixed to the bottom of the viewport, so on the checkout page it
 // sat ON TOP of the waiver signature and the Pay button. Someone mid-payment is
 // the last person to interrupt with an install prompt.
-const MARKETING_EXACT = new Set(['/', '/about', '/bars', '/parties', '/merch', '/cart', '/sponsors', '/contact', '/events', '/book'])
+const MARKETING_EXACT = new Set(['/', '/about', '/bars', '/merch', '/cart', '/sponsors', '/contact', '/events', '/book'])
 // /party/ is in here for the same reason /book/ is: it is a checkout page, and
 // the install banner is fixed to the bottom of the viewport, so on a booking
 // page it lands on top of the waiver signature and the Pay button.

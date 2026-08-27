@@ -25,10 +25,14 @@ create unique index if not exists events_access_token_key
 create index if not exists events_is_private_idx
   on public.events (is_private);
 
--- 2. Inbound requests from the public /parties page. This is a lead, not a
---    booking — no money, no seats, no event row until we build one. event_id
---    is stamped when we turn the request into a real party so the two stay
---    linked and we can see which requests actually converted.
+-- 2. Inbound requests from a public /parties page.
+--
+--    DORMANT as of 2026-08-27: Jacob cut the public parties page the day this
+--    shipped — private nights are sold by a link we hand out, never advertised
+--    — so nothing writes to this table any more. Left in place rather than
+--    dropped: it is already applied, it costs nothing empty, and it is the
+--    schema we would want back if a request form ever returns. Do not build
+--    anything that reads it expecting rows.
 create table if not exists public.party_requests (
   id             uuid primary key default gen_random_uuid(),
   name           text not null,

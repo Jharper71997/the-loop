@@ -21,22 +21,15 @@ export const dynamic = 'force-dynamic'
 export default async function PartiesPage() {
   const sb = supabaseAdmin()
 
-  const [requestsRes, partiesRes] = await Promise.all([
-    sb.from('party_requests')
-      .select('id, name, email, phone, requested_date, party_size, occasion, notes, status, event_id, created_at')
-      .order('created_at', { ascending: false })
-      .limit(200),
-    sb.from('events')
-      .select('id, name, event_date, capacity, access_token, status, created_at, group_id, ticket_types(name, price_cents, active), groups(schedule)')
-      .eq('is_private', true)
-      .order('event_date', { ascending: false })
-      .limit(200),
-  ])
+  const partiesRes = await sb
+    .from('events')
+    .select('id, name, event_date, capacity, access_token, status, created_at, group_id, ticket_types(name, price_cents, active), groups(schedule)')
+    .eq('is_private', true)
+    .order('event_date', { ascending: false })
+    .limit(200)
 
-  if (requestsRes.error) console.error('[admin/parties] requests', requestsRes.error)
   if (partiesRes.error) console.error('[admin/parties] parties', partiesRes.error)
 
-  const requests = requestsRes.data || []
   const parties = partiesRes.data || []
 
   // Paid money per party. A party's order is one Stripe charge on the
@@ -77,8 +70,6 @@ export default async function PartiesPage() {
     }
   })
 
-  const openRequests = requests.filter(r => r.status === 'new' || r.status === 'quoted')
-  const unquoted = requests.filter(r => r.status === 'new')
   const upcoming = partyRows.filter(p => p.upcoming)
   const needRoute = upcoming.filter(p => p.collected > 0 && !p.routeBuilt)
   const bookedCents = upcoming.reduce((s, p) => s + p.collected, 0)
@@ -92,60 +83,19 @@ export default async function PartiesPage() {
           <div>
             <h1 style={h1}>Private parties</h1>
             <p style={sub}>
-              Somebody buys the whole shuttle for their own night. These never appear
-              on /events — the only way in is the link you send them.
+              Somebody buys the whole shuttle for their own night, picked up wherever
+              they want. Nothing here is advertised anywhere on the site — you build
+              the party, you send the link, that is the only way in.
             </p>
           </div>
           <Link href="/admin/parties/new" style={primaryBtn}>Build a party</Link>
         </div>
 
         <div style={statRow}>
-          <StatCard label="Unquoted requests" value={String(unquoted.length)} hint={unquoted.length ? 'answer these first' : 'all caught up'} tone={unquoted.length ? 'err' : 'ink'} />
           <StatCard label="Upcoming parties" value={String(upcoming.length)} hint="sold and on the calendar" />
           <StatCard label="Booked money" value={fmtMoney(bookedCents)} hint="collected, upcoming nights" />
           <StatCard label="Routes to build" value={String(needRoute.length)} hint={needRoute.length ? 'they have paid and are waiting' : 'none outstanding'} tone={needRoute.length ? 'err' : 'ink'} />
         </div>
-
-        {/* Requests. The list is capped to open ones on purpose — a request
-            that is booked or lost is history, and history belongs below the
-            work. */}
-        <Section title="Requests" hint={openRequests.length ? `${openRequests.length} open` : 'nothing waiting'}>
-          <DataTable
-            columns={[
-              { key: 'name', header: 'Who', primary: true },
-              { key: 'contact', header: 'Contact', render: r => (
-                <span style={{ fontSize: 12.5 }}>
-                  {r.phone || '—'}{r.email ? <><br />{r.email}</> : null}
-                </span>
-              ) },
-              { key: 'date', header: 'Wants', render: r => r.requested_date ? fmtEventDate(r.requested_date, { weekday: 'short', month: 'short', day: 'numeric' }) : 'flexible' },
-              { key: 'party_size', header: 'Riders', mono: true },
-              { key: 'occasion', header: 'Occasion', render: r => r.occasion || '—' },
-              { key: 'status', header: 'Status', render: r => (
-                <StatusBadge label={r.status} tone={r.status === 'new' ? 'red' : r.status === 'booked' ? 'green' : 'gold'} />
-              ) },
-              { key: 'go', header: '', render: r => r.event_id
-                ? <Link href={`/admin/parties/${r.event_id}`} style={rowLink}>Open party</Link>
-                : <Link href={`/admin/parties/new?request=${r.id}`} style={rowLink}>Build →</Link> },
-            ]}
-            rows={openRequests}
-            rowKey={r => r.id}
-            empty="No open requests. They land here from /parties."
-          />
-          {openRequests.length > 0 && (
-            <details style={{ marginTop: 12 }}>
-              <summary style={summary}>Notes on each request</summary>
-              <div style={{ display: 'grid', gap: 10, marginTop: 10 }}>
-                {openRequests.filter(r => r.notes).map(r => (
-                  <div key={r.id} style={noteCard}>
-                    <strong style={{ fontSize: 13 }}>{r.name}</strong>
-                    <p style={{ margin: '4px 0 0', fontSize: 13, lineHeight: 1.5, whiteSpace: 'pre-wrap' }}>{r.notes}</p>
-                  </div>
-                ))}
-              </div>
-            </details>
-          )}
-        </Section>
 
         {/* The parties themselves. The link column is the whole point of the
             page: it is what gets pasted into a text message. */}
@@ -206,7 +156,5 @@ const sub = { color: '#6e6154', fontSize: 13.5, lineHeight: 1.55, margin: 0, max
 const statRow = { display: 'grid', gap: 12, gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', marginTop: 22 }
 const primaryBtn = { background: '#17130f', color: '#faf5ea', fontSize: 13.5, fontWeight: 700, padding: '11px 18px', borderRadius: 7, textDecoration: 'none', whiteSpace: 'nowrap' }
 const rowLink = { color: '#8a5f0a', fontWeight: 700, textDecoration: 'none', fontSize: 13.5 }
-const summary = { color: '#6e6154', fontSize: 12.5, cursor: 'pointer' }
-const noteCard = { background: '#fff', border: '1px solid #e8ddc8', borderRadius: 7, padding: '10px 12px' }
 const footNote = { color: '#8a7b68', fontSize: 12.5, lineHeight: 1.6, marginTop: 34, maxWidth: 720 }
 const code = { background: '#efe6d4', padding: '1px 5px', borderRadius: 4, fontFamily: '"JetBrains Mono", ui-monospace, monospace', fontSize: 12 }

@@ -160,14 +160,28 @@ export default async function PartyPage({ params }) {
                   </ol>
                 ) : (
                   <p style={{ color: INK_DIM, fontSize: 14, lineHeight: 1.55, margin: '14px 0 0' }}>
-                    We build the route around you. Lock the shuttle in below, tell
-                    us the bars you want in the notes, and the finished itinerary
-                    shows up right here on this page.
+                    We build the route around you, and we collect you from wherever
+                    you want to start — your place, wherever everyone is getting
+                    ready, or a bar. Lock the shuttle in below, tell us where to be
+                    and which bars you want, and the finished itinerary shows up
+                    right here on this page.
+                  </p>
+                )}
+
+                {/* The pickup alone is not an itinerary. A party built with only
+                    its pickup stop would otherwise render a one-line "route" and
+                    silently drop the promise that we are still planning it. */}
+                {routeBuilt && routeStops.length < 2 && (
+                  <p style={{ color: INK_MUTE, fontSize: 13.5, lineHeight: 1.55, margin: '12px 0 0' }}>
+                    That&rsquo;s where we&rsquo;re collecting you. We&rsquo;re still
+                    building the rest of the night — the bars land here as soon as
+                    they&rsquo;re set.
                   </p>
                 )}
 
                 <ul className="bk-facts">
                   <li>The shuttle is yours for the night, nobody else is on it</li>
+                  <li>We pick you up wherever you want to start</li>
                   <li>One person pays, everyone else gets a link to sign their own waiver</li>
                   <li>Name the bars, or let us build the route</li>
                   <li>Track the shuttle live all night</li>
