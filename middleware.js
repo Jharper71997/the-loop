@@ -29,6 +29,13 @@ const PUBLIC_PREFIXES = [
   '/sponsors',
   '/contact',
   '/api/contact',
+  // Private parties. /parties is the public pitch; /party/<token> is the
+  // booking page we text to one group. "Private" here means unlisted and
+  // noindexed, NOT logged-in — the customer opening that link has no account
+  // and never will, so leaving these out sent every party we sold to /login.
+  '/parties',
+  '/party',
+  '/api/party-request',
   '/api/merch/',
   '/my-tickets',
   '/tickets/',
