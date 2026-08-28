@@ -37,7 +37,24 @@ const PUBLIC_PREFIXES = [
   '/party',
   '/api/merch/',
   '/my-tickets',
-  '/tickets/',
+  '/tickets',
+  // Per-seat claim link. The buyer forwards /c/<token> to a friend, who fills
+  // in their info and signs the waiver there. Same reasoning as '/party'
+  // above: the token IS the credential and the friend has no account, so
+  // gating this sent every shared seat to the STAFF login. /tickets/<code>
+  // redirects here for an unclaimed seat, so that link died the same way.
+  '/c/',
+  '/api/claim/',
+  // Morning-after ride survey, minted per ticket by /api/cron/ride-feedback.
+  // No login by design: a rider who has to sign in leaves no feedback.
+  '/feedback/',
+  '/api/feedback',
+  // Bartender sales-contest QR lookup (public page + the phone/email lookup
+  // it calls).
+  '/bartender-qr',
+  '/api/bartender-lookup',
+  // Rider push-notification opt-in, called from the public rider shell.
+  '/api/push/subscribe',
   '/r/',
   '/pass',
   '/invite/',
