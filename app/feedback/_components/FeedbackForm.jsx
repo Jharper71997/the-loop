@@ -212,7 +212,7 @@ export default function FeedbackForm({
         </h2>
         <p style={{ color: INK_SOFT, fontSize: 15, lineHeight: 1.55, margin: '0 0 30px' }}>
           {requireContact
-            ? 'So we can actually fix what you flagged, and so anything you tick below reaches a real person instead of a stranger.'
+            ? 'So we know who to get back to.'
             : 'This is the part that decides who we go after next. Skip it if you are done.'}
         </p>
 
@@ -239,7 +239,7 @@ export default function FeedbackForm({
               style={fieldStyle}
             />
             <p style={{ ...hintStyle, textAlign: 'left', marginTop: 8 }}>
-              Only used to follow up on this ride. No number, no way to make it right.
+              We only use it to follow up on this ride.
             </p>
           </>
         )}
