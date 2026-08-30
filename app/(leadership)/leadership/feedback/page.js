@@ -31,7 +31,7 @@ export default async function FeedbackPage() {
 
   const { data: feedback, error: fbErr } = await sb
     .from('ride_feedback')
-    .select('id, rating, driver_rating, bars_rating, timing_rating, favorite_bar, ride_again, comment, group_type, heard_about, interests, email, marketing_opt_in, review_clicked_at, created_at, event_id, contact_id')
+    .select('id, rating, driver_rating, bars_rating, timing_rating, favorite_bar, ride_again, comment, group_type, heard_about, interests, email, marketing_opt_in, review_clicked_at, created_at, event_id, contact_id, source')
     .gte('created_at', since)
     .order('created_at', { ascending: false })
     .limit(2000)
@@ -67,7 +67,12 @@ export default async function FeedbackPage() {
   const promoters = rated.filter(r => r.rating >= 4).length
   const detractors = rated.filter(r => r.rating <= 3).length
   const reviewClicks = rows.filter(r => r.review_clicked_at).length
-  const responseRate = askedCount ? Math.round((rows.length / askedCount) * 100) : null
+  // Response rate is only meaningful for the survey we actually sent. Rows from
+  // the open /feedback link were never counted in askedCount, so folding them in
+  // would push the rate past 100% and quietly flatter a weekend.
+  const openLinkRows = rows.filter(r => r.source === 'link')
+  const surveyRows = rows.filter(r => r.source !== 'link')
+  const responseRate = askedCount ? Math.round((surveyRows.length / askedCount) * 100) : null
   const wouldRideAgain = rows.filter(r => r.ride_again === 'yes').length
   const answeredRideAgain = rows.filter(r => r.ride_again).length
 
@@ -140,14 +145,19 @@ export default async function FeedbackPage() {
         <p style={introStyle}>
           Last {WINDOW_DAYS} days. Sent the morning after each Loop to everyone who boarded — toggle it at{' '}
           <a href="/leadership/automations" style={{ color: GOLD_TXT, textDecoration: 'none' }}>Automations</a>.
+          The same survey answers at{' '}
+          <a href="/feedback" style={{ color: GOLD_TXT, textDecoration: 'none' }}>/feedback</a> with no token, for
+          texting out by hand or hanging as a QR on the shuttle; those responses carry no ride and are left out of
+          response rate.
           Ratings of 3 or below raise an{' '}
           <a href="/leadership/alerts" style={{ color: GOLD_TXT, textDecoration: 'none' }}>alert</a> the moment they land.
         </p>
 
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))', gap: 10, marginBottom: 22 }}>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(150px, 100%), 1fr))', gap: 10, marginBottom: 22 }}>
           <StatCard label="Avg rating" value={overall.avg == null ? '—' : overall.avg.toFixed(2)} tone="gold" />
           <StatCard label="Responses" value={rows.length} />
           <StatCard label="Response rate" value={responseRate == null ? '—' : `${responseRate}%`} />
+          <StatCard label="From the open link" value={openLinkRows.length} />
           <StatCard label="4-5 star" value={promoters} tone="ok" />
           <StatCard label="3 or below" value={detractors} tone={detractors > 0 ? 'err' : 'ok'} />
           <StatCard
@@ -308,7 +318,7 @@ function Empty({ children }) {
 }
 
 const mainStyle = {
-  minHeight: '100vh',
+  minHeight: '100dvh',
   background: '#faf5ea',
   color: '#17130f',
   padding: '24px 16px calc(48px + env(safe-area-inset-bottom))',

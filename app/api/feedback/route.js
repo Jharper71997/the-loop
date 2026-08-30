@@ -5,12 +5,17 @@ import { normalizeEmail } from '@/lib/contacts'
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
 
-// Public write endpoint for the post-ride survey at /feedback/<token>.
+// Public write endpoint for the post-ride survey. Two front doors:
 //
-// The token from order_items.feedback_token is the whole auth story: it is
-// random, per-ticket, and only ever sent to that rider. There is no login,
-// because a survey behind a login is a survey nobody fills out. Worst case for
-// a leaked token is a bogus rating on one ride.
+//   /feedback/<token>  a per-ticket token from order_items.feedback_token,
+//                      minted by the cron and only ever sent to that rider.
+//   /feedback          the open link, keyed on a UUID the browser mints.
+//
+// Neither has a login, because a survey behind a login is a survey nobody fills
+// out. The token door is the whole auth story for attributed responses: worst
+// case for a leaked token is a bogus rating on one ride. The open door buys no
+// trust at all, so its rows are stamped source='link', carry no event, and stay
+// out of the response-rate math on /leadership/feedback.
 //
 // Called several times per rider — once when the star is tapped (so a rating
 // survives someone closing the tab), once on submit, and once more if they tap
@@ -30,32 +35,52 @@ export async function POST(req) {
   }
 
   const token = String(body?.token || '').toUpperCase().trim()
-  if (!token) return Response.json({ error: 'missing_token' }, { status: 400 })
+  const publicToken = normalizePublicToken(body?.public_token)
+  if (!token && !publicToken) return Response.json({ error: 'missing_token' }, { status: 400 })
 
   const sb = supabaseAdmin()
 
-  const { data: item } = await sb
-    .from('order_items')
-    .select('id, order_id, contact_id, rider_first_name')
-    .eq('feedback_token', token)
-    .maybeSingle()
-  if (!item) return Response.json({ error: 'invalid_token' }, { status: 404 })
+  // Ticket-token path resolves the rider and the ride they were on. The
+  // open-link path has neither, and keys the row on the browser's UUID instead.
+  let item = null
+  let order = null
+  let event = null
 
-  const { data: order } = await sb
-    .from('orders')
-    .select('id, event_id, buyer_name')
-    .eq('id', item.order_id)
-    .maybeSingle()
+  if (token) {
+    const { data: found } = await sb
+      .from('order_items')
+      .select('id, order_id, contact_id, rider_first_name')
+      .eq('feedback_token', token)
+      .maybeSingle()
+    if (!found) return Response.json({ error: 'invalid_token' }, { status: 404 })
+    item = found
 
-  const { data: event } = order?.event_id
-    ? await sb.from('events').select('id, name, event_date, group_id').eq('id', order.event_id).maybeSingle()
-    : { data: null }
+    const { data: ord } = await sb
+      .from('orders')
+      .select('id, event_id, buyer_name')
+      .eq('id', item.order_id)
+      .maybeSingle()
+    order = ord || null
 
-  const { data: prior } = await sb
+    if (order?.event_id) {
+      const { data: ev } = await sb
+        .from('events')
+        .select('id, name, event_date, group_id')
+        .eq('id', order.event_id)
+        .maybeSingle()
+      event = ev || null
+    }
+  }
+
+  // Whichever credential arrived is also the upsert key, so reopening the link
+  // edits the same row instead of stacking duplicates.
+  const conflictKey = item ? 'order_item_id' : 'public_token'
+  const priorQuery = sb
     .from('ride_feedback')
     .select('id, rating, comment, review_clicked_at')
-    .eq('order_item_id', item.id)
-    .maybeSingle()
+  const { data: prior } = item
+    ? await priorQuery.eq('order_item_id', item.id).maybeSingle()
+    : await priorQuery.eq('public_token', publicToken).maybeSingle()
 
   // Google click-through is its own tiny write — don't let it clobber answers.
   if (body.review_clicked) {
@@ -70,11 +95,13 @@ export async function POST(req) {
 
   const rating = clampRating(body.rating)
   const row = {
-    order_item_id: item.id,
-    order_id: item.order_id || null,
+    order_item_id: item?.id || null,
+    public_token: item ? null : publicToken,
+    source: item ? 'survey' : 'link',
+    order_id: item?.order_id || null,
     event_id: event?.id || null,
     group_id: event?.group_id || null,
-    contact_id: item.contact_id || null,
+    contact_id: item?.contact_id || null,
     updated_at: new Date().toISOString(),
   }
 
@@ -95,7 +122,7 @@ export async function POST(req) {
 
   const { error } = await sb
     .from('ride_feedback')
-    .upsert(row, { onConflict: 'order_item_id' })
+    .upsert(row, { onConflict: conflictKey })
   if (error) {
     console.error('[feedback] upsert failed', error.message)
     return Response.json({ error: 'save_failed' }, { status: 500 })
@@ -103,7 +130,7 @@ export async function POST(req) {
 
   // Backfill the contact's email if the rider just gave us one we didn't have.
   // Guarded on null so a typo here can never overwrite a working address.
-  if (row.email && item.contact_id) {
+  if (row.email && item?.contact_id) {
     await sb
       .from('contacts')
       .update({ email: row.email })
@@ -118,23 +145,34 @@ export async function POST(req) {
   const wasLow = prior?.rating != null && prior.rating <= LOW_RATING_THRESHOLD
   const gainedComment = !!row.comment && row.comment !== prior?.comment
   if (isLow && (!wasLow || gainedComment)) {
-    const who = item.rider_first_name || order?.buyer_name || 'A rider'
+    const who = item?.rider_first_name || order?.buyer_name || 'A rider'
+    const when = event?.event_date || (item ? 'unknown date' : 'open link, ride date unknown')
     await recordAlert(sb, {
       kind: 'low_ride_rating',
       severity: 'warning',
-      subject: `${row.rating}-star ride — ${event?.event_date || 'unknown date'}`,
-      body: `${who} rated the ${event?.event_date || 'unknown'} Loop ${row.rating}/5.` +
+      subject: `${row.rating}-star ride — ${when}`,
+      body: `${who} rated the Loop ${row.rating}/5 (${when}).` +
             (row.comment ? `\n\n"${row.comment}"` : '\n\n(no comment left)'),
       context: {
         flow: 'ride_feedback',
-        order_item_id: item.id,
+        order_item_id: item?.id || null,
         event_id: event?.id || null,
+        source: row.source,
         rating: row.rating,
       },
     })
   }
 
   return Response.json({ ok: true })
+}
+
+// The open link's key. Constrained to the UUID shape the client mints, so the
+// unique index cannot be stuffed with arbitrary keys by a script.
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/
+
+function normalizePublicToken(v) {
+  const t = String(v || '').trim().toLowerCase()
+  return UUID_RE.test(t) ? t : null
 }
 
 function clampRating(v) {

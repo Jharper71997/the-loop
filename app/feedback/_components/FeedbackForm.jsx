@@ -55,8 +55,14 @@ const INTEREST_OPTIONS = [
 // the "tell us what went wrong" box first instead, which is where an unhappy
 // rider actually wants to go anyway.
 
+// Identity is one of two things and never both: `token` is the per-ticket token
+// minted by the morning-after cron, `publicToken` is a UUID the browser mints
+// for the open /feedback link. Both are just a key for the same upsert — the
+// open one buys no trust, which is why an open-link row carries no event and is
+// reported separately.
 export default function FeedbackForm({
-  token,
+  token = null,
+  publicToken = null,
   bars = [],
   firstName,
   knownEmail,
@@ -88,7 +94,7 @@ export default function FeedbackForm({
       const res = await fetch('/api/feedback', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ token, ...patch }),
+        body: JSON.stringify({ token, public_token: publicToken, ...patch }),
       })
       if (!res.ok) {
         const j = await res.json().catch(() => ({}))
@@ -294,7 +300,7 @@ export default function FeedbackForm({
               fetch('/api/feedback', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ token, review_clicked: true }),
+                body: JSON.stringify({ token, public_token: publicToken, review_clicked: true }),
                 keepalive: true,
               }).catch(() => {})
             }}

@@ -45,9 +45,12 @@ const PUBLIC_PREFIXES = [
   // redirects here for an unclaimed seat, so that link died the same way.
   '/c/',
   '/api/claim/',
-  // Morning-after ride survey, minted per ticket by /api/cron/ride-feedback.
-  // No login by design: a rider who has to sign in leaves no feedback.
-  '/feedback/',
+  // Ride survey. /feedback/<token> is minted per ticket by the morning-after
+  // cron; bare /feedback is the open link we text out by hand. No login by
+  // design: a rider who has to sign in leaves no feedback. Listed WITHOUT the
+  // trailing slash on purpose, so the bare path matches too — with it, the open
+  // link 307s riders to the STAFF login, same trap as '/party' and '/c/'.
+  '/feedback',
   '/api/feedback',
   // Bartender sales-contest QR lookup (public page + the phone/email lookup
   // it calls).

@@ -2,7 +2,7 @@ import { supabaseAdmin } from '@/lib/supabaseAdmin'
 import { brandFor } from '@/lib/businessConfig'
 import { getOrCreateReferralCode } from '@/lib/riderReferral'
 import { appUrl } from '@/lib/stripe'
-import FeedbackForm from './FeedbackForm'
+import FeedbackForm from '../_components/FeedbackForm'
 
 export const metadata = {
   title: 'How was your ride?',
