@@ -12,8 +12,11 @@ import FeedbackForm from './FeedbackForm'
 // a fresh one: the same link gets texted out every weekend, and a rider's
 // second Loop has to count as a second response, not an overwrite of the first.
 //
-// Nothing renders until the key exists — localStorage is not available during
-// the server render, and a form that POSTs with no key just errors.
+// The form renders straight away rather than waiting on the key. localStorage
+// is unreadable during the server render, so gating on it cost the whole survey
+// a blank first paint. The key is only needed at the first POST, and that POST
+// is a tap — which React cannot dispatch until hydration is done, by which
+// point this effect has already run.
 
 const STORAGE_KEY = 'brewloop.feedback.open'
 const SESSION_MS = 12 * 60 * 60 * 1000
@@ -47,10 +50,6 @@ export default function OpenFeedback(props) {
     } catch {}
     setPublicToken(token)
   }, [])
-
-  if (!publicToken) {
-    return <div style={{ minHeight: 220 }} aria-hidden="true" />
-  }
 
   return <FeedbackForm {...props} publicToken={publicToken} />
 }

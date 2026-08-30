@@ -1,6 +1,6 @@
 import { supabaseAdmin } from '@/lib/supabaseAdmin'
 import { recordAlert } from '@/lib/alerts'
-import { normalizeEmail } from '@/lib/contacts'
+import { normalizeEmail, upsertContactByPhoneOrEmail } from '@/lib/contacts'
 
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
@@ -15,7 +15,10 @@ export const dynamic = 'force-dynamic'
 // out. The token door is the whole auth story for attributed responses: worst
 // case for a leaked token is a bogus rating on one ride. The open door buys no
 // trust at all, so its rows are stamped source='link', carry no event, and stay
-// out of the response-rate math on /leadership/feedback.
+// out of the response-rate math on /leadership/feedback. It does have to carry a
+// name and a cell, though: an anonymous "book the whole shuttle" is a lead we
+// cannot return, so the open form makes those the price of finishing and this
+// route resolves them onto a real contact row.
 //
 // Called several times per rider — once when the star is tapped (so a rating
 // survives someone closing the tab), once on submit, and once more if they tap
@@ -117,8 +120,26 @@ export async function POST(req) {
   if ('group_type' in body) row.group_type = trimOrNull(body.group_type)
   if ('heard_about' in body) row.heard_about = trimOrNull(body.heard_about)
   if ('interests' in body) row.interests = toStringArray(body.interests)
+  if ('first_name' in body) row.first_name = trimOrNull(body.first_name, 80)
+  if ('phone' in body) row.phone = trimOrNull(body.phone, 40)
   if ('email' in body) row.email = normalizeEmail(body.email) || null
   if ('marketing_opt_in' in body) row.marketing_opt_in = !!body.marketing_opt_in
+
+  // Open-link responses arrive with a name and cell instead of a ticket. Run
+  // them through the same dedupe every other rider surface uses, so a repeat
+  // rider lands back on their existing contact rather than spawning a twin —
+  // and so a 3-star comment comes with someone to call.
+  if (!item && row.phone) {
+    const contact = await upsertContactByPhoneOrEmail(sb, {
+      firstName: row.first_name || null,
+      email: row.email || null,
+      phone: row.phone,
+      // Only ever grant consent here, never revoke it: an unticked box on a
+      // survey is not the same as opting out of a list they joined elsewhere.
+      ...(row.marketing_opt_in ? { smsConsent: true } : {}),
+    })
+    if (contact?.id) row.contact_id = contact.id
+  }
 
   const { error } = await sb
     .from('ride_feedback')
@@ -145,14 +166,15 @@ export async function POST(req) {
   const wasLow = prior?.rating != null && prior.rating <= LOW_RATING_THRESHOLD
   const gainedComment = !!row.comment && row.comment !== prior?.comment
   if (isLow && (!wasLow || gainedComment)) {
-    const who = item?.rider_first_name || order?.buyer_name || 'A rider'
+    const who = item?.rider_first_name || order?.buyer_name || row.first_name || 'A rider'
     const when = event?.event_date || (item ? 'unknown date' : 'open link, ride date unknown')
     await recordAlert(sb, {
       kind: 'low_ride_rating',
       severity: 'warning',
       subject: `${row.rating}-star ride — ${when}`,
       body: `${who} rated the Loop ${row.rating}/5 (${when}).` +
-            (row.comment ? `\n\n"${row.comment}"` : '\n\n(no comment left)'),
+            (row.comment ? `\n\n"${row.comment}"` : '\n\n(no comment left)') +
+            (row.phone ? `\n\nCall back: ${row.phone}` : ''),
       context: {
         flow: 'ride_feedback',
         order_item_id: item?.id || null,

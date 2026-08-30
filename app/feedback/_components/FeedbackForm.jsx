@@ -63,6 +63,7 @@ const INTEREST_OPTIONS = [
 export default function FeedbackForm({
   token = null,
   publicToken = null,
+  requireContact = false,
   bars = [],
   firstName,
   knownEmail,
@@ -82,6 +83,8 @@ export default function FeedbackForm({
   const [groupType, setGroupType] = useState(existing?.group_type || '')
   const [heardAbout, setHeardAbout] = useState(existing?.heard_about || '')
   const [interests, setInterests] = useState(existing?.interests || [])
+  const [nameInput, setNameInput] = useState(existing?.first_name || firstName || '')
+  const [phone, setPhone] = useState(existing?.phone || '')
   const [email, setEmail] = useState(existing?.email || knownEmail || '')
   const [optIn, setOptIn] = useState(existing?.marketing_opt_in ?? true)
   const [saving, setSaving] = useState(false)
@@ -205,13 +208,43 @@ export default function FeedbackForm({
         <Step n={3} />
 
         <h2 style={{ color: INK, fontSize: 21, margin: '0 0 6px', fontWeight: 650, letterSpacing: '-0.015em' }}>
-          Last bit, and it is optional
+          {requireContact ? 'Last bit. Who are we talking to?' : 'Last bit, and it is optional'}
         </h2>
         <p style={{ color: INK_SOFT, fontSize: 15, lineHeight: 1.55, margin: '0 0 30px' }}>
-          This is the part that decides who we go after next. Skip it if you are done.
+          {requireContact
+            ? 'So we can actually fix what you flagged, and so anything you tick below reaches a real person instead of a stranger.'
+            : 'This is the part that decides who we go after next. Skip it if you are done.'}
         </p>
 
-        <Q>Who were you riding with?</Q>
+        {requireContact && (
+          <>
+            <Q>First name</Q>
+            <input
+              type="text"
+              autoComplete="given-name"
+              value={nameInput}
+              onChange={e => setNameInput(e.target.value)}
+              placeholder="First name"
+              style={fieldStyle}
+            />
+
+            <Q top>Cell number</Q>
+            <input
+              type="tel"
+              inputMode="tel"
+              autoComplete="tel"
+              value={phone}
+              onChange={e => setPhone(e.target.value)}
+              placeholder="(910) 555 0134"
+              style={fieldStyle}
+            />
+            <p style={{ ...hintStyle, textAlign: 'left', marginTop: 8 }}>
+              Only used to follow up on this ride. No number, no way to make it right.
+            </p>
+          </>
+        )}
+
+        <Q top={requireContact}>Who were you riding with?</Q>
         <Chips options={GROUP_OPTIONS} value={groupType} onChange={setGroupType} />
 
         <Q top>How did you first hear about us?</Q>
@@ -222,7 +255,7 @@ export default function FeedbackForm({
 
         {!knownEmail && (
           <>
-            <Q top>Email</Q>
+            <Q top>Email{requireContact ? ' (optional)' : ''}</Q>
             <input
               type="email"
               inputMode="email"
@@ -252,33 +285,49 @@ export default function FeedbackForm({
           type="button"
           disabled={saving}
           style={primaryBtn(saving)}
-          onClick={() => save({
-            group_type: groupType || null,
-            heard_about: heardAbout || null,
-            interests,
-            email: email.trim() || null,
-            marketing_opt_in: optIn,
-          }, { advanceTo: 4 })}
+          onClick={() => {
+            // The open link earns nothing from an anonymous hand-raiser: a
+            // "book the whole shuttle" with no number is a lead we cannot
+            // return. So on that door the contact fields are the price of
+            // finishing. The star is already banked from screen 1 either way,
+            // so nobody bouncing here costs us the rating.
+            if (requireContact) {
+              if (!nameInput.trim()) return setError('We just need a first name.')
+              if (digitsOf(phone).length < 10) return setError('That cell number looks incomplete.')
+            }
+            save({
+              first_name: nameInput.trim() || null,
+              phone: requireContact ? phone.trim() : null,
+              group_type: groupType || null,
+              heard_about: heardAbout || null,
+              interests,
+              email: email.trim() || null,
+              marketing_opt_in: optIn,
+            }, { advanceTo: 4 })
+          }}
         >
           {saving ? 'Sending…' : 'Send it'}
         </button>
-        <button
-          type="button"
-          onClick={() => { setStep(4); window.scrollTo({ top: 0 }) }}
-          style={{ ...linkBtn, display: 'block', width: '100%', marginTop: 16, fontSize: 14, textAlign: 'center' }}
-        >
-          Skip this
-        </button>
+        {!requireContact && (
+          <button
+            type="button"
+            onClick={() => { setStep(4); window.scrollTo({ top: 0 }) }}
+            style={{ ...linkBtn, display: 'block', width: '100%', marginTop: 16, fontSize: 14, textAlign: 'center' }}
+          >
+            Skip this
+          </button>
+        )}
       </>
     )
   }
 
   // ---------- 4. thanks + the review ask ----------
   const unhappy = rating > 0 && rating <= 3
+  const greetName = firstName || nameInput.trim()
   return (
     <>
       <h2 style={{ color: INK, fontSize: 26, margin: '0 0 10px', fontWeight: 650, letterSpacing: '-0.02em' }}>
-        {unhappy ? 'Thank you. We are on it.' : `Thanks${firstName ? `, ${firstName}` : ''}.`}
+        {unhappy ? 'Thank you. We are on it.' : `Thanks${greetName ? `, ${greetName}` : ''}.`}
       </h2>
       <p style={{ color: INK_SOFT, fontSize: 16, lineHeight: 1.6, margin: '0 0 34px' }}>
         {unhappy
@@ -291,6 +340,12 @@ export default function FeedbackForm({
           <p style={panelCopy}>
             Say exactly what you told us above, good or bad. It is the single biggest thing that gets the next group on the shuttle.
           </p>
+          {comment.trim() ? (
+            // Most people quit at the blank Google box, not at the decision to
+            // review. Hand them back their own words to paste — they still
+            // write and submit it themselves on Google, edits and all.
+            <CopyComment text={comment.trim()} />
+          ) : null}
           <a
             href={googleReviewUrl}
             target="_blank"
@@ -374,6 +429,43 @@ function RatingRow({ label, value, onPick }) {
       <Stars rating={value} onPick={onPick} />
     </div>
   )
+}
+
+// Puts the rider's own comment on the clipboard on the way to Google. Never
+// posts anything: Google requires the reviewer to be signed in and type it
+// there, so this is a paste-buffer and nothing more.
+function CopyComment({ text }) {
+  const [copied, setCopied] = useState(false)
+  return (
+    <button
+      type="button"
+      onClick={async () => {
+        try {
+          await navigator.clipboard.writeText(text)
+          setCopied(true)
+          setTimeout(() => setCopied(false), 2500)
+        } catch { /* clipboard blocked — the Google link below still works */ }
+      }}
+      style={{
+        width: '100%',
+        background: '#fff',
+        border: `1px solid ${HAIR}`,
+        color: copied ? GOLD_TEXT : INK_SOFT,
+        borderRadius: 10,
+        padding: '12px 14px',
+        fontSize: 14.5,
+        fontWeight: 600,
+        cursor: 'pointer',
+        marginBottom: 12,
+      }}
+    >
+      {copied ? 'Copied. Paste it on Google.' : 'Copy what you wrote'}
+    </button>
+  )
+}
+
+function digitsOf(v) {
+  return String(v || '').replace(/\D/g, '')
 }
 
 function CopyLink({ url }) {

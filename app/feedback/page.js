@@ -16,9 +16,14 @@ export const dynamic = 'force-dynamic'
 // answers to anybody, which is exactly the point — the riders worth hearing
 // from include the ones who never scanned a ticket.
 //
-// What it gives up by being open is attribution: no event, no group, no
-// contact. Favourite-stop votes and the Google review ask do not need any of
-// that, and /leadership/feedback counts these rows separately so they can never
+// What it gives up by being open is the ride: no event, no group. It does NOT
+// give up the person — screen 3 requires a first name and a cell, and the API
+// resolves that onto a real contacts row. An anonymous "I want to book the
+// whole shuttle" is a lead nobody can return, which is the whole reason the
+// contact fields are the price of finishing here and optional on the token
+// version, where the ticket already says who they are.
+//
+// /leadership/feedback still counts these rows separately so they can never
 // inflate the response rate on the addressed survey.
 //
 // Same light chrome-free shell as the token page, and deliberately outside the
@@ -66,6 +71,7 @@ export default async function OpenFeedbackPage() {
 
       <OpenFeedback
         bars={barNames}
+        requireContact
         firstName=""
         knownEmail=""
         existing={null}

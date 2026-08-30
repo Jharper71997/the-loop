@@ -31,7 +31,7 @@ export default async function FeedbackPage() {
 
   const { data: feedback, error: fbErr } = await sb
     .from('ride_feedback')
-    .select('id, rating, driver_rating, bars_rating, timing_rating, favorite_bar, ride_again, comment, group_type, heard_about, interests, email, marketing_opt_in, review_clicked_at, created_at, event_id, contact_id, source')
+    .select('id, rating, driver_rating, bars_rating, timing_rating, favorite_bar, ride_again, comment, group_type, heard_about, interests, email, marketing_opt_in, review_clicked_at, created_at, event_id, contact_id, source, first_name, phone')
     .gte('created_at', since)
     .order('created_at', { ascending: false })
     .limit(2000)
@@ -116,8 +116,8 @@ export default async function FeedbackPage() {
       const c = contactById.get(r.contact_id) || {}
       return {
         key: r.id,
-        name: [c.first_name, c.last_name].filter(Boolean).join(' ') || '(unknown rider)',
-        contact: c.phone || r.email || c.email || '—',
+        name: [c.first_name, c.last_name].filter(Boolean).join(' ') || r.first_name || '(unknown rider)',
+        contact: c.phone || r.phone || r.email || c.email || '—',
         wants: (r.interests || []).join(', '),
         rating: r.rating ?? '—',
       }
@@ -126,14 +126,21 @@ export default async function FeedbackPage() {
   const commentRows = rows
     .filter(r => r.comment)
     .slice(0, 100)
-    .map(r => ({
-      key: r.id,
-      when: eventById.get(r.event_id)?.event_date || r.created_at.slice(0, 10),
-      rating: r.rating ?? '—',
-      again: RIDE_AGAIN_LABEL[r.ride_again] || '—',
-      comment: r.comment,
-      low: r.rating != null && r.rating <= 3,
-    }))
+    .map(r => {
+      const c = contactById.get(r.contact_id) || {}
+      return {
+        key: r.id,
+        when: eventById.get(r.event_id)?.event_date || r.created_at.slice(0, 10),
+        rating: r.rating ?? '—',
+        again: RIDE_AGAIN_LABEL[r.ride_again] || '—',
+        // A 2-star with nobody attached is a complaint you cannot answer, which
+        // is why the open link makes name and cell mandatory. Show them here.
+        who: [c.first_name, c.last_name].filter(Boolean).join(' ') || r.first_name || '—',
+        reach: c.phone || r.phone || c.email || r.email || '—',
+        comment: r.comment,
+        low: r.rating != null && r.rating <= 3,
+      }
+    })
 
   return (
     <main style={mainStyle}>
@@ -247,6 +254,8 @@ export default async function FeedbackPage() {
                 render: r => <span style={{ color: r.low ? '#b3311f' : GOLD_TXT, fontWeight: 700 }}>{r.rating}</span>,
               },
               { key: 'again', header: 'Again?', hideOnMobile: true },
+              { key: 'who', header: 'Rider', hideOnMobile: true },
+              { key: 'reach', header: 'Reach them', mono: true, hideOnMobile: true },
               { key: 'comment', header: 'Comment', primary: true },
             ]}
             rows={commentRows}
