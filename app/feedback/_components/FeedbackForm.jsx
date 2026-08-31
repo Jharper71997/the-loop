@@ -90,6 +90,7 @@ export default function FeedbackForm({
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState('')
   const [reviewCopied, setReviewCopied] = useState(false)
+  const [draftEdit, setDraftEdit] = useState(null)
 
   async function save(patch, { advanceTo } = {}) {
     setError('')
@@ -325,7 +326,13 @@ export default function FeedbackForm({
   // ---------- 4. thanks + the review ask ----------
   const unhappy = rating > 0 && rating <= 3
   const greetName = firstName || nameInput.trim()
-  const hasComment = comment.trim().length > 0
+  const autoDraft = buildReviewDraft({
+    rating, driverRating, barsRating, timingRating,
+    favoriteBar, groupType, rideAgain, comment, brand,
+    seed: hashSeed(publicToken || token || 'x'),
+  })
+  const reviewDraft = draftEdit === null ? autoDraft : draftEdit
+  const hasDraft = reviewDraft.trim().length > 0
   return (
     <>
       <h2 style={{ color: INK, fontSize: 26, margin: '0 0 10px', fontWeight: 650, letterSpacing: '-0.02em' }}>
@@ -342,14 +349,23 @@ export default function FeedbackForm({
           <p style={panelCopy}>
             Say exactly what you told us above, good or bad. It is the single biggest thing that gets the next group on the shuttle.
           </p>
-          {hasComment ? (
+          {hasDraft ? (
             // Google takes only a place id on the review URL — there is no
-            // parameter that fills the box in for them, by design. The nearest
-            // honest thing is to hand back their own words on the clipboard, in
-            // the same tap that opens Google, so nobody types it twice.
-            <p style={panelCopy}>
-              Google will not let us fill the review in for you, so this copies what you already wrote. Paste it there and change whatever you want.
-            </p>
+            // parameter that fills the box in for them, by design. So we write
+            // the draft here out of what they already tapped, show it so they
+            // can change it, and put it on the clipboard in the same tap that
+            // opens Google. A review then costs a paste, not a paragraph.
+            <>
+              <p style={panelCopy}>
+                We put this together from your answers so you do not have to write one. Change anything you like.
+              </p>
+              <textarea
+                value={reviewDraft}
+                onChange={e => setDraftEdit(e.target.value)}
+                rows={5}
+                style={{ ...fieldStyle, marginBottom: 14 }}
+              />
+            </>
           ) : null}
           <a
             href={googleReviewUrl}
@@ -359,9 +375,9 @@ export default function FeedbackForm({
               // Copy inside the click and deliberately do NOT await it. Awaiting
               // ends the user-gesture chain, and iOS Safari then treats the tab
               // that opens as an unrequested popup and blocks it.
-              if (hasComment) {
+              if (hasDraft) {
                 try {
-                  navigator.clipboard?.writeText(comment.trim())
+                  navigator.clipboard?.writeText(reviewDraft.trim())
                   setReviewCopied(true)
                 } catch { /* clipboard blocked — Google still opens, they just retype */ }
               }
@@ -375,7 +391,7 @@ export default function FeedbackForm({
             }}
             style={{ ...primaryBtn(false), display: 'block', textAlign: 'center', textDecoration: 'none', marginTop: 0 }}
           >
-            {hasComment ? 'Copy my words and review on Google' : 'Write a Google review'}
+            {hasDraft ? 'Copy it and review on Google' : 'Write a Google review'}
           </a>
           {reviewCopied ? (
             <p style={{ color: GOLD_TEXT, fontSize: 14, fontWeight: 600, textAlign: 'center', margin: '12px 0 0' }}>
@@ -448,6 +464,69 @@ function RatingRow({ label, value, onPick }) {
       <Stars rating={value} onPick={onPick} />
     </div>
   )
+}
+
+// Assembles a review out of the taps the rider already made, so somebody who
+// only touched the stars still has something to paste. Two rules keep this
+// honest. Every sentence is gated on a signal they actually gave us, so the
+// draft never claims something they did not say — and a rider who rated the
+// night 3 or below gets no composed praise at all, only their own words.
+//
+// The wording also varies on their answers rather than being one fixed
+// paragraph. Google filters duplicate review text, so a hundred riders pasting
+// the same sentences would get the whole batch removed and the listing flagged.
+function hashSeed(str) {
+  let h = 0
+  const v = String(str)
+  for (let i = 0; i < v.length; i++) h = (h * 31 + v.charCodeAt(i)) | 0
+  return Math.abs(h)
+}
+
+const WITH_WHO = {
+  'Friends': 'with friends',
+  'Date night': 'for date night',
+  'Birthday or bachelorette': 'for a birthday',
+  'Work or team': 'with our team',
+  'Military': 'with a few of us from base',
+  'Visiting town': 'while visiting town',
+}
+
+function buildReviewDraft({
+  rating, driverRating, barsRating, timingRating,
+  favoriteBar, groupType, rideAgain, comment, brand, seed,
+}) {
+  const own = String(comment || '').trim()
+
+  // Never write praise for an unhappy rider. Their words or nothing.
+  if (rating > 0 && rating <= 3) return own
+  if (!rating) return own
+
+  const pick = (arr, salt) => arr[(seed + salt) % arr.length]
+  const who = WITH_WHO[groupType]
+  const ride = `the ${brand || 'Brew Loop'}`
+  const out = []
+
+  out.push(pick([
+    who ? `Rode ${ride} ${who}.` : `Rode ${ride}.`,
+    who ? `Did ${ride} ${who}.` : `Did ${ride} for a night out.`,
+    who ? `Took ${ride} around Jacksonville ${who}.` : `Took ${ride} around Jacksonville.`,
+  ], 0))
+
+  if (own) out.push(own)
+
+  if (favoriteBar) {
+    out.push(pick([
+      `${favoriteBar} was our favorite stop.`,
+      `${favoriteBar} was the highlight.`,
+      `Best stop for us was ${favoriteBar}.`,
+    ], 1))
+  }
+  if (driverRating >= 4) out.push(pick(['Our driver was great.', 'The driver took good care of us.'], 2))
+  if (barsRating >= 4) out.push(pick(['Good lineup of stops on the route.', 'Liked the mix of places they run.'], 3))
+  if (timingRating >= 4) out.push(pick(['Never waited long for the next pickup.', 'The bus came back around right when it should.'], 4))
+  if (rideAgain === 'yes') out.push(pick(['We will be back.', 'Would do it again.'], 5))
+
+  return out.join(' ')
 }
 
 function digitsOf(v) {
