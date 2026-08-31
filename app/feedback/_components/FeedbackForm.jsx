@@ -89,6 +89,7 @@ export default function FeedbackForm({
   const [optIn, setOptIn] = useState(existing?.marketing_opt_in ?? true)
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState('')
+  const [reviewCopied, setReviewCopied] = useState(false)
 
   async function save(patch, { advanceTo } = {}) {
     setError('')
@@ -324,6 +325,7 @@ export default function FeedbackForm({
   // ---------- 4. thanks + the review ask ----------
   const unhappy = rating > 0 && rating <= 3
   const greetName = firstName || nameInput.trim()
+  const hasComment = comment.trim().length > 0
   return (
     <>
       <h2 style={{ color: INK, fontSize: 26, margin: '0 0 10px', fontWeight: 650, letterSpacing: '-0.02em' }}>
@@ -340,17 +342,29 @@ export default function FeedbackForm({
           <p style={panelCopy}>
             Say exactly what you told us above, good or bad. It is the single biggest thing that gets the next group on the shuttle.
           </p>
-          {comment.trim() ? (
-            // Most people quit at the blank Google box, not at the decision to
-            // review. Hand them back their own words to paste — they still
-            // write and submit it themselves on Google, edits and all.
-            <CopyComment text={comment.trim()} />
+          {hasComment ? (
+            // Google takes only a place id on the review URL — there is no
+            // parameter that fills the box in for them, by design. The nearest
+            // honest thing is to hand back their own words on the clipboard, in
+            // the same tap that opens Google, so nobody types it twice.
+            <p style={panelCopy}>
+              Google will not let us fill the review in for you, so this copies what you already wrote. Paste it there and change whatever you want.
+            </p>
           ) : null}
           <a
             href={googleReviewUrl}
             target="_blank"
             rel="noopener noreferrer"
             onClick={() => {
+              // Copy inside the click and deliberately do NOT await it. Awaiting
+              // ends the user-gesture chain, and iOS Safari then treats the tab
+              // that opens as an unrequested popup and blocks it.
+              if (hasComment) {
+                try {
+                  navigator.clipboard?.writeText(comment.trim())
+                  setReviewCopied(true)
+                } catch { /* clipboard blocked — Google still opens, they just retype */ }
+              }
               // Fire-and-forget — never block the tap through to Google on our own write.
               fetch('/api/feedback', {
                 method: 'POST',
@@ -361,8 +375,13 @@ export default function FeedbackForm({
             }}
             style={{ ...primaryBtn(false), display: 'block', textAlign: 'center', textDecoration: 'none', marginTop: 0 }}
           >
-            Write a Google review
+            {hasComment ? 'Copy my words and review on Google' : 'Write a Google review'}
           </a>
+          {reviewCopied ? (
+            <p style={{ color: GOLD_TEXT, fontSize: 14, fontWeight: 600, textAlign: 'center', margin: '12px 0 0' }}>
+              Copied. Paste it into the review box.
+            </p>
+          ) : null}
         </Panel>
       ) : null}
 
@@ -428,39 +447,6 @@ function RatingRow({ label, value, onPick }) {
       <span style={{ color: INK, fontSize: 15.5 }}>{label}</span>
       <Stars rating={value} onPick={onPick} />
     </div>
-  )
-}
-
-// Puts the rider's own comment on the clipboard on the way to Google. Never
-// posts anything: Google requires the reviewer to be signed in and type it
-// there, so this is a paste-buffer and nothing more.
-function CopyComment({ text }) {
-  const [copied, setCopied] = useState(false)
-  return (
-    <button
-      type="button"
-      onClick={async () => {
-        try {
-          await navigator.clipboard.writeText(text)
-          setCopied(true)
-          setTimeout(() => setCopied(false), 2500)
-        } catch { /* clipboard blocked — the Google link below still works */ }
-      }}
-      style={{
-        width: '100%',
-        background: '#fff',
-        border: `1px solid ${HAIR}`,
-        color: copied ? GOLD_TEXT : INK_SOFT,
-        borderRadius: 10,
-        padding: '12px 14px',
-        fontSize: 14.5,
-        fontWeight: 600,
-        cursor: 'pointer',
-        marginBottom: 12,
-      }}
-    >
-      {copied ? 'Copied. Paste it on Google.' : 'Copy what you wrote'}
-    </button>
   )
 }
 
