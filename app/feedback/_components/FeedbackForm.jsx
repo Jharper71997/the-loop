@@ -54,6 +54,14 @@ const INTEREST_OPTIONS = [
 // violates Google's policy and gets the reviews filtered out. Low ratings get
 // the "tell us what went wrong" box first instead, which is where an unhappy
 // rider actually wants to go anyway.
+//
+// `rewardOffer` (e.g. "50% off your next ride") turns on the survey-reward
+// copy; empty string is the campaign being off and restores the plain survey.
+// The code itself is never shown here. It is emailed by lib/surveyReward.js,
+// which keeps it off the same screen as the Google button — a reward sitting
+// next to that button is an incentivised review no matter how it is worded.
+// For the same reason the copy below says the code is already sent and is
+// unconditional, rather than dangling it as something still to be earned.
 
 // Identity is one of two things and never both: `token` is the per-ticket token
 // minted by the morning-after cron, `publicToken` is a UUID the browser mints
@@ -70,6 +78,7 @@ export default function FeedbackForm({
   existing,
   referralUrl,
   googleReviewUrl,
+  rewardOffer = '',
   brand = 'Brew Loop',
 }) {
   const [step, setStep] = useState(existing?.rating ? 2 : 1)
@@ -89,6 +98,7 @@ export default function FeedbackForm({
   const [optIn, setOptIn] = useState(existing?.marketing_opt_in ?? true)
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState('')
+  const [rewarded, setRewarded] = useState(false)
   const [reviewCopied, setReviewCopied] = useState(false)
   const [draftEdit, setDraftEdit] = useState(null)
 
@@ -255,9 +265,9 @@ export default function FeedbackForm({
         <Q top>Interested in any of these?</Q>
         <Chips options={INTEREST_OPTIONS} value={interests} onChange={toggleInterest} multi />
 
-        {!knownEmail && (
+        {(!knownEmail || rewardOffer) && (
           <>
-            <Q top>Email{requireContact ? ' (optional)' : ''}</Q>
+            <Q top>{rewardOffer ? `Where do we send your ${rewardOffer}?` : `Email${requireContact ? ' (optional)' : ''}`}</Q>
             <input
               type="email"
               inputMode="email"
@@ -266,6 +276,11 @@ export default function FeedbackForm({
               placeholder="you@email.com"
               style={fieldStyle}
             />
+            {rewardOffer ? (
+              <p style={{ color: INK_FAINT, fontSize: 13.5, lineHeight: 1.5, margin: '9px 0 0' }}>
+                It sends the moment you hit the button below. The code is for the feedback, so it lands whatever you rated us.
+              </p>
+            ) : null}
           </>
         )}
 
@@ -297,6 +312,7 @@ export default function FeedbackForm({
               if (!nameInput.trim()) return setError('We just need a first name.')
               if (digitsOf(phone).length < 10) return setError('That cell number looks incomplete.')
             }
+            setRewarded(!!rewardOffer && !!email.trim())
             save({
               first_name: nameInput.trim() || null,
               phone: requireContact ? phone.trim() : null,
@@ -316,7 +332,7 @@ export default function FeedbackForm({
             onClick={() => { setStep(4); window.scrollTo({ top: 0 }) }}
             style={{ ...linkBtn, display: 'block', width: '100%', marginTop: 16, fontSize: 14, textAlign: 'center' }}
           >
-            Skip this
+            {rewardOffer ? 'Skip this, and the code' : 'Skip this'}
           </button>
         )}
       </>
@@ -343,6 +359,20 @@ export default function FeedbackForm({
           ? 'A real person reads every one of these. If yours needs a reply, you will get one.'
           : 'That is the whole survey. Two more things, if you have a second.'}
       </p>
+
+      {rewarded ? (
+        <div style={{
+          margin: '0 0 30px', padding: '15px 17px', borderRadius: 11,
+          border: `1px solid ${HAIR}`, background: '#fbf8f1',
+        }}>
+          <p style={{ color: INK, fontSize: 15, lineHeight: 1.55, margin: 0, fontWeight: 600 }}>
+            Your {rewardOffer} is on its way to {email.trim()}.
+          </p>
+          <p style={{ color: INK_SOFT, fontSize: 14, lineHeight: 1.55, margin: '6px 0 0' }}>
+            That was for filling this out. It is already yours, whatever you said above and whatever you do next.
+          </p>
+        </div>
+      ) : null}
 
       {googleReviewUrl ? (
         <Panel title="Leave us a Google review">

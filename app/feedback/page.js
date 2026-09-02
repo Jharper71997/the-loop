@@ -77,6 +77,7 @@ export default async function OpenFeedbackPage() {
         existing={null}
         referralUrl={null}
         googleReviewUrl={process.env.GOOGLE_REVIEW_URL || ''}
+        rewardOffer={process.env.SURVEY_REWARD_OFFER || ''}
         brand={cfg.shortBrand}
       />
     </Shell>

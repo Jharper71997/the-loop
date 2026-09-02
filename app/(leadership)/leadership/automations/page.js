@@ -47,6 +47,7 @@ const TOGGLEABLE = [
     section: 'Feedback & reviews',
     rows: [
       { key: AUTOMATION_KEYS.RIDE_FEEDBACK_CRON, name: 'Morning-after feedback survey', channel: 'Both', trigger: 'Vercel cron, daily 10:30 AM ET', where: 'app/api/cron/ride-feedback', extra: 'One SMS + email to everyone who boarded last night, linking to /feedback/<token>. Three screens: overall rating, then driver/bars/timing + favorite stop + ride-again + open box, then an optional who-are-you screen. Google review ask on the thank-you. Only scanned riders get it when the driver scanned anyone; otherwise every paid seat. Results at /leadership/feedback.' },
+      { key: AUTOMATION_KEYS.SURVEY_REWARD_EMAIL, name: 'Survey reward code email', channel: 'Email', trigger: 'Rider submits /feedback', where: 'lib/surveyReward.js', extra: 'Emails the 50% off code (SURVEY) to every rider who finishes the survey. Paid for the feedback only: every star rating gets it, and it is never conditional on tapping through to Google, which is what keeps it clear of Google’s incentivised-review rules. Delivered by email so the code never shares a screen with the review button. Turn this OFF only once bl-survey-offer-email.js has stopped going out, or riders who were promised a code will get nothing.' },
     ],
   },
 ]
