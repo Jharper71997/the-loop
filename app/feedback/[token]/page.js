@@ -103,6 +103,7 @@ export default async function FeedbackPage({ params }) {
         existing={existing || null}
         referralUrl={referralUrl}
         googleReviewUrl={process.env.GOOGLE_REVIEW_URL || ''}
+        rewardOffer={process.env.SURVEY_REWARD_OFFER || ''}
         brand={cfg.shortBrand}
       />
     </Shell>

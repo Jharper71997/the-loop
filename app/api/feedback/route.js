@@ -1,6 +1,7 @@
 import { supabaseAdmin } from '@/lib/supabaseAdmin'
 import { recordAlert } from '@/lib/alerts'
 import { normalizeEmail, upsertContactByPhoneOrEmail } from '@/lib/contacts'
+import { grantSurveyReward } from '@/lib/surveyReward'
 
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
@@ -141,9 +142,13 @@ export async function POST(req) {
     if (contact?.id) row.contact_id = contact.id
   }
 
-  const { error } = await sb
+  // Return the id: the reward send below needs a row to claim, and on a first
+  // submit there is no `prior` to take it from.
+  const { data: saved, error } = await sb
     .from('ride_feedback')
     .upsert(row, { onConflict: conflictKey })
+    .select('id')
+    .maybeSingle()
   if (error) {
     console.error('[feedback] upsert failed', error.message)
     return Response.json({ error: 'save_failed' }, { status: 500 })
@@ -185,7 +190,34 @@ export async function POST(req) {
     })
   }
 
+  // Pay the 50%-off code for finishing the survey. Only the submit POST carries
+  // an email, so this cannot fire on the star tap, and the review-click POST
+  // returns long before it. Deliberately not gated on rating: paying only happy
+  // riders is review gating (see lib/surveyReward.js).
+  //
+  // Awaited on purpose. Fire-and-forget on a serverless function gets killed
+  // with the response, and a rider who was promised a code and got nothing is
+  // the failure that matters most here.
+  const feedbackId = saved?.id || prior?.id || null
+  if (row.email && feedbackId && (row.rating ?? prior?.rating) != null) {
+    await grantSurveyReward(sb, {
+      feedbackId,
+      email: row.email,
+      firstName: row.first_name || item?.rider_first_name || firstWord(order?.buyer_name),
+      origin: originOf(req),
+    })
+  }
+
   return Response.json({ ok: true })
+}
+
+function originOf(req) {
+  try { return new URL(req.url).origin } catch { return null }
+}
+
+function firstWord(name) {
+  const s = String(name || '').trim()
+  return s ? s.split(/\s+/)[0] : ''
 }
 
 // The open link's key. Constrained to the UUID shape the client mints, so the
