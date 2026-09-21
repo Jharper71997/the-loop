@@ -1,3 +1,4 @@
+import { denyIfNotAdmin } from '@/lib/routeAuth'
 import { supabaseAdmin } from '@/lib/supabaseAdmin'
 
 export const runtime = 'nodejs'
@@ -22,7 +23,14 @@ export const dynamic = 'force-dynamic'
 //     error: string | null,
 //   } | null
 //   tt_orders_in_db: number — orders rows tagged metadata.source=ticket_tailor
+// Authorize in-route rather than trusting the middleware path prefix.
+// Sync diagnostics.
+// Middleware is a single regex away from not covering this path, and the
+// handler below uses the service role, so it must not be the only gate.
 export async function GET() {
+  const denied = await denyIfNotAdmin()
+  if (denied) return denied
+
   const supabase = supabaseAdmin()
   const apiKey = process.env.TICKET_TAILOR_API_KEY
   const apiKeySet = !!apiKey

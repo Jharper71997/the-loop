@@ -45,7 +45,13 @@ export async function POST(req) {
 
   const sb = supabaseAdmin()
 
-  const contact = await upsertContactByPhoneOrEmail(sb, { firstName, lastName, email, phone })
+  // Public, unauthenticated route: whoever posted this has proved nothing
+  // about owning the phone number. Without the flag, posting a victim's
+  // phone with your own email rewrote their contact row, and their future
+  // booking confirmations (which prefer contacts.email) came to you.
+  const contact = await upsertContactByPhoneOrEmail(sb, {
+    firstName, lastName, email, phone, identityIsTrusted: false,
+  })
   if (!contact?.id) {
     return Response.json({ error: 'Could not save your info. Try again.' }, { status: 500 })
   }

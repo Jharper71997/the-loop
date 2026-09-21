@@ -1,3 +1,4 @@
+import { denyIfNotLeadership } from '@/lib/routeAuth'
 import { supabaseAdmin } from '@/lib/supabaseAdmin'
 import { BARS } from '@/lib/bars'
 import {
@@ -24,7 +25,14 @@ const SCHEMA_MISSING_CODES = new Set(['42P01', '42703'])
 // (the slug is the Ticket Tailor referral_tag — changing it would orphan all
 // historical attribution).
 
+// Authorize in-route rather than trusting the middleware path prefix.
+// GET returns every bartender's email and phone; DELETE removes them.
+// Middleware is a single regex away from not covering this path, and the
+// handler below uses the service role, so it must not be the only gate.
 export async function GET() {
+  const denied = await denyIfNotLeadership()
+  if (denied) return denied
+
   const supabase = supabaseAdmin()
   const { data, error } = await supabase
     .from('bartenders')
@@ -40,6 +48,9 @@ export async function GET() {
 // Creates a new bartender row directly (admin onboarding without the public
 // signup form). Mirrors the slug + QR generation logic from the signup route.
 export async function POST(req) {
+  const denied = await denyIfNotLeadership()
+  if (denied) return denied
+
   let body
   try { body = await req.json() } catch { return bad('invalid json') }
 
@@ -124,6 +135,9 @@ export async function POST(req) {
 // QR doesn't need to regenerate when name/bar change because the QR points at
 // the TT URL with the slug, which is unchanged.
 export async function PATCH(req) {
+  const denied = await denyIfNotLeadership()
+  if (denied) return denied
+
   let body
   try { body = await req.json() } catch { return bad('invalid json') }
 
@@ -181,6 +195,9 @@ export async function PATCH(req) {
 // row never had any ticket attribution. For "stop counting them" without
 // losing history, prefer PATCH active=false.
 export async function DELETE(req) {
+  const denied = await denyIfNotLeadership()
+  if (denied) return denied
+
   const url = new URL(req.url)
   const slug = String(url.searchParams.get('slug') || '').trim()
   if (!slug) return bad('slug required')

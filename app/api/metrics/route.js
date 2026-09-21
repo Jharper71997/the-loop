@@ -1,3 +1,4 @@
+import { denyIfNotLeadership } from '@/lib/routeAuth'
 import { supabaseAdmin } from '@/lib/supabaseAdmin'
 
 export const runtime = 'nodejs'
@@ -11,7 +12,14 @@ export const dynamic = 'force-dynamic'
 //
 // Everything the /metrics page needs in one fetch, mirroring the finance-data
 // endpoint's shape.
+// Authorize in-route rather than trusting the middleware path prefix.
+// 8 weeks of revenue, expenses and per-bar performance — leadership data that was reachable by any logged-in account, including seasonal driver and door-staff logins.
+// Middleware is a single regex away from not covering this path, and the
+// handler below uses the service role, so it must not be the only gate.
 export async function GET() {
+  const denied = await denyIfNotLeadership()
+  if (denied) return denied
+
   const supabase = supabaseAdmin()
   const today = new Date()
   const todayIso = today.toISOString().slice(0, 10)

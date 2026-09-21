@@ -9,7 +9,7 @@ const SURFACE = '#15151a'
 const BORDER = '#2a2a31'
 
 // Banner that prompts the rider to enable push notifications. Renders after
-// a successful booking (or anywhere the contactId is known). Hides itself
+// a successful booking (or anywhere the boarding-pass code is known). Hides itself
 // when:
 //   - the browser doesn't support push
 //   - permission is already 'granted' (already on)
@@ -21,8 +21,8 @@ const BORDER = '#2a2a31'
 //   1. Register /sw.js (idempotent — existing PWA SW is reused)
 //   2. Request Notification.permission
 //   3. pushManager.subscribe with the VAPID key
-//   4. POST the subscription + contact_id to /api/push/subscribe
-export default function EnableNotifications({ contactId }) {
+//   4. POST the subscription + boarding-pass code to /api/push/subscribe
+export default function EnableNotifications({ code }) {
   const [state, setState] = useState('idle') // idle | working | done | error | hidden
   const [error, setError] = useState(null)
 
@@ -63,7 +63,7 @@ export default function EnableNotifications({ contactId }) {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          contact_id: contactId || null,
+          code: code || null,
           subscription: sub.toJSON(),
           user_agent: navigator.userAgent,
         }),

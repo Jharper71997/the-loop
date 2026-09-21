@@ -5,13 +5,29 @@ import Link from 'next/link'
 import { useSearchParams } from 'next/navigation'
 import { supabase } from '@/lib/supabase'
 
+function safeNext(raw, fallback = '/') {
+  if (typeof raw !== 'string') return fallback
+  // Site-relative only: exactly one leading slash, and not a backslash after
+  // it (charCode 92 — some browsers treat '/\host' as protocol-relative).
+  if (!/^\/(?!\/)/.test(raw)) return fallback
+  if (raw.charCodeAt(1) === 92) return fallback
+  return raw
+}
+
 function LoginInner() {
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [error, setError] = useState('')
   const [submitting, setSubmitting] = useState(false)
   const params = useSearchParams()
-  const next = params.get('next') || '/'
+  // Force the post-login target to be a path on this site. Unvalidated, this
+  // was an open redirect (a real login form on the real domain that lands the
+  // staff member on a lookalike clone) and, because location.replace() honours
+  // javascript: URLs from same-origin script, a session-stealing XSS sink.
+  // Session cookies are written from JS by @supabase/ssr, so they are readable
+  // by such a payload. Single leading slash only — "//evil.tld" is protocol-
+  // relative and "/\evil.tld" is treated as protocol-relative by some browsers.
+  const next = safeNext(params.get('next'))
 
   async function handleLogin(e) {
     e?.preventDefault?.()

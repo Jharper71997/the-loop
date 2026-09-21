@@ -1,3 +1,4 @@
+import { rateLimit, clientIp } from '@/lib/rateLimit'
 import QRCode from 'qrcode'
 import { supabaseAdmin } from '@/lib/supabaseAdmin'
 import { normalizePhone } from '@/lib/phone'
@@ -15,24 +16,10 @@ export const dynamic = 'force-dynamic'
 // no security chat. Boarding-pass links point at /marines/tickets/<code>.
 //
 // Privacy: the response only includes first names, no last names, no emails.
-// Rate-limit at the edge with simple in-memory counters per IP (best-effort).
+// Throttled per IP and per submitted phone via the Postgres limiter (sql/054).
+// The in-memory counter this replaced was per lambda instance and reset on
+// every cold start, so it never really capped anything.
 
-const RATE_LIMIT_PER_MINUTE = 10
-const ipHits = new Map()
-
-function rateLimited(ip) {
-  if (!ip) return false
-  const now = Date.now()
-  const bucket = ipHits.get(ip) || []
-  const recent = bucket.filter(ts => now - ts < 60_000)
-  if (recent.length >= RATE_LIMIT_PER_MINUTE) {
-    ipHits.set(ip, recent)
-    return true
-  }
-  recent.push(now)
-  ipHits.set(ip, recent)
-  return false
-}
 
 export async function POST(req) {
   let body
@@ -42,10 +29,7 @@ export async function POST(req) {
     return Response.json({ error: 'bad json' }, { status: 400 })
   }
 
-  const ip = req.headers.get('x-forwarded-for')?.split(',')[0]?.trim()
-            || req.headers.get('x-real-ip')
-            || null
-  if (rateLimited(ip)) {
+  if (!(await rateLimit('marines_my_tickets_ip', clientIp(req), 20, 60))) {
     return Response.json({ error: 'rate_limited', retry_after_seconds: 60 }, { status: 429 })
   }
 

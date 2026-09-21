@@ -1,3 +1,4 @@
+import { rateLimit, clientIp } from '@/lib/rateLimit'
 import { supabaseAdmin } from '@/lib/supabaseAdmin'
 import { recordAlert } from '@/lib/alerts'
 import { normalizeEmail, upsertContactByPhoneOrEmail } from '@/lib/contacts'
@@ -31,6 +32,9 @@ const RIDE_AGAIN = new Set(['yes', 'maybe', 'no'])
 const MAX_INTERESTS = 12
 
 export async function POST(req) {
+  if (!(await rateLimit('feedback', clientIp(req), 8, 600))) {
+    return Response.json({ error: 'Too many requests. Try again shortly.' }, { status: 429 })
+  }
   let body
   try {
     body = await req.json()

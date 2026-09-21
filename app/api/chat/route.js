@@ -1,3 +1,4 @@
+import { rateLimit, clientIp } from '@/lib/rateLimit'
 import { supabaseAdmin } from '@/lib/supabaseAdmin'
 import { sendPushToRole } from '@/lib/push'
 
@@ -8,16 +9,6 @@ export const dynamic = 'force-dynamic'
 // code (same unguessable token that gates /tickets/<code>) — no login. One
 // thread per rider, keyed by the order_item's contact_id.
 
-const RATE_PER_MIN = 20
-const hits = new Map()
-function rateLimited(key) {
-  if (!key) return false
-  const now = Date.now()
-  const recent = (hits.get(key) || []).filter(t => now - t < 60_000)
-  if (recent.length >= RATE_PER_MIN) { hits.set(key, recent); return true }
-  recent.push(now); hits.set(key, recent)
-  return false
-}
 
 // Resolve a boarding-pass code → { contactId, orderId, eventId, riderName }.
 async function resolveCode(sb, code) {
@@ -41,6 +32,11 @@ async function resolveCode(sb, code) {
 
 // GET /api/chat?code=... → { messages, riderName }
 export async function GET(req) {
+  // Was unthrottled while POST was throttled, which made this the cheapest way
+  // to test a guessed boarding-pass code and read back the rider's name.
+  if (!(await rateLimit('chat_read', clientIp(req), 60, 60))) {
+    return Response.json({ error: 'rate_limited' }, { status: 429 })
+  }
   const code = new URL(req.url).searchParams.get('code')
   const sb = supabaseAdmin()
   const who = await resolveCode(sb, code)
@@ -71,8 +67,9 @@ export async function POST(req) {
   const body = String(payload?.body || '').trim().slice(0, 1000)
   if (!body) return Response.json({ error: 'empty' }, { status: 400 })
 
-  const ip = req.headers.get('x-forwarded-for')?.split(',')[0]?.trim() || code
-  if (rateLimited(ip)) return Response.json({ error: 'rate_limited' }, { status: 429 })
+  if (!(await rateLimit('chat_write', clientIp(req), 20, 60))) {
+    return Response.json({ error: 'rate_limited' }, { status: 429 })
+  }
 
   const sb = supabaseAdmin()
   const who = await resolveCode(sb, code)

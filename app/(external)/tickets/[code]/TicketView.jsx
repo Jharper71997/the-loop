@@ -353,7 +353,7 @@ export default function TicketView({
           </button>
         </div>
 
-        <EnableNotifications contactId={contactId} />
+        <EnableNotifications code={code} />
 
         {isPaid && contactId && <SecurityChat code={code} />}
 
