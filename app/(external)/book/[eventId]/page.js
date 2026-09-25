@@ -260,6 +260,8 @@ export default async function EventBookingPage({ params }) {
               waiver={waiver}
               minAge={event.kind === 'marines' ? null : 21}
               brandName={cfg.brand}
+              /* Same test the checkout route uses to honor the pass. */
+              loopPass={event.kind === 'brew'}
             />
           </div>
 

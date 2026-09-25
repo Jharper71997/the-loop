@@ -22,6 +22,9 @@ export default function BookingForm({
   minAge = 21,
   // Business name printed in the SMS consent (Brew / Surf / The Loop).
   brandName = undefined,
+  // Brew Loop only: explain how a Loop Pass is applied. The discount happens
+  // server-side, so without this a member sees full price and assumes it failed.
+  loopPass = false,
 }) {
   // A walk-on ticket type carries no bar (stop_index null). When the rider picks
   // one we make them choose a pickup bar from the night's list so the driver and
@@ -309,6 +312,24 @@ export default function BookingForm({
 
   return (
     <form onSubmit={onSubmit} className="bk-form-fields" style={{ display: 'grid', gap: 18 }}>
+      {loopPass && (
+        <div style={{
+          padding: '14px 16px',
+          background: 'rgba(212,163,51,0.08)',
+          border: '1px solid rgba(212,163,51,0.35)',
+          borderRadius: 12,
+          fontSize: 13.5,
+          lineHeight: 1.55,
+          color: '#e8e8ec',
+        }}>
+          <div style={{ fontWeight: 800, color: ACCENT, marginBottom: 6 }}>Have a Loop Pass?</div>
+          <ul style={{ margin: 0, paddingLeft: 18, display: 'grid', gap: 4 }}>
+            <li>Use the <strong>same phone or email</strong> you signed up for the pass with.</li>
+            <li>Your seat comes off when you continue. If it was the only seat, you skip payment entirely.</li>
+            <li>The pass covers <strong>your seat only</strong>. Friends you add pay the regular fare.</li>
+          </ul>
+        </div>
+      )}
       <Section title="Your info">
         <Row>
           <Field label="First name" value={buyer.first_name} onChange={v => setBuyer(b => ({ ...b, first_name: v }))} />
@@ -722,6 +743,11 @@ export default function BookingForm({
         {!formValid && !submitting && (
           <div style={{ fontSize: 12, color: '#8a8a92', textAlign: 'center', lineHeight: 1.45 }}>
             Add your details, pick a pickup bar, sign the waiver, and agree to the Terms to continue.
+          </div>
+        )}
+        {loopPass && (
+          <div style={{ fontSize: 12, color: '#c9c9cf', textAlign: 'center', lineHeight: 1.5 }}>
+            Loop Pass members: this total is before your pass. Your seat is removed on the next step.
           </div>
         )}
         <div style={{ fontSize: 11.5, color: '#8a8a92', textAlign: 'center', lineHeight: 1.5 }}>
