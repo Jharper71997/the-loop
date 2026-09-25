@@ -6,7 +6,9 @@ import { syncTtForEvent } from '@/lib/ticketTailorSync'
 import { stripe as stripeLib } from '@/lib/stripe'
 import { mapSubStatus } from '@/lib/loopPass'
 import { sendEmail } from '@/lib/email'
-import { merchOrderHtml, merchOrderText } from '@/lib/emailTemplates'
+import { merchOrderHtml, merchOrderText, passWelcomeHtml, passWelcomeText } from '@/lib/emailTemplates'
+import { sendPassWelcome } from '@/lib/sms'
+import { LEGAL } from '@/lib/legal'
 
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
@@ -123,6 +125,70 @@ async function handlePassCheckout(supabase, session) {
     status: sub ? mapSubStatus(sub.status) : 'active',
     periodEnd: sub?.current_period_end || null,
   })
+
+  await sendPassWelcomeOnce(supabase, session, sub)
+}
+
+// The pass makes a seat free; it does not book one. Members still book each
+// weekend on /book, and nothing else tells them that, so this welcome (SMS +
+// email) is how they find out. Stripe retries checkout.session.completed, so
+// the "already sent" marker lives on the subscription's own metadata.
+async function sendPassWelcomeOnce(supabase, session, sub) {
+  if (sub?.metadata?.welcome_sent) return
+
+  const contactId = session.metadata?.contact_id || sub?.metadata?.contact_id || null
+  let contact = null
+  if (contactId) {
+    const { data } = await supabase
+      .from('contacts')
+      .select('first_name, phone, email')
+      .eq('id', contactId)
+      .maybeSingle()
+    contact = data
+  }
+  const phone = contact?.phone || session.metadata?.buyer_phone || null
+  const email = contact?.email || session.customer_details?.email || session.customer_email || null
+  const member = { firstName: String(contact?.first_name || '').trim() }
+  const siteUrl = `https://${LEGAL.site}`
+
+  let sent = false
+  if (phone) {
+    try {
+      const r = await sendPassWelcome(phone, { member, siteUrl })
+      if (!r?.skipped) sent = true
+    } catch (err) {
+      console.error('[stripe-webhook] pass welcome sms failed', err)
+      await recordAlert(supabase, {
+        kind: 'sms_failed',
+        subject: 'Loop Pass welcome text failed',
+        body: err?.message || String(err),
+        context: { contact_id: contactId, subscription_id: sub?.id || session.subscription },
+      })
+    }
+  }
+  if (email) {
+    try {
+      await sendEmail({
+        to: email,
+        subject: 'Your Loop Pass is active. Here’s how to ride',
+        html: passWelcomeHtml({ member, siteUrl }),
+        text: passWelcomeText({ member, siteUrl }),
+      })
+      sent = true
+    } catch (err) {
+      console.error('[stripe-webhook] pass welcome email failed', err)
+    }
+  }
+
+  if (sent && sub?.id) {
+    try {
+      await stripeLib().subscriptions.update(sub.id, {
+        metadata: { welcome_sent: new Date().toISOString() },
+      })
+    } catch (err) {
+      console.error('[stripe-webhook] could not mark pass welcome sent', err)
+    }
+  }
 }
 
 // customer.subscription.created/updated/deleted — keep the local pass mirror in
