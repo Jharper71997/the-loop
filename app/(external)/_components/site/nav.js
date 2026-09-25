@@ -54,31 +54,3 @@ export const CONTACT = {
   phoneDisplay: '(219) 779-3677',
   city: 'Jacksonville, NC',
 }
-
-// The WEBSITE pages, as opposed to the APP pages a rider uses on the night
-// (/book, /track, /my-tickets, /tickets, /pass, /waiver).
-//
-// Both sets share the same header and footer — it's one site. This list exists
-// so app-only affordances stay off the website: someone who just landed from
-// Google shouldn't be asked to install a home-screen app before they know what
-// the Loop even is. Brew paths only; Surf and Marines never match.
-// /events is in here too: it's where "Book a seat" lands, so a first-time
-// visitor is mid-purchase there. Pitching an app install before they've bought
-// anything is the wrong ask at the wrong moment.
-// /book and /book/<id> were missed when that rule was written, which is worse:
-// the banner is fixed to the bottom of the viewport, so on the checkout page it
-// sat ON TOP of the waiver signature and the Pay button. Someone mid-payment is
-// the last person to interrupt with an install prompt.
-// /pass is a checkout page too (it is now in the nav), so it gets the same
-// no-install-banner treatment as /book.
-const MARKETING_EXACT = new Set(['/', '/about', '/bars', '/merch', '/cart', '/sponsors', '/contact', '/events', '/book', '/pass'])
-// /party/ is in here for the same reason /book/ is: it is a checkout page, and
-// the install banner is fixed to the bottom of the viewport, so on a booking
-// page it lands on top of the waiver signature and the Pay button.
-const MARKETING_PREFIXES = ['/merch/', '/bars/', '/book/', '/party/']
-
-export function isMarketingPath(pathname) {
-  const p = (pathname || '/').split('?')[0].split('#')[0]
-  if (MARKETING_EXACT.has(p)) return true
-  return MARKETING_PREFIXES.some(pre => p.startsWith(pre))
-}
