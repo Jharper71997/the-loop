@@ -1,6 +1,6 @@
 import { supabaseAdmin } from '@/lib/supabaseAdmin'
 import { recordAlert } from '@/lib/alerts'
-import { buildBartenderPayload } from '@/lib/bartenders'
+import { buildBartenderPayload, findBartendersByContact } from '@/lib/bartenders'
 import { normalizeEmail } from '@/lib/contacts'
 import { normalizePhone } from '@/lib/phone'
 
@@ -39,15 +39,7 @@ export async function POST(req) {
 
   const supabase = supabaseAdmin()
 
-  const filters = []
-  if (email) filters.push(`email.ilike.${email}`)
-  if (phone) filters.push(`phone.eq.${phone}`)
-
-  const { data, error } = await supabase
-    .from('bartenders')
-    .select('slug, display_name, bar, qr_image_url, active, share_code, email, phone')
-    .or(filters.join(','))
-    .limit(2)
+  const { data, error } = await findBartendersByContact(supabase, { email, phone })
 
   if (error) {
     if (SCHEMA_MISSING_CODES.has(error.code)) {

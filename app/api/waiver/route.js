@@ -1,3 +1,4 @@
+import { rateLimit, clientIp } from '@/lib/rateLimit'
 import { supabaseAdmin } from '@/lib/supabaseAdmin'
 import { recordSignature, getCurrentWaiverVersion, contactHasSignedCurrent } from '@/lib/waiver'
 
@@ -38,6 +39,9 @@ export async function GET(req) {
 // POST /api/waiver  { contact_id, typed_name }
 // Standalone signing flow used by the SMS-link page (/waiver/[contactId]).
 export async function POST(req) {
+  if (!(await rateLimit('waiver', clientIp(req), 10, 600))) {
+    return Response.json({ error: 'Too many requests. Try again shortly.' }, { status: 429 })
+  }
   let body
   try {
     body = await req.json()

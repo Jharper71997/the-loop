@@ -10,8 +10,7 @@ import {
   formatDisplayName,
   referralUrlFor,
   renderBartenderQr,
-  buildBartenderPayload,
-} from '@/lib/bartenders'
+  buildBartenderPayload, findBartendersByContact } from '@/lib/bartenders'
 import { normalizeEmail } from '@/lib/contacts'
 import { normalizePhone } from '@/lib/phone'
 import { ensureBartenderVoucher } from '@/lib/ticketTailorVouchers'
@@ -70,14 +69,8 @@ export async function POST(req) {
   // or email matches. Two different "Alyssa"s at two different bars stay
   // disambiguated because their contact info differs.
   if (email || phone) {
-    const filters = []
-    if (email) filters.push(`email.ilike.${email}`)
-    if (phone) filters.push(`phone.eq.${phone}`)
-    const { data: byContact, error: contactErr } = await supabase
-      .from('bartenders')
-      .select('slug, display_name, bar, qr_image_url, active, share_code, email, phone')
-      .or(filters.join(','))
-      .limit(2)
+    const { data: byContact, error: contactErr } =
+      await findBartendersByContact(supabase, { email, phone })
 
     if (contactErr && SCHEMA_MISSING_CODES.has(contactErr.code)) {
       return await schemaMissing(supabase)

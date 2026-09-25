@@ -1,3 +1,4 @@
+import { rateLimit, clientIp } from '@/lib/rateLimit'
 import QRCode from 'qrcode'
 import { supabaseAdmin } from '@/lib/supabaseAdmin'
 import { contactHasSignedCurrent } from '@/lib/waiver'
@@ -16,26 +17,11 @@ export const dynamic = 'force-dynamic'
 //
 // Privacy: the response only includes first names, no last names, no emails.
 // Anyone with the phone could already retrieve the original SMS deep links
-// from the carrier, so the real risk surface is small. Rate-limit at the
-// edge with simple in-memory counters per IP (best-effort; KV/Supabase if
-// abuse becomes a problem).
+// from the carrier, so the real risk surface is small. Throttled per IP and
+// per submitted phone number via the Postgres limiter (sql/054), which — unlike
+// the in-memory counter this replaced — survives cold starts and is shared
+// across lambda instances.
 
-const RATE_LIMIT_PER_MINUTE = 10
-const ipHits = new Map()
-
-function rateLimited(ip) {
-  if (!ip) return false
-  const now = Date.now()
-  const bucket = ipHits.get(ip) || []
-  const recent = bucket.filter(ts => now - ts < 60_000)
-  if (recent.length >= RATE_LIMIT_PER_MINUTE) {
-    ipHits.set(ip, recent)
-    return true
-  }
-  recent.push(now)
-  ipHits.set(ip, recent)
-  return false
-}
 
 export async function POST(req) {
   let body
@@ -45,15 +31,18 @@ export async function POST(req) {
     return Response.json({ error: 'bad json' }, { status: 400 })
   }
 
-  const ip = req.headers.get('x-forwarded-for')?.split(',')[0]?.trim()
-            || req.headers.get('x-real-ip')
-            || null
-  if (rateLimited(ip)) {
-    return Response.json({ error: 'rate_limited', retry_after_seconds: 60 }, { status: 429 })
-  }
-
   const normPhone = normalizePhone(body?.phone)
   if (!normPhone) return Response.json({ orders: [] })
+
+  // Two buckets. The IP bucket is the blunt one; the phone bucket is what
+  // actually matters, because rotating IPs is free and the previous in-memory
+  // limiter reset on every cold start. Keying on the submitted number caps how
+  // fast anyone can walk a range of phone numbers regardless of where from.
+  const withinIp    = await rateLimit('my_tickets_ip', clientIp(req), 20, 60)
+  const withinPhone = await rateLimit('my_tickets_phone', normPhone, 5, 600)
+  if (!withinIp || !withinPhone) {
+    return Response.json({ error: 'rate_limited', retry_after_seconds: 60 }, { status: 429 })
+  }
 
   const sb = supabaseAdmin()
 

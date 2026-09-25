@@ -1,3 +1,4 @@
+import { rateLimit, clientIp } from '@/lib/rateLimit'
 import { randomBytes } from 'crypto'
 import { cookies } from 'next/headers'
 import { supabaseAdmin } from '@/lib/supabaseAdmin'
@@ -44,6 +45,9 @@ export const dynamic = 'force-dynamic'
 // body, which makes the client's res.json() throw "Unexpected end of JSON
 // input" and surfaces a cryptic error to the rider. Real cause is logged here.
 export async function POST(req) {
+  if (!(await rateLimit('checkout', clientIp(req), 12, 600))) {
+    return Response.json({ error: 'Too many requests. Try again shortly.' }, { status: 429 })
+  }
   try {
     return await handleCheckout(req)
   } catch (err) {

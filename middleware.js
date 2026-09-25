@@ -235,7 +235,19 @@ export async function middleware(req) {
   // mp4/webm/mov are here because the landing-page hero plays real shuttle
   // footage from /public/brand/video — without them the request 307s to /login
   // and the hero silently falls back to its poster with no visible error.
-  if (/\.(png|jpe?g|gif|svg|webp|avif|ico|css|js|mjs|json|txt|xml|woff2?|ttf|otf|map|webmanifest|mp4|webm|mov|m4v)$/i.test(pathname)) {
+  //
+  // Scoped to where static files actually live: the two asset directories, and
+  // single-segment paths at the root (/sw.js, /manifest.json, /robots.txt,
+  // /icon-512.png and friends). It used to match the extension anywhere in the
+  // path, which meant ANY url ending in one of these skipped every gate below
+  // — public check, getUser(), staff/leadership/security/driver checks and the
+  // x-business header stamping. /admin/groups/12.json reached a service-role
+  // server component with no session; it only 404s today because the id fails
+  // an integer cast, which is the column type saving us, not a control.
+  const STATIC_EXT = /\.(png|jpe?g|gif|svg|webp|avif|ico|css|js|mjs|json|txt|xml|woff2?|ttf|otf|map|webmanifest|mp4|webm|mov|m4v)$/i
+  const isAssetDir = pathname.startsWith('/brand/') || pathname.startsWith('/flyers/')
+  const isRootFile = pathname.indexOf('/', 1) === -1
+  if (STATIC_EXT.test(pathname) && (isAssetDir || isRootFile)) {
     return NextResponse.next()
   }
 

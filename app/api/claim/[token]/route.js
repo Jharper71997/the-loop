@@ -44,12 +44,16 @@ export async function POST(req, ctx) {
   if (item.claimed_at) return Response.json({ error: 'already_claimed' }, { status: 409 })
 
   // Look up the friend's contact row (creates if missing).
+  // The claim token proves they were given this seat, not that they own the
+  // phone number they typed. So a NEW contact is created in full, but an
+  // existing row matched on that phone keeps its own name and email.
   const contact = await upsertContactByPhoneOrEmail(sb, {
     firstName: first,
     lastName: last,
     email,
     phone,
     smsConsent,
+    identityIsTrusted: false,
   })
   if (!contact) return Response.json({ error: 'contact_failed' }, { status: 500 })
 

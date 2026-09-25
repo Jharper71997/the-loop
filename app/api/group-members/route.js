@@ -1,3 +1,4 @@
+import { denyIfNotAdmin } from '@/lib/routeAuth'
 import { supabaseAdmin } from '@/lib/supabaseAdmin'
 
 export const runtime = 'nodejs'
@@ -5,7 +6,14 @@ export const dynamic = 'force-dynamic'
 
 // PATCH /api/group-members?id=...
 // Body: { current_stop_index?: int }
+// Authorize in-route rather than trusting the middleware path prefix.
+// PATCH rewrites any rider's stop assignment.
+// Middleware is a single regex away from not covering this path, and the
+// handler below uses the service role, so it must not be the only gate.
 export async function PATCH(req) {
+  const denied = await denyIfNotAdmin()
+  if (denied) return denied
+
   const url = new URL(req.url)
   const id = url.searchParams.get('id')
   if (!id) return Response.json({ error: 'id required' }, { status: 400 })
