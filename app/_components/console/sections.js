@@ -14,6 +14,7 @@
 //   Door    — scanning riders in            (security)
 //   Driver  — the screen in the bus         (driver)
 //   Riders  — look somebody up, text them
+//   Texts   — two-way inbox for the business number   (leadership)
 //   Parties — quote a private night, mint its link   (party)
 //
 // Everything else — money, bars, sponsors, season, automations, all of it — is
@@ -69,6 +70,16 @@ export const SECTIONS = [
     label: 'Riders',
     icon: 'search',
     blurb: 'Look someone up',
+  },
+  {
+    // Two-way SimpleTexting inbox. Leadership only: it is every private
+    // conversation on the business number. Also gated in lib/roles.js.
+    key: 'messages',
+    href: '/admin/messages',
+    label: 'Texts',
+    icon: 'chat',
+    leadership: true,
+    blurb: 'Rider replies',
   },
   {
     key: 'parties',
