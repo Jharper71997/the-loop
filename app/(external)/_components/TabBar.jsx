@@ -1,7 +1,6 @@
 'use client'
 
 import { usePathname } from 'next/navigation'
-import { useEffect, useState } from 'react'
 import { brandFor, businessFromPath, prefixLink } from '@/lib/businessConfig'
 
 const GOLD = '#d4a333'
@@ -46,37 +45,6 @@ export default function TabBar() {
   const base = brandFor(kind).basePath
   const rel = base ? (pathname.replace(new RegExp('^' + base), '') || '/') : pathname
   const tabs = tabsFor(kind)
-  const [shuttleLive, setShuttleLive] = useState(false)
-
-  useEffect(() => {
-    // The shared shuttle feed is the Brew shuttle; don't surface a brew "Live"
-    // dot on the Surf tabs (surf GPS broadcasting isn't wired yet).
-    if (kind !== 'brew') return
-    let cancelled = false
-    async function poll() {
-      try {
-        const res = await fetch('/api/shuttle/current', { cache: 'no-store' })
-        if (!res.ok) return
-        const json = await res.json()
-        if (!cancelled) setShuttleLive(!!json?.shuttle?.is_active)
-      } catch {}
-    }
-    poll()
-    // Only poll while the tab is actually on screen — a pocketed phone with the
-    // page open shouldn't keep hitting /api/shuttle/current every 20s. Resume +
-    // refresh the moment the rider comes back.
-    const t = setInterval(() => {
-      if (document.visibilityState === 'visible') poll()
-    }, 30_000)
-    const onVis = () => { if (document.visibilityState === 'visible') poll() }
-    document.addEventListener('visibilitychange', onVis)
-    return () => {
-      cancelled = true
-      clearInterval(t)
-      document.removeEventListener('visibilitychange', onVis)
-    }
-  }, [kind])
-
   if (HIDDEN_ON.some(re => re.test(rel))) return null
 
   return (
@@ -106,7 +74,6 @@ export default function TabBar() {
       >
         {tabs.map(t => {
           const active = t.match(rel)
-          const showLiveDot = t.kind === 'track' && shuttleLive
           return (
             <a
               key={t.href}
@@ -125,23 +92,6 @@ export default function TabBar() {
             >
               <span style={{ position: 'relative', display: 'inline-flex' }}>
                 <TabIcon kind={t.kind} active={active} badge={badge} />
-                {showLiveDot && (
-                  <span
-                    aria-hidden
-                    style={{
-                      position: 'absolute',
-                      top: -2,
-                      right: -4,
-                      width: 9,
-                      height: 9,
-                      borderRadius: '50%',
-                      background: GOLD,
-                      border: '2px solid #0a0a0b',
-                      boxShadow: `0 0 0 0 ${GOLD}`,
-                      animation: 'jbl-tab-pulse 1.6s ease-out infinite',
-                    }}
-                  />
-                )}
               </span>
               <span
                 style={{
@@ -152,7 +102,7 @@ export default function TabBar() {
                   color: active ? GOLD_HI : INK_DIM,
                 }}
               >
-                {showLiveDot ? 'Live' : t.label}
+                {t.label}
               </span>
               {active && (
                 <span
@@ -172,13 +122,6 @@ export default function TabBar() {
           )
         })}
       </div>
-      <style>{`
-        @keyframes jbl-tab-pulse {
-          0%   { box-shadow: 0 0 0 0 rgba(212,163,51,0.55); }
-          70%  { box-shadow: 0 0 0 7px rgba(212,163,51,0); }
-          100% { box-shadow: 0 0 0 0 rgba(212,163,51,0); }
-        }
-      `}</style>
     </nav>
   )
 }

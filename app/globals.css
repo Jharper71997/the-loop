@@ -248,17 +248,6 @@ button:active:not(:disabled) { transform: translateY(1px); }
   box-shadow: 0 0 0 1px var(--gold-wash), 0 0 14px rgba(212,163,51,0.14);
 }
 
-.btn-link {
-  background: none;
-  color: var(--ink-dim);
-  font-size: 12px;
-  padding: 10px 4px;
-  min-height: 40px;
-  letter-spacing: 0.06em;
-  text-transform: uppercase;
-}
-.btn-link:hover { color: var(--gold); }
-
 /* ============================================================
    Card — HUD panel with corner brackets
    ============================================================ */
@@ -296,20 +285,6 @@ button:active:not(:disabled) { transform: translateY(1px); }
   bottom: -1px; right: -1px;
   border-left: none; border-top: none;
   border-bottom-right-radius: var(--radius);
-}
-
-.card-compact { padding: 10px 14px; }
-
-/* Highlighted / active panel */
-.card-active {
-  border-color: var(--gold-dim);
-  background:
-    linear-gradient(180deg, rgba(212,163,51,0.07), transparent 50%),
-    linear-gradient(180deg, var(--bg-3), var(--bg-2));
-  box-shadow:
-    0 0 0 1px var(--gold-wash) inset,
-    0 0 24px rgba(212,163,51,0.12),
-    0 8px 28px rgba(0,0,0,0.45);
 }
 
 /* ============================================================
@@ -389,40 +364,6 @@ nav a:hover { color: var(--gold) !important; }
 /* ============================================================
    HUD primitives
    ============================================================ */
-
-/* Pulsing status dot */
-.pulse-dot {
-  display: inline-block;
-  width: 8px; height: 8px;
-  border-radius: 50%;
-  background: var(--gold);
-  box-shadow: 0 0 10px var(--gold);
-  position: relative;
-  vertical-align: middle;
-}
-.pulse-dot::after {
-  content: '';
-  position: absolute;
-  inset: -3px;
-  border-radius: 50%;
-  border: 1px solid var(--gold);
-  opacity: 0.7;
-  animation: pulse-ring 1.6s ease-out infinite;
-}
-@keyframes pulse-ring {
-  0%   { transform: scale(0.85); opacity: 0.7; }
-  100% { transform: scale(2.2); opacity: 0; }
-}
-
-/* Bracketed readout: [ VALUE ] */
-.readout {
-  font-family: 'JetBrains Mono', ui-monospace, monospace;
-  font-variant-numeric: tabular-nums;
-  color: var(--gold);
-  letter-spacing: 0.08em;
-}
-.readout::before { content: '[ '; color: var(--gold-dim); }
-.readout::after  { content: ' ]'; color: var(--gold-dim); }
 
 /* Big numeral display */
 .stat {

@@ -5,7 +5,6 @@ export const metadata = {
   title: { default: 'Brew Loop', template: '%s · Brew Loop' },
   description: 'Jville Brew Loop — book a ride, sign your waiver, show your QR when you board.',
   manifest: '/manifest.json',
-  themeColor: '#0a0a0b',
   appleWebApp: {
     capable: true,
     statusBarStyle: 'black-translucent',

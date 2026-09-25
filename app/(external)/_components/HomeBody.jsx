@@ -1,6 +1,6 @@
 import { brandFor, prefixLink } from '@/lib/businessConfig'
 
-// Shared rider home body for Brew ('/') and Surf City ('/surfcity'). Takes the
+// Rider home body for Surf City ('/surfcity'); Brew '/' uses BrewLanding. Takes the
 // upcoming loops + the business so every link is prefixed and brand strings swap
 // via brandFor(business). Server-renderable (no hooks).
 
@@ -148,8 +148,6 @@ function QuickChips({ business }) {
     <div style={{ display: 'flex', gap: 8, overflowX: 'auto', paddingBottom: 2, WebkitOverflowScrolling: 'touch' }}>
       <Chip href={prefixLink('/my-tickets', business)} label="My tickets" accent />
       <Chip href={prefixLink('/track', business)} label="Track the loop" />
-      {/* /about only exists for Brew today; skip it on Surf to avoid a 404. */}
-      {business === 'brew' && <Chip href="/about" label="How it works" />}
     </div>
   )
 }

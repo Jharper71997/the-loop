@@ -85,7 +85,7 @@ export const SECTIONS = [
     icon: 'gear',
     leadership: true,
     blurb: 'Money + everything else',
-    match: ['/leadership', '/admin/finance'],
+    match: ['/leadership'],
   },
 ]
 

@@ -7,7 +7,7 @@ import { brandFor, prefixLink } from '@/lib/businessConfig'
 import { MARINES_VERIFIED_COOKIE } from '@/lib/marines'
 import { capacityForTicketType } from '@/lib/capacity'
 import { getBarByName } from '@/lib/bars'
-import { GOLD, GOLD_HI, INK, INK_DIM, INK_MUTE, MAX_W, eyebrow } from '@/lib/marketingTheme'
+import { GOLD, INK, INK_DIM, INK_MUTE, MAX_W, eyebrow } from '@/lib/marketingTheme'
 import { TONES, grainOverlay, lightPool, photoScrim, litCard, litCardInner } from '@/lib/atmosphere'
 import BookingForm from './BookingForm'
 

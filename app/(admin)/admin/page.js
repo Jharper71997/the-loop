@@ -1,6 +1,6 @@
 import { supabaseAdmin } from '@/lib/supabaseAdmin'
 import { serverNow } from '@/lib/serverNow'
-import { operationalDateInTZ, nowInTZ, currentStopIndex, formatStopTime } from '@/lib/schedule'
+import { operationalDateInTZ, nowInTZ, currentStopIndex } from '@/lib/schedule'
 import { getActiveBusiness } from '@/lib/businessServer'
 import { resolveActiveLoop } from '@/lib/activeLoop'
 import TonightClient from './TonightClient'

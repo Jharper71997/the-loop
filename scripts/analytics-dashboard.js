@@ -4,7 +4,7 @@
 //
 //   node scripts/analytics-dashboard.js
 //
-// Counting rules (match may-perbar-db.js):
+// Counting rules (match perbar-db.js):
 //   - Riders   = paid, non-voided order_items, founder $0 comps excluded.
 //   - Revenue  = paid orders' total_cents, counted ONCE per order.
 //   - Native   = tt_ticket_id null; TT = imported from Ticket Tailor.

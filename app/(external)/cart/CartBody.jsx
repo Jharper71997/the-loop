@@ -6,7 +6,7 @@ import { useCart } from '../_components/merch/CartProvider'
 import { MerchImage, fmtPrice } from '../_components/merch/MerchBody'
 import {
   GOLD, GOLD_HI, INK, INK_DIM, INK_MUTE, LINE, LINE_HI, MAX_W_NARROW,
-  primaryCta, ghostCta, softCard, eyebrow,
+  primaryCta, softCard, eyebrow,
 } from '@/lib/marketingTheme'
 
 export default function CartBody() {

@@ -1,8 +1,6 @@
-import Stripe from 'stripe'
 import { supabaseAdmin } from '@/lib/supabaseAdmin'
 import { recordSignature } from '@/lib/waiver'
 import { finalizeBooking } from '@/lib/booking'
-import { sendSms } from '@/lib/sms'
 import { recordAlert } from '@/lib/alerts'
 import { syncTtForEvent } from '@/lib/ticketTailorSync'
 import { stripe as stripeLib } from '@/lib/stripe'
@@ -14,7 +12,7 @@ export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
 
 export async function POST(req) {
-  const stripe = new Stripe(process.env.STRIPE_SECRET_KEY)
+  const stripe = stripeLib()
   const supabase = supabaseAdmin()
   const body = await req.text()
   const sig = req.headers.get('stripe-signature')
@@ -169,7 +167,7 @@ async function resolvePromoCode(session) {
       const id = typeof disc.promotion_code === 'string' ? disc.promotion_code : disc.promotion_code?.id
       if (id) {
         try {
-          const pc = await stripeLib.promotionCodes.retrieve(id)
+          const pc = await stripeLib().promotionCodes.retrieve(id)
           return pc?.code || id
         } catch { return id }
       }
@@ -196,7 +194,7 @@ async function resolveShippingMethod(session) {
       if (typeof rate === 'object' && rate.display_name) return rate.display_name
       const id = typeof rate === 'string' ? rate : rate?.id
       if (id) {
-        const full = await stripeLib.shippingRates.retrieve(id)
+        const full = await stripeLib().shippingRates.retrieve(id)
         if (full?.display_name) return full.display_name
       }
     }
@@ -506,17 +504,6 @@ async function handleRefund(supabase, obj) {
       console.error('[stripe-webhook refund] tt sync threw', err)
     }
   }
-}
-
-function formatRefundDate(iso) {
-  if (!iso) return ''
-  try {
-    const d = new Date(`${iso}T12:00:00-05:00`)
-    return d.toLocaleDateString('en-US', {
-      weekday: 'short', month: 'short', day: 'numeric',
-      timeZone: 'America/Indiana/Indianapolis',
-    })
-  } catch { return iso }
 }
 
 async function handleLegacyGroupCheckout(supabase, session) {

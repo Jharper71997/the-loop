@@ -5,13 +5,10 @@ import { useRouter } from 'next/navigation'
 import DataTable from '@/app/(leadership)/_components/DataTable'
 import ShowMore from '@/app/(leadership)/_components/ShowMore'
 
-const ACCENT = '#d4a333'
 const ACCENT_TXT = '#8a5f0a'
 const INK = '#17130f'
 const INK_DIM = '#6e6154'
-const RED = '#d8543f'
 const RED_TXT = '#b3311f'
-const GREEN = '#2fa36b'
 const GREEN_TXT = '#0f7a4e'
 
 export default function RosterView({ items, ticketTypes }) {

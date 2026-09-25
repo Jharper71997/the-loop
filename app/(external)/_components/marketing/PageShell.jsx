@@ -17,7 +17,7 @@
 
 import Link from 'next/link'
 import {
-  GOLD_HI, GOLD_INK, INK, INK_DIM, INK_MUTE, LINE_HI, MAX_W,
+  GOLD_HI, GOLD_INK, INK, INK_DIM, INK_MUTE, MAX_W,
   ON_PAPER, ON_PAPER_DIM,
 } from '@/lib/marketingTheme'
 import {
@@ -246,13 +246,3 @@ const ctaPrimary = {
 }
 
 /* A pill that sits on a hero photo — used for "next loop" style chips. */
-export function GlassChip({ children, href }) {
-  const style = {
-    display: 'inline-flex', alignItems: 'center', gap: 10, textDecoration: 'none',
-    padding: '13px 18px', borderRadius: 999,
-    background: 'rgba(18,18,21,0.55)', border: `1px solid ${LINE_HI}`,
-    color: INK, fontSize: 14, fontWeight: 700,
-    backdropFilter: 'blur(8px)', WebkitBackdropFilter: 'blur(8px)',
-  }
-  return href ? <Link href={href} style={style}>{children}</Link> : <span style={style}>{children}</span>
-}

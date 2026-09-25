@@ -92,15 +92,13 @@ const PUBLIC_PREFIXES = [
   '/api/cron/',
 ]
 
-const LEGACY_ADMIN_PREFIXES = ['/groups', '/contacts', '/finance']
+const LEGACY_ADMIN_PREFIXES = ['/groups', '/contacts']
 
 // Old admin-side leadership pages now live under /leadership. Keep these
 // here so any bookmarks / links land on the right place. /security moved
 // inside the admin shell at /admin/security.
 const LEADERSHIP_RELOCATIONS = {
-  '/admin/finance': '/leadership/finance',
   '/admin/metrics': '/leadership',
-  '/admin/qr': '/leadership/qr',
   '/admin/groups/new': '/leadership/loops/new',
   '/admin/leaderboard': '/leadership/leaderboard',
   '/admin/loops': '/leadership/loops',

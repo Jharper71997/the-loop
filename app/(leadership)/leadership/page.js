@@ -255,7 +255,6 @@ const GROUPS = [
       ['/leadership/cash', 'Cash on hand'],
       ['/leadership/merch', 'Merch'],
       ['/leadership/profit-first', 'Profit First'],
-      ['/admin/finance', 'Ledger entries'],
     ],
   },
   {

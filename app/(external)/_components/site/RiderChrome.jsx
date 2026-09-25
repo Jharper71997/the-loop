@@ -38,7 +38,6 @@ export default function RiderChrome({ children }) {
       ) : (
         <>
           <TopBar />
-          <LiveStatusStrip />
           <div style={{ paddingBottom: 'calc(72px + env(safe-area-inset-bottom))' }}>
             {children}
           </div>

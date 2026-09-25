@@ -12,7 +12,6 @@ import { brandFor } from '@/lib/businessConfig'
 
 const GOLD = '#d4a333'
 const GOLD_TXT = '#8a5f0a'
-const GOLD_HI = '#f0c24a'
 const INK = '#17130f'
 const INK_DIM = '#3b322a'
 const BG = '#faf5ea'
