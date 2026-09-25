@@ -283,6 +283,8 @@ export default function BookingForm({
           // them to verify with their DoD ID, then back to buying.
           window.location.href = prefixLink('/verify', 'marines')
           return
+        } else if (json.error === 'pass_verify_failed') {
+          message = json.message
         } else if (json.error) {
           console.error('[checkout] server error:', json.error, json)
         }
@@ -324,9 +326,10 @@ export default function BookingForm({
         }}>
           <div style={{ fontWeight: 800, color: ACCENT, marginBottom: 6 }}>Have a Loop Pass?</div>
           <ul style={{ margin: 0, paddingLeft: 18, display: 'grid', gap: 4 }}>
-            <li>Use the <strong>same phone or email</strong> you signed up for the pass with.</li>
+            <li>Book with the <strong>same phone number</strong> you signed up for the pass with.</li>
             <li>Your seat comes off when you continue. If it was the only seat, you skip payment entirely.</li>
-            <li>The pass covers <strong>your seat only</strong>. Friends you add pay the regular fare.</li>
+            <li>It covers loops inside the month you've paid for. For a date after your renewal, book once it renews.</li>
+            <li>The pass is for <strong>you only</strong>, one seat per loop. Crew checks ID at the door. Friends you add pay the regular fare.</li>
           </ul>
         </div>
       )}

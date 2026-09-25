@@ -89,7 +89,8 @@ export async function POST(req, ctx) {
       checked_in_at,
       checked_in_via,
       voided_at,
-      order:orders ( id, status, event:events ( id, name, event_date ) )
+      unit_price_cents,
+      order:orders ( id, status, metadata, event:events ( id, name, event_date ) )
     `)
     .eq('id', itemId)
     .maybeSingle()
@@ -168,11 +169,20 @@ export async function POST(req, ctx) {
     }, { status: 500 })
   }
 
+  // A free seat on an order a Loop Pass paid for: the scanner tells crew to
+  // check ID against the name the pass was bought under, so a member can't
+  // hand their pass to someone else.
+  const loopPass = item.order?.metadata?.loop_pass
+  const passHolder = loopPass && item.unit_price_cents === 0
+    ? (loopPass.holder_name || riderName)
+    : null
+
   return Response.json({
     ok: true,
     rider_name: riderName,
     event_name: eventName,
     event_date: eventDate,
     checked_in_at: checkedAt,
+    ...(passHolder ? { loop_pass_holder: passHolder } : {}),
   })
 }

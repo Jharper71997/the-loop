@@ -258,6 +258,16 @@ function ResultCard({ last }) {
       {sub && (
         <div style={{ color: INK_DIM, fontSize: 14, marginTop: 6 }}>{sub}</div>
       )}
+      {last.ok && last.loop_pass_holder && (
+        <div style={{
+          marginTop: 12, padding: '10px 12px', borderRadius: 10,
+          background: 'rgba(212,163,51,0.14)', border: '1px solid rgba(212,163,51,0.5)',
+          color: INK, fontSize: 14, lineHeight: 1.4,
+        }}>
+          <strong style={{ color: '#d4a333' }}>LOOP PASS: CHECK ID.</strong>{' '}
+          Must be {last.loop_pass_holder}. Passes are not transferable.
+        </div>
+      )}
       {last.code && (
         <div style={{ color: '#17130f', fontSize: 11, marginTop: 10, fontFamily: 'ui-monospace, monospace', letterSpacing: '0.2em' }}>
           {last.code.toUpperCase()}

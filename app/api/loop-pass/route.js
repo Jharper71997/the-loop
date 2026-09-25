@@ -61,6 +61,7 @@ export async function POST(req) {
       contactId: contact.id,
       email,
       phone,
+      name: `${firstName} ${lastName}`.trim(),
       plan,
       priceId,
       origin,

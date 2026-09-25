@@ -8,7 +8,7 @@ import { upsertContactByPhoneOrEmail, normalizeEmail } from '@/lib/contacts'
 import { normalizePhone } from '@/lib/phone'
 import { getCurrentWaiverVersion, contactHasSignedCurrent, recordSignature } from '@/lib/waiver'
 import { syncTtForEvent } from '@/lib/ticketTailorSync'
-import { getActivePass } from '@/lib/loopPass'
+import { getActivePass, verifyPassForRide } from '@/lib/loopPass'
 import { finalizeBooking } from '@/lib/booking'
 import { MARINES_VERIFIED_COOKIE } from '@/lib/marines'
 import { capacityForTicketType } from '@/lib/capacity'
@@ -365,19 +365,41 @@ async function handleCheckout(req) {
   // dropped from the charge. One active pass covers one seat per order, so a
   // passholder can't cover their whole party off a single pass. Claim-link
   // riders have no contact yet, so they're never covered here.
+  //
+  // verifyPassForRide checks Stripe live (paid through the ride date) and locks
+  // the seat to the holder's own phone, one seat per loop. Private charters are
+  // invoiced off-app and never honor the pass.
   const usedPassContacts = new Set()
+  let passUsed = null
   for (const rc of riderContacts) {
     rc.covered = false
     // Only Brew Loop honors the Brew Loop subscription pass. Marines + Surf City
     // are separate businesses — their fares are always charged, so a rider who
     // happens to hold a Brew Loop Pass can't ride those free.
-    if (event.kind !== 'brew') continue
+    if (event.kind !== 'brew' || event.is_private) continue
     if (rc.claim || !rc.contact?.id) continue
     if (usedPassContacts.has(rc.contact.id)) continue
-    const pass = await getActivePass(supabase, rc.contact.id)
-    if (pass) {
+    if (!(await getActivePass(supabase, rc.contact.id))) continue
+    const check = await verifyPassForRide(supabase, {
+      contactId: rc.contact.id,
+      riderPhone: rc.rider.phone,
+      buyerPhone: buyer.phone,
+      eventId: event.id,
+      eventDate: event.event_date,
+    })
+    if (check.covered) {
       rc.covered = true
       usedPassContacts.add(rc.contact.id)
+      passUsed = { subscription_id: check.subscriptionId, holder_name: check.holderName }
+    } else if (check.reason === 'verify_failed') {
+      // Never guess: a member would otherwise be charged full fare, and a
+      // lapsed pass must not ride free. Ask them to retry.
+      return Response.json({
+        error: 'pass_verify_failed',
+        message: "We couldn't confirm your Loop Pass right now. Please try again in a minute.",
+      }, { status: 503 })
+    } else {
+      console.log('[checkout] loop pass not applied', { contact_id: rc.contact.id, event_id: event.id, reason: check.reason })
     }
   }
 
@@ -448,6 +470,8 @@ async function handleCheckout(req) {
       // webhook spreads existing order.metadata before its own fields, so this
       // survives settlement.
       ...(event.kind && event.kind !== 'brew' ? { metadata: { kind: event.kind } } : {}),
+      // Which pass covered a seat, so the door scanner can ask for the holder's ID.
+      ...(passUsed ? { metadata: { loop_pass: passUsed } } : {}),
     })
     .select('id')
     .single()
@@ -579,6 +603,7 @@ async function handleCheckout(req) {
         utm_campaign: resolvedAttribution.utm_campaign || null,
       }
     }
+    if (passUsed) update.metadata = { ...(update.metadata || {}), loop_pass: passUsed }
     await supabase.from('orders').update(update).eq('id', order.id)
 
     const signedContactIds = new Set()
