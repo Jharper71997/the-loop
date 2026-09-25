@@ -20,9 +20,12 @@
 // the site should be able to find them — a private night is sold by a link we
 // hand out, not advertised. The booking page lives at /party/<token> and is
 // unlinked, unlisted, noindexed and robots-disallowed.
+// Loop Pass (2026-09-25): the pass went live 9/21 but /pass was only linked
+// from a "Cancel Loop Pass" footer link, so nobody could find it to buy one.
 export const NAV_LINKS = [
   { href: '/about', label: 'How It Works' },
   { href: '/bars', label: 'Partner Bars' },
+  { href: '/pass', label: 'Loop Pass' },
   { href: '/merch', label: 'Merch' },
   { href: '/sponsors', label: 'Sponsors' },
 ]
@@ -66,7 +69,9 @@ export const CONTACT = {
 // the banner is fixed to the bottom of the viewport, so on the checkout page it
 // sat ON TOP of the waiver signature and the Pay button. Someone mid-payment is
 // the last person to interrupt with an install prompt.
-const MARKETING_EXACT = new Set(['/', '/about', '/bars', '/merch', '/cart', '/sponsors', '/contact', '/events', '/book'])
+// /pass is a checkout page too (it is now in the nav), so it gets the same
+// no-install-banner treatment as /book.
+const MARKETING_EXACT = new Set(['/', '/about', '/bars', '/merch', '/cart', '/sponsors', '/contact', '/events', '/book', '/pass'])
 // /party/ is in here for the same reason /book/ is: it is a checkout page, and
 // the install banner is fixed to the bottom of the viewport, so on a booking
 // page it lands on top of the waiver signature and the Pay button.

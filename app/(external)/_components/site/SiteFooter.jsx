@@ -47,6 +47,7 @@ export default function SiteFooter() {
             title="Riders"
             links={[
               PRIMARY_CTA,
+              { href: '/pass', label: 'Loop Pass' },
               { href: '/track', label: 'Find My Bus' },
               { href: '/my-tickets', label: 'My Tickets' },
             ]}

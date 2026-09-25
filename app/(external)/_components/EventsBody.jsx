@@ -116,6 +116,23 @@ export default function EventsBody({ loops = [], renderError = null, business = 
    every card "Tonight's bars" including ones two days out, and stacked the
    stops as numbered pills — which is where the blocky look came from. */
 
+// Someone picking a night is the rider most likely to come back, so the pass
+// gets one line here. No dollar figure: the price lives in Stripe.
+function PassNudge() {
+  return (
+    <div style={{
+      marginTop: 22, padding: '16px 18px', borderRadius: 14, maxWidth: 640,
+      border: '1px solid rgba(212,163,51,0.35)', background: 'rgba(212,163,51,0.08)',
+      display: 'flex', flexWrap: 'wrap', gap: 12, alignItems: 'center', justifyContent: 'space-between',
+    }}>
+      <span style={{ color: '#f5f5f7', fontSize: 15, lineHeight: 1.5 }}>
+        Out most weekends? The <strong style={{ color: GOLD_HI }}>Loop Pass</strong> covers your seat every weekend loop.
+      </span>
+      <Link href="/pass" style={{ ...mktGhostCta, padding: '11px 20px' }}>See the pass</Link>
+    </div>
+  )
+}
+
 function BrewEvents({ loops = [], renderError = null }) {
   const bookable = loops.filter(l => l.kind === 'event')
   return (
@@ -154,6 +171,7 @@ function BrewEvents({ loops = [], renderError = null }) {
               Routes rotate weekend to weekend, and Friday can differ from Saturday. The stops listed on each
               night are that night&rsquo;s actual lineup.
             </p>
+            <PassNudge />
           </>
         )}
       </Band>

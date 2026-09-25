@@ -402,6 +402,14 @@ function Closer() {
         <div style={{ marginTop: 30 }}>
           <Link href="/events" style={{ ...primaryCtaLg, padding: '17px 34px', fontSize: 17 }}>Book a seat</Link>
         </div>
+        {/* The pass is for someone who already rides, so it sits under the
+            one ask as the quieter second option, never competing with it. No
+            dollar figure: the price lives in Stripe (see lib/loopPass.js). */}
+        <div style={{ marginTop: 18 }}>
+          <Link href="/pass" style={{ color: GOLD_HI, fontSize: 15, fontWeight: 700, textDecoration: 'none' }}>
+            Out most weekends? Get the Loop Pass &rarr;
+          </Link>
+        </div>
 
         {/* Follow. The socials were only reachable from the footer and
             /contact, which is the wrong place for them: the weekend lineup
