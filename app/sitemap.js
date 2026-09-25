@@ -19,7 +19,7 @@ export default function sitemap() {
         // Private parties are absent on purpose — there is no public page for
         // them at all. A party is reachable only at /party/<token>, which is
         // handed out one link at a time and disallowed in robots.js.
-        const marketing = ['', '/events', '/bars', '/merch', '/sponsors', '/about', '/contact', '/track']
+        const marketing = ['', '/events', '/bars', '/merch', '/sponsors', '/about', '/contact', '/track', '/privacy', '/terms', '/refunds', '/cookies']
         const otherLoops = ['/surfcity', '/marines']
         const bars = PUBLIC_PARTNER_BARS.map(b => `/bars/${b.slug}`)
         return [...marketing, ...bars, ...otherLoops]

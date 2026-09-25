@@ -102,6 +102,8 @@ export async function POST(req) {
         {
           shipping_rate_data: {
             type: 'fixed_amount',
+            // Shown to shoppers before checkout in cart/CartBody.jsx and
+            // merch/[slug]/page.js. Change all three together.
             fixed_amount: { amount: 600, currency: 'usd' },
             display_name: 'Standard shipping',
             delivery_estimate: {

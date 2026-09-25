@@ -1,6 +1,7 @@
 'use client'
 
 import { useState } from 'react'
+import ConsentCheckbox, { PolicyLink, SmsConsentLabel } from '@/app/_components/legal/ConsentCheckbox'
 
 // Light palette. This page deliberately does NOT use the app's black + gold
 // rider chrome: a survey read one-handed on a phone in daylight is easier on
@@ -8,7 +9,7 @@ import { useState } from 'react'
 // instead of needing to be fought. Gold survives as the accent only.
 const INK = '#17181b'
 const INK_SOFT = '#5c6066'
-const INK_FAINT = '#8a8f95'
+const INK_FAINT = '#6b7076'   // 4.99:1 on white (was #8a8f95, 3.3:1)
 const HAIR = '#e6e5e1'
 const GOLD = '#d4a333'
 const GOLD_TEXT = '#8a6510'   // gold dark enough to read as text on white
@@ -95,7 +96,9 @@ export default function FeedbackForm({
   const [nameInput, setNameInput] = useState(existing?.first_name || firstName || '')
   const [phone, setPhone] = useState(existing?.phone || '')
   const [email, setEmail] = useState(existing?.email || knownEmail || '')
-  const [optIn, setOptIn] = useState(existing?.marketing_opt_in ?? true)
+  // Marketing texts are opt-in: the box starts unticked unless this rider
+  // already ticked it on an earlier visit to the same survey.
+  const [optIn, setOptIn] = useState(existing?.marketing_opt_in ?? false)
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState('')
   const [rewarded, setRewarded] = useState(false)
@@ -284,17 +287,15 @@ export default function FeedbackForm({
           </>
         )}
 
-        <label style={{ display: 'flex', gap: 11, alignItems: 'flex-start', marginTop: 24, cursor: 'pointer' }}>
-          <input
-            type="checkbox"
-            checked={optIn}
-            onChange={e => setOptIn(e.target.checked)}
-            style={{ width: 19, height: 19, marginTop: 1, accentColor: GOLD, flex: '0 0 19px' }}
-          />
-          <span style={{ color: INK_SOFT, fontSize: 14.5, lineHeight: 1.5 }}>
-            Text me when a new {brand} weekend goes on sale.
-          </span>
-        </label>
+        <div style={{ marginTop: 24 }}>
+          <ConsentCheckbox id="fb-marketing-sms" checked={optIn} onChange={setOptIn} tone="light" fontSize={13.5}>
+            <SmsConsentLabel marketing tone="light" brand={brand} />
+          </ConsentCheckbox>
+        </div>
+        <p style={{ color: INK_FAINT, fontSize: 12.5, lineHeight: 1.5, margin: '12px 0 0' }}>
+          Your answers are used to run and improve the shuttle. See our{' '}
+          <PolicyLink href="/privacy" tone="light">Privacy Policy</PolicyLink>.
+        </p>
 
         {error && <ErrorLine>{error}</ErrorLine>}
 

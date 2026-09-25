@@ -30,9 +30,13 @@ export default function RiderChrome({ children }) {
               page — see lib/motion.js. Brew only: Surf and Marines keep the app
               chrome and stay byte-for-byte unchanged. */}
           <style>{SITE_MOTION_CSS}</style>
+          {/* Keyboard users can jump past the header straight to the page. */}
+          <a href="#main-content" className="skip-link">Skip to content</a>
           <SiteHeader />
           <LiveStatusStrip />
-          {children}
+          <div id="main-content" tabIndex={-1} style={{ outline: 'none' }}>
+            {children}
+          </div>
           <SiteFooter />
         </>
       ) : (

@@ -1,3 +1,5 @@
+import Link from 'next/link'
+
 export const metadata = { title: 'You’re on the Loop — Loop Pass' }
 
 export default function PassSuccessPage() {
@@ -20,6 +22,10 @@ export default function PassSuccessPage() {
       <p style={{ color: INK_DIM, fontSize: 16, marginTop: 12, lineHeight: 1.6 }}>
         Your Loop Pass is active. We’ll text your pickup details before each weekend loop —
         just hop on, no checkout needed.
+      </p>
+      <p style={{ color: INK_DIM, fontSize: 14, marginTop: 14, lineHeight: 1.6 }}>
+        Your pass renews automatically until you cancel. Stripe emails your receipt.
+        To cancel anytime, go to <Link href="/pass/manage" style={{ color: GOLD, textDecoration: 'underline' }}>Manage your Loop Pass</Link>.
       </p>
       <a
         href="/book"

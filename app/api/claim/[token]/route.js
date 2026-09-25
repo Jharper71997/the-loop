@@ -29,6 +29,8 @@ export async function POST(req, ctx) {
   if (!first || !last) return Response.json({ error: 'name_required' }, { status: 400 })
   if (!phone && !email) return Response.json({ error: 'phone_or_email_required' }, { status: 400 })
   if (!typedName) return Response.json({ error: 'typed_name_required' }, { status: 400 })
+  // Server half of the Terms / age checkbox on the claim form.
+  if (body?.terms_accepted !== true) return Response.json({ error: 'Please agree to the Terms to claim this seat.' }, { status: 400 })
 
   const sb = supabaseAdmin()
 

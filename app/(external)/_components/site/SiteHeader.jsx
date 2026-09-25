@@ -5,7 +5,7 @@
 // Brew marketing pages (see RiderChrome). Styling mirrors TopBar's sticky/blur
 // so it feels native to the app.
 
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
@@ -25,6 +25,19 @@ export default function SiteHeader() {
   const { count } = useCart()
 
   useEffect(() => { setMounted(true) }, [])
+
+  // Keyboard support for the mobile drawer: focus moves into it on open,
+  // Escape closes it, and focus returns to the menu button on close.
+  const closeRef = useRef(null)
+  const menuBtnRef = useRef(null)
+  useEffect(() => {
+    if (!open) return
+    closeRef.current?.focus()
+    const onKey = e => { if (e.key === 'Escape') setOpen(false) }
+    window.addEventListener('keydown', onKey)
+    const btn = menuBtnRef.current
+    return () => { window.removeEventListener('keydown', onKey); btn?.focus?.() }
+  }, [open])
 
   useEffect(() => {
     const onScroll = () => setScrolled(window.scrollY > 4)
@@ -120,6 +133,7 @@ export default function SiteHeader() {
         <div className="bl-mobile-nav" style={{ marginLeft: 'auto', alignItems: 'center', gap: 6 }}>
           <CartButton count={count} />
           <button
+            ref={menuBtnRef}
             type="button"
             aria-label="Open menu"
             aria-expanded={open}
@@ -143,10 +157,10 @@ export default function SiteHeader() {
           background behind them. */}
       {mounted && open && createPortal((
         <div style={overlay} onClick={() => setOpen(false)}>
-          <div style={drawer} onClick={e => e.stopPropagation()} role="dialog" aria-label="Menu">
+          <div style={drawer} onClick={e => e.stopPropagation()} role="dialog" aria-modal="true" aria-label="Menu">
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
               <Logo size={36} />
-              <button type="button" aria-label="Close menu" onClick={() => setOpen(false)} style={iconButton}>
+              <button ref={closeRef} type="button" aria-label="Close menu" onClick={() => setOpen(false)} style={iconButton}>
                 <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke={INK} strokeWidth={2} strokeLinecap="round">
                   <line x1="6" y1="6" x2="18" y2="18" />
                   <line x1="6" y1="18" x2="18" y2="6" />

@@ -236,7 +236,7 @@ function Bubble({ mine, body, at }) {
         }}>
           {body}
         </div>
-        <div style={{ color: '#6f6f76', fontSize: 10, marginTop: 2, textAlign: mine ? 'right' : 'left' }}>
+        <div style={{ color: '#9c9ca3', fontSize: 11, marginTop: 2, textAlign: mine ? 'right' : 'left' }}>
           {mine ? 'You' : 'Security'} · {fmt(at)}
         </div>
       </div>

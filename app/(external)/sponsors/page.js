@@ -42,7 +42,7 @@ const WAYS = [
 ]
 
 const AUDIENCE = [
-  { stat: '21+', label: 'Every rider, age verified' },
+  { stat: '21+', label: 'Every rider, no exceptions' },
   { stat: 'Fri + Sat', label: 'Weekend nights, all season' },
   { stat: `${PARTNER_BAR_COUNT} bars`, label: 'A rotating Jacksonville route' },
   { stat: 'Screens', label: 'On board, running the whole route' },

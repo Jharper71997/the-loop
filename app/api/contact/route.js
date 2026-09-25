@@ -37,6 +37,7 @@ export async function POST(req) {
   const message = str(body?.message, MAX.message)
   const topicKey = TOPICS[body?.topic] ? body.topic : 'other'
 
+  if (body?.agreed !== true) return Response.json({ error: 'Please tick the box agreeing to the Privacy Policy so we can reply.' }, { status: 400 })
   if (!name) return Response.json({ error: 'Add your name so we know who to write back to.' }, { status: 400 })
   if (!isEmail(email)) return Response.json({ error: 'That email address doesn’t look right.' }, { status: 400 })
   if (message.length < 5) return Response.json({ error: 'Tell us a little more so we can actually help.' }, { status: 400 })

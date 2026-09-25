@@ -29,6 +29,14 @@ const PUBLIC_PREFIXES = [
   '/sponsors',
   '/contact',
   '/api/contact',
+  // Legal pages + the data request form (2026-09-25 compliance pass). Anyone
+  // must be able to read the policies and ask for deletion without logging in.
+  // '/privacy' also covers /privacy/request.
+  '/privacy',
+  '/terms',
+  '/refunds',
+  '/cookies',
+  '/api/privacy-request',
   // A private party's booking page. There is no public parties page — this is
   // the only party surface, and it is reachable only by the token we text to
   // one group. "Private" here means unlisted and noindexed, NOT logged-in: the

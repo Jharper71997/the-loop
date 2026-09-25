@@ -14,6 +14,7 @@ import {
   primaryCta,
 } from '@/lib/marketingTheme'
 import { litCard, litCardInner } from '@/lib/atmosphere'
+import ConsentCheckbox, { PolicyLink } from '@/app/_components/legal/ConsentCheckbox'
 
 const TOPICS = [
   { key: 'ride', label: 'Riding the Loop' },
@@ -30,6 +31,9 @@ export default function ContactForm() {
   const [topic, setTopic] = useState(initialTopic)
   const [state, setState] = useState('idle') // idle | sending | sent | error
   const [error, setError] = useState('')
+  // Charter and group inquiries come through here, so the sender agrees to
+  // the Terms and Privacy Policy explicitly. Never pre-ticked.
+  const [agreed, setAgreed] = useState(false)
 
   async function onSubmit(e) {
     e.preventDefault()
@@ -49,6 +53,7 @@ export default function ContactForm() {
           message: fd.get('message'),
           company: fd.get('company'),
           topic,
+          agreed,
         }),
       })
       const json = await res.json().catch(() => ({}))
@@ -136,6 +141,14 @@ export default function ContactForm() {
         <input id="c-company" name="company" tabIndex={-1} autoComplete="off" />
       </div>
 
+      <div style={{ marginTop: 18 }}>
+        <ConsentCheckbox id="c-agree" checked={agreed} onChange={setAgreed} required fontSize={13.5}>
+          I agree that Jville Brew Loop can use these details to reply to me, as described in the{' '}
+          <PolicyLink href="/privacy">Privacy Policy</PolicyLink>. For group and charter bookings, the{' '}
+          <PolicyLink href="/terms">Terms of Service</PolicyLink> and <PolicyLink href="/refunds">Refund Policy</PolicyLink> apply.
+        </ConsentCheckbox>
+      </div>
+
       {error && (
         <p role="alert" style={{ color: '#ff9b8a', fontSize: 14, lineHeight: 1.5, margin: '16px 0 0' }}>{error}</p>
       )}
@@ -144,7 +157,7 @@ export default function ContactForm() {
         {state === 'sending' ? 'Sending…' : 'Send it'}
       </button>
       <p style={{ color: INK_MUTE, fontSize: 12.5, lineHeight: 1.5, margin: '14px 0 0', textAlign: 'center' }}>
-        Goes straight to {CONTACT.email}. No list, no spam.
+        Goes straight to {CONTACT.email}. We only use it to reply. No list, no spam.
       </p>
     </form>
     </div>

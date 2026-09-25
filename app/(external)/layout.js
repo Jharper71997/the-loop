@@ -1,5 +1,6 @@
 import PwaShell from './_components/PwaShell'
 import RiderChrome from './_components/site/RiderChrome'
+import CookieConsent from './_components/legal/CookieConsent'
 
 export const metadata = {
   title: { default: 'Brew Loop', template: '%s · Brew Loop' },
@@ -48,6 +49,7 @@ export default function ExternalLayout({ children }) {
     >
       <PwaShell />
       <RiderChrome>{children}</RiderChrome>
+      <CookieConsent />
     </div>
   )
 }

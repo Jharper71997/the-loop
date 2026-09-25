@@ -6,6 +6,8 @@ import { brandFor } from '@/lib/businessConfig'
 import { PRIMARY_CTA, CONTACT } from './nav'
 import SocialLinks from './SocialLinks'
 import { INK, INK_DIM, INK_MUTE, LINE } from '@/lib/marketingTheme'
+import { LEGAL, LEGAL_LINKS } from '@/lib/legal'
+import CookieSettingsButton from '../legal/CookieSettingsButton'
 
 const cfg = brandFor('brew')
 const YEAR = 2026 // Date.* is unavailable in some build contexts; bump yearly.
@@ -60,8 +62,20 @@ export default function SiteFooter() {
           </div>
         </div>
 
-        <div style={{ borderTop: `1px solid ${LINE}`, marginTop: 28, paddingTop: 18, display: 'flex', flexWrap: 'wrap', gap: 8, justifyContent: 'space-between', alignItems: 'center' }}>
-          <span style={{ color: INK_MUTE, fontSize: 12.5 }}>© {YEAR} Jville Brew Loop LLC · Jacksonville, NC</span>
+        {/* Legal row: policies, cookie choices, and the business details every
+            policy page points back to. Addresses come from lib/legal.js. */}
+        <nav aria-label="Legal" style={{ borderTop: `1px solid ${LINE}`, marginTop: 28, paddingTop: 16, display: 'flex', flexWrap: 'wrap', gap: '4px 18px' }}>
+          {LEGAL_LINKS.map(l => (
+            <Link key={l.href} href={l.href} style={legalLink}>{l.label}</Link>
+          ))}
+          <Link href="/pass/manage" style={legalLink}>Cancel Loop Pass</Link>
+          <CookieSettingsButton variant="link" style={legalLink} />
+        </nav>
+
+        <div style={{ marginTop: 12, display: 'flex', flexWrap: 'wrap', gap: 8, justifyContent: 'space-between', alignItems: 'center' }}>
+          <span style={{ color: INK_MUTE, fontSize: 12.5, lineHeight: 1.6 }}>
+            © {YEAR} {LEGAL.entity} · {LEGAL.mailingAddress || LEGAL.city} · Riders {LEGAL.riderMinAge}+ with valid ID
+          </span>
           <span style={{ color: INK_MUTE, fontSize: 12.5 }}>Never drive between bars.</span>
         </div>
       </div>
@@ -83,6 +97,9 @@ function FooterCol({ title, links }) {
 const colTitle = {
   color: INK, fontSize: 12, fontWeight: 800, letterSpacing: '0.14em',
   textTransform: 'uppercase', marginBottom: 12,
+}
+const legalLink = {
+  color: INK_DIM, fontSize: 13, textDecoration: 'none', padding: '8px 0', lineHeight: 1.3,
 }
 const footerLink = {
   display: 'block', color: INK_DIM, fontSize: 14, textDecoration: 'none',

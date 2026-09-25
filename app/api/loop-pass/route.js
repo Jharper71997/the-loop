@@ -22,6 +22,9 @@ export async function POST(req) {
   const plan = String(body?.plan || 'monthly').trim()
 
   if (!firstName) return bad('first_name required')
+  // Server half of the auto-renewal checkbox on /pass. No acknowledgement,
+  // no subscription.
+  if (body?.renewal_ack !== true) return bad('Please confirm you understand the pass renews automatically.')
   if (!phone) return bad('A mobile number is required so we can text your pickup details.')
 
   const planDef = PASS_PLANS[plan]
