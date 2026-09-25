@@ -90,6 +90,9 @@ const PUBLIC_PREFIXES = [
   '/api/qr-image',
   '/api/ticket-tailor-webhook',
   '/api/stripe-webhook',
+  // SimpleTexting two-way sync (replies, delivery reports, STOP). No session:
+  // the route checks SIMPLETEXTING_WEBHOOK_SECRET itself and fails closed.
+  '/api/simpletexting-webhook',
   '/api/checkout',
   '/api/loop-pass',
   '/api/waitlist',
