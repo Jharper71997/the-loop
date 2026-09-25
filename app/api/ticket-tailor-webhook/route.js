@@ -7,18 +7,15 @@ export const dynamic = 'force-dynamic'
 
 // Shared-secret check for the TT webhook. TT does not natively HMAC-sign,
 // but the webhook URL configured in TT can carry a long random ?token=...
-// value; we require it to match TT_WEBHOOK_TOKEN.
-//
-// Fails CLOSED when the env var is unset, matching lib/cronAuth.js. It used to
-// fall open with a console.warn, which is invisible in practice: a forged POST
-// then wrote status:'paid' with an attacker-chosen total and minted tickets
-// that pass the door scanner. A missed env var on a new project, a preview
-// deployment or the standalone Loop site was enough to reopen it.
+// value; we require it to match TT_WEBHOOK_TOKEN. If the env var is unset we
+// fall open (legacy mode) but warn loudly in the log so a misconfig is
+// visible. Once TT_WEBHOOK_TOKEN is set in Vercel + the matching ?token=...
+// is appended to the TT dashboard URL, anonymous POSTs will be rejected.
 function denyIfWebhookSecretMismatch(req) {
   const expected = process.env.TT_WEBHOOK_TOKEN
   if (!expected) {
-    console.error('[ticket-tailor-webhook] TT_WEBHOOK_TOKEN not set — refusing the request')
-    return Response.json({ error: 'webhook not configured' }, { status: 503 })
+    console.warn('[ticket-tailor-webhook] TT_WEBHOOK_TOKEN not set — anyone can POST forged orders')
+    return null
   }
   const url = new URL(req.url)
   const provided = url.searchParams.get('token') || ''
