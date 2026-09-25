@@ -3,7 +3,7 @@
 import { useState } from 'react'
 import Link from 'next/link'
 import { useCart } from '../../_components/merch/CartProvider'
-import { GOLD, GOLD_HI, INK, INK_DIM, LINE, LINE_HI, primaryCta } from '@/lib/marketingTheme'
+import { GOLD, GOLD_HI, INK, INK_DIM, LINE_HI, primaryCta } from '@/lib/marketingTheme'
 
 // Variant picker + quantity + add-to-cart. Receives a serializable product from
 // the server page.

@@ -16,9 +16,7 @@ const INK_MUTED = '#6e6154'
 const BG = '#faf5ea'
 const SURFACE = '#fdfaf3'
 const LINE = 'rgba(23,19,15,0.08)'
-const GREEN = '#2fa36b'
 const GREEN_TXT = '#0f7a4e'
-const RED = '#d8543f'
 const RED_TXT = '#b3311f'
 
 const POLL_MS = 8000

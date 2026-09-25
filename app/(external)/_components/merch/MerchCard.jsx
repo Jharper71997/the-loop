@@ -6,7 +6,7 @@
 
 import Link from 'next/link'
 import { useState } from 'react'
-import { GOLD_HI, GOLD_INK, PAPER, PAPER_HI, PAPER_LINE, ON_PAPER, ON_PAPER_DIM } from '@/lib/marketingTheme'
+import { GOLD_INK, PAPER, PAPER_HI, PAPER_LINE, ON_PAPER, ON_PAPER_DIM } from '@/lib/marketingTheme'
 
 function fmt(cents) {
   if (cents == null) return ''

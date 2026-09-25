@@ -7,9 +7,7 @@ const GOLD_TXT = '#8a5f0a'
 const GOLD_HI = '#f0c24a'
 const INK = '#17130f'
 const INK_DIM = '#3b322a'
-const SURFACE = '#fdfaf3'
 const LINE = 'rgba(23,19,15,0.08)'
-const GREEN = '#2fa36b'
 
 // Hybrid "5 minutes away" prompt — shown on BOTH the driver and security
 // screens. The server watches the live shuttle pings and tells us which bar

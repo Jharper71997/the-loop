@@ -2,7 +2,6 @@ import { supabaseAdmin } from '@/lib/supabaseAdmin'
 import { denyIfNotLeadership } from '@/lib/routeAuth'
 import { refundOrder } from '@/lib/stripe'
 import { recordAlert } from '@/lib/alerts'
-import { sendSms } from '@/lib/sms'
 import { syncTtForEvent } from '@/lib/ticketTailorSync'
 
 export const runtime = 'nodejs'

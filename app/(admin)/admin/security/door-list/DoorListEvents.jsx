@@ -6,7 +6,6 @@ import { useBusiness } from '../../../_components/BusinessProvider'
 import { adminBase } from '@/lib/adminBase'
 import { brandFor } from '@/lib/businessConfig'
 
-const GOLD = '#d4a333'
 const GOLD_TXT = '#8a5f0a'
 const INK = '#17130f'
 const INK_DIM = '#3b322a'

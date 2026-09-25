@@ -9,8 +9,6 @@
     "lint": "eslint"
   },
   "dependencies": {
-    "@dnd-kit/core": "^6.3.1",
-    "@stripe/stripe-js": "^9.2.0",
     "@supabase/ssr": "^0.10.2",
     "@supabase/supabase-js": "^2.103.2",
     "jsqr": "^1.4.0",
@@ -20,7 +18,6 @@
     "react": "19.2.4",
     "react-dom": "19.2.4",
     "stripe": "^22.0.2",
-    "twilio": "^5.13.1",
     "web-push": "^3.6.7"
   },
   "devDependencies": {
