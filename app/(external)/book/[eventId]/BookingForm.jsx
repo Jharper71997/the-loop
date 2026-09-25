@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState } from 'react'
 import { prefixLink } from '@/lib/businessConfig'
+import ConsentCheckbox, { PolicyLink, SmsConsentLabel } from '@/app/_components/legal/ConsentCheckbox'
 
 const ACCENT = '#d4a333'
 const SURFACE = '#15151a'
@@ -16,6 +17,11 @@ const BORDER = '#2a2a31'
 export default function BookingForm({
   eventId, eventName, ticketTypes, addons = [], stops = [], waiver,
   fareLabel = null, fareHint = null,
+  // Rider age rule printed in the Terms checkbox. The bar loops (Brew, Surf)
+  // are 21+; pass null for a service without one (The Loop / Marines).
+  minAge = 21,
+  // Business name printed in the SMS consent (Brew / Surf / The Loop).
+  brandName = undefined,
 }) {
   // A walk-on ticket type carries no bar (stop_index null). When the rider picks
   // one we make them choose a pickup bar from the night's list so the driver and
@@ -61,8 +67,13 @@ export default function BookingForm({
   }, [])
 
   const [buyer, setBuyer] = useState({
-    first_name: '', last_name: '', email: '', phone: '', sms_consent: true,
+    // Ride-text consent starts UNCHECKED (TCPA express consent: the rider has to
+    // opt in themselves, and it is never a condition of buying).
+    first_name: '', last_name: '', email: '', phone: '', sms_consent: false,
   })
+  // Terms / Privacy / Refund agreement (plus the age rule on the bar loops).
+  // Required to pay, never pre-ticked.
+  const [termsAccepted, setTermsAccepted] = useState(false)
   const [riders, setRiders] = useState([
     {
       ticket_type_id: defaultTtId,
@@ -174,8 +185,9 @@ export default function BookingForm({
       if (r.signed_self && !r.typed_name.trim()) return false
     }
     if (buyerOwesSig && !buyerTypedName.trim()) return false
+    if (!termsAccepted) return false
     return true
-  }, [buyer, riders, ticketTypes, stops, buyerOwesSig, buyerTypedName, oversellError])
+  }, [buyer, riders, ticketTypes, stops, buyerOwesSig, buyerTypedName, oversellError, termsAccepted])
 
   async function onSubmit(e) {
     e.preventDefault()
@@ -242,6 +254,8 @@ export default function BookingForm({
           buyer_typed_name: buyerTypedName.trim(),
           attribution: submittedAttribution,
           client_token: clientToken,
+          terms_accepted: termsAccepted,
+          age_confirmed: !!minAge && termsAccepted,
         }),
       })
       const json = await res.json()
@@ -257,6 +271,8 @@ export default function BookingForm({
             : `Sold out: ${json.ticket_type_name || 'this ticket'} is fully booked.`
         } else if (json.error === 'in_flight_retry') {
           message = 'Hang on — finalizing your previous attempt. Try again in a few seconds.'
+        } else if (json.error === 'terms_not_accepted') {
+          message = 'Please tick the box agreeing to the Terms before you pay.'
         } else if (json.error === 'pickup_required') {
           message = 'Please choose a pickup stop for your walk-on ticket.'
         } else if (json.error === 'verification_required') {
@@ -302,11 +318,19 @@ export default function BookingForm({
           <Field label="Phone" value={buyer.phone} type="tel" onChange={v => setBuyer(b => ({ ...b, phone: v }))} />
           <Field label="Email" value={buyer.email} type="email" onChange={v => setBuyer(b => ({ ...b, email: v }))} />
         </Row>
-        <CheckRow
-          checked={buyer.sms_consent}
-          onChange={v => setBuyer(b => ({ ...b, sms_consent: v }))}
-          label="Text me my pickup details and the live tracking link."
-        />
+        <p style={{ fontSize: 12, color: '#a6a6ae', lineHeight: 1.5, margin: '2px 0 0' }}>
+          We text your booking confirmation and boarding pass to this phone. Reply STOP to any text to opt out.
+        </p>
+        <div style={{ padding: '8px 4px 0' }}>
+          <ConsentCheckbox
+            id="bk-sms-consent"
+            checked={buyer.sms_consent}
+            onChange={v => setBuyer(b => ({ ...b, sms_consent: v }))}
+            fontSize={12.5}
+          >
+            <SmsConsentLabel brand={brandName} />
+          </ConsentCheckbox>
+        </div>
       </Section>
 
       <Section title={`Riders (${riders.length})`}>
@@ -614,7 +638,7 @@ export default function BookingForm({
               autoFocus
               style={{ ...input, textTransform: 'uppercase', letterSpacing: '0.05em', fontSize: 13, padding: '8px 10px' }}
             />
-            <div style={{ fontSize: 11, color: '#777', textAlign: 'center' }}>
+            <div style={{ fontSize: 11, color: '#8a8a92', textAlign: 'center' }}>
               Gives the bartender credit for sending you.
             </div>
           </div>
@@ -624,6 +648,23 @@ export default function BookingForm({
       {soldOutTypes.length > 0 && (
         <WaitlistForm eventId={eventId} soldOutTypes={soldOutTypes} />
       )}
+
+      <div style={{ padding: '14px 16px', borderRadius: 12, border: `1px solid ${BORDER}`, background: SURFACE }}>
+        <ConsentCheckbox
+          id="bk-terms"
+          checked={termsAccepted}
+          onChange={setTermsAccepted}
+          required
+          fontSize={13}
+        >
+          {minAge
+            ? <>Every rider on this order is {minAge} or older and will bring a valid photo ID. I am 18 or older and agree to the </>
+            : <>I am 18 or older and agree to the </>}
+          <PolicyLink href="/terms">Terms of Service</PolicyLink>,{' '}
+          <PolicyLink href="/refunds">Refund Policy</PolicyLink> and{' '}
+          <PolicyLink href="/privacy">Privacy Policy</PolicyLink>.
+        </ConsentCheckbox>
+      </div>
 
       {(error || oversellError) && (
         <div style={{ padding: 10, background: '#3a1a1a', border: '1px solid #f87171', borderRadius: 8, color: '#f87171', fontSize: 13 }}>
@@ -680,11 +721,11 @@ export default function BookingForm({
         </button>
         {!formValid && !submitting && (
           <div style={{ fontSize: 12, color: '#8a8a92', textAlign: 'center', lineHeight: 1.45 }}>
-            Add your details, pick a pickup bar, and sign the waiver to continue.
+            Add your details, pick a pickup bar, sign the waiver, and agree to the Terms to continue.
           </div>
         )}
-        <div style={{ fontSize: 11, color: '#777', textAlign: 'center' }}>
-          Secure checkout powered by Stripe
+        <div style={{ fontSize: 11.5, color: '#8a8a92', textAlign: 'center', lineHeight: 1.5 }}>
+          No booking or service fees are added at checkout. Secure checkout powered by Stripe.
         </div>
       </div>
 
@@ -692,7 +733,7 @@ export default function BookingForm({
         /* Only what an inline style object cannot express. The base look of
            these controls lives in the input style object above, because inline
            wins over a stylesheet and splitting it would make the two fight. */
-        .bk-form-fields input::placeholder { color: #6a6a73; }
+        .bk-form-fields input::placeholder { color: #8a8a92; }
         .bk-form-fields input:focus-visible,
         .bk-form-fields select:focus-visible,
         .bk-form-fields textarea:focus-visible,
@@ -938,6 +979,10 @@ function WaitlistForm({ eventId, soldOutTypes }) {
           >
             {state === 'submitting' ? 'Joining…' : 'Join the waitlist'}
           </button>
+          <div style={{ fontSize: 11.5, color: '#9c9ca3', lineHeight: 1.5 }}>
+            By joining, you ask us to text this number if a seat opens for this loop. Msg &amp; data rates may apply. Reply STOP to opt out.
+            See our <PolicyLink href="/privacy">Privacy Policy</PolicyLink>.
+          </div>
         </div>
       )}
     </Section>

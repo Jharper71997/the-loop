@@ -26,7 +26,7 @@ const LOOP_META = {
   description: 'No car, no problem. The Loop runs a constant route from base into Jacksonville and back all day. Grab a ride, sign your waiver, show your QR when you board.',
   siteName: 'The Loop',
   socialTitle: 'The Loop — get off base and go do something',
-  socialDescription: 'A constant loop from base into town and back, all day on the weekend. Cheaper than an Uber and it runs whether or not your buddy has a car.',
+  socialDescription: 'A constant loop from base into town and back, all day on the weekend. It runs whether or not your buddy has a car.',
 }
 
 const M = isLoopSite ? LOOP_META : BREW_META

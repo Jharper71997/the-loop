@@ -258,6 +258,8 @@ export default async function EventBookingPage({ params }) {
               addons={addons}
               stops={stops}
               waiver={waiver}
+              minAge={event.kind === 'marines' ? null : 21}
+              brandName={cfg.brand}
             />
           </div>
 

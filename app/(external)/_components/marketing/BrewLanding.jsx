@@ -62,10 +62,10 @@ const TICKER_ITEMS = [
 ]
 
 const MERCH_SHOTS = [
-  { src: '/brand/merch/hoodie-4.png', label: 'Hoodie', price: '$55' },
-  { src: '/brand/merch/tshirt-5.png', label: 'Tee', price: '$35' },
-  { src: '/brand/merch/hoodie-1.png', label: 'Hoodie', price: '$55' },
-  { src: '/brand/merch/patches.png', label: 'Patch', price: '$10' },
+  { src: '/brand/merch/hoodie-4.png', label: 'Hoodie', price: '$55', alt: 'Person wearing the black Jville Brew Loop hoodie' },
+  { src: '/brand/merch/tshirt-5.png', label: 'Tee', price: '$35', alt: 'Person wearing the black Jville Brew Loop tee' },
+  { src: '/brand/merch/hoodie-1.png', label: 'Hoodie', price: '$55', alt: 'Another view of the black Jville Brew Loop hoodie' },
+  { src: '/brand/merch/patches.png', label: 'Patch', price: '$10', alt: 'Jville Brew Loop patches' },
 ]
 
 export default function BrewLanding({ loops = [] }) {
@@ -360,7 +360,7 @@ function TheGear() {
           {MERCH_SHOTS.map((m, i) => (
             <Link key={i} href="/merch" className="bl-merch-tile">
               {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img src={m.src} alt={m.label} loading="lazy" />
+              <img src={m.src} alt={m.alt || m.label} loading="lazy" />
               <span className="bl-merch-meta">
                 <span style={{ color: ON_PAPER, fontSize: 14.5, fontWeight: 700 }}>{m.label}</span>
                 <span style={{ color: GOLD_INK, fontSize: 14.5, fontWeight: 800 }}>{m.price}</span>

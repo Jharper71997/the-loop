@@ -35,6 +35,8 @@ export default function MerchGallery({ images = [], name = '' }) {
   return (
     <div>
       <div
+        role="img"
+        aria-label={name ? `${name}, photo ${Math.min(active, pics.length - 1) + 1} of ${pics.length}` : 'Product photo'}
         style={{
           width: '100%',
           aspectRatio: '1 / 1',

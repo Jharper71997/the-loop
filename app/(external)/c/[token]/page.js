@@ -40,7 +40,7 @@ export default async function ClaimPage({ params }) {
   if (item.order?.event_id) {
     const { data } = await sb
       .from('events')
-      .select('id, name, event_date, pickup_time')
+      .select('id, name, event_date, pickup_time, kind')
       .eq('id', item.order.event_id)
       .maybeSingle()
     event = data

@@ -11,6 +11,7 @@ import { getActivePass } from '@/lib/loopPass'
 import { finalizeBooking } from '@/lib/booking'
 import { MARINES_VERIFIED_COOKIE } from '@/lib/marines'
 import { capacityForTicketType } from '@/lib/capacity'
+import { LEGAL } from '@/lib/legal'
 
 function mintClaimToken() {
   // 24 bytes => 32 url-safe base64 chars. Long enough that brute-forcing
@@ -60,9 +61,15 @@ async function handleCheckout(req) {
     return Response.json({ error: 'invalid JSON' }, { status: 400 })
   }
 
-  const { event_id, buyer, riders, buyer_typed_name, client_token } = body || {}
+  const { event_id, buyer, riders, buyer_typed_name, client_token, terms_accepted } = body || {}
   if (!event_id || !buyer || !Array.isArray(riders) || !riders.length) {
     return Response.json({ error: 'missing event_id, buyer, or riders' }, { status: 400 })
+  }
+  // The buyer has to tick the Terms / Privacy / Refund (and, on the bar loops,
+  // 21+) box. The form will not submit without it; this is the server half so
+  // an old cached page or a hand-rolled POST cannot skip it.
+  if (terms_accepted !== true) {
+    return Response.json({ error: 'terms_not_accepted' }, { status: 400 })
   }
 
   const supabase = supabaseAdmin()
@@ -638,6 +645,11 @@ async function handleCheckout(req) {
       orderId: order.id,
       waiverPayload: JSON.stringify({ sigs: waiverQueue }),
       attribution: resolvedAttribution,
+      consent: {
+        termsVersion: LEGAL.termsVersion,
+        smsConsent: !!buyer.sms_consent,
+        ageConfirmed: body?.age_confirmed === true,
+      },
       origin: req.headers.get('origin') || req.headers.get('referer'),
     })
   } catch (err) {

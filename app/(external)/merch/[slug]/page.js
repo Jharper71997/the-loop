@@ -49,7 +49,7 @@ export default async function ProductPage({ params }) {
             )}
             <AddToCart product={product} />
             <p style={{ color: INK_DIM, fontSize: 13, lineHeight: 1.5, margin: '20px 0 0' }}>
-              Ships in the US, or choose &ldquo;grab it on the shuttle&rdquo; at checkout to skip shipping.
+              Ships in the US for $6.00, or choose &ldquo;grab it on the shuttle&rdquo; at checkout for free pickup.
             </p>
           </div>
         </div>

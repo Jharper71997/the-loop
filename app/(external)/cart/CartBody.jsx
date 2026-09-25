@@ -87,7 +87,7 @@ export default function CartBody() {
                 <span style={{ fontWeight: 800 }}>{fmtPrice(subtotalCents)}</span>
               </div>
               <div style={{ color: INK_MUTE, fontSize: 12.5, marginTop: 6 }}>
-                Shipping picked at checkout (or grab it on the shuttle, free).
+                Shipping is chosen at checkout: $6.00 standard shipping (5 to 10 business days), or free if you pick it up on the shuttle. No other fees are added.
               </div>
               {error && <div style={{ color: '#f87171', fontSize: 13.5, marginTop: 12 }}>{error}</div>}
               <button type="button" onClick={checkout} disabled={loading} style={{ ...primaryCta, width: '100%', marginTop: 16, opacity: loading ? 0.7 : 1, cursor: loading ? 'default' : 'pointer' }}>

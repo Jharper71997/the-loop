@@ -1,6 +1,7 @@
 'use client'
 
 import { useState } from 'react'
+import ConsentCheckbox, { PolicyLink, SmsConsentLabel } from '@/app/_components/legal/ConsentCheckbox'
 
 const GOLD = '#d4a333'
 const GOLD_HI = '#f0c24a'
@@ -15,13 +16,16 @@ export default function ClaimForm({ token, event, waiver }) {
   const [last, setLast] = useState('')
   const [phone, setPhone] = useState('')
   const [email, setEmail] = useState('')
-  const [smsConsent, setSmsConsent] = useState(true)
+  // Opt-in only: never pre-ticked, never required to claim the seat.
+  const [smsConsent, setSmsConsent] = useState(false)
+  const [termsAccepted, setTermsAccepted] = useState(false)
+  const minAge = event?.kind === 'marines' ? null : 21
   const [typedName, setTypedName] = useState('')
   const [waiverOpen, setWaiverOpen] = useState(false)
   const [submitting, setSubmitting] = useState(false)
   const [error, setError] = useState(null)
 
-  const valid = !!(first && last && (phone || email) && typedName.trim())
+  const valid = !!(first && last && (phone || email) && typedName.trim() && termsAccepted)
 
   async function onSubmit(e) {
     e.preventDefault()
@@ -39,6 +43,7 @@ export default function ClaimForm({ token, event, waiver }) {
           email,
           sms_consent: smsConsent,
           typed_name: typedName.trim(),
+          terms_accepted: termsAccepted,
         }),
       })
       const json = await res.json()
@@ -86,14 +91,9 @@ export default function ClaimForm({ token, event, waiver }) {
           <Field label="Phone" type="tel" value={phone} onChange={setPhone} />
           <Field label="Email" type="email" value={email} onChange={setEmail} />
         </Row>
-        <label style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 13, color: INK_DIM }}>
-          <input
-            type="checkbox"
-            checked={smsConsent}
-            onChange={e => setSmsConsent(e.target.checked)}
-          />
-          Text me my pickup details and the live tracking link.
-        </label>
+        <ConsentCheckbox id="claim-sms-consent" checked={smsConsent} onChange={setSmsConsent} fontSize={12.5}>
+          <SmsConsentLabel />
+        </ConsentCheckbox>
       </Section>
 
       <Section title="Waiver">
@@ -147,6 +147,15 @@ export default function ClaimForm({ token, event, waiver }) {
           {error}
         </div>
       )}
+
+      <ConsentCheckbox id="claim-terms" checked={termsAccepted} onChange={setTermsAccepted} required>
+        {minAge
+          ? <>I am {minAge} or older and will bring a valid photo ID. I agree to the </>
+          : <>I am 18 or older and agree to the </>}
+        <PolicyLink href="/terms">Terms of Service</PolicyLink>,{' '}
+        <PolicyLink href="/refunds">Refund Policy</PolicyLink> and{' '}
+        <PolicyLink href="/privacy">Privacy Policy</PolicyLink>.
+      </ConsentCheckbox>
 
       <button
         type="submit"

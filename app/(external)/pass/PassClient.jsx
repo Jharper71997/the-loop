@@ -1,12 +1,13 @@
 'use client'
 
 import { useState } from 'react'
+import ConsentCheckbox, { PolicyLink } from '@/app/_components/legal/ConsentCheckbox'
 
 const GOLD = '#d4a333'
 const GOLD_HI = '#f0c24a'
 const INK = '#f5f5f7'
 const INK_DIM = '#b8b8bf'
-const INK_MUTED = '#8a8a90'
+const INK_MUTED = '#94949b' // 4.5:1+ on the card background
 const LINE = 'rgba(255,255,255,0.10)'
 const CARD = 'rgba(255,255,255,0.03)'
 
@@ -15,9 +16,14 @@ export default function PassClient({ plans = [] }) {
   const [plan, setPlan] = useState(plans[0]?.id || 'monthly')
   const [submitting, setSubmitting] = useState(false)
   const [error, setError] = useState('')
+  // Required, never pre-ticked: the rider confirms they understand the pass
+  // renews automatically at the price shown until they cancel.
+  const [renewalAck, setRenewalAck] = useState(false)
 
   const set = (k) => (e) => setForm((f) => ({ ...f, [k]: e.target.value }))
-  const ready = form.first_name.trim() && form.phone.trim() && plan
+  const selected = plans.find(p => p.id === plan) || null
+  const priceText = selected?.price ? formatPrice(selected.price) : null
+  const ready = form.first_name.trim() && form.phone.trim() && plan && priceText && renewalAck
 
   async function submit(e) {
     e.preventDefault()
@@ -28,7 +34,7 @@ export default function PassClient({ plans = [] }) {
       const res = await fetch('/api/loop-pass', {
         method: 'POST',
         headers: { 'content-type': 'application/json' },
-        body: JSON.stringify({ ...form, plan }),
+        body: JSON.stringify({ ...form, plan, renewal_ack: renewalAck }),
       })
       const data = await res.json().catch(() => ({}))
       if (!res.ok || !data.url) {
@@ -56,7 +62,7 @@ export default function PassClient({ plans = [] }) {
 
   return (
     <main style={wrap}>
-      <p style={kicker}>Ride more, pay less</p>
+      <p style={kicker}>Monthly membership</p>
       <h1 style={h1}>Loop Pass</h1>
       <p style={{ color: INK_DIM, marginTop: 8, fontSize: 16, maxWidth: 460 }}>
         Your standing seat on every weekend loop. Skip the per-night checkout and just hop on.
@@ -71,6 +77,7 @@ export default function PassClient({ plans = [] }) {
                 type="button"
                 key={p.id}
                 onClick={() => setPlan(p.id)}
+                aria-pressed={active}
                 style={{
                   textAlign: 'left',
                   padding: '16px 18px',
@@ -83,7 +90,10 @@ export default function PassClient({ plans = [] }) {
               >
                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
                   <span style={{ fontWeight: 700, fontSize: 16 }}>{p.label}</span>
-                  <span style={{ color: active ? GOLD : INK_MUTED, fontSize: 18 }}>{active ? '●' : '○'}</span>
+                  <span style={{ color: active ? GOLD : INK_DIM, fontSize: 15, fontWeight: 800 }}>
+                    {p.price ? formatPrice(p.price) : 'Price unavailable'}
+                    <span aria-hidden style={{ marginLeft: 10, fontSize: 18 }}>{active ? '●' : '○'}</span>
+                  </span>
                 </div>
                 <div style={{ color: INK_DIM, fontSize: 13, marginTop: 4 }}>{p.blurb}</div>
               </button>
@@ -96,8 +106,23 @@ export default function PassClient({ plans = [] }) {
           <Field label="Last name" value={form.last_name} onChange={set('last_name')} autoComplete="family-name" />
         </Row>
         <Field label="Mobile number" value={form.phone} onChange={set('phone')} type="tel" autoComplete="tel" required
-          hint="We text your pickup details to this number." />
+          hint="We text your pass details and pickup info to this number. Msg & data rates may apply. Reply STOP to opt out." />
         <Field label="Email (optional)" value={form.email} onChange={set('email')} type="email" autoComplete="email" />
+
+        <div style={{ padding: '14px 16px', borderRadius: 12, border: `1px solid ${LINE}`, background: CARD, display: 'grid', gap: 10 }}>
+          <p style={{ color: INK, fontSize: 14, lineHeight: 1.55, margin: 0 }}>
+            {priceText
+              ? <><strong>{priceText}, billed automatically</strong> starting today and every {intervalWord(selected.price)} after, until you cancel.</>
+              : <>We could not load the price right now, so checkout is paused. Please try again shortly.</>}
+            {' '}Cancel anytime on the <PolicyLink href="/pass/manage">Manage your Loop Pass</PolicyLink> page or by contacting us; your pass then runs to the end of the period you paid for.
+          </p>
+          <ConsentCheckbox id="pass-renewal" checked={renewalAck} onChange={setRenewalAck} required>
+            I understand my Loop Pass renews automatically{priceText ? ` at ${priceText}` : ''} until I cancel, and I agree to the{' '}
+            <PolicyLink href="/terms#loop-pass">Terms of Service</PolicyLink>,{' '}
+            <PolicyLink href="/refunds#loop-pass">Refund Policy</PolicyLink> and{' '}
+            <PolicyLink href="/privacy">Privacy Policy</PolicyLink>. I am 21 or older.
+          </ConsentCheckbox>
+        </div>
 
         {error && <div style={{ color: '#ff9a8a', fontSize: 14 }}>{error}</div>}
 
@@ -105,11 +130,22 @@ export default function PassClient({ plans = [] }) {
           {submitting ? 'Starting checkout…' : 'Get my Loop Pass'}
         </button>
         <p style={{ color: INK_MUTED, fontSize: 12, textAlign: 'center' }}>
-          Secure checkout powered by Stripe. Cancel anytime.
+          Secure checkout powered by Stripe. No fees on top of the price shown.
         </p>
       </form>
     </main>
   )
+}
+
+function formatPrice(price) {
+  const amount = (price.amountCents / 100).toLocaleString('en-US', { style: 'currency', currency: price.currency || 'USD' })
+  return `${amount}/${intervalWord(price)}`
+}
+
+function intervalWord(price) {
+  const n = price?.intervalCount || 1
+  const unit = price?.interval || 'month'
+  return n === 1 ? unit : `${n} ${unit}s`
 }
 
 function Row({ children }) {
