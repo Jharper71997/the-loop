@@ -65,7 +65,7 @@ export default function PassClient({ plans = [] }) {
       <p style={kicker}>Monthly membership</p>
       <h1 style={h1}>Loop Pass</h1>
       <p style={{ color: INK_DIM, marginTop: 8, fontSize: 16, maxWidth: 460 }}>
-        Your standing seat on every weekend loop. Skip the per-night checkout and just hop on.
+        Every weekend loop, covered. Book your seat each weekend and it shows $0.
       </p>
 
       <form onSubmit={submit} style={{ marginTop: 28, display: 'flex', flexDirection: 'column', gap: 18 }}>
