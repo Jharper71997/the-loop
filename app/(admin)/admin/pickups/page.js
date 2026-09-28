@@ -1,5 +1,5 @@
 import { supabaseAdmin } from '@/lib/supabaseAdmin'
-import { isDoorPickupEvent, zoneOfTicketType } from '@/lib/doorPickup'
+import { isDoorPickupEvent, zoneOfTicketType, joinUrl, DOOR_PICKUP_MIN_RIDERS } from '@/lib/doorPickup'
 
 export const metadata = { title: 'Door pickups' }
 export const dynamic = 'force-dynamic'
@@ -42,7 +42,12 @@ export default async function PickupsPage() {
             <h2 style={{ fontSize: 18, fontWeight: 800, margin: '0 0 4px' }}>{ev.name}</h2>
             <div style={{ color: '#9c9ca3', fontSize: 13, marginBottom: 12 }}>{ev.event_date} · {ev.status}</div>
             {slots.map(slot => {
-              const groups = evOrders.filter(o => (o.order_items || []).some(i => i.ticket_type_id === slot.id && !i.voided_at))
+              const live = o => (o.order_items || []).filter(i => !i.voided_at).length
+              const inSlot = evOrders.filter(o => (o.order_items || []).some(i => i.ticket_type_id === slot.id && !i.voided_at))
+              // Organizers, each with the friends who joined and paid their own seat.
+              const groups = inSlot.filter(o => !o.metadata?.door_pickup?.party_of).map(o => ({
+                ...o, joiners: inSlot.filter(j => j.metadata?.door_pickup?.party_of === o.id),
+              }))
               const seats = groups.reduce((s, o) => s + (o.order_items || []).filter(i => !i.voided_at).length, 0)
               return (
                 <div key={slot.id} style={{ borderTop: '1px solid #2a2a31', padding: '10px 0' }}>
@@ -54,11 +59,13 @@ export default async function PickupsPage() {
                   </div>
                   {groups.map(o => {
                     const d = o.metadata?.door_pickup || {}
+                    const total = live(o) + o.joiners.reduce((s, j) => s + live(j), 0)
                     const addr = [d.street, d.city, d.zip].filter(Boolean).join(', ')
                     return (
                       <div key={o.id} style={{ fontSize: 14, padding: '8px 0 0 12px', lineHeight: 1.5 }}>
                         <div>
-                          {o.buyer_name || 'Group'} · {(o.order_items || []).filter(i => !i.voided_at).length} riders ·{' '}
+                          {o.buyer_name || 'Group'} · <strong style={{ color: total < DOOR_PICKUP_MIN_RIDERS ? '#f87171' : '#f5f5f7' }}>{total} riders</strong>
+                          {total < DOOR_PICKUP_MIN_RIDERS ? ' (under 4)' : ''} ·{' '}
                           {o.buyer_phone ? <a href={`tel:${o.buyer_phone}`} style={{ color: '#d4a333' }}>{o.buyer_phone}</a> : 'no phone'}
                         </div>
                         <div>
@@ -68,6 +75,10 @@ export default async function PickupsPage() {
                           ? <div style={{ color: '#9c9ca3' }}>{d.geo.miles} mi from the depot</div>
                           : <div style={{ color: '#f87171' }}>Address not verified on the map. Check it before the run.</div>}
                         {d.notes && <div style={{ color: '#9c9ca3' }}>Note: {d.notes}</div>}
+                        {o.joiners.map(j => (
+                          <div key={j.id} style={{ color: '#9c9ca3' }}>+ {j.buyer_name || 'Friend'} · {live(j)} paid their own · {j.buyer_phone || ''}</div>
+                        ))}
+                        {d.join_code && <div style={{ color: '#6c6c74', fontSize: 12, wordBreak: 'break-all' }}>Group link: {joinUrl(ev.id, d.join_code)}</div>}
                       </div>
                     )
                   })}

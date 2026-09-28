@@ -16,7 +16,7 @@ import { LEGAL } from '@/lib/legal'
 import {
   DOOR_PICKUP_MIN_RIDERS, DOOR_PICKUP_MAX_RIDERS,
   isDoorPickupEvent, zoneOfTicketType, zipProblem, normalizeZip,
-  geocodeAddress, pointProblem, milesBetween, DEPOT,
+  geocodeAddress, pointProblem, milesBetween, DEPOT, mintJoinCode, findParty,
 } from '@/lib/doorPickup'
 
 function mintClaimToken() {
@@ -163,8 +163,18 @@ async function handleCheckout(req) {
     .from('ticket_types').select('id, name, active').eq('event_id', event.id).eq('active', true)
   const doorPickup = isDoorPickupEvent(event, eventTts)
   let doorPickupMeta = null
-  if (doorPickup) {
-    if (riders.length < DOOR_PICKUP_MIN_RIDERS || riders.length > DOOR_PICKUP_MAX_RIDERS) {
+  const joinCode = doorPickup ? String(body.join_code || '').trim() : ''
+  if (doorPickup && joinCode) {
+    // A friend joining a group: same slot, same address, pays their own seat.
+    const party = await findParty(supabase, event.id, joinCode)
+    if (!party) return Response.json({ error: 'join_invalid' }, { status: 400 })
+    if (riders.length > DOOR_PICKUP_MAX_RIDERS || riders.some(r => r.ticket_type_id !== party.slotId)) {
+      return Response.json({ error: 'one_slot_per_group' }, { status: 400 })
+    }
+    const { join_code: _code, ...rest } = party.metadata?.door_pickup || {}
+    doorPickupMeta = { ...rest, party_of: party.id, party_name: party.buyer_name || null }
+  } else if (doorPickup) {
+    if (riders.length > DOOR_PICKUP_MAX_RIDERS) {
       return Response.json({ error: 'group_size' }, { status: 400 })
     }
     if (new Set(riders.map(r => r.ticket_type_id)).size !== 1) {
@@ -190,6 +200,7 @@ async function handleCheckout(req) {
       notes: String(addr.notes || '').trim().slice(0, 300) || null,
       // null = the geocoder could not place it; the run sheet flags it.
       geo: geo ? { lat: geo.lat, lon: geo.lon, miles: Math.round(milesBetween(DEPOT, geo) * 10) / 10 } : null,
+      join_code: mintJoinCode(),
     }
   }
 

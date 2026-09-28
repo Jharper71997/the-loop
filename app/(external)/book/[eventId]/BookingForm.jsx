@@ -29,6 +29,8 @@ export default function BookingForm({
   // Door pickup (lib/doorPickup.js): the group picks ONE departure slot and is
   // collected from their own address, which has to sit in that slot's zone.
   doorPickup = false,
+  // Door pickup, joining someone's group: { code, slotId, organizer, street, city }.
+  joinParty = null,
 }) {
   // A walk-on ticket type carries no bar (stop_index null). When the rider picks
   // one we make them choose a pickup bar from the night's list so the driver and
@@ -38,7 +40,8 @@ export default function BookingForm({
   // Default to the first ticket type that still has seats. If everything is
   // sold out we fall back to the first one anyway so the form renders — the
   // submit button will be disabled by the oversell check below.
-  const defaultTtId = (ticketTypes.find(t => (t.remaining ?? Infinity) > 0) || ticketTypes[0])?.id || ''
+  const defaultTtId = joinParty?.slotId
+    || (ticketTypes.find(t => (t.remaining ?? Infinity) > 0) || ticketTypes[0])?.id || ''
 
   const [attribution, setAttribution] = useState(null)
   const [bartenderCode, setBartenderCode] = useState('')
@@ -92,8 +95,6 @@ export default function BookingForm({
       typed_name: '',
       pickup_stop_index: '',
     },
-    // A door pickup group starts at its minimum size.
-    ...Array.from({ length: doorPickup ? DOOR_PICKUP_MIN_RIDERS - 1 : 0 }, () => newGuest(defaultTtId)),
   ])
   const [pickupAddress, setPickupAddress] = useState({ street: '', city: 'Jacksonville', zip: '', notes: '' })
   const doorSlot = doorPickup ? ticketTypes.find(t => t.id === riders[0]?.ticket_type_id) : null
@@ -201,12 +202,14 @@ export default function BookingForm({
     if (buyerOwesSig && !buyerTypedName.trim()) return false
     if (!termsAccepted) return false
     if (doorPickup) {
-      if (riders.length < DOOR_PICKUP_MIN_RIDERS || riders.length > DOOR_PICKUP_MAX_RIDERS) return false
-      if (!pickupAddress.street.trim() || !pickupAddress.city.trim()) return false
-      if (zipProblem(pickupAddress.zip, doorZone)) return false
+      if (riders.length > DOOR_PICKUP_MAX_RIDERS) return false
+      if (!joinParty) {
+        if (!pickupAddress.street.trim() || !pickupAddress.city.trim()) return false
+        if (zipProblem(pickupAddress.zip, doorZone)) return false
+      }
     }
     return true
-  }, [buyer, riders, ticketTypes, stops, buyerOwesSig, buyerTypedName, oversellError, termsAccepted, doorPickup, pickupAddress, doorZone])
+  }, [buyer, riders, ticketTypes, stops, buyerOwesSig, buyerTypedName, oversellError, termsAccepted, doorPickup, joinParty, pickupAddress, doorZone])
 
   async function onSubmit(e) {
     e.preventDefault()
@@ -273,7 +276,8 @@ export default function BookingForm({
           buyer_typed_name: buyerTypedName.trim(),
           attribution: submittedAttribution,
           client_token: clientToken,
-          ...(doorPickup ? { pickup_address: pickupAddress } : {}),
+          ...(doorPickup && joinParty ? { join_code: joinParty.code } : {}),
+          ...(doorPickup && !joinParty ? { pickup_address: pickupAddress } : {}),
           terms_accepted: termsAccepted,
           age_confirmed: !!minAge && termsAccepted,
         }),
@@ -303,7 +307,9 @@ export default function BookingForm({
         } else if (json.error === 'pickup_address') {
           message = json.message || 'Please check your pickup address.'
         } else if (json.error === 'group_size') {
-          message = `Groups are ${DOOR_PICKUP_MIN_RIDERS} to ${DOOR_PICKUP_MAX_RIDERS} riders.`
+          message = `A booking holds up to ${DOOR_PICKUP_MAX_RIDERS} riders.`
+        } else if (json.error === 'join_invalid') {
+          message = 'That group link isn’t valid anymore. Ask whoever sent it for a new one, or book your own pickup.'
         } else if (json.error === 'pass_verify_failed') {
           message = json.message
         } else if (json.error) {
@@ -378,7 +384,19 @@ export default function BookingForm({
         </div>
       </Section>
 
-      {doorPickup && (
+      {doorPickup && joinParty && (
+        <Section title="Joining a group">
+          <p style={{ fontSize: 15, color: '#f5f5f7', lineHeight: 1.55, margin: 0 }}>
+            You&rsquo;re riding with <strong>{joinParty.organizer || 'your group'}</strong>
+            {doorSlot ? <> at <strong style={{ color: ACCENT }}>{doorSlot.name.replace(/\s*·\s*Zone\s*\d/i, '')}</strong></> : null}.
+          </p>
+          <p style={{ fontSize: 13.5, color: '#9c9ca3', lineHeight: 1.55, margin: 0 }}>
+            Pickup at {joinParty.street}, {joinParty.city}. Pay for your own seat below. Adding someone else? Add them as a rider.
+          </p>
+        </Section>
+      )}
+
+      {doorPickup && !joinParty && (
         <Section title="Pickup">
           <label style={{ display: 'grid', gap: 7 }}>
             <span style={{ fontSize: 14, color: '#f5f5f7', fontWeight: 700 }}>What time should we pick you up?</span>
@@ -414,9 +432,13 @@ export default function BookingForm({
             <div style={{ fontSize: 13, color: '#f87171', lineHeight: 1.5 }}>{zipError}</div>
           )}
           <Field label="Anything the driver should know? (gate code, which building)" value={pickupAddress.notes} onChange={v => setPickupAddress(a => ({ ...a, notes: v }))} />
+          <p style={{ fontSize: 13, color: '#f5f5f7', lineHeight: 1.55, margin: 0 }}>
+            <strong style={{ color: ACCENT }}>Everyone pays for their own seat.</strong> Book yours now. After you pay you get a
+            link to text your group; each friend pays their own $10 and rides with you. Want to cover someone? Add them as a rider.
+          </p>
           <p style={{ fontSize: 12.5, color: '#9c9ca3', lineHeight: 1.5, margin: 0 }}>
             Pickup only. We drop your group downtown at the train depot, a short walk to Oktoberfest. The ride home is not included.
-            Groups of {DOOR_PICKUP_MIN_RIDERS} to {DOOR_PICKUP_MAX_RIDERS}, all from one address, within 10 miles and not past Piney Green Rd. No pickups on base.
+            Groups of {DOOR_PICKUP_MIN_RIDERS} or more, up to {DOOR_PICKUP_MAX_RIDERS}, all from one address, within 10 miles and not past Piney Green Rd. No pickups on base.
           </p>
         </Section>
       )}
@@ -439,7 +461,7 @@ export default function BookingForm({
               }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                   <strong style={{ color: ACCENT, fontSize: 11, letterSpacing: '0.2em', textTransform: 'uppercase', fontWeight: 800 }}>Rider {idx + 1}</strong>
-                  {idx > 0 && !(doorPickup && riders.length <= DOOR_PICKUP_MIN_RIDERS) && (
+                  {idx > 0 && (
                     <button type="button" onClick={() => removeRider(idx)} style={btnGhost}>Remove</button>
                   )}
                 </div>

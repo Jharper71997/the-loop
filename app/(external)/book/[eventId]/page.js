@@ -9,7 +9,7 @@ import { capacityForTicketType } from '@/lib/capacity'
 import { getBarByName } from '@/lib/bars'
 import { GOLD, INK, INK_DIM, INK_MUTE, MAX_W, eyebrow } from '@/lib/marketingTheme'
 import { TONES, grainOverlay, lightPool, photoScrim, litCard, litCardInner } from '@/lib/atmosphere'
-import { isDoorPickupEvent } from '@/lib/doorPickup'
+import { isDoorPickupEvent, findParty } from '@/lib/doorPickup'
 import BookingForm from './BookingForm'
 
 export const dynamic = 'force-dynamic'
@@ -35,8 +35,9 @@ export async function generateMetadata({ params }) {
   }
 }
 
-export default async function EventBookingPage({ params }) {
+export default async function EventBookingPage({ params, searchParams }) {
   const { eventId } = await params
+  const sp = await searchParams
 
   let supabase
   try {
@@ -189,6 +190,24 @@ export default async function EventBookingPage({ params }) {
 
   const doorPickup = isDoorPickupEvent(event, ticketTypes)
 
+  // ?join=<code>: a friend paying their own seat in someone's group.
+  let joinParty = null
+  if (doorPickup && sp?.join) {
+    try {
+      const party = await findParty(supabase, event.id, String(sp.join))
+      const d = party?.metadata?.door_pickup
+      if (party && d) {
+        joinParty = {
+          code: String(sp.join), slotId: party.slotId,
+          organizer: (party.buyer_name || '').trim().split(/\s+/)[0] || null,
+          street: d.street, city: d.city,
+        }
+      }
+    } catch (err) {
+      console.error('[book/eventId] join lookup threw', err)
+    }
+  }
+
   let waiver = null
   try {
     waiver = await getCurrentWaiverVersion(supabase)
@@ -266,6 +285,7 @@ export default async function EventBookingPage({ params }) {
               /* Same test the checkout route uses to honor the pass. */
               loopPass={event.kind === 'brew' && !doorPickup}
               doorPickup={doorPickup}
+              joinParty={joinParty}
             />
           </div>
 

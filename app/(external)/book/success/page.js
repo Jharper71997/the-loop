@@ -1,5 +1,7 @@
 import { supabaseAdmin } from '@/lib/supabaseAdmin'
 import { brandFor, prefixLink } from '@/lib/businessConfig'
+import { joinUrl } from '@/lib/doorPickup'
+import CopyJoinLink from './CopyJoinLink'
 
 export const dynamic = 'force-dynamic'
 
@@ -13,7 +15,7 @@ const INK = '#f5f5f7'
 async function loadOrder(sessionId, orderId) {
   if (!sessionId && !orderId) return null
   const sb = supabaseAdmin()
-  const sel = 'contact_id, contacts ( id, first_name ), event:events ( kind )'
+  const sel = 'contact_id, event_id, metadata, contacts ( id, first_name ), event:events ( kind )'
   const { data: order } = await (sessionId
     ? sb.from('orders').select(sel).eq('stripe_checkout_session_id', sessionId)
     : sb.from('orders').select(sel).eq('id', orderId)
@@ -42,6 +44,9 @@ export default async function BookingSuccess({ searchParams }) {
   let kind = 'brew'
 
   const order = await loadOrder(sessionId, orderId)
+  // Door pickup organizer: hand them the link their group pays through.
+  const door = order?.metadata?.door_pickup
+  const groupLink = door?.join_code && !door.party_of ? joinUrl(order.event_id, door.join_code) : null
   if (order) {
     kind = order.event?.kind || 'brew'
     firstName = order.contacts?.first_name || null
@@ -82,6 +87,8 @@ export default async function BookingSuccess({ searchParams }) {
               Your ticket is on its way to your inbox. Check your email for the QR code, or open My Tickets anytime.
             </p>
           </div>
+
+          {groupLink && <CopyJoinLink url={groupLink} slot={door.slot} />}
 
           <div style={{ marginTop: 40, display: 'flex', gap: 12, justifyContent: 'center', flexWrap: 'wrap' }}>
             <a href={myTicketsHref} style={ghostCta}>My tickets</a>
