@@ -13,6 +13,10 @@ import { finalizeBooking } from '@/lib/booking'
 import { MARINES_VERIFIED_COOKIE } from '@/lib/marines'
 import { capacityForTicketType } from '@/lib/capacity'
 import { LEGAL } from '@/lib/legal'
+import {
+  DOOR_PICKUP_MIN_RIDERS, DOOR_PICKUP_MAX_RIDERS,
+  isDoorPickupEvent, zoneOfTicketType, zipProblem, normalizeZip,
+} from '@/lib/doorPickup'
 
 function mintClaimToken() {
   // 24 bytes => 32 url-safe base64 chars. Long enough that brute-forcing
@@ -148,6 +152,35 @@ async function handleCheckout(req) {
     const tt = ttById.get(r.ticket_type_id)
     if (!tt || tt.event_id !== event.id || !tt.active) {
       return Response.json({ error: 'invalid ticket_type_id' }, { status: 400 })
+    }
+  }
+
+  // Door pickup (lib/doorPickup.js): one group, one departure slot, picked up
+  // from an address inside that slot's zone. The whole group rides one slot so
+  // the driver makes one stop per booking.
+  const { data: eventTts } = await supabase
+    .from('ticket_types').select('id, name, active').eq('event_id', event.id).eq('active', true)
+  const doorPickup = isDoorPickupEvent(event, eventTts)
+  let doorPickupMeta = null
+  if (doorPickup) {
+    if (riders.length < DOOR_PICKUP_MIN_RIDERS || riders.length > DOOR_PICKUP_MAX_RIDERS) {
+      return Response.json({ error: 'group_size' }, { status: 400 })
+    }
+    if (new Set(riders.map(r => r.ticket_type_id)).size !== 1) {
+      return Response.json({ error: 'one_slot_per_group' }, { status: 400 })
+    }
+    const slot = ttById.get(riders[0].ticket_type_id)
+    const zone = zoneOfTicketType(slot)
+    const addr = body.pickup_address || {}
+    const street = String(addr.street || '').trim().slice(0, 200)
+    const city = String(addr.city || '').trim().slice(0, 80)
+    const problem = zipProblem(addr.zip, zone)
+    if (!street || !city || problem) {
+      return Response.json({ error: 'pickup_address', message: problem || 'Enter your pickup address.' }, { status: 400 })
+    }
+    doorPickupMeta = {
+      street, city, zip: normalizeZip(addr.zip), zone, slot: slot.name,
+      notes: String(addr.notes || '').trim().slice(0, 300) || null,
     }
   }
 
@@ -376,7 +409,7 @@ async function handleCheckout(req) {
     // Only Brew Loop honors the Brew Loop subscription pass. Marines + Surf City
     // are separate businesses — their fares are always charged, so a rider who
     // happens to hold a Brew Loop Pass can't ride those free.
-    if (event.kind !== 'brew' || event.is_private) continue
+    if (event.kind !== 'brew' || event.is_private || doorPickup) continue
     if (rc.claim || !rc.contact?.id) continue
     if (usedPassContacts.has(rc.contact.id)) continue
     if (!(await getActivePass(supabase, rc.contact.id))) continue
@@ -411,7 +444,7 @@ async function handleCheckout(req) {
   // dropped silently rather than failing the sale.
   const addonRows = []
   const addonLineItems = []
-  const requestedAddons = Array.isArray(body.addons) ? body.addons : []
+  const requestedAddons = Array.isArray(body.addons) && !doorPickup ? body.addons : []
   if (requestedAddons.length) {
     const addonIds = [...new Set(requestedAddons.map(a => a?.addon_id).filter(Boolean))]
     if (addonIds.length) {
@@ -469,9 +502,15 @@ async function handleCheckout(req) {
       // metadata->>kind test (marines / surf). Brew Loop stays untagged. The
       // webhook spreads existing order.metadata before its own fields, so this
       // survives settlement.
-      ...(event.kind && event.kind !== 'brew' ? { metadata: { kind: event.kind } } : {}),
       // Which pass covered a seat, so the door scanner can ask for the holder's ID.
-      ...(passUsed ? { metadata: { loop_pass: passUsed } } : {}),
+      // Door pickup carries the address the driver goes to.
+      ...((event.kind && event.kind !== 'brew') || passUsed || doorPickupMeta
+        ? { metadata: {
+            ...(event.kind && event.kind !== 'brew' ? { kind: event.kind } : {}),
+            ...(passUsed ? { loop_pass: passUsed } : {}),
+            ...(doorPickupMeta ? { door_pickup: doorPickupMeta } : {}),
+          } }
+        : {}),
     })
     .select('id')
     .single()

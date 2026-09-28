@@ -9,6 +9,7 @@ import { capacityForTicketType } from '@/lib/capacity'
 import { getBarByName } from '@/lib/bars'
 import { GOLD, INK, INK_DIM, INK_MUTE, MAX_W, eyebrow } from '@/lib/marketingTheme'
 import { TONES, grainOverlay, lightPool, photoScrim, litCard, litCardInner } from '@/lib/atmosphere'
+import { isDoorPickupEvent } from '@/lib/doorPickup'
 import BookingForm from './BookingForm'
 
 export const dynamic = 'force-dynamic'
@@ -186,6 +187,8 @@ export default async function EventBookingPage({ params }) {
     console.error('[book/eventId] addons threw', err)
   }
 
+  const doorPickup = isDoorPickupEvent(event, ticketTypes)
+
   let waiver = null
   try {
     waiver = await getCurrentWaiverVersion(supabase)
@@ -255,13 +258,14 @@ export default async function EventBookingPage({ params }) {
               eventId={event.id}
               eventName={event.name}
               ticketTypes={ticketTypes || []}
-              addons={addons}
+              addons={doorPickup ? [] : addons}
               stops={stops}
               waiver={waiver}
               minAge={event.kind === 'marines' ? null : 21}
               brandName={cfg.brand}
               /* Same test the checkout route uses to honor the pass. */
-              loopPass={event.kind === 'brew'}
+              loopPass={event.kind === 'brew' && !doorPickup}
+              doorPickup={doorPickup}
             />
           </div>
 
@@ -273,7 +277,7 @@ export default async function EventBookingPage({ params }) {
           <aside className="bk-aside">
             <div style={litCard({ radius: 18 })}>
               <div style={litCardInner({ radius: 17, pad: 22 })}>
-                <div style={eyebrow}>Your night</div>
+                <div style={eyebrow}>{doorPickup ? 'Your ride' : 'Your night'}</div>
 
                 {routeStops.length > 0 && (
                   <ol className="bk-route">
@@ -294,13 +298,23 @@ export default async function EventBookingPage({ params }) {
                   </ol>
                 )}
 
-                <ul className="bk-facts">
-                  <li>One seat covers the whole night</li>
-                  <li>Shuttle loops all night, back at every bar about every 1h15</li>
-                  <li>Ends back at the stop you started from</li>
-                  <li>Track the shuttle live all night</li>
-                  <li>Strictly 21+, every rider</li>
-                </ul>
+                {doorPickup ? (
+                  <ul className="bk-facts">
+                    <li>We pick your group up at your door at the time you choose</li>
+                    <li>Dropped at Riverwalk Crossing Park for Oktoberfest</li>
+                    <li>Pickup only, the ride home is not included</li>
+                    <li>Groups of 4 to 13 from one address, off base</li>
+                    <li>Strictly 21+, every rider</li>
+                  </ul>
+                ) : (
+                  <ul className="bk-facts">
+                    <li>One seat covers the whole night</li>
+                    <li>Shuttle loops all night, back at every bar about every 1h15</li>
+                    <li>Ends back at the stop you started from</li>
+                    <li>Track the shuttle live all night</li>
+                    <li>Strictly 21+, every rider</li>
+                  </ul>
+                )}
               </div>
             </div>
           </aside>

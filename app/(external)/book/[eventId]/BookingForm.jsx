@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import { prefixLink } from '@/lib/businessConfig'
 import ConsentCheckbox, { PolicyLink, SmsConsentLabel } from '@/app/_components/legal/ConsentCheckbox'
+import { DOOR_PICKUP_MIN_RIDERS, DOOR_PICKUP_MAX_RIDERS, ZONES, zoneOfTicketType, zipProblem } from '@/lib/doorPickup'
 
 const ACCENT = '#d4a333'
 const SURFACE = '#15151a'
@@ -25,6 +26,9 @@ export default function BookingForm({
   // Brew Loop only: explain how a Loop Pass is applied. The discount happens
   // server-side, so without this a member sees full price and assumes it failed.
   loopPass = false,
+  // Door pickup (lib/doorPickup.js): the group picks ONE departure slot and is
+  // collected from their own address, which has to sit in that slot's zone.
+  doorPickup = false,
 }) {
   // A walk-on ticket type carries no bar (stop_index null). When the rider picks
   // one we make them choose a pickup bar from the night's list so the driver and
@@ -77,7 +81,7 @@ export default function BookingForm({
   // Terms / Privacy / Refund agreement (plus the age rule on the bar loops).
   // Required to pay, never pre-ticked.
   const [termsAccepted, setTermsAccepted] = useState(false)
-  const [riders, setRiders] = useState([
+  const [riders, setRiders] = useState(() => [
     {
       ticket_type_id: defaultTtId,
       first_name: '', last_name: '', email: '', phone: '',
@@ -88,7 +92,20 @@ export default function BookingForm({
       typed_name: '',
       pickup_stop_index: '',
     },
+    // A door pickup group starts at its minimum size.
+    ...Array.from({ length: doorPickup ? DOOR_PICKUP_MIN_RIDERS - 1 : 0 }, () => newGuest(defaultTtId)),
   ])
+  const [pickupAddress, setPickupAddress] = useState({ street: '', city: 'Jacksonville', zip: '', notes: '' })
+  const doorSlot = doorPickup ? ticketTypes.find(t => t.id === riders[0]?.ticket_type_id) : null
+  const doorZone = doorSlot ? zoneOfTicketType(doorSlot) : null
+  const zipError = doorPickup && pickupAddress.zip.trim().length >= 5
+    ? zipProblem(pickupAddress.zip, doorZone)
+    : null
+
+  // One slot for the whole group.
+  function setDoorSlot(ttId) {
+    setRiders(prev => prev.map(r => ({ ...r, ticket_type_id: ttId })))
+  }
   // Add-on quantities, keyed by addon id. Default everything to 0 (opt-in).
   const [addonQty, setAddonQty] = useState(() =>
     Object.fromEntries((addons || []).map(a => [a.id, 0])))
@@ -120,16 +137,10 @@ export default function BookingForm({
   }
 
   function addRider() {
-    setRiders(prev => [...prev, {
-      ticket_type_id: defaultTtId,
-      first_name: '', last_name: '', email: '', phone: '',
-      same_as_buyer: false,
-      signed_self: false,
-      signed_by_buyer: false,
-      claim_link: true,
-      typed_name: '',
-      pickup_stop_index: '',
-    }])
+    setRiders(prev => {
+      if (doorPickup && prev.length >= DOOR_PICKUP_MAX_RIDERS) return prev
+      return [...prev, newGuest(doorPickup ? prev[0].ticket_type_id : defaultTtId)]
+    })
   }
 
   function removeRider(idx) {
@@ -189,8 +200,13 @@ export default function BookingForm({
     }
     if (buyerOwesSig && !buyerTypedName.trim()) return false
     if (!termsAccepted) return false
+    if (doorPickup) {
+      if (riders.length < DOOR_PICKUP_MIN_RIDERS || riders.length > DOOR_PICKUP_MAX_RIDERS) return false
+      if (!pickupAddress.street.trim() || !pickupAddress.city.trim()) return false
+      if (zipProblem(pickupAddress.zip, doorZone)) return false
+    }
     return true
-  }, [buyer, riders, ticketTypes, stops, buyerOwesSig, buyerTypedName, oversellError, termsAccepted])
+  }, [buyer, riders, ticketTypes, stops, buyerOwesSig, buyerTypedName, oversellError, termsAccepted, doorPickup, pickupAddress, doorZone])
 
   async function onSubmit(e) {
     e.preventDefault()
@@ -257,6 +273,7 @@ export default function BookingForm({
           buyer_typed_name: buyerTypedName.trim(),
           attribution: submittedAttribution,
           client_token: clientToken,
+          ...(doorPickup ? { pickup_address: pickupAddress } : {}),
           terms_accepted: termsAccepted,
           age_confirmed: !!minAge && termsAccepted,
         }),
@@ -283,6 +300,10 @@ export default function BookingForm({
           // them to verify with their DoD ID, then back to buying.
           window.location.href = prefixLink('/verify', 'marines')
           return
+        } else if (json.error === 'pickup_address') {
+          message = json.message || 'Please check your pickup address.'
+        } else if (json.error === 'group_size') {
+          message = `Groups are ${DOOR_PICKUP_MIN_RIDERS} to ${DOOR_PICKUP_MAX_RIDERS} riders.`
         } else if (json.error === 'pass_verify_failed') {
           message = json.message
         } else if (json.error) {
@@ -357,6 +378,49 @@ export default function BookingForm({
         </div>
       </Section>
 
+      {doorPickup && (
+        <Section title="Pickup">
+          <label style={{ display: 'grid', gap: 7 }}>
+            <span style={{ fontSize: 14, color: '#f5f5f7', fontWeight: 700 }}>What time should we pick you up?</span>
+            <span style={{ fontSize: 12.5, color: '#9c9ca3', lineHeight: 1.5, marginTop: -3 }}>
+              Each time serves one zone of town. Pick a time in the zone your address is in.
+            </span>
+            <select value={riders[0]?.ticket_type_id || ''} onChange={e => setDoorSlot(e.target.value)} style={input}>
+              {Object.entries(ZONES).map(([n, z]) => {
+                const slots = ticketTypes.filter(t => zoneOfTicketType(t) === Number(n))
+                if (!slots.length) return null
+                return (
+                  <optgroup key={n} label={`Zone ${n}: ${z.label} (${z.zips.join(', ')})`}>
+                    {slots.map(t => (
+                      <option key={t.id} value={t.id} disabled={t.remaining === 0}>{ticketLabel(t)}</option>
+                    ))}
+                  </optgroup>
+                )
+              })}
+            </select>
+            {doorSlot && (
+              <span style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: 12.5, color: '#9c9ca3', gap: 8 }}>
+                <span>Zone {doorZone}: {ZONES[doorZone]?.label} &middot; ZIP {ZONES[doorZone]?.zips.join(' or ')}</span>
+                <RemainingBadge remaining={doorSlot.remaining} />
+              </span>
+            )}
+          </label>
+          <Field label="Street address" value={pickupAddress.street} onChange={v => setPickupAddress(a => ({ ...a, street: v }))} />
+          <Row>
+            <Field label="City" value={pickupAddress.city} onChange={v => setPickupAddress(a => ({ ...a, city: v }))} />
+            <Field label="ZIP" value={pickupAddress.zip} onChange={v => setPickupAddress(a => ({ ...a, zip: v }))} />
+          </Row>
+          {zipError && (
+            <div style={{ fontSize: 13, color: '#f87171', lineHeight: 1.5 }}>{zipError}</div>
+          )}
+          <Field label="Anything the driver should know? (gate code, which building)" value={pickupAddress.notes} onChange={v => setPickupAddress(a => ({ ...a, notes: v }))} />
+          <p style={{ fontSize: 12.5, color: '#9c9ca3', lineHeight: 1.5, margin: 0 }}>
+            Pickup only. We drop your group at Oktoberfest; the ride home is not included.
+            Groups of {DOOR_PICKUP_MIN_RIDERS} to {DOOR_PICKUP_MAX_RIDERS}, all from one address. No pickups on base.
+          </p>
+        </Section>
+      )}
+
       <Section title={`Riders (${riders.length})`}>
         <div style={{ display: 'grid', gap: 12 }}>
           {riders.map((r, idx) => {
@@ -375,12 +439,12 @@ export default function BookingForm({
               }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                   <strong style={{ color: ACCENT, fontSize: 11, letterSpacing: '0.2em', textTransform: 'uppercase', fontWeight: 800 }}>Rider {idx + 1}</strong>
-                  {idx > 0 && (
+                  {idx > 0 && !(doorPickup && riders.length <= DOOR_PICKUP_MIN_RIDERS) && (
                     <button type="button" onClick={() => removeRider(idx)} style={btnGhost}>Remove</button>
                   )}
                 </div>
 
-                {(() => {
+                {!doorPickup && (() => {
                   const sel = ticketTypes.find(x => x.id === r.ticket_type_id)
                   // A walk-on ticket is not tied to a stop, so for those this
                   // select really is just the ticket and the bar is asked
@@ -550,9 +614,11 @@ export default function BookingForm({
           })}
         </div>
 
-        <button type="button" onClick={addRider} style={{ ...btnGhost, marginTop: 4, width: '100%' }}>
-          + Add another rider
-        </button>
+        {!(doorPickup && riders.length >= DOOR_PICKUP_MAX_RIDERS) && (
+          <button type="button" onClick={addRider} style={{ ...btnGhost, marginTop: 4, width: '100%' }}>
+            + Add another rider
+          </button>
+        )}
       </Section>
 
       {addons.length > 0 && (
@@ -844,6 +910,19 @@ function formatPickupTime(hhmm) {
   const suffix = h >= 12 ? 'PM' : 'AM'
   const h12 = ((h + 11) % 12) + 1
   return `${h12}:${String(m).padStart(2, '0')} ${suffix}`
+}
+
+function newGuest(ticketTypeId) {
+  return {
+    ticket_type_id: ticketTypeId,
+    first_name: '', last_name: '', email: '', phone: '',
+    same_as_buyer: false,
+    signed_self: false,
+    signed_by_buyer: false,
+    claim_link: true,
+    typed_name: '',
+    pickup_stop_index: '',
+  }
 }
 
 function mintToken() {
