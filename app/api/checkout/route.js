@@ -16,6 +16,7 @@ import { LEGAL } from '@/lib/legal'
 import {
   DOOR_PICKUP_MIN_RIDERS, DOOR_PICKUP_MAX_RIDERS,
   isDoorPickupEvent, zoneOfTicketType, zipProblem, normalizeZip,
+  geocodeAddress, pointProblem, milesBetween, DEPOT,
 } from '@/lib/doorPickup'
 
 function mintClaimToken() {
@@ -178,9 +179,17 @@ async function handleCheckout(req) {
     if (!street || !city || problem) {
       return Response.json({ error: 'pickup_address', message: problem || 'Enter your pickup address.' }, { status: 400 })
     }
+    const zip = normalizeZip(addr.zip)
+    const geo = await geocodeAddress({ street, city, zip })
+    const outside = pointProblem(geo)
+    if (outside) {
+      return Response.json({ error: 'pickup_address', message: outside }, { status: 400 })
+    }
     doorPickupMeta = {
-      street, city, zip: normalizeZip(addr.zip), zone, slot: slot.name,
+      street, city, zip, zone, slot: slot.name,
       notes: String(addr.notes || '').trim().slice(0, 300) || null,
+      // null = the geocoder could not place it; the run sheet flags it.
+      geo: geo ? { lat: geo.lat, lon: geo.lon, miles: Math.round(milesBetween(DEPOT, geo) * 10) / 10 } : null,
     }
   }
 

@@ -301,9 +301,9 @@ export default async function EventBookingPage({ params }) {
                 {doorPickup ? (
                   <ul className="bk-facts">
                     <li>We pick your group up at your door at the time you choose</li>
-                    <li>Dropped at Riverwalk Crossing Park for Oktoberfest</li>
+                    <li>Dropped at the downtown train depot, a short walk to Oktoberfest at Riverwalk Crossing</li>
                     <li>Pickup only, the ride home is not included</li>
-                    <li>Groups of 4 to 13 from one address, off base</li>
+                    <li>Groups of 4 to 13 from one address, within 10 miles and not past Piney Green Rd. No base pickups</li>
                     <li>Strictly 21+, every rider</li>
                   </ul>
                 ) : (

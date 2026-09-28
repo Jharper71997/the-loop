@@ -64,6 +64,9 @@ export default async function PickupsPage() {
                         <div>
                           <a href={`https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(addr)}`} style={{ color: '#f5f5f7' }}>{addr || 'no address'}</a>
                         </div>
+                        {d.geo
+                          ? <div style={{ color: '#9c9ca3' }}>{d.geo.miles} mi from the depot</div>
+                          : <div style={{ color: '#f87171' }}>Address not verified on the map. Check it before the run.</div>}
                         {d.notes && <div style={{ color: '#9c9ca3' }}>Note: {d.notes}</div>}
                       </div>
                     )

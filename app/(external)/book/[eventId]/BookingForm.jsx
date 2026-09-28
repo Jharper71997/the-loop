@@ -415,8 +415,8 @@ export default function BookingForm({
           )}
           <Field label="Anything the driver should know? (gate code, which building)" value={pickupAddress.notes} onChange={v => setPickupAddress(a => ({ ...a, notes: v }))} />
           <p style={{ fontSize: 12.5, color: '#9c9ca3', lineHeight: 1.5, margin: 0 }}>
-            Pickup only. We drop your group at Oktoberfest; the ride home is not included.
-            Groups of {DOOR_PICKUP_MIN_RIDERS} to {DOOR_PICKUP_MAX_RIDERS}, all from one address. No pickups on base.
+            Pickup only. We drop your group downtown at the train depot, a short walk to Oktoberfest. The ride home is not included.
+            Groups of {DOOR_PICKUP_MIN_RIDERS} to {DOOR_PICKUP_MAX_RIDERS}, all from one address, within 10 miles and not past Piney Green Rd. No pickups on base.
           </p>
         </Section>
       )}
