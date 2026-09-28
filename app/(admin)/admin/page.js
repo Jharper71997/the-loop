@@ -14,6 +14,33 @@ export default async function TonightPage() {
   const today = operationalDateInTZ()
   const now = nowInTZ()
 
+  // "Orders today" doesn't depend on which loop is on top, so it starts now and
+  // runs alongside the loop lookup instead of after it. This page used to make
+  // ~7 Supabase round trips one after another; it's now three rounds deep.
+  //
+  // Scope "Orders today" to THIS console's business so Marines/Surf paid orders
+  // never appear on Brew /admin (and vice-versa). Brew orders are untagged
+  // (metadata->>kind null); Marines/Surf carry metadata.kind.
+  const ordersTodayP = (async () => {
+    let q = supabase
+      .from('orders')
+      .select('id, buyer_name, buyer_phone, contact_id, event_id, total_cents, party_size, status, paid_at, metadata')
+      .eq('status', 'paid')
+      .gte('paid_at', `${today}T00:00:00`)
+    q = business === 'brew' ? q.is('metadata->>kind', null) : q.eq('metadata->>kind', business)
+    const { data: orders } = await q.order('paid_at', { ascending: false }).limit(5)
+
+    // Per-order pickup-stop breakdown so the Orders today panel can render
+    // "3 × Hideaway Lounge" instead of just "3 tickets". Order_items mirror
+    // both Stripe-native checkouts and TT syncs (migration 008), so this
+    // works for either source.
+    const ids = (orders || []).map(o => o.id)
+    const { data: items } = ids.length
+      ? await supabase.from('order_items').select('order_id, stop_index').in('order_id', ids)
+      : { data: [] }
+    return { ordersToday: orders || [], orderItemsToday: items || [] }
+  })()
+
   // Which loop is on top is resolved against today rather than against the
   // first N open rows — see lib/activeLoop.js for the three weeks of August
   // this screen spent showing the Friday Aug 7 loop.
@@ -53,6 +80,7 @@ export default async function TonightPage() {
   // for their actual headcount, not just the buyer contact row. Two paths:
   //   1) Native /book: orders.event_id → events.group_id matches activeGroup.
   //   2) TT mirror: orders.metadata.tt_event_id matches group.tt_event_id.
+  // The two paths are independent, so they run side by side.
   let ticketsByContact = {}
   let totalTickets = 0
   const seenOrderIds = new Set()
@@ -66,41 +94,49 @@ export default async function TonightPage() {
   }
 
   if (activeGroup?.id) {
-    const { data: events } = await supabase
-      .from('events')
-      .select('id')
-      .eq('group_id', activeGroup.id)
-    const eventIds = (events || []).map(e => e.id)
-    if (eventIds.length) {
-      const { data: paidOrders } = await supabase
-        .from('orders')
-        .select('id, contact_id, party_size')
-        .in('event_id', eventIds)
-        .eq('status', 'paid')
-      for (const o of paidOrders || []) rollUpOrder(o)
-    }
-
-    if (activeGroup.tt_event_id) {
-      const { data: ttOrders } = await supabase
-        .from('orders')
-        .select('id, contact_id, party_size, metadata')
-        .eq('status', 'paid')
-        .eq('metadata->>tt_event_id', String(activeGroup.tt_event_id))
-      for (const o of ttOrders || []) rollUpOrder(o)
-    }
+    const [paidOrders, ttOrders] = await Promise.all([
+      (async () => {
+        const { data: events } = await supabase
+          .from('events')
+          .select('id')
+          .eq('group_id', activeGroup.id)
+        const eventIds = (events || []).map(e => e.id)
+        if (!eventIds.length) return []
+        const { data } = await supabase
+          .from('orders')
+          .select('id, contact_id, party_size')
+          .in('event_id', eventIds)
+          .eq('status', 'paid')
+        return data || []
+      })(),
+      (async () => {
+        if (!activeGroup.tt_event_id) return []
+        const { data } = await supabase
+          .from('orders')
+          .select('id, contact_id, party_size, metadata')
+          .eq('status', 'paid')
+          .eq('metadata->>tt_event_id', String(activeGroup.tt_event_id))
+        return data || []
+      })(),
+    ])
+    for (const o of paidOrders) rollUpOrder(o)
+    for (const o of ttOrders) rollUpOrder(o)
 
     // Seats per contact from order_items, crediting a group buy's unnamed seats
     // to the buyer — so a 4-ticket buyer counts as 4 at their stop while a named
     // companion (who has their own contact row) isn't double-counted.
     // totalTickets stays the party_size sum (the group's true ticket count).
     const orderIds = [...orderBuyer.keys()]
-    for (let i = 0; i < orderIds.length; i += 100) {
-      const chunk = orderIds.slice(i, i + 100)
-      const { data: items } = await supabase
+    const chunks = []
+    for (let i = 0; i < orderIds.length; i += 100) chunks.push(orderIds.slice(i, i + 100))
+    const itemPages = await Promise.all(chunks.map(chunk =>
+      supabase
         .from('order_items')
         .select('order_id, contact_id, voided_at')
         .in('order_id', chunk)
         .is('voided_at', null)
+    ))
+    for (const { data: items } of itemPages) {
       for (const it of items || []) {
         const c = it.contact_id || orderBuyer.get(it.order_id)
         if (c) ticketsByContact[c] = (ticketsByContact[c] || 0) + 1
@@ -108,36 +144,11 @@ export default async function TonightPage() {
     }
   }
 
-  // Scope "Orders today" to THIS console's business so Marines/Surf paid orders
-  // never appear on Brew /admin (and vice-versa). Brew orders are untagged
-  // (metadata->>kind null); Marines/Surf carry metadata.kind.
-  let ordersTodayQuery = supabase
-    .from('orders')
-    .select('id, buyer_name, buyer_phone, contact_id, event_id, total_cents, party_size, status, paid_at, metadata')
-    .eq('status', 'paid')
-    .gte('paid_at', `${today}T00:00:00`)
-  ordersTodayQuery = business === 'brew'
-    ? ordersTodayQuery.is('metadata->>kind', null)
-    : ordersTodayQuery.eq('metadata->>kind', business)
-  const { data: ordersToday } = await ordersTodayQuery
-    .order('paid_at', { ascending: false })
-    .limit(5)
-
-  // Per-order pickup-stop breakdown so the Orders today panel can render
-  // "3 × Hideaway Lounge" instead of just "3 tickets". Order_items mirror
-  // both Stripe-native checkouts and TT syncs (migration 008), so this
-  // works for either source.
-  const orderIds = (ordersToday || []).map(o => o.id)
-  const { data: orderItemsToday } = orderIds.length
-    ? await supabase
-        .from('order_items')
-        .select('order_id, stop_index')
-        .in('order_id', orderIds)
-    : { data: [] }
+  const { ordersToday, orderItemsToday } = await ordersTodayP
 
   const activeSchedule = Array.isArray(activeGroup?.schedule) ? activeGroup.schedule : []
   const orderStopBreakdown = {}
-  for (const it of orderItemsToday || []) {
+  for (const it of orderItemsToday) {
     const idx = it.stop_index
     const stopName = (idx != null && activeSchedule[idx]?.name) || (idx != null ? `Stop ${idx + 1}` : 'Unassigned')
     if (!orderStopBreakdown[it.order_id]) orderStopBreakdown[it.order_id] = {}

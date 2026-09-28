@@ -10,6 +10,21 @@ import SelectionBar from './_components/SelectionBar'
 import LoopFilterChips from './_components/LoopFilterChips'
 import { formatEventDate } from './_components/util'
 
+// PostgREST caps a response at 1,000 rows, so a plain select silently drops
+// everything past that. Page until a short page comes back. Under 1,000 rows
+// this is still a single request.
+const PAGE = 1000
+async function allRows(build) {
+  const out = []
+  for (let from = 0; ; from += PAGE) {
+    const { data, error } = await build().range(from, from + PAGE - 1)
+    if (error || !data) break
+    out.push(...data)
+    if (data.length < PAGE) break
+  }
+  return out
+}
+
 export default function Contacts() {
   const { business } = useBusiness()
   const [contacts, setContacts] = useState([])
@@ -42,16 +57,20 @@ export default function Contacts() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [contacts])
 
+  // Only the columns this page and its panels read. It used to pull every
+  // column of every contact plus every membership row across Brew, Surf and
+  // Marines, then filter in the browser. The detail panel's edit form only
+  // touches these fields, and the save response hands back the full row.
   async function refresh() {
     const [c, g, m] = await Promise.all([
-      supabase.from('contacts').select('*').order('last_name'),
+      allRows(() => supabase.from('contacts').select('id, first_name, last_name, phone, email').order('last_name').order('id')),
       // Scope the assign dropdown to the active business (Brew/Surf); exclude other surfaces.
-      supabase.from('groups').select('*').eq('kind', business),
-      supabase.from('group_members').select('id, group_id, contact_id'),
+      supabase.from('groups').select('id, name, event_date, pickup_time, closed_out_at').eq('kind', business),
+      allRows(() => supabase.from('group_members').select('id, group_id, contact_id, groups!inner(kind)').eq('groups.kind', business).order('id')),
     ])
-    setContacts(c.data || [])
+    setContacts(c)
     setGroups(g.data || [])
-    setMembers(m.data || [])
+    setMembers(m)
   }
 
   // Operational date in the Indianapolis TZ — UTC midnight rolls over at 8pm
