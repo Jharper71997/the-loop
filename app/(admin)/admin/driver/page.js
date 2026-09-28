@@ -4,6 +4,7 @@ import { supabaseAdmin } from '@/lib/supabaseAdmin'
 import { lookupBarsByNames } from '@/lib/barsServer'
 import { generateStopsForEvent } from '@/lib/routeStopLogs'
 import { getActiveBusiness } from '@/lib/businessServer'
+import { isDoorPickupEvent } from '@/lib/doorPickup'
 
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
@@ -103,7 +104,20 @@ export default async function DriverPage() {
     } catch {}
   }
 
-  return (
+  // Door pickup day: the boarding list (who has and has not paid) lives on
+  // /admin/pickups. Put it one tap away.
+  let doorPickupToday = false
+  try {
+    const today = new Date().toLocaleDateString('en-CA', { timeZone: 'America/New_York' })
+    const { data: evs } = await supabaseAdmin()
+      .from('events')
+      .select('id, kind, is_private, group_id, ticket_types(name, active)')
+      .eq('event_date', today)
+      .is('group_id', null)
+    doorPickupToday = (evs || []).some(e => isDoorPickupEvent(e, e.ticket_types))
+  } catch {}
+
+  const client = (
     <DriverClient
       groupId={nextLoop?.groupId || null}
       eventId={nextLoop?.id || null}
@@ -113,5 +127,17 @@ export default async function DriverPage() {
       stops={stops}
       initialRouteLog={routeLog}
     />
+  )
+  if (!doorPickupToday) return client
+  return (
+    <>
+      <a href="/admin/pickups" style={{
+        display: 'block', margin: '10px 16px 0', padding: '12px 14px', borderRadius: 12,
+        background: '#d4a333', color: '#111', fontWeight: 800, textDecoration: 'none', textAlign: 'center',
+      }}>
+        Door pickups today: check who has paid before they board
+      </a>
+      {client}
+    </>
   )
 }
