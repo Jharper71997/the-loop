@@ -16,7 +16,7 @@ import { LEGAL } from '@/lib/legal'
 import {
   DOOR_PICKUP_MIN_RIDERS, DOOR_PICKUP_MAX_RIDERS,
   isDoorPickupEvent, zoneOfTicketType, zipProblem, normalizeZip,
-  geocodeAddress, pointProblem, milesBetween, DEPOT, mintJoinCode, findParty,
+  geocodeAddress, pointProblem, milesBetween, DEPOT, mintJoinCode, findParty, reservedUnpaidSeats,
 } from '@/lib/doorPickup'
 
 function mintClaimToken() {
@@ -70,7 +70,8 @@ async function handleCheckout(req) {
     return Response.json({ error: 'invalid JSON' }, { status: 400 })
   }
 
-  const { event_id, buyer, riders, buyer_typed_name, client_token, terms_accepted } = body || {}
+  const { event_id, buyer, buyer_typed_name, client_token, terms_accepted } = body || {}
+  let riders = body?.riders
   if (!event_id || !buyer || !Array.isArray(riders) || !riders.length) {
     return Response.json({ error: 'missing event_id, buyer, or riders' }, { status: 400 })
   }
@@ -163,6 +164,9 @@ async function handleCheckout(req) {
     .from('ticket_types').select('id, name, active').eq('event_id', event.id).eq('active', true)
   const doorPickup = isDoorPickupEvent(event, eventTts)
   let doorPickupMeta = null
+  // A friend paying the seat the organizer held for them: that seat is already
+  // counted as taken, so the capacity check is skipped for it.
+  let heldSeat = false
   const joinCode = doorPickup ? String(body.join_code || '').trim() : ''
   if (doorPickup && joinCode) {
     // A friend joining a group: same slot, same address, pays their own seat.
@@ -171,15 +175,42 @@ async function handleCheckout(req) {
     if (riders.length > DOOR_PICKUP_MAX_RIDERS || riders.some(r => r.ticket_type_id !== party.slotId)) {
       return Response.json({ error: 'one_slot_per_group' }, { status: 400 })
     }
-    const { join_code: _code, ...rest } = party.metadata?.door_pickup || {}
+    const { join_code: _code, roster, ...rest } = party.metadata?.door_pickup || {}
     doorPickupMeta = { ...rest, party_of: party.id, party_name: party.buyer_name || null }
+    const seatToken = String(body.seat_token || '').trim()
+    if (seatToken && riders.length === 1 && (roster || []).some(r => r.token === seatToken)) {
+      const { data: taken } = await supabase
+        .from('orders').select('id')
+        .eq('event_id', event.id).eq('status', 'paid')
+        .eq('metadata->door_pickup->>seat_token', seatToken)
+        .limit(1)
+      if (taken?.length) return Response.json({ error: 'seat_already_paid' }, { status: 409 })
+      doorPickupMeta.seat_token = seatToken
+      heldSeat = true
+    }
   } else if (doorPickup) {
-    if (riders.length > DOOR_PICKUP_MAX_RIDERS) {
+    // Friends the organizer listed who will pay their own seat through a link.
+    // They are not charged or signed for here; their seats are held.
+    const payLater = riders.filter(r => r.pay_self)
+    riders = riders.filter(r => !r.pay_self)
+    if (!riders.length) return Response.json({ error: 'group_size' }, { status: 400 })
+    if (riders.length + payLater.length < DOOR_PICKUP_MIN_RIDERS || riders.length + payLater.length > DOOR_PICKUP_MAX_RIDERS) {
       return Response.json({ error: 'group_size' }, { status: 400 })
     }
-    if (new Set(riders.map(r => r.ticket_type_id)).size !== 1) {
+    if (new Set([...riders, ...payLater].map(r => r.ticket_type_id)).size !== 1) {
       return Response.json({ error: 'one_slot_per_group' }, { status: 400 })
     }
+    for (const r of payLater) {
+      if (!String(r.first_name || '').trim() || !normalizePhone(r.phone)) {
+        return Response.json({ error: 'pay_self_contact' }, { status: 400 })
+      }
+    }
+    const roster = payLater.map(r => ({
+      token: mintJoinCode(),
+      first_name: String(r.first_name).trim().slice(0, 60),
+      last_name: String(r.last_name || '').trim().slice(0, 60),
+      phone: normalizePhone(r.phone),
+    }))
     const slot = ttById.get(riders[0].ticket_type_id)
     const zone = zoneOfTicketType(slot)
     const addr = body.pickup_address || {}
@@ -201,6 +232,7 @@ async function handleCheckout(req) {
       // null = the geocoder could not place it; the run sheet flags it.
       geo: geo ? { lat: geo.lat, lon: geo.lon, miles: Math.round(milesBetween(DEPOT, geo) * 10) / 10 } : null,
       join_code: mintJoinCode(),
+      roster,
     }
   }
 
@@ -265,6 +297,14 @@ async function handleCheckout(req) {
     requestedByStop.set(key, (requestedByStop.get(key) || 0) + 1)
     if (!stopMeta.has(key)) stopMeta.set(key, tt)
   }
+  // Door pickup: the organizer's pay-later friends need seats too.
+  const rosterLen = doorPickupMeta?.roster?.length || 0
+  if (rosterLen && riders[0]) {
+    const key = `tt:${riders[0].ticket_type_id}`
+    requestedByStop.set(key, (requestedByStop.get(key) || 0) + rosterLen)
+  }
+  // A friend paying their held seat is already counted.
+  if (heldSeat) requestedByStop.clear()
 
   // Self-heal: clear pending orders for this event older than the cutoff so
   // their items stop holding seats. Cascade deletes order_items.
@@ -297,7 +337,8 @@ async function handleCheckout(req) {
       pendingQuery = pendingQuery.eq('ticket_type_id', tt.id)
     }
     const [{ count: paidCount }, { count: pendingCount }] = await Promise.all([paidQuery, pendingQuery])
-    return (paidCount || 0) + (pendingCount || 0)
+    const held = doorPickup ? await reservedUnpaidSeats(supabase, event.id, tt.id, pendingCutoff) : 0
+    return (paidCount || 0) + (pendingCount || 0) + held
   }
 
   for (const [key, requested] of requestedByStop.entries()) {

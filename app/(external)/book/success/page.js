@@ -88,7 +88,17 @@ export default async function BookingSuccess({ searchParams }) {
             </p>
           </div>
 
-          {groupLink && <CopyJoinLink url={groupLink} slot={door.slot} />}
+          {groupLink && (
+            <CopyJoinLink
+              url={groupLink}
+              slot={door.slot}
+              friends={(door.roster || []).map(f => ({
+                name: [f.first_name, f.last_name].filter(Boolean).join(' '),
+                phone: f.phone,
+                url: `${groupLink}&seat=${f.token}`,
+              }))}
+            />
+          )}
 
           <div style={{ marginTop: 40, display: 'flex', gap: 12, justifyContent: 'center', flexWrap: 'wrap' }}>
             <a href={myTicketsHref} style={ghostCta}>My tickets</a>

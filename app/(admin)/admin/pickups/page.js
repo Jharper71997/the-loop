@@ -59,13 +59,16 @@ export default async function PickupsPage() {
                   </div>
                   {groups.map(o => {
                     const d = o.metadata?.door_pickup || {}
-                    const total = live(o) + o.joiners.reduce((s, j) => s + live(j), 0)
+                    const roster = Array.isArray(d.roster) ? d.roster : []
+                    const paidTokens = new Set(o.joiners.map(j => j.metadata?.door_pickup?.seat_token).filter(Boolean))
+                    const unpaid = roster.filter(f => !paidTokens.has(f.token))
+                    const paid = live(o) + o.joiners.reduce((s, j) => s + live(j), 0)
+                    const total = paid + unpaid.length
                     const addr = [d.street, d.city, d.zip].filter(Boolean).join(', ')
                     return (
                       <div key={o.id} style={{ fontSize: 14, padding: '8px 0 0 12px', lineHeight: 1.5 }}>
                         <div>
-                          {o.buyer_name || 'Group'} · <strong style={{ color: total < DOOR_PICKUP_MIN_RIDERS ? '#f87171' : '#f5f5f7' }}>{total} riders</strong>
-                          {total < DOOR_PICKUP_MIN_RIDERS ? ' (under 4)' : ''} ·{' '}
+                          {o.buyer_name || 'Group'} · <strong style={{ color: unpaid.length ? '#f87171' : '#f5f5f7' }}>{paid} of {total} paid</strong> ·{' '}
                           {o.buyer_phone ? <a href={`tel:${o.buyer_phone}`} style={{ color: '#d4a333' }}>{o.buyer_phone}</a> : 'no phone'}
                         </div>
                         <div>
@@ -75,6 +78,11 @@ export default async function PickupsPage() {
                           ? <div style={{ color: '#9c9ca3' }}>{d.geo.miles} mi from the depot</div>
                           : <div style={{ color: '#f87171' }}>Address not verified on the map. Check it before the run.</div>}
                         {d.notes && <div style={{ color: '#9c9ca3' }}>Note: {d.notes}</div>}
+                        {unpaid.map(f => (
+                          <div key={f.token} style={{ color: '#f87171' }}>
+                            ○ {[f.first_name, f.last_name].filter(Boolean).join(' ')} · not paid · {f.phone} · {joinUrl(ev.id, d.join_code)}&amp;seat={f.token}
+                          </div>
+                        ))}
                         {o.joiners.map(j => (
                           <div key={j.id} style={{ color: '#9c9ca3' }}>+ {j.buyer_name || 'Friend'} · {live(j)} paid their own · {j.buyer_phone || ''}</div>
                         ))}

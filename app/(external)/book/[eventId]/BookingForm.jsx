@@ -79,8 +79,12 @@ export default function BookingForm({
   const [buyer, setBuyer] = useState({
     // Ride-text consent starts UNCHECKED (TCPA express consent: the rider has to
     // opt in themselves, and it is never a condition of buying).
-    first_name: '', last_name: '', email: '', phone: '', sms_consent: false,
+    first_name: joinParty?.seat?.first_name || '', last_name: joinParty?.seat?.last_name || '',
+    email: '', phone: joinParty?.seat?.phone || '', sms_consent: false,
   })
+  // Organizer of a door pickup: must list at least 4 riders, and for each
+  // friend chooses to pay for them or send them a link to pay their own.
+  const organizer = doorPickup && !joinParty
   // Terms / Privacy / Refund agreement (plus the age rule on the bar loops).
   // Required to pay, never pre-ticked.
   const [termsAccepted, setTermsAccepted] = useState(false)
@@ -95,6 +99,7 @@ export default function BookingForm({
       typed_name: '',
       pickup_stop_index: '',
     },
+    ...Array.from({ length: doorPickup && !joinParty ? DOOR_PICKUP_MIN_RIDERS - 1 : 0 }, () => newGuest(defaultTtId, true)),
   ])
   const [pickupAddress, setPickupAddress] = useState({ street: '', city: 'Jacksonville', zip: '', notes: '' })
   const doorSlot = doorPickup ? ticketTypes.find(t => t.id === riders[0]?.ticket_type_id) : null
@@ -123,7 +128,7 @@ export default function BookingForm({
 
   const ticketCents = useMemo(() => riders.reduce((s, r) => {
     const tt = ticketTypes.find(t => t.id === r.ticket_type_id)
-    return s + (tt?.price_cents || 0)
+    return r.pay_self ? s : s + (tt?.price_cents || 0)
   }, 0), [riders, ticketTypes])
 
   const addonCents = useMemo(() => (addons || []).reduce(
@@ -140,7 +145,7 @@ export default function BookingForm({
   function addRider() {
     setRiders(prev => {
       if (doorPickup && prev.length >= DOOR_PICKUP_MAX_RIDERS) return prev
-      return [...prev, newGuest(doorPickup ? prev[0].ticket_type_id : defaultTtId)]
+      return [...prev, newGuest(doorPickup ? prev[0].ticket_type_id : defaultTtId, organizer)]
     })
   }
 
@@ -188,6 +193,11 @@ export default function BookingForm({
     if (oversellError) return false
     for (const r of riders) {
       if (!r.ticket_type_id) return false
+      // A friend paying through their own link: we only need who they are.
+      if (r.pay_self) {
+        if (!r.first_name.trim() || r.phone.replace(/\D/g, '').length < 10) return false
+        continue
+      }
       // Walk-on riders must pick a pickup bar (applies even to claim-link seats
       // — the buyer chooses where their friend boards).
       const tt = ticketTypes.find(t => t.id === r.ticket_type_id)
@@ -203,6 +213,7 @@ export default function BookingForm({
     if (!termsAccepted) return false
     if (doorPickup) {
       if (riders.length > DOOR_PICKUP_MAX_RIDERS) return false
+      if (organizer && riders.length < DOOR_PICKUP_MIN_RIDERS) return false
       if (!joinParty) {
         if (!pickupAddress.street.trim() || !pickupAddress.city.trim()) return false
         if (zipProblem(pickupAddress.zip, doorZone)) return false
@@ -218,6 +229,12 @@ export default function BookingForm({
     setError(null)
 
     const ridersPayload = riders.map(r => {
+      if (r.pay_self) {
+        return {
+          ticket_type_id: r.ticket_type_id, pay_self: true,
+          first_name: r.first_name.trim(), last_name: r.last_name.trim(), phone: r.phone.trim(),
+        }
+      }
       // Walk-on pickup bar → numeric stop index (null for normal per-bar tickets).
       const ttSel = ticketTypes.find(t => t.id === r.ticket_type_id)
       const pickupStopIndex = (ttSel && ttSel.stop_index == null && r.pickup_stop_index !== '' && r.pickup_stop_index != null)
@@ -276,7 +293,7 @@ export default function BookingForm({
           buyer_typed_name: buyerTypedName.trim(),
           attribution: submittedAttribution,
           client_token: clientToken,
-          ...(doorPickup && joinParty ? { join_code: joinParty.code } : {}),
+          ...(doorPickup && joinParty ? { join_code: joinParty.code, seat_token: joinParty.seat?.token || null } : {}),
           ...(doorPickup && !joinParty ? { pickup_address: pickupAddress } : {}),
           terms_accepted: termsAccepted,
           age_confirmed: !!minAge && termsAccepted,
@@ -308,6 +325,10 @@ export default function BookingForm({
           message = json.message || 'Please check your pickup address.'
         } else if (json.error === 'group_size') {
           message = `A booking holds up to ${DOOR_PICKUP_MAX_RIDERS} riders.`
+        } else if (json.error === 'seat_already_paid') {
+          message = 'This seat is already paid for. You’re all set.'
+        } else if (json.error === 'pay_self_contact') {
+          message = 'Add a first name and phone for each friend paying their own seat.'
         } else if (json.error === 'join_invalid') {
           message = 'That group link isn’t valid anymore. Ask whoever sent it for a new one, or book your own pickup.'
         } else if (json.error === 'pass_verify_failed') {
@@ -433,8 +454,8 @@ export default function BookingForm({
           )}
           <Field label="Anything the driver should know? (gate code, which building)" value={pickupAddress.notes} onChange={v => setPickupAddress(a => ({ ...a, notes: v }))} />
           <p style={{ fontSize: 13, color: '#f5f5f7', lineHeight: 1.55, margin: 0 }}>
-            <strong style={{ color: ACCENT }}>Everyone pays for their own seat.</strong> Book yours now. After you pay you get a
-            link to text your group; each friend pays their own $10 and rides with you. Want to cover someone? Add them as a rider.
+            <strong style={{ color: ACCENT }}>List everyone in your group, at least {DOOR_PICKUP_MIN_RIDERS}.</strong> For each friend,
+            pay for them now or send them a link to pay their own $10. Their seat is held for them either way.
           </p>
           <p style={{ fontSize: 12.5, color: '#9c9ca3', lineHeight: 1.5, margin: 0 }}>
             Pickup only. We drop your group downtown at the train depot, a short walk to Oktoberfest. The ride home is not included.
@@ -461,7 +482,7 @@ export default function BookingForm({
               }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                   <strong style={{ color: ACCENT, fontSize: 11, letterSpacing: '0.2em', textTransform: 'uppercase', fontWeight: 800 }}>Rider {idx + 1}</strong>
-                  {idx > 0 && (
+                  {idx > 0 && !(organizer && riders.length <= DOOR_PICKUP_MIN_RIDERS) && (
                     <button type="button" onClick={() => removeRider(idx)} style={btnGhost}>Remove</button>
                   )}
                 </div>
@@ -557,6 +578,35 @@ export default function BookingForm({
                   />
                 ) : null}
 
+                {organizer && idx > 0 && (
+                  <div style={{ display: 'grid', gap: 8 }}>
+                    <RadioRow
+                      name={`pay-${idx}`}
+                      checked={!!r.pay_self}
+                      onChange={() => updateRider(idx, { pay_self: true, claim_link: false, signed_self: false, signed_by_buyer: false })}
+                      label="Send them a link to pay their own $10"
+                    />
+                    <RadioRow
+                      name={`pay-${idx}`}
+                      checked={!r.pay_self}
+                      onChange={() => updateRider(idx, { pay_self: false, claim_link: true })}
+                      label="I'll pay for them"
+                    />
+                  </div>
+                )}
+
+                {r.pay_self ? (
+                  <>
+                    <Row>
+                      <Field label="First name" value={r.first_name} onChange={v => updateRider(idx, { first_name: v })} />
+                      <Field label="Last name" value={r.last_name} onChange={v => updateRider(idx, { last_name: v })} />
+                    </Row>
+                    <Field label="Phone" value={r.phone} type="tel" onChange={v => updateRider(idx, { phone: v })} />
+                    <span style={{ fontSize: 12.5, color: '#9c9ca3', lineHeight: 1.5 }}>
+                      After you pay, you get their personal link to text them. They pay and sign their own waiver.
+                    </span>
+                  </>
+                ) : (<>
                 {idx > 0 && (
                   <CheckRow
                     checked={!!r.claim_link}
@@ -627,16 +677,17 @@ export default function BookingForm({
                     </div>
                   </>
                 )}
+                </>)}
 
                 <div style={{ fontSize: 12, color: '#9c9ca3', textAlign: 'right' }}>
-                  {tt ? `$${(tt.price_cents / 100).toFixed(2)}` : ''}
+                  {r.pay_self ? 'Pays their own $10' : tt ? `$${(tt.price_cents / 100).toFixed(2)}` : ''}
                 </div>
               </div>
             )
           })}
         </div>
 
-        {!(doorPickup && riders.length >= DOOR_PICKUP_MAX_RIDERS) && (
+        {!(doorPickup && riders.length >= DOOR_PICKUP_MAX_RIDERS) && !joinParty?.seat && (
           <button type="button" onClick={addRider} style={{ ...btnGhost, marginTop: 4, width: '100%' }}>
             + Add another rider
           </button>
@@ -934,8 +985,9 @@ function formatPickupTime(hhmm) {
   return `${h12}:${String(m).padStart(2, '0')} ${suffix}`
 }
 
-function newGuest(ticketTypeId) {
+function newGuest(ticketTypeId, paySelf = false) {
   return {
+    pay_self: paySelf,
     ticket_type_id: ticketTypeId,
     first_name: '', last_name: '', email: '', phone: '',
     same_as_buyer: false,

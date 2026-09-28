@@ -9,7 +9,7 @@ import { capacityForTicketType } from '@/lib/capacity'
 import { getBarByName } from '@/lib/bars'
 import { GOLD, INK, INK_DIM, INK_MUTE, MAX_W, eyebrow } from '@/lib/marketingTheme'
 import { TONES, grainOverlay, lightPool, photoScrim, litCard, litCardInner } from '@/lib/atmosphere'
-import { isDoorPickupEvent, findParty } from '@/lib/doorPickup'
+import { isDoorPickupEvent, findParty, reservedUnpaidSeats } from '@/lib/doorPickup'
 import BookingForm from './BookingForm'
 
 export const dynamic = 'force-dynamic'
@@ -189,6 +189,19 @@ export default async function EventBookingPage({ params, searchParams }) {
   }
 
   const doorPickup = isDoorPickupEvent(event, ticketTypes)
+  // Seats held for friends who have not paid yet are taken seats.
+  if (doorPickup) {
+    ticketTypes = await Promise.all(ticketTypes.map(async t => {
+      if (t.remaining == null) return t
+      try {
+        const held = await reservedUnpaidSeats(supabase, event.id, t.id, pendingCutoff)
+        return { ...t, remaining: Math.max(0, t.remaining - held) }
+      } catch (err) {
+        console.error('[book/eventId] held seats failed', t.id, err)
+        return t
+      }
+    }))
+  }
 
   // ?join=<code>: a friend paying their own seat in someone's group.
   let joinParty = null
@@ -201,6 +214,13 @@ export default async function EventBookingPage({ params, searchParams }) {
           code: String(sp.join), slotId: party.slotId,
           organizer: (party.buyer_name || '').trim().split(/\s+/)[0] || null,
           street: d.street, city: d.city,
+          // ?seat=<token>: the seat the organizer held for this friend.
+          seat: (Array.isArray(d.roster) && d.roster.find(r => r.token === String(sp.seat || ''))) || null,
+        }
+        // Their own held seat is theirs to take, not a taken seat.
+        if (joinParty.seat) {
+          ticketTypes = ticketTypes.map(t => (t.id === party.slotId && t.remaining != null
+            ? { ...t, remaining: t.remaining + 1 } : t))
         }
       }
     } catch (err) {
