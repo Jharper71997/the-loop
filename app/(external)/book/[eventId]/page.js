@@ -9,7 +9,7 @@ import { capacityForTicketType } from '@/lib/capacity'
 import { getBarByName } from '@/lib/bars'
 import { GOLD, INK, INK_DIM, INK_MUTE, MAX_W, eyebrow } from '@/lib/marketingTheme'
 import { TONES, grainOverlay, lightPool, photoScrim, litCard, litCardInner } from '@/lib/atmosphere'
-import { isDoorPickupEvent, findParty, reservedUnpaidSeats } from '@/lib/doorPickup'
+import { isDoorPickupEvent, findParty, reservedUnpaidSeats, bookedSlotIds } from '@/lib/doorPickup'
 import BookingForm from './BookingForm'
 
 export const dynamic = 'force-dynamic'
@@ -225,6 +225,15 @@ export default async function EventBookingPage({ params, searchParams }) {
       }
     } catch (err) {
       console.error('[book/eventId] join lookup threw', err)
+    }
+  }
+  // One group per slot: a new group cannot pick a slot another group has.
+  if (doorPickup && !joinParty) {
+    try {
+      const booked = await bookedSlotIds(supabase, event.id, pendingCutoff)
+      ticketTypes = ticketTypes.map(t => (booked.has(t.id) ? { ...t, remaining: 0 } : t))
+    } catch (err) {
+      console.error('[book/eventId] booked slots failed', err)
     }
   }
 

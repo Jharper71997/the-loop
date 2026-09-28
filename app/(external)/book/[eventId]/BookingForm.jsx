@@ -329,6 +329,8 @@ export default function BookingForm({
           message = 'This seat is already paid for. You’re all set.'
         } else if (json.error === 'pay_self_contact') {
           message = 'Add a first name and phone for each friend paying their own seat.'
+        } else if (json.error === 'slot_taken') {
+          message = 'Another group just booked that pickup time. Pick a different time.'
         } else if (json.error === 'join_invalid') {
           message = 'That group link isn’t valid anymore. Ask whoever sent it for a new one, or book your own pickup.'
         } else if (json.error === 'pass_verify_failed') {
@@ -459,7 +461,7 @@ export default function BookingForm({
           </p>
           <p style={{ fontSize: 12.5, color: '#9c9ca3', lineHeight: 1.5, margin: 0 }}>
             Pickup only. We drop your group downtown at the train depot, a short walk to Oktoberfest. The ride home is not included.
-            Groups of {DOOR_PICKUP_MIN_RIDERS} or more, up to {DOOR_PICKUP_MAX_RIDERS}, all from one address, within 10 miles and not past Piney Green Rd. No pickups on base.
+            One group per pickup time, one address. Groups of {DOOR_PICKUP_MIN_RIDERS} to {DOOR_PICKUP_MAX_RIDERS}, within 10 miles and not past Piney Green Rd. No pickups on base.
           </p>
         </Section>
       )}

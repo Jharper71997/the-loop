@@ -16,7 +16,7 @@ import { LEGAL } from '@/lib/legal'
 import {
   DOOR_PICKUP_MIN_RIDERS, DOOR_PICKUP_MAX_RIDERS,
   isDoorPickupEvent, zoneOfTicketType, zipProblem, normalizeZip,
-  geocodeAddress, pointProblem, milesBetween, DEPOT, mintJoinCode, findParty, reservedUnpaidSeats,
+  geocodeAddress, pointProblem, milesBetween, DEPOT, mintJoinCode, findParty, reservedUnpaidSeats, bookedSlotIds,
 } from '@/lib/doorPickup'
 
 function mintClaimToken() {
@@ -199,6 +199,11 @@ async function handleCheckout(req) {
     }
     if (new Set([...riders, ...payLater].map(r => r.ticket_type_id)).size !== 1) {
       return Response.json({ error: 'one_slot_per_group' }, { status: 400 })
+    }
+    // One group per slot: the bus picks up one address per run.
+    const booked = await bookedSlotIds(supabase, event.id, new Date(Date.now() - 15 * 60 * 1000).toISOString(), normalizePhone(buyer.phone))
+    if (booked.has(riders[0].ticket_type_id)) {
+      return Response.json({ error: 'slot_taken' }, { status: 409 })
     }
     for (const r of payLater) {
       if (!String(r.first_name || '').trim() || !normalizePhone(r.phone)) {
