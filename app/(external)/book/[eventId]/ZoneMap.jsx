@@ -7,8 +7,8 @@ import { DEPOT, ZONES } from '@/lib/doorPickup'
 
 // Door pickup coverage, so a rider can see which zone their address is in.
 // lib/doorPickupZones.json is each zone's ZIP (Census 2020 ZCTA) clipped to
-// the same two limits checkout enforces in lib/doorPickup.js: 10 miles from
-// the depot and west of Piney Green Rd. Regenerate it if either one changes.
+// the limits checkout enforces in lib/doorPickup.js (each zone's maxMiles and
+// eastLon). Regenerate it if either one changes.
 const COLORS = { 1: '#d4a333', 2: '#2f6fd6' }
 
 export default function ZoneMap({ highlight = null }) {
@@ -20,14 +20,9 @@ export default function ZoneMap({ highlight = null }) {
     ;(async () => {
       const L = (await import('leaflet')).default
       if (cancelled || !ref.current) return
-      map = L.map(ref.current, { attributionControl: false, scrollWheelZoom: false })
+      map = L.map(ref.current, { attributionControl: false, scrollWheelZoom: false, zoomSnap: 0.25 })
       L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 18 }).addTo(map)
       L.control.attribution({ prefix: false }).addAttribution('&copy; OpenStreetMap').addTo(map)
-
-      // The 10 mile limit, for context.
-      L.polygon(SHAPES.circle.map(([lon, lat]) => [lat, lon]), {
-        color: '#ffffff', weight: 1.5, dashArray: '6 6', fill: false, opacity: 0.7,
-      }).addTo(map)
 
       const layers = []
       for (const [n, geom] of Object.entries(SHAPES.zones)) {
@@ -37,22 +32,19 @@ export default function ZoneMap({ highlight = null }) {
             color: COLORS[n], weight: on ? 3 : 2,
             fillColor: COLORS[n], fillOpacity: on ? 0.4 : 0.22, opacity: 1,
           },
-        }).bindTooltip(`Zone ${n}: ${ZONES[n].label}`, { sticky: true }).addTo(map)
+        }).bindTooltip(`Zone ${n}: ${ZONES[n].label}`, { sticky: true })
         layers.push(layer)
       }
 
-      // Piney Green Rd: the east edge. Nothing past it.
-      L.polyline(SHAPES.piney, { color: '#111', weight: 7, opacity: 0.85 }).addTo(map)
-      L.polyline(SHAPES.piney, { color: '#ffffff', weight: 3, dashArray: '2 8' })
-        .bindTooltip('Piney Green Rd: no pickups past here', { sticky: true })
-        .addTo(map)
+      // Set the view BEFORE adding shapes: Leaflet clips a path against the
+      // map's pixel bounds on add, and with no view yet that throws.
+      map.fitBounds(L.featureGroup(layers).getBounds(), { padding: [12, 12] })
+      layers.forEach(l => l.addTo(map))
 
       L.circleMarker([DEPOT.lat, DEPOT.lon], {
         radius: 8, color: '#111', weight: 2, fillColor: '#f0c24a', fillOpacity: 1,
       }).bindTooltip('Drop off', { permanent: true, direction: 'left', offset: [-8, 0], className: 'zm-tip' })
         .addTo(map)
-
-      map.fitBounds(L.featureGroup(layers).getBounds(), { padding: [12, 12] })
     })()
     return () => { cancelled = true; if (map) map.remove() }
   }, [highlight])
@@ -69,7 +61,7 @@ export default function ZoneMap({ highlight = null }) {
         ))}
       </div>
       <div style={{ fontSize: 12.5, color: '#9c9ca3', lineHeight: 1.5 }}>
-        The striped line is Piney Green Rd, our limit. Outside the colored area, including on base, we can&rsquo;t pick up.
+        Blue goes as far as Hwy 172 in Hubert. Outside the colored area, including on base, we can&rsquo;t pick up.
       </div>
       <style>{`.zm-tip { font-weight: 700; font-size: 12px; }`}</style>
     </div>

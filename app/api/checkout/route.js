@@ -227,7 +227,7 @@ async function handleCheckout(req) {
     }
     const zip = normalizeZip(addr.zip)
     const geo = await geocodeAddress({ street, city, zip })
-    const outside = pointProblem(geo)
+    const outside = pointProblem(geo, zone)
     if (outside) {
       return Response.json({ error: 'pickup_address', message: outside }, { status: 400 })
     }
