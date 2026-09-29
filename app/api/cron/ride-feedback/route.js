@@ -23,12 +23,9 @@ export const maxDuration = 60
 // they're home, sober, and remembering it fondly — which is also when a Google
 // review actually gets written rather than started and abandoned.
 //
-// Who gets it — per event, in this order:
-//   1. If ANY ticket on that event was scanned, only scanned tickets get the
-//      survey. No-shows didn't ride and shouldn't be asked how the ride was.
-//   2. If NOTHING was scanned (driver never opened the scanner, which happens),
-//      fall back to every paid non-voided ticket. Better to ask a no-show than
-//      to silently survey nobody on a full Loop.
+// Who gets it: every paid, non-voided ticket on last night's events, scanned or
+// not. Drivers miss scans all the time, and an unscanned ticket almost always
+// still rode (Jacob, 2026-09-29), so a scan is not treated as proof of riding.
 //
 // Dedupe: one send per phone and per email per run. A buyer who booked four
 // seats and left the rider fields blank has all four items falling back to the
@@ -106,14 +103,6 @@ export async function GET(req) {
     return Response.json({ ok: true, ride_date: rideDate, processed: 0, reason: 'no_pending_items' })
   }
 
-  // Scanned-only vs everyone, decided per event (see header).
-  const anyScannedByEvent = new Map()
-  for (const item of items) {
-    const eventId = ordersById.get(item.order_id)?.event_id
-    if (!eventId) continue
-    if (item.checked_in_at) anyScannedByEvent.set(eventId, true)
-  }
-
   const contactIds = [...new Set(items.map(i => i.contact_id).filter(Boolean))]
   const { data: contacts } = contactIds.length
     ? await sb.from('contacts').select('id, first_name, phone, email, sms_consent').in('id', contactIds)
@@ -129,10 +118,6 @@ export async function GET(req) {
     const event = order ? eventById.get(order.event_id) : null
     if (!event) { results.push({ item: item.id, skipped: 'no_event' }); continue }
 
-    if (anyScannedByEvent.get(event.id) && !item.checked_in_at) {
-      results.push({ item: item.id, skipped: 'no_show' })
-      continue
-    }
 
     const contact = item.contact_id ? contactById.get(item.contact_id) : null
     const firstName = contact?.first_name || item.rider_first_name || order?.buyer_name?.split(' ')?.[0] || ''
