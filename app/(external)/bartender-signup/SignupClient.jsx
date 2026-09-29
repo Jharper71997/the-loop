@@ -8,13 +8,12 @@ const INK = '#f5f5f7'
 const INK_DIM = '#b8b8bf'
 const BG_PANEL = 'linear-gradient(180deg, rgba(255,255,255,0.03), rgba(255,255,255,0.01))'
 
-export default function SignupClient({ bars }) {
+export default function SignupClient() {
   const [code, setCode] = useState('')
   const [firstName, setFirstName] = useState('')
   const [lastName, setLastName] = useState('')
   const [email, setEmail] = useState('')
   const [phone, setPhone] = useState('')
-  const [barSlug, setBarSlug] = useState('')
   const [submitting, setSubmitting] = useState(false)
   const [error, setError] = useState(null)
   const [result, setResult] = useState(null)
@@ -35,7 +34,6 @@ export default function SignupClient({ bars }) {
         body: JSON.stringify({
           first_name: firstName,
           last_name: lastName,
-          bar_slug: barSlug,
           code,
           email: email.trim(),
           phone: phone.trim(),
@@ -107,19 +105,6 @@ export default function SignupClient({ bars }) {
             autoComplete="family-name"
             style={inputStyle}
           />
-        </Field>
-
-        <Field label="Bar (optional)">
-          <select
-            value={barSlug}
-            onChange={e => setBarSlug(e.target.value)}
-            style={inputStyle}
-          >
-            <option value="">I&apos;m not with a bar</option>
-            {bars.map(b => (
-              <option key={b.slug} value={b.slug}>{b.name}</option>
-            ))}
-          </select>
         </Field>
 
         <Field label="Phone">

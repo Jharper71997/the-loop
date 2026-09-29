@@ -126,11 +126,6 @@ function Row({ row, rank }) {
         <div style={{ color: INK, fontSize: 15, fontWeight: 600 }}>
           {row.name}
         </div>
-        {row.bar && (
-          <div style={{ color: INK_DIM, fontSize: 12 }}>
-            {row.bar}
-          </div>
-        )}
       </div>
       <div style={{ textAlign: 'right' }}>
         <div style={{

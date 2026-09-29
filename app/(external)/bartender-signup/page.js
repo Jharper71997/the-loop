@@ -1,5 +1,4 @@
 import SignupClient from './SignupClient'
-import { BARS } from '@/lib/bars'
 
 export const metadata = {
   title: 'Brew Loop Sales Team — Sign up',
@@ -10,6 +9,5 @@ export const metadata = {
 export const dynamic = 'force-dynamic'
 
 export default function BartenderSignupPage() {
-  const bars = BARS.map(b => ({ slug: b.slug, name: b.name }))
-  return <SignupClient bars={bars} />
+  return <SignupClient />
 }
