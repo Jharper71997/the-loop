@@ -120,6 +120,7 @@ export default async function FeedbackPage() {
         contact: c.phone || r.phone || r.email || c.email || '—',
         wants: (r.interests || []).join(', '),
         rating: r.rating ?? '—',
+        filled: filledOut(r.created_at),
       }
     })
 
@@ -139,8 +140,23 @@ export default async function FeedbackPage() {
         reach: c.phone || r.phone || c.email || r.email || '—',
         comment: r.comment,
         low: r.rating != null && r.rating <= 3,
+        filled: filledOut(r.created_at),
       }
     })
+
+  // Every response, comment or not, newest first, so each one has a visible date.
+  const responseRows = rows.slice(0, 200).map(r => {
+    const c = contactById.get(r.contact_id) || {}
+    return {
+      key: r.id,
+      filled: filledOut(r.created_at),
+      loop: eventById.get(r.event_id)?.event_date || (r.source === 'link' ? 'Open link' : '—'),
+      rating: r.rating ?? '—',
+      again: RIDE_AGAIN_LABEL[r.ride_again] || '—',
+      who: [c.first_name, c.last_name].filter(Boolean).join(' ') || r.first_name || '—',
+      low: r.rating != null && r.rating <= 3,
+    }
+  })
 
   return (
     <main style={mainStyle}>
@@ -230,6 +246,7 @@ export default async function FeedbackPage() {
           <DataTable
             columns={[
               { key: 'name', header: 'Rider', primary: true },
+              { key: 'filled', header: 'Filled out', mono: true },
               { key: 'contact', header: 'Reach them', mono: true },
               { key: 'wants', header: 'Asked about' },
               { key: 'rating', header: '★', mono: true, align: 'right', hideOnMobile: true },
@@ -248,7 +265,8 @@ export default async function FeedbackPage() {
         <Section title="What they said">
           <DataTable
             columns={[
-              { key: 'when', header: 'Loop', mono: true },
+              { key: 'filled', header: 'Filled out', mono: true },
+              { key: 'when', header: 'Loop', mono: true, hideOnMobile: true },
               {
                 key: 'rating', header: '★', mono: true, align: 'right',
                 render: r => <span style={{ color: r.low ? '#b3311f' : GOLD_TXT, fontWeight: 700 }}>{r.rating}</span>,
@@ -261,6 +279,24 @@ export default async function FeedbackPage() {
             rows={commentRows}
             rowKey={r => r.key}
             empty={<Empty>No written comments yet.</Empty>}
+          />
+        </Section>
+
+        <Section title="Every response">
+          <DataTable
+            columns={[
+              { key: 'filled', header: 'Filled out', mono: true, primary: true },
+              { key: 'loop', header: 'Loop', mono: true },
+              {
+                key: 'rating', header: '★', mono: true, align: 'right',
+                render: r => <span style={{ color: r.low ? '#b3311f' : GOLD_TXT, fontWeight: 700 }}>{r.rating}</span>,
+              },
+              { key: 'again', header: 'Again?', hideOnMobile: true },
+              { key: 'who', header: 'Rider' },
+            ]}
+            rows={responseRows}
+            rowKey={r => r.key}
+            empty={<Empty>No responses yet.</Empty>}
           />
         </Section>
       </div>
@@ -286,6 +322,14 @@ function MigrationPending() {
       </div>
     </main>
   )
+}
+
+// When the rider submitted, in Jacksonville time: "Sep 29, 3:12 PM".
+function filledOut(iso) {
+  if (!iso) return '—'
+  return new Date(iso).toLocaleString('en-US', {
+    month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit', timeZone: 'America/New_York',
+  })
 }
 
 // Count non-null values of `pick` across rows, biggest first, ties by name so
