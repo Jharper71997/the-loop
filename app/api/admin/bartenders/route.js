@@ -13,7 +13,6 @@ import {
 } from '@/lib/bartenders'
 import { normalizeEmail } from '@/lib/contacts'
 import { normalizePhone } from '@/lib/phone'
-import { ensureBartenderVoucher } from '@/lib/ticketTailorVouchers'
 
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
@@ -40,7 +39,13 @@ export async function GET() {
     .order('created_at', { ascending: false })
 
   if (error) return Response.json({ error: error.message }, { status: 500 })
-  return Response.json({ bartenders: data || [] })
+  // Render each QR from the current link rather than trusting the stored image,
+  // which for older rows still encodes the retired Ticket Tailor store URL.
+  const bartenders = await Promise.all((data || []).map(async b => {
+    const referral_url = referralUrlFor(b.slug)
+    return { ...b, referral_url, qr_image_url: await renderBartenderQr(referral_url) }
+  }))
+  return Response.json({ bartenders })
 }
 
 // POST /api/admin/bartenders
@@ -121,10 +126,6 @@ export async function POST(req) {
     }
     return Response.json({ error: error.message }, { status: 500 })
   }
-
-  ensureBartenderVoucher(supabase, { slug, shareCode, displayName }).catch(err => {
-    console.error('[admin/bartenders] TT voucher create failed', err)
-  })
 
   return Response.json({ bartender: row })
 }

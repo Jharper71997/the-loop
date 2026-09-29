@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import dynamic from 'next/dynamic'
 import { prefixLink } from '@/lib/businessConfig'
+import { captureAttribution } from '@/lib/attribution'
 import ConsentCheckbox, { PolicyLink, SmsConsentLabel } from '@/app/_components/legal/ConsentCheckbox'
 import { DOOR_PICKUP_MIN_RIDERS, DOOR_PICKUP_MAX_RIDERS, ZONES, zoneOfTicketType, zipProblem, BASE_ZONE, BASE_ID_TEXT } from '@/lib/doorPickup'
 
@@ -51,36 +52,10 @@ export default function BookingForm({
 
   const [attribution, setAttribution] = useState(null)
   const [bartenderCode, setBartenderCode] = useState('')
-  // Capture attribution from the URL on landing and STICK it for the session.
-  // Tags ride on the first touch (a QR scan / shared link), but the buyer often
-  // navigates (listing → event → /book) before paying, which used to drop the
-  // tag. Persisting to sessionStorage keeps the credit through that journey.
-  // `qr` and `ref` both map to qr_code so bartender/QR slugs work either way.
-  useEffect(() => {
-    if (typeof window === 'undefined') return
-    const STORE_KEY = 'bl_attribution'
-    const p = new URLSearchParams(window.location.search)
-    const fresh = {
-      qr_code: p.get('qr') || p.get('ref') || null,
-      // rider-to-rider referral code (from /invite/<code>); separate from the
-      // bartender/QR qr_code so a booking can carry both.
-      referrer_code: p.get('rref') || null,
-      utm_source: p.get('utm_source') || null,
-      utm_medium: p.get('utm_medium') || null,
-      utm_campaign: p.get('utm_campaign') || null,
-    }
-    const hasFresh = fresh.qr_code || fresh.referrer_code || fresh.utm_source || fresh.utm_medium || fresh.utm_campaign
-    if (hasFresh) {
-      try { sessionStorage.setItem(STORE_KEY, JSON.stringify(fresh)) } catch {}
-      setAttribution(fresh)
-      return
-    }
-    // No tag on this URL — fall back to whatever was captured earlier this session.
-    try {
-      const saved = sessionStorage.getItem(STORE_KEY)
-      if (saved) setAttribution(JSON.parse(saved))
-    } catch {}
-  }, [])
+  // Seller / QR / UTM tags. lib/attribution keeps them for a week across pages
+  // (AttributionCapture in the layout stores them on landing); this re-reads
+  // on mount so a tag on the /book URL itself counts too.
+  useEffect(() => { setAttribution(captureAttribution()) }, [])
 
   const [buyer, setBuyer] = useState({
     // Ride-text consent starts UNCHECKED (TCPA express consent: the rider has to
@@ -809,14 +784,14 @@ export default function BookingForm({
               padding: 4,
             }}
           >
-            Have a bartender code?
+            Have a seller code?
           </button>
         ) : (
           <div style={{ display: 'grid', gap: 6, maxWidth: 280, margin: '0 auto' }}>
             <input
               value={bartenderCode}
               onChange={e => setBartenderCode(e.target.value)}
-              placeholder="Bartender code"
+              placeholder="Seller code"
               autoCapitalize="characters"
               autoCorrect="off"
               spellCheck={false}
@@ -824,7 +799,7 @@ export default function BookingForm({
               style={{ ...input, textTransform: 'uppercase', letterSpacing: '0.05em', fontSize: 13, padding: '8px 10px' }}
             />
             <div style={{ fontSize: 12.5, color: '#bcbcc3', textAlign: 'center' }}>
-              Gives the bartender credit for sending you.
+              Gives the person who sent you credit for the sale.
             </div>
           </div>
         )}

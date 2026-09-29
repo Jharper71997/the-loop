@@ -80,7 +80,7 @@ export default function BartenderSuccessCard({ result, mode = 'signup' }) {
           </div>
           <p style={{ color: INK_DIM, fontSize: 13, margin: '0 0 14px', lineHeight: 1.5 }}>
             Tell riders: <strong style={{ color: INK }}>“type {result.share_code} at checkout”</strong>.
-            Works on the app and Ticket Tailor — every ticket with that code counts toward your total.
+            It goes in the "Have a seller code?" box. Every ticket with your code or your link counts toward your total.
           </p>
           <button
             onClick={copyCode}
