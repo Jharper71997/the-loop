@@ -86,6 +86,11 @@ export default async function BookingSuccess({ searchParams }) {
             <p style={{ marginTop: 14, fontSize: 17 }}>
               Your ticket is on its way to your inbox. Check your email for the QR code, or open My Tickets anytime.
             </p>
+            {door && (
+              <p style={{ marginTop: 10, fontSize: 16, color: GOLD_HI, fontWeight: 700 }}>
+                Your $10 also gets you a seat on the Brew Loop that night. Show this ticket when you board.
+              </p>
+            )}
           </div>
 
           {groupLink && (

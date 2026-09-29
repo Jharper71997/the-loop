@@ -1,9 +1,13 @@
 'use client'
 
 import { useEffect, useMemo, useState } from 'react'
+import dynamic from 'next/dynamic'
 import { prefixLink } from '@/lib/businessConfig'
 import ConsentCheckbox, { PolicyLink, SmsConsentLabel } from '@/app/_components/legal/ConsentCheckbox'
 import { DOOR_PICKUP_MIN_RIDERS, DOOR_PICKUP_MAX_RIDERS, ZONES, zoneOfTicketType, zipProblem } from '@/lib/doorPickup'
+
+// Leaflet touches window, and only door pickup riders who open it need it.
+const ZoneMap = dynamic(() => import('./ZoneMap'), { ssr: false })
 
 const ACCENT = '#d4a333'
 const SURFACE = '#15151a'
@@ -102,6 +106,7 @@ export default function BookingForm({
     ...Array.from({ length: doorPickup && !joinParty ? DOOR_PICKUP_MIN_RIDERS - 1 : 0 }, () => newGuest(defaultTtId, true)),
   ])
   const [pickupAddress, setPickupAddress] = useState({ street: '', city: 'Jacksonville', zip: '', notes: '' })
+  const [showZoneMap, setShowZoneMap] = useState(false)
   const doorSlot = doorPickup ? ticketTypes.find(t => t.id === riders[0]?.ticket_type_id) : null
   const doorZone = doorSlot ? zoneOfTicketType(doorSlot) : null
   const zipError = doorPickup && pickupAddress.zip.trim().length >= 5
@@ -426,6 +431,10 @@ export default function BookingForm({
             <span style={{ fontSize: 12.5, color: '#9c9ca3', lineHeight: 1.5, marginTop: -3 }}>
               Each time serves one zone of town. Pick a time in the zone your address is in.
             </span>
+            <button type="button" onClick={() => setShowZoneMap(v => !v)} style={{ ...btnGhost, justifySelf: 'start', borderColor: '#d4a333', color: '#f0c24a' }}>
+              {showZoneMap ? 'Hide the zone map' : 'Not sure which zone? See the map'}
+            </button>
+            {showZoneMap && <ZoneMap highlight={doorZone} />}
             <select value={riders[0]?.ticket_type_id || ''} onChange={e => setDoorSlot(e.target.value)} style={input}>
               {Object.entries(ZONES).map(([n, z]) => {
                 const slots = ticketTypes.filter(t => zoneOfTicketType(t) === Number(n))
@@ -460,7 +469,8 @@ export default function BookingForm({
             pay for them now or send them a link to pay their own $10. Their seat is held for them either way.
           </p>
           <p style={{ fontSize: 12.5, color: '#9c9ca3', lineHeight: 1.5, margin: 0 }}>
-            Pickup only. We drop your group downtown at the train depot, a short walk to Oktoberfest. The ride home is not included.
+            <strong style={{ color: '#f5f5f7' }}>Your $10 also gets you a seat on the Brew Loop that night.</strong> Show your ticket when you board.
+            {' '}Pickup only. We drop your group downtown at the train depot, a short walk to Oktoberfest. The ride home is not included.
             One group per pickup time, one address. Groups of {DOOR_PICKUP_MIN_RIDERS} to {DOOR_PICKUP_MAX_RIDERS}, within 10 miles and not past Piney Green Rd. No pickups on base.
           </p>
         </Section>
