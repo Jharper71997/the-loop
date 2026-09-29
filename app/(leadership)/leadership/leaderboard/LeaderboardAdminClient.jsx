@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react'
 
-export default function LeaderboardAdminClient({ bars = [] }) {
+export default function LeaderboardAdminClient() {
   const [board, setBoard] = useState(null)
   const [roster, setRoster] = useState(null)
   const [error, setError] = useState(null)
@@ -120,10 +120,10 @@ export default function LeaderboardAdminClient({ bars = [] }) {
           <div className="muted">No sellers signed up yet. Share the signup link below.</div>
         ) : (
           <div style={{ display: 'grid', gap: 6 }}>
-            <HeaderRow cells={['#', 'Name', 'Bar', 'Tickets', 'Collected', `Commission ${Math.round((board.commission_rate || 0) * 100)}%`]} cols={6} />
+            <HeaderRow cells={['#', 'Name', 'Tickets', 'Collected', `Commission ${Math.round((board.commission_rate || 0) * 100)}%`]} cols={5} />
             {standings.map((row, idx) => (
               <div key={row.slug}>
-              <div className="row" style={{ ...rowStyle, gridTemplateColumns: 'repeat(6, minmax(0, 1fr))' }}>
+              <div className="row" style={{ ...rowStyle, gridTemplateColumns: 'repeat(5, minmax(0, 1fr))' }}>
                 <span className="mono" style={{ color: '#8a5f0a' }}>{idx + 1}</span>
                 <span>
                   {(sales?.[row.slug] || []).length > 0 ? (
@@ -135,7 +135,6 @@ export default function LeaderboardAdminClient({ bars = [] }) {
                     </button>
                   ) : row.name}
                 </span>
-                <span className="muted">{row.bar || '—'}</span>
                 <span className="mono" style={{ color: '#17130f' }}>{row.tickets}</span>
                 <span className="mono">{formatMoney(row.revenue_cents)}</span>
                 <span className="mono" style={{ color: '#0f7a4e' }}>{formatMoney(row.commission_cents)}</span>
@@ -165,19 +164,18 @@ export default function LeaderboardAdminClient({ bars = [] }) {
         </div>
 
         {adding && (
-          <AddRow bars={bars} onCancel={() => setAdding(false)} onSave={createBartender} />
+          <AddRow onCancel={() => setAdding(false)} onSave={createBartender} />
         )}
 
         {roster.length === 0 ? (
           <div className="muted" style={{ marginTop: 10 }}>No signups yet.</div>
         ) : (
           <div style={{ display: 'grid', gap: 6, marginTop: 10 }}>
-            <HeaderRow cells={['Name', 'Bar', 'Code', 'Joined', 'Link / QR', 'Active', 'Actions']} cols={7} />
+            <HeaderRow cells={['Name', 'Code', 'Joined', 'Link / QR', 'Active', 'Actions']} cols={6} />
             {roster.map(b => editingSlug === b.slug ? (
               <EditRow
                 key={b.slug}
                 bartender={b}
-                bars={bars}
                 onCancel={() => setEditingSlug(null)}
                 onSave={async payload => {
                   await patch(b.slug, payload)
@@ -186,9 +184,8 @@ export default function LeaderboardAdminClient({ bars = [] }) {
                 busy={busySlug === b.slug}
               />
             ) : (
-              <div key={b.slug} className="row" style={{ ...rowStyle, gridTemplateColumns: 'repeat(7, minmax(0, 1fr))' }}>
+              <div key={b.slug} className="row" style={{ ...rowStyle, gridTemplateColumns: 'repeat(6, minmax(0, 1fr))' }}>
                 <span style={{ opacity: b.active ? 1 : 0.5 }}>{b.display_name}</span>
-                <span className="muted">{b.bar || '—'}</span>
                 <span className="mono tiny" style={{ color: '#6e6154' }}>{b.share_code || '—'}</span>
                 <span className="tiny muted">{formatDate(b.created_at)}</span>
                 <span style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
@@ -230,10 +227,9 @@ export default function LeaderboardAdminClient({ bars = [] }) {
   )
 }
 
-function AddRow({ bars, onCancel, onSave }) {
+function AddRow({ onCancel, onSave }) {
   const [firstName, setFirstName] = useState('')
   const [lastName, setLastName] = useState('')
-  const [barSlug, setBarSlug] = useState('')
   const [busy, setBusy] = useState(false)
   const [err, setErr] = useState(null)
 
@@ -242,7 +238,7 @@ function AddRow({ bars, onCancel, onSave }) {
     setBusy(true)
     setErr(null)
     try {
-      await onSave({ first_name: firstName.trim(), last_name: lastName.trim(), bar_slug: barSlug })
+      await onSave({ first_name: firstName.trim(), last_name: lastName.trim(), bar_slug: '' })
     } catch (e) {
       setErr(e.message)
     } finally {
@@ -267,10 +263,6 @@ function AddRow({ bars, onCancel, onSave }) {
           onChange={e => setLastName(e.target.value)}
           style={inputStyle}
         />
-        <select value={barSlug} onChange={e => setBarSlug(e.target.value)} style={selectStyle}>
-          <option value="">No bar</option>
-          {bars.map(b => <option key={b.slug} value={b.slug}>{b.name}</option>)}
-        </select>
         <button onClick={submit} disabled={busy} style={btnPrimary}>{busy ? 'Saving…' : 'Save'}</button>
         <button onClick={onCancel} disabled={busy} style={btnGhost}>Cancel</button>
       </div>
@@ -279,18 +271,12 @@ function AddRow({ bars, onCancel, onSave }) {
   )
 }
 
-function EditRow({ bartender, bars, onCancel, onSave, busy }) {
+function EditRow({ bartender, onCancel, onSave, busy }) {
   const [name, setName] = useState(bartender.display_name)
-  const [barSlug, setBarSlug] = useState(() => {
-    const match = bars.find(b => b.name === bartender.bar)
-    return match?.slug || ''
-  })
 
   function submit() {
     const payload = {}
     if (name.trim() && name.trim() !== bartender.display_name) payload.display_name = name.trim()
-    const currentSlug = bars.find(b => b.name === bartender.bar)?.slug || ''
-    if (barSlug !== currentSlug) payload.bar_slug = barSlug
     if (Object.keys(payload).length === 0) {
       onCancel()
       return
@@ -305,10 +291,6 @@ function EditRow({ bartender, bars, onCancel, onSave, busy }) {
       </div>
       <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', alignItems: 'center' }}>
         <input value={name} onChange={e => setName(e.target.value)} style={inputStyle} />
-        <select value={barSlug} onChange={e => setBarSlug(e.target.value)} style={selectStyle}>
-          <option value="">No bar</option>
-          {bars.map(b => <option key={b.slug} value={b.slug}>{b.name}</option>)}
-        </select>
         <button onClick={submit} disabled={busy} style={btnPrimary}>{busy ? 'Saving…' : 'Save'}</button>
         <button onClick={onCancel} disabled={busy} style={btnGhost}>Cancel</button>
       </div>
