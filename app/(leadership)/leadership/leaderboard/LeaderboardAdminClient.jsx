@@ -10,6 +10,9 @@ export default function LeaderboardAdminClient({ bars = [] }) {
   const [editingSlug, setEditingSlug] = useState(null)
   const [adding, setAdding] = useState(false)
   const [refreshing, setRefreshing] = useState(false)
+  // Paid orders per seller slug, with the buyer, for checking payouts.
+  const [sales, setSales] = useState(null)
+  const [openSlug, setOpenSlug] = useState(null)
 
   async function manualRefresh() {
     setRefreshing(true)
@@ -25,8 +28,10 @@ export default function LeaderboardAdminClient({ bars = [] }) {
   async function refetchAll({ fresh = false } = {}) {
     const board = await fetch(`/api/leaderboard${fresh ? '?fresh=1' : ''}`).then(r => r.json())
     const r = await fetch('/api/admin/bartenders').then(r => r.json())
+    const s = await fetch('/api/admin/seller-sales').then(r => r.json()).catch(() => null)
     setBoard(board)
     setRoster(r.bartenders || [])
+    setSales(s?.sales || {})
   }
 
   useEffect(() => {
@@ -117,9 +122,19 @@ export default function LeaderboardAdminClient({ bars = [] }) {
           <div style={{ display: 'grid', gap: 6 }}>
             <HeaderRow cells={['#', 'Name', 'Bar', 'Tickets', 'Collected', `Commission ${Math.round((board.commission_rate || 0) * 100)}%`, 'Status']} cols={7} />
             {standings.map((row, idx) => (
-              <div key={row.slug} className="row" style={{ ...rowStyle, gridTemplateColumns: 'repeat(7, minmax(0, 1fr))' }}>
+              <div key={row.slug}>
+              <div className="row" style={{ ...rowStyle, gridTemplateColumns: 'repeat(7, minmax(0, 1fr))' }}>
                 <span className="mono" style={{ color: '#8a5f0a' }}>{idx + 1}</span>
-                <span>{row.name}</span>
+                <span>
+                  {(sales?.[row.slug] || []).length > 0 ? (
+                    <button
+                      onClick={() => setOpenSlug(openSlug === row.slug ? null : row.slug)}
+                      style={{ background: 'none', border: 0, padding: 0, color: '#8a5f0a', cursor: 'pointer', textDecoration: 'underline', font: 'inherit', textAlign: 'left' }}
+                    >
+                      {openSlug === row.slug ? '▾' : '▸'} {row.name}
+                    </button>
+                  ) : row.name}
+                </span>
                 <span className="muted">{row.bar || '—'}</span>
                 <span className="mono" style={{ color: row.qualifies ? '#8a5f0a' : '#17130f' }}>{row.tickets}</span>
                 <span className="mono">{formatMoney(row.revenue_cents)}</span>
@@ -127,6 +142,8 @@ export default function LeaderboardAdminClient({ bars = [] }) {
                 <span className="tiny mono" style={{ color: row.qualifies ? '#0f7a4e' : '#6e6154' }}>
                   {row.qualifies ? 'QUALIFIES' : `${10 - row.tickets} TO GO`}
                 </span>
+              </div>
+              {openSlug === row.slug && <SellerSales orders={sales?.[row.slug] || []} rate={board.commission_rate || 0} />}
               </div>
             ))}
           </div>
@@ -369,6 +386,26 @@ function CopyableLine({ label, path, addCode = false, addToken = false }) {
           {copied ? 'Copied' : 'Copy'}
         </button>
       </div>
+    </div>
+  )
+}
+
+// Who paid under one seller this month: one line per order.
+function SellerSales({ orders, rate }) {
+  return (
+    <div style={{ margin: '2px 0 10px 24px', padding: '8px 12px', borderLeft: '2px solid #d4a333', display: 'grid', gap: 4 }}>
+      <HeaderRow cells={['Paid', 'Buyer', 'Phone', 'Loop', 'Tickets', 'Collected', 'Commission']} cols={7} />
+      {orders.map(o => (
+        <div key={o.id} className="row tiny" style={{ ...rowStyle, gridTemplateColumns: 'repeat(7, minmax(0, 1fr))', padding: '4px' }}>
+          <span className="muted">{formatDate(o.paid_at)}</span>
+          <span>{o.buyer_name || '—'}</span>
+          <span className="mono">{o.buyer_phone || o.buyer_email || '—'}</span>
+          <span className="muted">{o.event_name || '—'}{o.event_date ? ` · ${formatDate(o.event_date + 'T12:00:00')}` : ''}</span>
+          <span className="mono">{o.tickets}</span>
+          <span className="mono">{formatMoney(o.collected_cents)}</span>
+          <span className="mono" style={{ color: '#0f7a4e' }}>{formatMoney(Math.round(o.collected_cents * rate))}</span>
+        </div>
+      ))}
     </div>
   )
 }
