@@ -13,7 +13,6 @@ import {
   buildBartenderPayload, findBartendersByContact } from '@/lib/bartenders'
 import { normalizeEmail } from '@/lib/contacts'
 import { normalizePhone } from '@/lib/phone'
-import { ensureBartenderVoucher } from '@/lib/ticketTailorVouchers'
 
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
@@ -148,14 +147,6 @@ export async function POST(req) {
     })
     return Response.json({ error: 'Could not complete signup. Please try again.' }, { status: 500 })
   }
-
-  // Fire-and-forget: create a TT voucher so the customer can type this
-  // bartender's share_code in TT's "promo credit or voucher code" field at
-  // checkout. Failing here doesn't block signup — the URL referral path
-  // still works.
-  ensureBartenderVoucher(supabase, { slug, shareCode, displayName }).catch(err => {
-    console.error('[bartender-signup] TT voucher create failed', err)
-  })
 
   return Response.json(await buildBartenderPayload(supabase, row))
 }

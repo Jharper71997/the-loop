@@ -115,14 +115,15 @@ export default function LeaderboardAdminClient({ bars = [] }) {
           <div className="muted">No sellers signed up yet. Share the signup link below.</div>
         ) : (
           <div style={{ display: 'grid', gap: 6 }}>
-            <HeaderRow cells={['#', 'Name', 'Bar', 'Slug', 'Tickets', 'Status']} />
+            <HeaderRow cells={['#', 'Name', 'Bar', 'Tickets', 'Collected', `Commission ${Math.round((board.commission_rate || 0) * 100)}%`, 'Status']} cols={7} />
             {standings.map((row, idx) => (
-              <div key={row.slug} className="row" style={rowStyle}>
+              <div key={row.slug} className="row" style={{ ...rowStyle, gridTemplateColumns: 'repeat(7, minmax(0, 1fr))' }}>
                 <span className="mono" style={{ color: '#8a5f0a' }}>{idx + 1}</span>
                 <span>{row.name}</span>
                 <span className="muted">{row.bar || '—'}</span>
-                <span className="mono tiny" style={{ color: '#6e6154' }}>{row.slug}</span>
                 <span className="mono" style={{ color: row.qualifies ? '#8a5f0a' : '#17130f' }}>{row.tickets}</span>
+                <span className="mono">{formatMoney(row.revenue_cents)}</span>
+                <span className="mono" style={{ color: '#0f7a4e' }}>{formatMoney(row.commission_cents)}</span>
                 <span className="tiny mono" style={{ color: row.qualifies ? '#0f7a4e' : '#6e6154' }}>
                   {row.qualifies ? 'QUALIFIES' : `${10 - row.tickets} TO GO`}
                 </span>
@@ -157,7 +158,7 @@ export default function LeaderboardAdminClient({ bars = [] }) {
           <div className="muted" style={{ marginTop: 10 }}>No signups yet.</div>
         ) : (
           <div style={{ display: 'grid', gap: 6, marginTop: 10 }}>
-            <HeaderRow cells={['Name', 'Bar', 'Slug', 'Joined', 'QR', 'Active', 'Actions']} cols={7} />
+            <HeaderRow cells={['Name', 'Bar', 'Code', 'Joined', 'Link / QR', 'Active', 'Actions']} cols={7} />
             {roster.map(b => editingSlug === b.slug ? (
               <EditRow
                 key={b.slug}
@@ -174,14 +175,15 @@ export default function LeaderboardAdminClient({ bars = [] }) {
               <div key={b.slug} className="row" style={{ ...rowStyle, gridTemplateColumns: 'repeat(7, minmax(0, 1fr))' }}>
                 <span style={{ opacity: b.active ? 1 : 0.5 }}>{b.display_name}</span>
                 <span className="muted">{b.bar || '—'}</span>
-                <span className="mono tiny" style={{ color: '#6e6154' }}>{b.slug}</span>
+                <span className="mono tiny" style={{ color: '#6e6154' }}>{b.share_code || '—'}</span>
                 <span className="tiny muted">{formatDate(b.created_at)}</span>
-                <span>
+                <span style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+                  {b.referral_url && <CopyLinkButton url={b.referral_url} />}
                   {b.qr_image_url ? (
-                    <a href={b.qr_image_url} target="_blank" rel="noreferrer" style={{ color: '#8a5f0a', fontSize: 12 }}>
-                      view
+                    <a href={b.qr_image_url} download={`brewloop-${b.slug}.png`} style={{ color: '#8a5f0a', fontSize: 12 }}>
+                      QR
                     </a>
-                  ) : <span className="muted tiny">—</span>}
+                  ) : null}
                 </span>
                 <button
                   onClick={() => patch(b.slug, { active: !b.active })}
@@ -369,6 +371,26 @@ function CopyableLine({ label, path, addCode = false, addToken = false }) {
       </div>
     </div>
   )
+}
+
+function CopyLinkButton({ url }) {
+  const [copied, setCopied] = useState(false)
+  async function copy() {
+    try {
+      await navigator.clipboard.writeText(url)
+      setCopied(true)
+      setTimeout(() => setCopied(false), 1500)
+    } catch {}
+  }
+  return (
+    <button onClick={copy} title={url} style={{ background: 'none', border: 0, padding: 0, color: '#8a5f0a', fontSize: 12, cursor: 'pointer', textDecoration: 'underline' }}>
+      {copied ? 'Copied' : 'Copy link'}
+    </button>
+  )
+}
+
+function formatMoney(cents) {
+  return `$${(Number(cents || 0) / 100).toFixed(2)}`
 }
 
 function formatDate(iso) {
