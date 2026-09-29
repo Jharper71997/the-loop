@@ -76,6 +76,11 @@ export default async function PickupsPage() {
         Check every name before anyone boards. <strong style={{ color: RED }}>NOT PAID</strong> does not get on the bus
         until they pay at their link (tap it and hand them the phone, or text it to them).
       </p>
+      <p style={{ color: '#f5f5f7', fontSize: 14, margin: '0 0 14px', lineHeight: 1.5 }}>
+        <strong style={{ color: '#d4a333' }}>All ages.</strong> Kids ride with their group and are on the list like everyone else.
+        No 21+ check for this ride. Riders were told we come sometime within their hour and that you text before you arrive,
+        so tap <strong>On my way</strong> on each group as you head to them.
+      </p>
       {totalUnpaid > 0 && (
         <div style={{ padding: '12px 14px', borderRadius: 12, background: 'rgba(248,113,113,0.12)', border: `1px solid ${RED}`, color: RED, fontWeight: 800, marginBottom: 18 }}>
           {totalUnpaid} rider{totalUnpaid === 1 ? '' : 's'} not paid yet
@@ -113,6 +118,11 @@ export default async function PickupsPage() {
                         <a href={`https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(addr)}`} style={{ color: '#f5f5f7' }}>{addr || 'no address'}</a>
                         {o.buyer_phone && <> · <a href={`tel:${o.buyer_phone}`} style={{ color: '#d4a333' }}>{o.buyer_phone}</a></>}
                       </div>
+                      {o.buyer_phone && (
+                        <div style={{ margin: '6px 0 2px' }}>
+                          <a href={`sms:${o.buyer_phone}?&body=${encodeURIComponent(`Hi ${(o.buyer_name || '').split(' ')[0] || 'there'}, this is your Brew Loop driver. I'm on my way to pick up your group for Oktoberfest. Please be ready out front.`)}`} style={pill}>On my way</a>
+                        </div>
+                      )}
                       {!d.geo && <div style={{ color: RED }}>Address not verified on the map. Check it before the run.</div>}
                       {d.zone === BASE_ZONE && <div style={{ color: '#d4a333', fontWeight: 700 }}>On base: check every rider&rsquo;s military or dependent ID before they board.</div>}
                       {d.notes && <div style={{ color: MUTE }}>Note: {d.notes}</div>}

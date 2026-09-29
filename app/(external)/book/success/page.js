@@ -91,6 +91,11 @@ export default async function BookingSuccess({ searchParams }) {
                 Your $10 also gets you a seat on the Brew Loop that night. Show this ticket when you board.
               </p>
             )}
+            {door && (
+              <p style={{ marginTop: 10, fontSize: 16 }}>
+                We pick you up sometime within the hour you chose, not exactly on the hour. Your driver texts you when they are on the way. Kids are welcome on the ride.
+              </p>
+            )}
           </div>
 
           {groupLink && (
