@@ -56,6 +56,7 @@ const TICKER_ITEMS = [
   `${PARTNER_BAR_COUNT} partner bars`,
   'One shuttle all night',
   '$20 a seat',
+  'Loop Pass $25 a month',
   'Back where you started',
   'Tracked live',
   'Strictly 21+',
@@ -75,6 +76,7 @@ export default function BrewLanding({ loops = [] }) {
       <Hero next={next} />
       <Ticker items={TICKER_ITEMS} label="What a seat gets you" />
       <TheNight />
+      <ThePass />
       <TheBars />
       <TheGear />
       <Closer />
@@ -275,6 +277,9 @@ function TheNight() {
               Covers your whole night. No surge, no per-ride math, and it brings you back
               to the same spot you started.
             </p>
+            <Link href="/pass" style={{ display: 'inline-block', marginTop: 14, color: GOLD_INK, fontSize: 14.5, fontWeight: 800, textDecoration: 'none' }}>
+              Out most weekends? $25 a month with the Loop Pass &rarr;
+            </Link>
           </div>
         </div>
       </div>
@@ -384,6 +389,61 @@ function TheGear() {
   )
 }
 
+/* ============================== LOOP PASS ================================ */
+/* The monthly membership, explained on the page that gets the traffic. It  */
+/* was live from 9/21 but linked from nowhere but a "Cancel" footer link.   */
+/* $25 is typed here like $20 is above; the real amount is the Stripe price */
+/* (STRIPE_LOOP_PASS_MONTHLY_PRICE_ID), so change both together.           */
+/* Accuracy: the pass does not book a seat. The member still books each     */
+/* night on the site with the pass phone, and that seat comes up $0 (see     */
+/* verifyPassForRide in lib/loopPass.js). Own seat only, one per night.     */
+
+const PASS_STEPS = [
+  { n: 1, title: 'Get the pass', sub: '$25 a month. Cancel anytime, and it runs to the end of the month you paid for.' },
+  { n: 2, title: 'Book your night like normal', sub: 'Pick a loop on the site with the phone number on your pass. Your seat comes up $0.' },
+  { n: 3, title: 'Show your ticket and ID', sub: 'Board with your ticket like everyone else. We check your ID against the pass.' },
+]
+
+function ThePass() {
+  return (
+    <section id="loop-pass" style={{ position: 'relative', background: TONES.void, overflow: 'hidden' }}>
+      <div aria-hidden style={{ position: 'absolute', inset: 0, background: lightPool('top-right', 0.26) }} />
+      <div aria-hidden style={grainOverlay} />
+
+      <div className="bl-pass" style={{ position: 'relative', maxWidth: MAX_W, margin: '0 auto', padding: 'clamp(64px, 9vw, 108px) 24px' }}>
+        <div>
+          <div style={eyebrow}>Loop Pass &middot; monthly</div>
+          <h2 className="bl-h2" style={sectionH2}>
+            Out most weekends?<br /><span style={{ color: GOLD_HI }}>Ride all month for $25.</span>
+          </h2>
+          <p style={{ color: INK_DIM, fontSize: 'clamp(15px, 2vw, 18px)', lineHeight: 1.55, margin: '18px 0 0', maxWidth: 520 }}>
+            A seat is $20 a night. The Loop Pass covers your seat on every weekend loop for one monthly
+            price, so two nights out and it has already paid for itself.
+          </p>
+          <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap', marginTop: 30 }}>
+            <Link href="/pass" style={{ ...primaryCtaLg, padding: '15px 26px' }}>Get the Loop Pass</Link>
+          </div>
+          <p style={{ color: INK_MUTE, fontSize: 13, lineHeight: 1.55, margin: '16px 0 0', maxWidth: 480 }}>
+            Covers the pass holder&rsquo;s own seat, one per night. Friends still book their own. 21+.
+          </p>
+        </div>
+
+        <ol style={{ listStyle: 'none', margin: 0, padding: 0, display: 'grid', gap: 14 }}>
+          {PASS_STEPS.map(s => (
+            <li key={s.n} style={passStep}>
+              <span style={passNum}>{s.n}</span>
+              <div>
+                <h3 style={{ color: INK, fontSize: 18, fontWeight: 800, margin: 0 }}>{s.title}</h3>
+                <p style={{ color: INK_DIM, fontSize: 15, lineHeight: 1.55, margin: '6px 0 0' }}>{s.sub}</p>
+              </div>
+            </li>
+          ))}
+        </ol>
+      </div>
+    </section>
+  )
+}
+
 /* =============================== CLOSER ================================== */
 
 function Closer() {
@@ -401,6 +461,11 @@ function Closer() {
         </p>
         <div style={{ marginTop: 30 }}>
           <Link href="/events" style={{ ...primaryCtaLg, padding: '17px 34px', fontSize: 17 }}>Book a seat</Link>
+        </div>
+        <div style={{ marginTop: 18 }}>
+          <Link href="/pass" style={{ color: GOLD_HI, fontSize: 15, fontWeight: 700, textDecoration: 'none' }}>
+            Out most weekends? Get the Loop Pass &rarr;
+          </Link>
         </div>
 
         {/* Follow. The socials were only reachable from the footer and
@@ -464,6 +529,19 @@ const timelineNumPaper = {
 }
 
 
+const passStep = {
+  display: 'flex', gap: 16, alignItems: 'flex-start',
+  padding: '18px 20px', borderRadius: 16,
+  border: '1px solid rgba(212,163,51,0.30)', background: 'rgba(212,163,51,0.06)',
+}
+
+const passNum = {
+  flex: '0 0 auto', width: 38, height: 38, borderRadius: 11,
+  border: '1px solid rgba(212,163,51,0.7)', background: 'rgba(212,163,51,0.16)',
+  color: GOLD_HI, fontSize: 15, fontWeight: 800,
+  display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
+}
+
 function LandingStyles() {
   return (
     <style>{`
@@ -487,6 +565,12 @@ function LandingStyles() {
       .bl-night-aside { display: grid; gap: 16px; align-content: start; }
       @media (min-width: 940px) {
         .bl-night { grid-template-columns: 1.15fr 0.85fr; gap: 72px; align-items: center; }
+      }
+
+      /* --- loop pass --- */
+      .bl-pass { display: grid; grid-template-columns: 1fr; gap: 40px; }
+      @media (min-width: 940px) {
+        .bl-pass { grid-template-columns: 1.05fr 0.95fr; gap: 64px; align-items: center; }
       }
 
       /* The bar rail lives in ./BarRail.jsx — landing only. The grid it

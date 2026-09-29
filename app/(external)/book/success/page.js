@@ -104,9 +104,33 @@ export default async function BookingSuccess({ searchParams }) {
             <a href={myTicketsHref} style={ghostCta}>My tickets</a>
             <a href={eventsHref} style={ghostCta}>Browse more loops</a>
           </div>
+
+          {/* Someone who just paid for a seat is the best person to pitch the
+              pass to. Brew card checkouts only: not a pass seat, not a door
+              pickup (the pass does not cover those). */}
+          {kind === 'brew' && sessionId && !door && !order?.metadata?.loop_pass && (
+            <div style={passCard}>
+              <div style={{ color: GOLD_HI, fontSize: 12, fontWeight: 800, letterSpacing: '0.14em', textTransform: 'uppercase' }}>
+                Loop Pass
+              </div>
+              <p style={{ margin: '8px 0 16px', fontSize: 16, color: INK, lineHeight: 1.5 }}>
+                Coming back next weekend? $25 a month covers your seat on every weekend loop. Cancel anytime.
+              </p>
+              <a href="/pass" style={{ ...ghostCta, borderColor: GOLD, color: GOLD_HI }}>See the pass</a>
+            </div>
+          )}
         </section>
     </main>
   )
+}
+
+const passCard = {
+  marginTop: 36,
+  padding: '20px 22px',
+  borderRadius: 16,
+  textAlign: 'center',
+  border: '1px solid rgba(212,163,51,0.35)',
+  background: 'rgba(212,163,51,0.08)',
 }
 
 const ghostCta = {

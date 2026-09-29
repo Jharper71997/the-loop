@@ -65,7 +65,29 @@ export default function PassClient({ plans = [] }) {
       <p style={kicker}>Monthly membership</p>
       <h1 style={h1}>Loop Pass</h1>
       <p style={{ color: INK_DIM, marginTop: 8, fontSize: 16, maxWidth: 460 }}>
-        Your standing seat on every weekend loop. Skip the per-night checkout and just hop on.
+        Your seat on every weekend loop for one monthly price. A seat is $20 a night, so two nights out and it has paid for itself.
+      </p>
+
+      {/* How it actually works. The pass does not book a seat on its own: the
+          member books each night with the pass phone and the seat is $0 (see
+          verifyPassForRide in lib/loopPass.js). */}
+      <ol style={{ listStyle: 'none', margin: '22px 0 0', padding: 0, display: 'grid', gap: 10 }}>
+        {[
+          ['Get the pass', 'Monthly, cancel anytime. It runs to the end of the month you paid for.'],
+          ['Book your night like normal', 'Pick a loop on the site with the same phone number. Your seat comes up $0.'],
+          ['Show your ticket and ID', 'Board with your ticket. We check your ID against the pass.'],
+        ].map(([title, sub], i) => (
+          <li key={title} style={{ display: 'flex', gap: 12, alignItems: 'flex-start', padding: '12px 14px', borderRadius: 12, border: `1px solid ${LINE}`, background: CARD }}>
+            <span style={{ flex: '0 0 auto', width: 28, height: 28, borderRadius: 8, background: 'rgba(212,163,51,0.16)', border: `1px solid ${GOLD}`, color: GOLD_HI, fontWeight: 800, fontSize: 13, display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }}>{i + 1}</span>
+            <span>
+              <span style={{ display: 'block', color: INK, fontWeight: 700, fontSize: 15 }}>{title}</span>
+              <span style={{ display: 'block', color: INK_DIM, fontSize: 13.5, lineHeight: 1.5, marginTop: 2 }}>{sub}</span>
+            </span>
+          </li>
+        ))}
+      </ol>
+      <p style={{ color: INK_MUTED, fontSize: 12.5, lineHeight: 1.5, margin: '10px 0 0' }}>
+        Covers your own seat, one per night. Friends still book their own.
       </p>
 
       <form onSubmit={submit} style={{ marginTop: 28, display: 'flex', flexDirection: 'column', gap: 18 }}>

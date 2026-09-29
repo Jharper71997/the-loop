@@ -182,7 +182,8 @@ export default function SiteHeader() {
       <style>{`
         .bl-desktop-nav { display: none; }
         .bl-mobile-nav { display: flex; }
-        @media (min-width: 860px) {
+        /* 980, not 860: with Loop Pass in the nav the row crowds the logo below ~980px. */
+        @media (min-width: 980px) {
           .bl-desktop-nav { display: flex; }
           .bl-mobile-nav { display: none; }
         }

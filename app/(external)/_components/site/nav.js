@@ -23,6 +23,7 @@
 export const NAV_LINKS = [
   { href: '/about', label: 'How It Works' },
   { href: '/bars', label: 'Partner Bars' },
+  { href: '/pass', label: 'Loop Pass' },
   { href: '/merch', label: 'Merch' },
   { href: '/sponsors', label: 'Sponsors' },
 ]
