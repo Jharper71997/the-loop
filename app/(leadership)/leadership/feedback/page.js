@@ -42,7 +42,12 @@ export default async function FeedbackPage() {
   // automations page.
   if (fbErr?.code === '42P01') return <MigrationPending />
 
-  const rows = feedback || []
+  // One response per person. The open link can be filled out again and again
+  // (Jacob tested it three times; blank double submits land a minute apart), and
+  // every repeat would count as another score. Rows come newest first, so the
+  // latest answer from each person is the one kept.
+  const rows = dedupeByPerson(feedback || [])
+  const duplicatesHidden = (feedback || []).length - rows.length
 
   // Send volume over the same window, so the response rate is honest about how
   // many riders were actually asked rather than how many answered.
@@ -174,6 +179,7 @@ export default async function FeedbackPage() {
           response rate.
           Ratings of 3 or below raise an{' '}
           <a href="/leadership/alerts" style={{ color: GOLD_TXT, textDecoration: 'none' }}>alert</a> the moment they land.
+          {duplicatesHidden > 0 && ` Each person counts once, using their latest answer (${duplicatesHidden} repeat ${duplicatesHidden === 1 ? 'response' : 'responses'} left out).`}
         </p>
 
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(150px, 100%), 1fr))', gap: 10, marginBottom: 22 }}>
@@ -322,6 +328,31 @@ function MigrationPending() {
       </div>
     </main>
   )
+}
+
+// Who a response belongs to: the contact, else their phone digits, else their
+// email. A response with none of those only matches an identical one sent
+// within 10 minutes (a double tap on submit), since two anonymous riders can
+// honestly give the same score.
+function dedupeByPerson(rows) {
+  const seen = new Set()
+  const anon = []
+  const out = []
+  for (const r of rows) {
+    const digits = (r.phone || '').replace(/\D/g, '').replace(/^1(?=\d{10}$)/, '')
+    const who = r.contact_id ? `c:${r.contact_id}` : digits ? `p:${digits}` : r.email ? `e:${r.email.trim().toLowerCase()}` : null
+    if (who) {
+      if (seen.has(who)) continue
+      seen.add(who)
+    } else {
+      const sig = [r.rating, r.driver_rating, r.bars_rating, r.timing_rating, r.favorite_bar, r.ride_again, r.comment].join('|')
+      const t = Date.parse(r.created_at)
+      if (anon.some(a => a.sig === sig && Math.abs(a.t - t) < 10 * 60 * 1000)) continue
+      anon.push({ sig, t })
+    }
+    out.push(r)
+  }
+  return out
 }
 
 // When the rider submitted, in Jacksonville time: "Sep 29, 3:12 PM".
