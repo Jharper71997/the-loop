@@ -23,7 +23,8 @@ export default function BookingForm({
   eventId, eventName, ticketTypes, addons = [], stops = [], waiver,
   fareLabel = null, fareHint = null,
   // Rider age rule printed in the Terms checkbox. The bar loops (Brew, Surf)
-  // are 21+; pass null for a service without one (The Loop / Marines).
+  // are 21+; pass null for a service without one (The Loop / Marines, and
+  // door pickup, which is all ages).
   minAge = 21,
   // Business name printed in the SMS consent (Brew / Surf / The Loop).
   brandName = undefined,

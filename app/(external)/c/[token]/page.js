@@ -1,5 +1,6 @@
 import { supabaseAdmin } from '@/lib/supabaseAdmin'
 import { getCurrentWaiverVersion } from '@/lib/waiver'
+import { isDoorPickupEvent } from '@/lib/doorPickup'
 import ClaimForm from './ClaimForm'
 
 export const dynamic = 'force-dynamic'
@@ -40,10 +41,17 @@ export default async function ClaimPage({ params }) {
   if (item.order?.event_id) {
     const { data } = await sb
       .from('events')
-      .select('id, name, event_date, pickup_time, kind')
+      .select('id, name, event_date, pickup_time, kind, is_private, group_id')
       .eq('id', item.order.event_id)
       .maybeSingle()
     event = data
+  }
+
+  // Door pickup (Oktoberfest) is all ages, so no 21+ box.
+  let allAges = event?.kind === 'marines'
+  if (event && !allAges) {
+    const { data: tts } = await sb.from('ticket_types').select('name, active').eq('event_id', event.id)
+    allAges = isDoorPickupEvent(event, tts)
   }
 
   const waiver = await getCurrentWaiverVersion(sb)
@@ -66,7 +74,7 @@ export default async function ClaimPage({ params }) {
           </p>
         </header>
 
-        <ClaimForm token={token} event={event} waiver={waiver} />
+        <ClaimForm token={token} event={event} waiver={waiver} allAges={allAges} />
       </div>
     </main>
   )

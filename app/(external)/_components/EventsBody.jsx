@@ -198,11 +198,12 @@ function DoorPickupCard({ loop, times }) {
         </div>
         <div style={{ color: GOLD_HI, fontSize: 16, fontWeight: 800, marginTop: 8 }}>Oktoberfest door pickup</div>
         <p style={{ margin: '12px 0 0', color: INK, fontSize: 15, lineHeight: 1.6 }}>
-          We pick your group up at your door and drop you downtown at Oktoberfest. Your $10 also gets you a seat on the Brew Loop that night.
+          We pick your group up at your door and drop you downtown at Oktoberfest. Your $10 also gets you a seat on the Brew Loop that night (21+).
         </p>
         <ul style={{ margin: '14px 0 0', padding: 0, listStyle: 'none', display: 'grid', gap: 6, color: INK_DIM, fontSize: 14 }}>
           <li>Pickups every hour, {times.first} to {times.last}</li>
           <li>Groups of 4 or more, anywhere in Jacksonville or on base</li>
+          <li>All ages, kids welcome</li>
           <li>On base pickups: military or dependent ID required</li>
           <li>Pickup only, the ride home is not included</li>
         </ul>

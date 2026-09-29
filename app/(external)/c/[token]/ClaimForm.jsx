@@ -11,7 +11,7 @@ const SURFACE = '#15151a'
 const BORDER = '#2a2a31'
 const RED = '#e07a7a'
 
-export default function ClaimForm({ token, event, waiver }) {
+export default function ClaimForm({ token, event, waiver, allAges = false }) {
   const [first, setFirst] = useState('')
   const [last, setLast] = useState('')
   const [phone, setPhone] = useState('')
@@ -19,7 +19,7 @@ export default function ClaimForm({ token, event, waiver }) {
   // Opt-in only: never pre-ticked, never required to claim the seat.
   const [smsConsent, setSmsConsent] = useState(false)
   const [termsAccepted, setTermsAccepted] = useState(false)
-  const minAge = event?.kind === 'marines' ? null : 21
+  const minAge = allAges ? null : 21
   const [typedName, setTypedName] = useState('')
   const [waiverOpen, setWaiverOpen] = useState(false)
   const [submitting, setSubmitting] = useState(false)

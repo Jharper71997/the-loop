@@ -306,7 +306,9 @@ export default async function EventBookingPage({ params, searchParams }) {
               addons={doorPickup ? [] : addons}
               stops={stops}
               waiver={waiver}
-              minAge={event.kind === 'marines' ? null : 21}
+              /* Oktoberfest is all ages, so door pickup has no age gate (Jacob,
+                 2026-09-29). The Brew Loop seat that comes with it stays 21+. */
+              minAge={event.kind === 'marines' || doorPickup ? null : 21}
               brandName={cfg.brand}
               /* Same test the checkout route uses to honor the pass. */
               loopPass={event.kind === 'brew' && !doorPickup}
@@ -348,11 +350,11 @@ export default async function EventBookingPage({ params, searchParams }) {
                   <ul className="bk-facts">
                     <li>We pick your group up at your door at the time you choose</li>
                     <li>Dropped at the downtown train depot, a short walk to Oktoberfest at Riverwalk Crossing</li>
-                    <li>Your $10 also gets you a seat on the Brew Loop that night</li>
+                    <li>Your $10 also gets you a seat on the Brew Loop that night (21+)</li>
                     <li>Pickup only, the ride home is not included</li>
                     <li>Groups of 4 to 13, picked up at one address, anywhere in Jacksonville out to Hwy 172</li>
                     <li>On base? Zone 3 has its own shuttle every hour. Every rider needs a military or dependent ID</li>
-                    <li>Strictly 21+, every rider</li>
+                    <li>All ages. Kids are welcome with their group</li>
                   </ul>
                 ) : (
                   <ul className="bk-facts">
