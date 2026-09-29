@@ -4,7 +4,7 @@ import { useEffect, useMemo, useState } from 'react'
 import dynamic from 'next/dynamic'
 import { prefixLink } from '@/lib/businessConfig'
 import ConsentCheckbox, { PolicyLink, SmsConsentLabel } from '@/app/_components/legal/ConsentCheckbox'
-import { DOOR_PICKUP_MIN_RIDERS, DOOR_PICKUP_MAX_RIDERS, ZONES, zoneOfTicketType, zipProblem } from '@/lib/doorPickup'
+import { DOOR_PICKUP_MIN_RIDERS, DOOR_PICKUP_MAX_RIDERS, ZONES, zoneOfTicketType, zipProblem, BASE_ZONE, BASE_ID_TEXT } from '@/lib/doorPickup'
 
 // Leaflet touches window, and only door pickup riders who open it need it.
 const ZoneMap = dynamic(() => import('./ZoneMap'), { ssr: false })
@@ -107,6 +107,7 @@ export default function BookingForm({
   ])
   const [pickupAddress, setPickupAddress] = useState({ street: '', city: 'Jacksonville', zip: '', notes: '' })
   const [showZoneMap, setShowZoneMap] = useState(false)
+  const [baseIdAck, setBaseIdAck] = useState(false)
   const doorSlot = doorPickup ? ticketTypes.find(t => t.id === riders[0]?.ticket_type_id) : null
   const doorZone = doorSlot ? zoneOfTicketType(doorSlot) : null
   const zipError = doorPickup && pickupAddress.zip.trim().length >= 5
@@ -219,13 +220,14 @@ export default function BookingForm({
     if (doorPickup) {
       if (riders.length > DOOR_PICKUP_MAX_RIDERS) return false
       if (organizer && riders.length < DOOR_PICKUP_MIN_RIDERS) return false
+      if (doorZone === BASE_ZONE && !baseIdAck) return false
       if (!joinParty) {
         if (!pickupAddress.street.trim() || !pickupAddress.city.trim()) return false
         if (zipProblem(pickupAddress.zip, doorZone)) return false
       }
     }
     return true
-  }, [buyer, riders, ticketTypes, stops, buyerOwesSig, buyerTypedName, oversellError, termsAccepted, doorPickup, joinParty, pickupAddress, doorZone])
+  }, [buyer, riders, ticketTypes, stops, buyerOwesSig, buyerTypedName, oversellError, termsAccepted, doorPickup, joinParty, pickupAddress, doorZone, baseIdAck])
 
   async function onSubmit(e) {
     e.preventDefault()
@@ -300,6 +302,7 @@ export default function BookingForm({
           client_token: clientToken,
           ...(doorPickup && joinParty ? { join_code: joinParty.code, seat_token: joinParty.seat?.token || null } : {}),
           ...(doorPickup && !joinParty ? { pickup_address: pickupAddress } : {}),
+          ...(doorPickup && doorZone === BASE_ZONE ? { base_id_ack: baseIdAck } : {}),
           terms_accepted: termsAccepted,
           age_confirmed: !!minAge && termsAccepted,
         }),
@@ -334,6 +337,8 @@ export default function BookingForm({
           message = 'This seat is already paid for. You’re all set.'
         } else if (json.error === 'pay_self_contact') {
           message = 'Add a first name and phone for each friend paying their own seat.'
+        } else if (json.error === 'base_id_required') {
+          message = 'On base pickups need every rider to have a military or dependent ID. Check the box to confirm.'
         } else if (json.error === 'join_invalid') {
           message = 'That group link isn’t valid anymore. Ask whoever sent it for a new one, or book your own pickup.'
         } else if (json.error === 'pass_verify_failed') {
@@ -419,6 +424,7 @@ export default function BookingForm({
           <p style={{ fontSize: 13.5, color: '#9c9ca3', lineHeight: 1.55, margin: 0 }}>
             Pickup at {joinParty.street}, {joinParty.city}. Pay for your own seat below. Adding someone else? Add them as a rider.
           </p>
+          {doorZone === BASE_ZONE && <BaseIdNotice checked={baseIdAck} onChange={setBaseIdAck} />}
         </Section>
       )}
 
@@ -453,6 +459,7 @@ export default function BookingForm({
               </span>
             )}
           </label>
+          {doorZone === BASE_ZONE && <BaseIdNotice checked={baseIdAck} onChange={setBaseIdAck} />}
           <Field label="Street address" value={pickupAddress.street} onChange={v => setPickupAddress(a => ({ ...a, street: v }))} />
           <Row>
             <Field label="City" value={pickupAddress.city} onChange={v => setPickupAddress(a => ({ ...a, city: v }))} />
@@ -1056,6 +1063,19 @@ function Field({ label, value, onChange, type = 'text' }) {
       {label}
       <input type={type} value={value} onChange={e => onChange(e.target.value)} style={input} />
     </label>
+  )
+}
+
+// Zone 3 (on base): the gate needs an ID for every rider, so the booker
+// confirms it before paying. The driver checks it again at the bus.
+function BaseIdNotice({ checked, onChange }) {
+  return (
+    <div style={{ padding: '12px 14px', borderRadius: 12, border: '1px solid rgba(212,163,51,0.5)', background: 'rgba(212,163,51,0.08)', display: 'grid', gap: 6 }}>
+      <div style={{ fontSize: 14, color: '#f5f5f7', lineHeight: 1.5 }}>
+        <strong style={{ color: ACCENT }}>On base pickup: military or dependent ID required.</strong> Every rider needs a valid military ID or dependent ID to get on base. No ID, no ride.
+      </div>
+      <CheckRow checked={checked} onChange={onChange} label={BASE_ID_TEXT} />
+    </div>
   )
 }
 

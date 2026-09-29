@@ -351,7 +351,7 @@ export default async function EventBookingPage({ params, searchParams }) {
                     <li>Your $10 also gets you a seat on the Brew Loop that night</li>
                     <li>Pickup only, the ride home is not included</li>
                     <li>Groups of 4 to 13, picked up at one address, anywhere in Jacksonville out to Hwy 172</li>
-                    <li>On base? Zone 3 has its own shuttle every hour</li>
+                    <li>On base? Zone 3 has its own shuttle every hour. Every rider needs a military or dependent ID</li>
                     <li>Strictly 21+, every rider</li>
                   </ul>
                 ) : (

@@ -16,7 +16,7 @@ import { LEGAL } from '@/lib/legal'
 import {
   DOOR_PICKUP_MIN_RIDERS, DOOR_PICKUP_MAX_RIDERS,
   isDoorPickupEvent, zoneOfTicketType, zipProblem, normalizeZip,
-  geocodeAddress, pointProblem, milesBetween, DEPOT, mintJoinCode, findParty, reservedUnpaidSeats,
+  geocodeAddress, pointProblem, milesBetween, DEPOT, mintJoinCode, findParty, reservedUnpaidSeats, BASE_ZONE,
 } from '@/lib/doorPickup'
 
 function mintClaimToken() {
@@ -234,6 +234,13 @@ async function handleCheckout(req) {
       join_code: mintJoinCode(),
       roster,
     }
+  }
+
+  // Zone 3 is on base: the booker confirms every rider has a military or
+  // dependent ID (lib/doorPickup.js BASE_ZONE). Organizer and joiners alike.
+  if (doorPickupMeta && doorPickupMeta.zone === BASE_ZONE) {
+    if (body.base_id_ack !== true) return Response.json({ error: 'base_id_required' }, { status: 400 })
+    doorPickupMeta.base_id_ack = true
   }
 
   // Walk-on pickup. A ticket type with no stop_index has no bar attached, so the

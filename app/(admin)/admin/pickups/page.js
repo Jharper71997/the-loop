@@ -1,5 +1,5 @@
 import { supabaseAdmin } from '@/lib/supabaseAdmin'
-import { isDoorPickupEvent, zoneOfTicketType, joinUrl } from '@/lib/doorPickup'
+import { isDoorPickupEvent, zoneOfTicketType, joinUrl, BASE_ZONE } from '@/lib/doorPickup'
 
 export const metadata = { title: 'Door pickups' }
 export const dynamic = 'force-dynamic'
@@ -114,6 +114,7 @@ export default async function PickupsPage() {
                         {o.buyer_phone && <> · <a href={`tel:${o.buyer_phone}`} style={{ color: '#d4a333' }}>{o.buyer_phone}</a></>}
                       </div>
                       {!d.geo && <div style={{ color: RED }}>Address not verified on the map. Check it before the run.</div>}
+                      {d.zone === BASE_ZONE && <div style={{ color: '#d4a333', fontWeight: 700 }}>On base: check every rider&rsquo;s military or dependent ID before they board.</div>}
                       {d.notes && <div style={{ color: MUTE }}>Note: {d.notes}</div>}
                       <ul style={{ listStyle: 'none', margin: '8px 0 0', padding: 0, display: 'grid', gap: 6 }}>
                         {rows.map((r, i) => (
