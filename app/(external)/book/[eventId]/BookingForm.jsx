@@ -340,7 +340,7 @@ export default function BookingForm({
         } else if (json.error === 'pay_self_contact') {
           message = 'Add a first name and phone for each friend paying their own seat.'
         } else if (json.error === 'base_id_required') {
-          message = 'On base pickups need every rider to have a military or dependent ID. Check the box to confirm.'
+          message = 'On base pickups need every adult to have a military or dependent ID. Check the box to confirm.'
         } else if (json.error === 'join_invalid') {
           message = 'That group link isn’t valid anymore. Ask whoever sent it for a new one, or book your own pickup.'
         } else if (json.error === 'pass_verify_failed') {
@@ -1077,7 +1077,7 @@ function BaseIdNotice({ checked, onChange }) {
   return (
     <div style={{ padding: '12px 14px', borderRadius: 12, border: '1px solid rgba(212,163,51,0.5)', background: 'rgba(212,163,51,0.08)', display: 'grid', gap: 6 }}>
       <div style={{ fontSize: 14, color: '#f5f5f7', lineHeight: 1.5 }}>
-        <strong style={{ color: ACCENT }}>On base pickup: military or dependent ID required.</strong> Every rider needs a valid military ID or dependent ID to get on base. No ID, no ride.
+        <strong style={{ color: ACCENT }}>On base pickup: military or dependent ID required.</strong> Every adult needs a valid military ID or dependent ID to get on base. Kids ride with their parent or guardian. No ID, no ride.
       </div>
       <CheckRow checked={checked} onChange={onChange} label={BASE_ID_TEXT} />
     </div>
