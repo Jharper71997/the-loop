@@ -11,8 +11,9 @@ import { DOOR_PICKUP_MIN_RIDERS, DOOR_PICKUP_MAX_RIDERS, ZONES, zoneOfTicketType
 const ZoneMap = dynamic(() => import('./ZoneMap'), { ssr: false })
 
 const ACCENT = '#d4a333'
-const SURFACE = '#15151a'
-const BORDER = '#2a2a31'
+// Lifted (Jacob, 2026-09-29: too dark to read the details).
+const SURFACE = '#2a2a31'
+const BORDER = '#3c3c45'
 
 // fareLabel / fareHint let a caller relabel the ticket chooser. The defaults
 // are the public loop's words, where a ticket IS a pickup bar and the rider has
@@ -314,7 +315,7 @@ export default function BookingForm({
         } else if (json.error === 'pay_self_contact') {
           message = 'Add a first name and phone for each friend paying their own seat.'
         } else if (json.error === 'base_id_required') {
-          message = 'On base pickups need every rider to have a military or dependent ID. Check the box to confirm.'
+          message = 'On base pickups need every adult to have a military or dependent ID. Check the box to confirm.'
         } else if (json.error === 'join_invalid') {
           message = 'That group link isn’t valid anymore. Ask whoever sent it for a new one, or book your own pickup.'
         } else if (json.error === 'pass_verify_failed') {
@@ -376,7 +377,7 @@ export default function BookingForm({
           <Field label="Phone" value={buyer.phone} type="tel" onChange={v => setBuyer(b => ({ ...b, phone: v }))} />
           <Field label="Email" value={buyer.email} type="email" onChange={v => setBuyer(b => ({ ...b, email: v }))} />
         </Row>
-        <p style={{ fontSize: 12, color: '#a6a6ae', lineHeight: 1.5, margin: '2px 0 0' }}>
+        <p style={{ fontSize: 13.5, color: '#d8d8de', lineHeight: 1.5, margin: '2px 0 0' }}>
           We text your booking confirmation and boarding pass to this phone. Reply STOP to any text to opt out.
         </p>
         <div style={{ padding: '8px 4px 0' }}>
@@ -397,7 +398,7 @@ export default function BookingForm({
             You&rsquo;re riding with <strong>{joinParty.organizer || 'your group'}</strong>
             {doorSlot ? <> at <strong style={{ color: ACCENT }}>{doorSlot.name.replace(/\s*·\s*Zone\s*\d/i, '')}</strong></> : null}.
           </p>
-          <p style={{ fontSize: 13.5, color: '#9c9ca3', lineHeight: 1.55, margin: 0 }}>
+          <p style={{ fontSize: 13.5, color: '#d2d2d8', lineHeight: 1.55, margin: 0 }}>
             Pickup at {joinParty.street}, {joinParty.city}. Pay for your own seat below. Adding someone else? Add them as a rider.
           </p>
           {doorZone === BASE_ZONE && <BaseIdNotice checked={baseIdAck} onChange={setBaseIdAck} />}
@@ -407,9 +408,9 @@ export default function BookingForm({
       {doorPickup && !joinParty && (
         <Section title="Pickup">
           <label style={{ display: 'grid', gap: 7 }}>
-            <span style={{ fontSize: 14, color: '#f5f5f7', fontWeight: 700 }}>What time should we pick you up?</span>
-            <span style={{ fontSize: 12.5, color: '#9c9ca3', lineHeight: 1.5, marginTop: -3 }}>
-              Each time serves one zone of town. Pick a time in the zone your address is in.
+            <span style={{ fontSize: 15, color: '#f5f5f7', fontWeight: 700 }}>What hour should we pick you up?</span>
+            <span style={{ fontSize: 14, color: '#d2d2d8', lineHeight: 1.5, marginTop: -3 }}>
+              Each hour serves one zone of town. Pick an hour in the zone your address is in. We get to you sometime within that hour, and your driver texts you when they are on the way.
             </span>
             <button type="button" onClick={() => setShowZoneMap(v => !v)} style={{ ...btnGhost, justifySelf: 'start', borderColor: '#d4a333', color: '#f0c24a' }}>
               {showZoneMap ? 'Hide the zone map' : 'Not sure which zone? See the map'}
@@ -429,7 +430,7 @@ export default function BookingForm({
               })}
             </select>
             {doorSlot && (
-              <span style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: 12.5, color: '#9c9ca3', gap: 8 }}>
+              <span style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: 14, color: '#d2d2d8', gap: 8 }}>
                 <span>Zone {doorZone}: {ZONES[doorZone]?.label} &middot; ZIP {ZONES[doorZone]?.zips.join(' or ')}</span>
                 <RemainingBadge remaining={doorSlot.remaining} />
               </span>
@@ -445,15 +446,18 @@ export default function BookingForm({
             <div style={{ fontSize: 13, color: '#f87171', lineHeight: 1.5 }}>{zipError}</div>
           )}
           <Field label="Anything the driver should know? (gate code, which building)" value={pickupAddress.notes} onChange={v => setPickupAddress(a => ({ ...a, notes: v }))} />
-          <p style={{ fontSize: 13, color: '#f5f5f7', lineHeight: 1.55, margin: 0 }}>
+          <p style={{ fontSize: 15, color: '#f5f5f7', lineHeight: 1.55, margin: 0 }}>
             <strong style={{ color: ACCENT }}>List everyone in your group, at least {DOOR_PICKUP_MIN_RIDERS}.</strong> For each friend,
             pay for them now or send them a link to pay their own $10. Their seat is held for them either way.
           </p>
-          <p style={{ fontSize: 12.5, color: '#9c9ca3', lineHeight: 1.5, margin: 0 }}>
-            <strong style={{ color: '#f5f5f7' }}>Your $10 also gets you a seat on the Brew Loop that night.</strong> Show your ticket when you board.
-            {' '}Pickup only. We drop your group downtown at the train depot, a short walk to Oktoberfest. The ride home is not included.
-            Your whole group is picked up at one address. Groups of {DOOR_PICKUP_MIN_RIDERS} to {DOOR_PICKUP_MAX_RIDERS}, out to Hwy 172. On base? Pick a Zone 3 time; base has its own shuttle.
-          </p>
+          <ul style={{ fontSize: 15, color: '#f5f5f7', lineHeight: 1.5, margin: 0, padding: '14px 16px 14px 34px', background: 'rgba(212,163,51,0.10)', border: '1px solid rgba(212,163,51,0.35)', borderRadius: 12, display: 'grid', gap: 6 }}>
+            <li><strong>Pickup within the hour.</strong> Other groups in your zone ride the same run, so we get to you sometime in the hour you choose, not exactly on the hour. Your driver texts you when they are on the way.</li>
+            <li><strong>Pickup only.</strong> We drop your group downtown at the train depot, a short walk to Oktoberfest. The ride home is not included.</li>
+            <li><strong>Kids are welcome.</strong> The ride to Oktoberfest is all ages. Kids ride with their group and count as a seat, so list them with everyone else.</li>
+            <li>Your whole group is picked up at one address. Groups of {DOOR_PICKUP_MIN_RIDERS} to {DOOR_PICKUP_MAX_RIDERS}, out to Hwy 172.</li>
+            <li>On base? Pick a Zone 3 time. Base has its own shuttle.</li>
+            <li>Your $10 also gets you a seat on the Brew Loop that night (21+). Show your ticket when you board.</li>
+          </ul>
         </Section>
       )}
 
@@ -474,7 +478,7 @@ export default function BookingForm({
                 marginLeft: 2,
               }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                  <strong style={{ color: ACCENT, fontSize: 11, letterSpacing: '0.2em', textTransform: 'uppercase', fontWeight: 800 }}>Rider {idx + 1}</strong>
+                  <strong style={{ color: ACCENT, fontSize: 12.5, letterSpacing: '0.2em', textTransform: 'uppercase', fontWeight: 800 }}>Rider {idx + 1}</strong>
                   {idx > 0 && !(organizer && riders.length <= DOOR_PICKUP_MIN_RIDERS) && (
                     <button type="button" onClick={() => removeRider(idx)} style={btnGhost}>Remove</button>
                   )}
@@ -500,7 +504,7 @@ export default function BookingForm({
                         {label}
                       </span>
                       {hint && (
-                        <span style={{ fontSize: 12.5, color: '#9c9ca3', lineHeight: 1.5, marginTop: -3 }}>
+                        <span style={{ fontSize: 14, color: '#d2d2d8', lineHeight: 1.5, marginTop: -3 }}>
                           {hint}
                         </span>
                       )}
@@ -525,7 +529,7 @@ export default function BookingForm({
                         </select>
                       )}
                       {sel && (
-                        <span style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: 12.5, color: '#9c9ca3', gap: 8 }}>
+                        <span style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: 14, color: '#d2d2d8', gap: 8 }}>
                           <span>
                             {!walkOn && sel.pickup_time ? (
                               <>Be at <strong style={{ color: '#f5f5f7', fontWeight: 700 }}>{sel.name}</strong>{' '}
@@ -544,7 +548,7 @@ export default function BookingForm({
                     <span style={{ fontSize: 14, color: '#f5f5f7', fontWeight: 700 }}>
                       Where should we pick you up? <span style={{ color: ACCENT }}>*</span>
                     </span>
-                    <span style={{ fontSize: 12.5, color: '#9c9ca3', lineHeight: 1.5, marginTop: -3 }}>
+                    <span style={{ fontSize: 14, color: '#d2d2d8', lineHeight: 1.5, marginTop: -3 }}>
                       Pick the bar you&rsquo;ll already be at. You can ride between every bar on the
                       route from there, and the last loop brings you back to this one.
                     </span>
@@ -595,7 +599,7 @@ export default function BookingForm({
                       <Field label="Last name" value={r.last_name} onChange={v => updateRider(idx, { last_name: v })} />
                     </Row>
                     <Field label="Phone" value={r.phone} type="tel" onChange={v => updateRider(idx, { phone: v })} />
-                    <span style={{ fontSize: 12.5, color: '#9c9ca3', lineHeight: 1.5 }}>
+                    <span style={{ fontSize: 14, color: '#d2d2d8', lineHeight: 1.5 }}>
                       After you pay, you get their personal link to text them. They pay and sign their own waiver.
                     </span>
                   </>
@@ -620,7 +624,7 @@ export default function BookingForm({
                     background: 'rgba(212,163,51,0.06)',
                     border: `1px dashed ${ACCENT}`,
                     borderRadius: 8,
-                    fontSize: 12,
+                    fontSize: 13.5,
                     color: '#bbb',
                   }}>
                     Friend’s ticket — after payment we’ll give you a link to text them. They fill their info + sign on their own.
@@ -641,7 +645,7 @@ export default function BookingForm({
                     )}
 
                     <div style={{ display: 'grid', gap: 10, paddingTop: 14, marginTop: 4, borderTop: '1px solid rgba(255,255,255,0.07)' }}>
-                      <strong style={{ fontSize: 11, color: ACCENT, letterSpacing: '0.08em', textTransform: 'uppercase' }}>
+                      <strong style={{ fontSize: 12.5, color: ACCENT, letterSpacing: '0.08em', textTransform: 'uppercase' }}>
                         Waiver for this rider
                       </strong>
                       <RadioRow
@@ -672,7 +676,7 @@ export default function BookingForm({
                 )}
                 </>)}
 
-                <div style={{ fontSize: 12, color: '#9c9ca3', textAlign: 'right' }}>
+                <div style={{ fontSize: 13.5, color: '#d2d2d8', textAlign: 'right' }}>
                   {r.pay_self ? 'Pays their own $10' : tt ? `$${(tt.price_cents / 100).toFixed(2)}` : ''}
                 </div>
               </div>
@@ -695,7 +699,7 @@ export default function BookingForm({
               return (
                 <div key={a.id} style={{
                   display: 'flex', alignItems: 'center', gap: 12,
-                  padding: 12, background: '#0e0e12', border: `1px solid ${BORDER}`, borderRadius: 10,
+                  padding: 12, background: '#202027', border: `1px solid ${BORDER}`, borderRadius: 10,
                 }}>
                   <div style={{ flex: 1, minWidth: 0 }}>
                     <div style={{ fontSize: 14, color: '#eee', fontWeight: 600 }}>
@@ -703,7 +707,7 @@ export default function BookingForm({
                       <span style={{ color: ACCENT, fontWeight: 700 }}>+${(a.price_cents / 100).toFixed(2)}</span>
                     </div>
                     {a.description && (
-                      <div style={{ fontSize: 12, color: '#9c9ca3', marginTop: 2 }}>{a.description}</div>
+                      <div style={{ fontSize: 13.5, color: '#d2d2d8', marginTop: 2 }}>{a.description}</div>
                     )}
                   </div>
                   <Stepper
@@ -732,8 +736,8 @@ export default function BookingForm({
             whiteSpace: 'pre-wrap',
             fontFamily: 'inherit',
             fontSize: 13,
-            color: '#ddd',
-            background: '#0e0e12',
+            color: '#f2f2f5',
+            background: '#202027',
             border: `1px solid ${BORDER}`,
             borderRadius: 8,
             padding: 12,
@@ -757,7 +761,7 @@ export default function BookingForm({
               style={{ ...input, marginTop: 6 }}
             />
             {buyerTypedName && (
-              <div style={{ fontSize: 11, color: '#9c9ca3', marginTop: 4 }}>
+              <div style={{ fontSize: 12.5, color: '#d2d2d8', marginTop: 4 }}>
                 Signed by {buyerTypedName} · {new Date().toLocaleDateString('en-US')}
               </div>
             )}
@@ -773,8 +777,8 @@ export default function BookingForm({
             style={{
               background: 'transparent',
               border: 0,
-              color: '#9c9ca3',
-              fontSize: 12,
+              color: '#d2d2d8',
+              fontSize: 13.5,
               cursor: 'pointer',
               textDecoration: 'underline',
               padding: 4,
@@ -794,7 +798,7 @@ export default function BookingForm({
               autoFocus
               style={{ ...input, textTransform: 'uppercase', letterSpacing: '0.05em', fontSize: 13, padding: '8px 10px' }}
             />
-            <div style={{ fontSize: 11, color: '#8a8a92', textAlign: 'center' }}>
+            <div style={{ fontSize: 12.5, color: '#bcbcc3', textAlign: 'center' }}>
               Gives the person who sent you credit for the sale.
             </div>
           </div>
@@ -841,7 +845,7 @@ export default function BookingForm({
         boxShadow: '0 22px 50px rgba(0,0,0,0.45)',
       }}>
         <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between' }}>
-          <span style={{ fontSize: 11, color: '#a6a6ae', textTransform: 'uppercase', letterSpacing: '0.2em', fontWeight: 700 }}>Total</span>
+          <span style={{ fontSize: 12.5, color: '#d8d8de', textTransform: 'uppercase', letterSpacing: '0.2em', fontWeight: 700 }}>Total</span>
           <span style={{ fontSize: 'clamp(30px, 4vw, 38px)', fontWeight: 800, color: ACCENT, letterSpacing: '-0.03em', lineHeight: 1 }}>
             ${(totalCents / 100).toFixed(2)}
           </span>
@@ -860,7 +864,7 @@ export default function BookingForm({
             background: formValid && !submitting
               ? 'linear-gradient(180deg, #f0c24a, #d4a333)'
               : 'rgba(255,255,255,0.05)',
-            color: formValid && !submitting ? '#0a0a0b' : '#8a8a92',
+            color: formValid && !submitting ? '#0a0a0b' : '#bcbcc3',
             border: formValid && !submitting ? '1px solid transparent' : '1px solid rgba(255,255,255,0.12)',
             padding: '15px 20px',
             borderRadius: 12,
@@ -876,16 +880,16 @@ export default function BookingForm({
           {submitting ? 'Loading…' : `Pay $${(totalCents / 100).toFixed(2)}`}
         </button>
         {!formValid && !submitting && (
-          <div style={{ fontSize: 12, color: '#8a8a92', textAlign: 'center', lineHeight: 1.45 }}>
+          <div style={{ fontSize: 13.5, color: '#bcbcc3', textAlign: 'center', lineHeight: 1.45 }}>
             Add your details, pick a pickup bar, sign the waiver, and agree to the Terms to continue.
           </div>
         )}
         {loopPass && (
-          <div style={{ fontSize: 12, color: '#c9c9cf', textAlign: 'center', lineHeight: 1.5 }}>
+          <div style={{ fontSize: 13.5, color: '#c9c9cf', textAlign: 'center', lineHeight: 1.5 }}>
             Loop Pass members: this total is before your pass. Your seat is removed on the next step.
           </div>
         )}
-        <div style={{ fontSize: 11.5, color: '#8a8a92', textAlign: 'center', lineHeight: 1.5 }}>
+        <div style={{ fontSize: 13, color: '#bcbcc3', textAlign: 'center', lineHeight: 1.5 }}>
           No booking or service fees are added at checkout. Secure checkout powered by Stripe.
         </div>
       </div>
@@ -894,7 +898,7 @@ export default function BookingForm({
         /* Only what an inline style object cannot express. The base look of
            these controls lives in the input style object above, because inline
            wins over a stylesheet and splitting it would make the two fight. */
-        .bk-form-fields input::placeholder { color: #8a8a92; }
+        .bk-form-fields input::placeholder { color: #a8a8b0; }
         .bk-form-fields input:focus-visible,
         .bk-form-fields select:focus-visible,
         .bk-form-fields textarea:focus-visible,
@@ -904,7 +908,7 @@ export default function BookingForm({
           box-shadow: 0 0 0 3px rgba(212,163,51,0.18);
         }
         .bk-form-fields select {
-          background: #21212a;
+          background: #3a3a43;
           border: 1px solid rgba(255,255,255,0.14);
           color: #f5f5f7;
           padding: 12px 13px;
@@ -940,7 +944,7 @@ function RemainingBadge({ remaining }) {
   if (remaining === 0) {
     return (
       <span style={{
-        fontSize: 11,
+        fontSize: 12.5,
         fontWeight: 700,
         textTransform: 'uppercase',
         letterSpacing: '0.06em',
@@ -956,7 +960,7 @@ function RemainingBadge({ remaining }) {
   const tight = remaining <= 3
   return (
     <span style={{
-      fontSize: 11,
+      fontSize: 12.5,
       fontWeight: 700,
       textTransform: 'uppercase',
       letterSpacing: '0.06em',
@@ -1035,7 +1039,7 @@ function Row({ children }) {
 
 function Field({ label, value, onChange, type = 'text' }) {
   return (
-    <label style={{ display: 'grid', gap: 7, fontSize: 12.5, color: '#a6a6ae', fontWeight: 600 }}>
+    <label style={{ display: 'grid', gap: 7, fontSize: 14, color: '#d8d8de', fontWeight: 600 }}>
       {label}
       <input type={type} value={value} onChange={e => onChange(e.target.value)} style={input} />
     </label>
@@ -1048,7 +1052,7 @@ function BaseIdNotice({ checked, onChange }) {
   return (
     <div style={{ padding: '12px 14px', borderRadius: 12, border: '1px solid rgba(212,163,51,0.5)', background: 'rgba(212,163,51,0.08)', display: 'grid', gap: 6 }}>
       <div style={{ fontSize: 14, color: '#f5f5f7', lineHeight: 1.5 }}>
-        <strong style={{ color: ACCENT }}>On base pickup: military or dependent ID required.</strong> Every rider needs a valid military ID or dependent ID to get on base. No ID, no ride.
+        <strong style={{ color: ACCENT }}>On base pickup: military or dependent ID required.</strong> Every adult needs a valid military ID or dependent ID to get on base. Kids ride with their parent or guardian. No ID, no ride.
       </div>
       <CheckRow checked={checked} onChange={onChange} label={BASE_ID_TEXT} />
     </div>
@@ -1139,7 +1143,7 @@ function WaitlistForm({ eventId, soldOutTypes }) {
         </button>
       ) : (
         <div style={{ display: 'grid', gap: 8 }}>
-          <p style={{ fontSize: 12, color: '#9c9ca3', margin: 0 }}>
+          <p style={{ fontSize: 13.5, color: '#d2d2d8', margin: 0 }}>
             We&rsquo;ll reach out if a seat frees up. No charge until you book.
           </p>
           {soldOutTypes.length > 1 && (
@@ -1153,12 +1157,12 @@ function WaitlistForm({ eventId, soldOutTypes }) {
           </Row>
           <Row>
             <Field label="Phone" value={f.phone} type="tel" onChange={v => setF(s => ({ ...s, phone: v }))} />
-            <label style={{ display: 'grid', gap: 4, fontSize: 12, color: '#9c9ca3' }}>
+            <label style={{ display: 'grid', gap: 4, fontSize: 13.5, color: '#d2d2d8' }}>
               Party size
               <input type="number" min={1} max={20} value={f.party_size} onChange={e => setF(s => ({ ...s, party_size: e.target.value }))} style={input} />
             </label>
           </Row>
-          {err && <div style={{ color: '#f87171', fontSize: 12 }}>{err}</div>}
+          {err && <div style={{ color: '#f87171', fontSize: 13.5 }}>{err}</div>}
           <button
             type="button"
             onClick={submit}
@@ -1167,7 +1171,7 @@ function WaitlistForm({ eventId, soldOutTypes }) {
           >
             {state === 'submitting' ? 'Joining…' : 'Join the waitlist'}
           </button>
-          <div style={{ fontSize: 11.5, color: '#9c9ca3', lineHeight: 1.5 }}>
+          <div style={{ fontSize: 13, color: '#d2d2d8', lineHeight: 1.5 }}>
             By joining, you ask us to text this number if a seat opens for this loop. Msg &amp; data rates may apply. Reply STOP to opt out.
             See our <PolicyLink href="/privacy">Privacy Policy</PolicyLink>.
           </div>
@@ -1180,7 +1184,7 @@ function WaitlistForm({ eventId, soldOutTypes }) {
 function Stepper({ qty, onDec, onInc }) {
   const btn = {
     width: 32, height: 32, borderRadius: 8, border: `1px solid ${BORDER}`,
-    background: '#15151a', color: ACCENT, fontSize: 18, lineHeight: 1,
+    background: '#202027', color: ACCENT, fontSize: 18, lineHeight: 1,
     cursor: 'pointer', flexShrink: 0,
   }
   return (
@@ -1200,7 +1204,7 @@ function RadioRow({ name, checked, onChange, label }) {
       gap: 10,
       padding: '6px 4px',
       fontSize: 14,
-      color: '#ddd',
+      color: '#f2f2f5',
       cursor: 'pointer',
       lineHeight: 1.35,
     }}>
@@ -1233,8 +1237,8 @@ const input = {
   // A lifted fill, not a black hole. Against the section surface these used to
   // read as punched-out voids in a row, which is most of why a plain four-field
   // block looked so grim.
-  background: 'rgba(255,255,255,0.05)',
-  border: '1px solid rgba(255,255,255,0.14)',
+  background: 'rgba(255,255,255,0.09)',
+  border: '1px solid rgba(255,255,255,0.22)',
   color: '#f5f5f7',
   padding: '12px 13px',
   borderRadius: 10,

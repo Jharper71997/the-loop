@@ -252,14 +252,14 @@ export default async function EventBookingPage({ params, searchParams }) {
   })
 
   return (
-    <main className="site-main" style={{ background: TONES.base }}>
+    <main className="site-main" style={{ background: TONES.raised }}>
       {/* This page used to render its own <main> on flat #0a0a0b, with its own
           font stack and its own gold-underlined header bar - directly beneath
           the real SiteHeader that RiderChrome already puts on every Brew page.
           So a rider who had just been sold by the marketing site landed on two
           headers and a 640px form column marooned in black. This is the same
           shell every other page uses. THE FORM ITSELF IS UNTOUCHED. */}
-      <section style={{ position: 'relative', overflow: 'hidden', background: TONES.void }}>
+      <section style={{ position: 'relative', overflow: 'hidden', background: TONES.base }}>
         {event.cover_image_url ? (
           <>
             <div aria-hidden style={{
@@ -295,7 +295,7 @@ export default async function EventBookingPage({ params, searchParams }) {
         </div>
       </section>
 
-      <section style={{ position: 'relative', background: TONES.base }}>
+      <section style={{ position: 'relative', background: TONES.raised }}>
         <div aria-hidden style={{ position: 'absolute', inset: 0, background: lightPool('top-right', 0.1) }} />
         <div className="bk-grid" style={{ position: 'relative', maxWidth: MAX_W, margin: '0 auto', padding: 'clamp(26px, 4vw, 44px) 24px clamp(56px, 8vw, 96px)' }}>
           <div className="bk-form">
@@ -348,12 +348,12 @@ export default async function EventBookingPage({ params, searchParams }) {
 
                 {doorPickup ? (
                   <ul className="bk-facts">
-                    <li>We pick your group up at your door at the time you choose</li>
+                    <li>We pick your group up at your door sometime within the hour you choose, not exactly on the hour. Your driver texts you when they are on the way</li>
                     <li>Dropped at the downtown train depot, a short walk to Oktoberfest at Riverwalk Crossing</li>
                     <li>Your $10 also gets you a seat on the Brew Loop that night (21+)</li>
                     <li>Pickup only, the ride home is not included</li>
                     <li>Groups of 4 to 13, picked up at one address, anywhere in Jacksonville out to Hwy 172</li>
-                    <li>On base? Zone 3 has its own shuttle every hour. Every rider needs a military or dependent ID</li>
+                    <li>On base? Zone 3 has its own shuttle every hour. Every adult needs a military or dependent ID; kids ride with their parent or guardian</li>
                     <li>All ages. Kids are welcome with their group</li>
                   </ul>
                 ) : (

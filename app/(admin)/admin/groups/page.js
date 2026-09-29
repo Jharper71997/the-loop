@@ -11,6 +11,7 @@ import {
   nowInTZ,
   operationalDateInTZ,
 } from '@/lib/schedule'
+import DoorPickupCard from './DoorPickupCard'
 
 // Operational view of upcoming Loops. Day-of users (security, drivers,
 // staff, leadership) see who's riding which stop and can move riders +
@@ -29,6 +30,7 @@ export default function Groups() {
   const [groupHasEvent, setGroupHasEvent] = useState({})
   const [ticketsByGroup, setTicketsByGroup] = useState({})
   const [ticketsByContact, setTicketsByContact] = useState({})
+  const [doorEvents, setDoorEvents] = useState([])
   const [now, setNow] = useState(() => nowInTZ())
   const [today] = useState(() => operationalDateInTZ())
   const [activeDay, setActiveDay] = useState(() => initialDay())
@@ -74,6 +76,18 @@ export default function Groups() {
       if (!res.ok) console.error('[Loops] ticket aggregates fetch failed', res.status)
     } catch (e) {
       console.error('[Loops] ticket aggregates fetch error', e)
+    }
+
+    // Door pickup days (Oktoberfest) are not Loops in the groups table; they
+    // come from their own staff route with addresses and who has paid.
+    if (business === 'brew') {
+      try {
+        const res = await fetch('/api/admin/door-pickups', { cache: 'no-store' })
+        const j = res.ok ? await res.json() : {}
+        setDoorEvents(j.events || [])
+      } catch (e) {
+        console.error('[Loops] door pickups fetch error', e)
+      }
     }
   }
 
@@ -160,6 +174,10 @@ export default function Groups() {
     return deduped.sort((a, b) => (a.event_date || '').localeCompare(b.event_date || ''))
   }, [groups, activeDay, today, groupHasEvent])
 
+  const weekdayOf = iso => new Date(`${iso}T12:00:00-05:00`).getDay()
+  const doorForDay = key => doorEvents.filter(ev => weekdayOf(ev.event_date) === DAY_TABS.find(d => d.key === key)?.weekday)
+  const filteredDoor = doorForDay(activeDay)
+
   const counts = useMemo(() => {
     const out = {}
     for (const day of DAY_TABS) {
@@ -217,14 +235,18 @@ export default function Groups() {
                 fontSize: '12px',
                 opacity: 0.7,
               }}>
-                {counts[day.key] || 0}
+                {(counts[day.key] || 0) + doorForDay(day.key).reduce((s, ev) => s + ev.seats, 0)}
               </span>
             </button>
           )
         })}
       </div>
 
-      {filtered.length === 0 && (
+      {filteredDoor.map(ev => (
+        <DoorPickupCard key={ev.id} ev={ev} isTonight={ev.event_date === today} />
+      ))}
+
+      {filtered.length === 0 && filteredDoor.length === 0 && (
         <p className="muted" style={{ textAlign: 'center', marginTop: '40px' }}>
           No upcoming {DAY_TABS.find(d => d.key === activeDay)?.label} loops yet.
         </p>

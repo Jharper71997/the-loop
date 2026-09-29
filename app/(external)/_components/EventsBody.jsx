@@ -204,7 +204,7 @@ function DoorPickupCard({ loop, times }) {
           <li>Pickups every hour, {times.first} to {times.last}</li>
           <li>Groups of 4 or more, anywhere in Jacksonville or on base</li>
           <li>All ages, kids welcome</li>
-          <li>On base pickups: military or dependent ID required</li>
+          <li>On base pickups: military or dependent ID required for adults</li>
           <li>Pickup only, the ride home is not included</li>
         </ul>
         <div style={{ marginTop: 'auto', paddingTop: 20, display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12 }}>
