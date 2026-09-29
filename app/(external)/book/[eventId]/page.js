@@ -9,7 +9,7 @@ import { capacityForTicketType } from '@/lib/capacity'
 import { getBarByName } from '@/lib/bars'
 import { GOLD, INK, INK_DIM, INK_MUTE, MAX_W, eyebrow } from '@/lib/marketingTheme'
 import { TONES, grainOverlay, lightPool, photoScrim, litCard, litCardInner } from '@/lib/atmosphere'
-import { isDoorPickupEvent, findParty, reservedUnpaidSeats, bookedSlotIds } from '@/lib/doorPickup'
+import { isDoorPickupEvent, findParty, reservedUnpaidSeats, DOOR_PICKUP_MIN_RIDERS } from '@/lib/doorPickup'
 import BookingForm from './BookingForm'
 
 export const dynamic = 'force-dynamic'
@@ -227,14 +227,11 @@ export default async function EventBookingPage({ params, searchParams }) {
       console.error('[book/eventId] join lookup threw', err)
     }
   }
-  // One group per slot: a new group cannot pick a slot another group has.
+  // Several groups can share a pickup time (one stop each, same zone) until
+  // its 13 seats are gone. A new group needs room for at least 4, so a time
+  // with fewer seats left than that is full to them.
   if (doorPickup && !joinParty) {
-    try {
-      const booked = await bookedSlotIds(supabase, event.id, pendingCutoff)
-      ticketTypes = ticketTypes.map(t => (booked.has(t.id) ? { ...t, remaining: 0 } : t))
-    } catch (err) {
-      console.error('[book/eventId] booked slots failed', err)
-    }
+    ticketTypes = ticketTypes.map(t => (t.remaining != null && t.remaining < DOOR_PICKUP_MIN_RIDERS ? { ...t, remaining: 0 } : t))
   }
 
   let waiver = null
@@ -353,7 +350,7 @@ export default async function EventBookingPage({ params, searchParams }) {
                     <li>Dropped at the downtown train depot, a short walk to Oktoberfest at Riverwalk Crossing</li>
                     <li>Your $10 also gets you a seat on the Brew Loop that night</li>
                     <li>Pickup only, the ride home is not included</li>
-                    <li>Groups of 4 to 13 from one address, anywhere in Jacksonville or on base, out to Hwy 172</li>
+                    <li>Groups of 4 to 13, picked up at one address, anywhere in Jacksonville or on base, out to Hwy 172</li>
                     <li>Strictly 21+, every rider</li>
                   </ul>
                 ) : (
