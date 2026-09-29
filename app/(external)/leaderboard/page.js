@@ -3,7 +3,7 @@ import LeaderboardClient from './LeaderboardClient'
 
 export const metadata = {
   title: 'Brew Loop Sales Leaderboard',
-  description: 'Brew Loop sales contest standings.',
+  description: 'Brew Loop sales standings.',
   robots: { index: false, follow: false },
 }
 

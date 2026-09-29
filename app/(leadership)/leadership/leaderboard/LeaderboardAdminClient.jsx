@@ -120,10 +120,10 @@ export default function LeaderboardAdminClient({ bars = [] }) {
           <div className="muted">No sellers signed up yet. Share the signup link below.</div>
         ) : (
           <div style={{ display: 'grid', gap: 6 }}>
-            <HeaderRow cells={['#', 'Name', 'Bar', 'Tickets', 'Collected', `Commission ${Math.round((board.commission_rate || 0) * 100)}%`, 'Status']} cols={7} />
+            <HeaderRow cells={['#', 'Name', 'Bar', 'Tickets', 'Collected', `Commission ${Math.round((board.commission_rate || 0) * 100)}%`]} cols={6} />
             {standings.map((row, idx) => (
               <div key={row.slug}>
-              <div className="row" style={{ ...rowStyle, gridTemplateColumns: 'repeat(7, minmax(0, 1fr))' }}>
+              <div className="row" style={{ ...rowStyle, gridTemplateColumns: 'repeat(6, minmax(0, 1fr))' }}>
                 <span className="mono" style={{ color: '#8a5f0a' }}>{idx + 1}</span>
                 <span>
                   {(sales?.[row.slug] || []).length > 0 ? (
@@ -136,12 +136,9 @@ export default function LeaderboardAdminClient({ bars = [] }) {
                   ) : row.name}
                 </span>
                 <span className="muted">{row.bar || '—'}</span>
-                <span className="mono" style={{ color: row.qualifies ? '#8a5f0a' : '#17130f' }}>{row.tickets}</span>
+                <span className="mono" style={{ color: '#17130f' }}>{row.tickets}</span>
                 <span className="mono">{formatMoney(row.revenue_cents)}</span>
                 <span className="mono" style={{ color: '#0f7a4e' }}>{formatMoney(row.commission_cents)}</span>
-                <span className="tiny mono" style={{ color: row.qualifies ? '#0f7a4e' : '#6e6154' }}>
-                  {row.qualifies ? 'QUALIFIES' : `${10 - row.tickets} TO GO`}
-                </span>
               </div>
               {openSlug === row.slug && <SellerSales orders={sales?.[row.slug] || []} rate={board.commission_rate || 0} />}
               </div>

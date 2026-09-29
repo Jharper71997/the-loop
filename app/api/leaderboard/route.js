@@ -76,7 +76,6 @@ export async function GET(req) {
     .map(r => ({
       ...r,
       commission_cents: Math.round(r.revenue_cents * COMMISSION_RATE),
-      qualifies: r.tickets >= 10,
     }))
     .sort((a, b) => b.tickets - a.tickets || b.revenue_cents - a.revenue_cents)
 
@@ -86,7 +85,7 @@ export async function GET(req) {
     if (!b.active || seen.has(b.slug)) continue
     standings.push({
       slug: b.slug, name: b.display_name, bar: b.bar,
-      tickets: 0, revenue_cents: 0, commission_cents: 0, qualifies: false,
+      tickets: 0, revenue_cents: 0, commission_cents: 0,
     })
   }
 

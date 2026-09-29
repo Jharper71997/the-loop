@@ -65,14 +65,13 @@ export default function SignupClient({ bars }) {
           color: GOLD, fontSize: 11, letterSpacing: '0.2em',
           textTransform: 'uppercase', fontWeight: 700, marginBottom: 12,
         }}>
-          Brew Loop Sales Contest
+          Brew Loop Sales Team
         </div>
         <h1 style={{ color: INK, fontSize: 28, margin: '0 0 12px' }}>
           Get your sales QR.
         </h1>
         <p style={{ color: INK_DIM, fontSize: 15, lineHeight: 1.55, margin: 0 }}>
-          Anyone can sell. Top seller this month wins <strong style={{ color: GOLD }}>$250</strong>.
-          Runner-up gets <strong style={{ color: GOLD }}>$50</strong>. Sell at least 10 to qualify.
+          Every ticket sold with your link or code is tracked to you, and you earn commission on it.
         </p>
       </div>
 
@@ -146,7 +145,7 @@ export default function SignupClient({ bars }) {
         </Field>
 
         <p style={{ color: INK_DIM, fontSize: 12, margin: '-4px 0 0', lineHeight: 1.5 }}>
-          We need at least one — that&apos;s how we&apos;ll send you your prize.
+          We need at least one — that&apos;s how we&apos;ll pay your commission.
         </p>
 
         {error && (
