@@ -178,7 +178,47 @@ function BrewEvents({ loops = [], renderError = null }) {
   )
 }
 
+// A door pickup event (lib/doorPickup.js) has no bars: its "stops" are its
+// pickup times ("4:00 PM · Zone 1"). Shown as a route they read as nonsense,
+// so it gets its own card.
+const ZONE_STOP = /^(\d{1,2}:\d{2}\s*[AP]M)\s*·\s*Zone\s*\d/i
+function doorPickupTimes(stops) {
+  if (!stops.length || !stops.every(s => ZONE_STOP.test(s?.name || ''))) return null
+  const mins = t => { const [, h, m, ap] = /(\d+):(\d+)\s*([AP])/i.exec(t); return ((+h % 12) + (ap.toUpperCase() === 'P' ? 12 : 0)) * 60 + +m }
+  const times = [...new Set(stops.map(s => ZONE_STOP.exec(s.name)[1]))].sort((x, y) => mins(x) - mins(y))
+  return { first: times[0], last: times[times.length - 1] }
+}
+
+function DoorPickupCard({ loop, times }) {
+  return (
+    <Link href={prefixLink(`/book/${loop.id}`, 'brew')} style={{ ...litCard({ radius: 20 }), textDecoration: 'none', display: 'block' }}>
+      <div style={{ ...litCardInner({ radius: 19, pad: 26 }), display: 'flex', flexDirection: 'column' }}>
+        <div style={{ color: INK, fontSize: 'clamp(24px, 3.4vw, 30px)', fontWeight: 800, letterSpacing: '-0.02em', lineHeight: 1.05 }}>
+          {formatDate(loop.eventDate)}
+        </div>
+        <div style={{ color: GOLD_HI, fontSize: 16, fontWeight: 800, marginTop: 8 }}>Oktoberfest door pickup</div>
+        <p style={{ margin: '12px 0 0', color: INK, fontSize: 15, lineHeight: 1.6 }}>
+          We pick your group up at your door and drop you downtown at Oktoberfest. Your $10 also gets you a seat on the Brew Loop that night.
+        </p>
+        <ul style={{ margin: '14px 0 0', padding: 0, listStyle: 'none', display: 'grid', gap: 6, color: INK_DIM, fontSize: 14 }}>
+          <li>Pickups every hour, {times.first} to {times.last}</li>
+          <li>Groups of 4 or more, anywhere in Jacksonville or on base</li>
+          <li>Pickup only, the ride home is not included</li>
+        </ul>
+        <div style={{ marginTop: 'auto', paddingTop: 20, display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12 }}>
+          <span style={{ color: GOLD_HI, fontWeight: 800, fontSize: 17 }}>$10 a person</span>
+          <span style={{ color: INK, fontSize: 14, fontWeight: 700, display: 'inline-flex', alignItems: 'center', gap: 6 }}>
+            Book a pickup <span style={{ color: GOLD }}>&rarr;</span>
+          </span>
+        </div>
+      </div>
+    </Link>
+  )
+}
+
 function BrewLoopCard({ loop }) {
+  const doorTimes = loop.kind === 'event' ? doorPickupTimes(Array.isArray(loop.stops) ? loop.stops : []) : null
+  if (doorTimes) return <DoorPickupCard loop={loop} times={doorTimes} />
   const isBookable = loop.kind === 'event'
   const name = cleanLoopName(loop.name, 'brew')
   const stops = Array.isArray(loop.stops) ? loop.stops : []
