@@ -59,8 +59,6 @@ export default function LeaderboardClient() {
   }
 
   const standings = data.standings || []
-  const leader = standings[0]
-  const runnerUp = standings[1]
 
   return (
     <main style={{ maxWidth: 600, margin: '0 auto', padding: '32px 16px 80px' }}>
@@ -69,7 +67,7 @@ export default function LeaderboardClient() {
           color: GOLD, fontSize: 11, letterSpacing: '0.2em',
           textTransform: 'uppercase', fontWeight: 700, marginBottom: 10,
         }}>
-          Brew Loop Sales Contest · {data.month}
+          Brew Loop Sales · {data.month}
         </div>
         <h1 style={{ color: INK, fontSize: 26, margin: '0 0 6px' }}>
           Leaderboard
@@ -77,16 +75,6 @@ export default function LeaderboardClient() {
         <div style={{ color: INK_DIM, fontSize: 13 }}>
           {data.days_remaining} day{data.days_remaining === 1 ? '' : 's'} left this month
         </div>
-      </div>
-
-      <div style={{
-        display: 'grid',
-        gap: 10,
-        gridTemplateColumns: '1fr 1fr',
-        marginBottom: 22,
-      }}>
-        <PrizeChip label="1st place" amount="$250" name={leader?.qualifies ? leader.name : 'TBD'} />
-        <PrizeChip label="2nd place" amount="$50" name={runnerUp?.qualifies ? runnerUp.name : 'TBD'} />
       </div>
 
       <div style={{
@@ -107,45 +95,14 @@ export default function LeaderboardClient() {
       </div>
 
       <div style={{ color: INK_DIM, fontSize: 11, textAlign: 'center', marginTop: 16 }}>
-        Open to anyone · 10 sales minimum to qualify · resets the 1st of each month
+        Tickets sold this month · resets the 1st of each month
       </div>
     </main>
   )
 }
 
-function PrizeChip({ label, amount, name }) {
-  return (
-    <div style={{
-      background: BG_PANEL,
-      border: `1px solid ${GOLD}`,
-      borderRadius: 12,
-      padding: 14,
-      textAlign: 'center',
-      boxShadow: '0 0 24px rgba(212,163,51,0.12)',
-    }}>
-      <div style={{
-        color: GOLD, fontSize: 9, letterSpacing: '0.2em',
-        textTransform: 'uppercase', fontWeight: 700,
-      }}>
-        {label}
-      </div>
-      <div style={{
-        color: GOLD, fontSize: 22, fontWeight: 700,
-        fontFamily: "'JetBrains Mono', ui-monospace, monospace",
-        margin: '4px 0',
-      }}>
-        {amount}
-      </div>
-      <div style={{ color: INK, fontSize: 13, fontWeight: 600 }}>
-        {name}
-      </div>
-    </div>
-  )
-}
-
 function Row({ row, rank }) {
-  const isPodium = rank <= 2 && row.qualifies
-  const ticketsToQualify = Math.max(0, 10 - row.tickets)
+  const isPodium = rank === 1 && row.tickets > 0
   return (
     <div style={{
       display: 'flex',
@@ -185,7 +142,7 @@ function Row({ row, rank }) {
           {row.tickets}
         </div>
         <div style={{ color: INK_DIM, fontSize: 10, letterSpacing: '0.1em' }}>
-          {row.qualifies ? 'TICKETS' : `${ticketsToQualify} TO QUALIFY`}
+          TICKETS
         </div>
       </div>
     </div>

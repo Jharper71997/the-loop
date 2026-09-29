@@ -193,7 +193,7 @@ export default function BartenderSuccessCard({ result, mode = 'signup' }) {
       <div style={{
         color: INK_DIM, fontSize: 12, textAlign: 'center', marginTop: 20, lineHeight: 1.6,
       }}>
-        $250 to #1 · $50 to #2 · 10 sales to qualify · resets monthly
+        Commission on every ticket sold with your link or code · totals reset monthly
       </div>
     </main>
   )
