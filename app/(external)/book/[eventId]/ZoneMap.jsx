@@ -9,7 +9,7 @@ import { DEPOT, ZONES } from '@/lib/doorPickup'
 // lib/doorPickupZones.json is each zone's ZIP (Census 2020 ZCTA) clipped to
 // the limits checkout enforces in lib/doorPickup.js (each zone's maxMiles and
 // NC 172). Regenerate it if either one changes.
-const COLORS = { 1: '#d4a333', 2: '#2f6fd6' }
+const COLORS = { 1: '#d4a333', 2: '#2f6fd6', 3: '#2e9e6a' }
 
 export default function ZoneMap({ highlight = null }) {
   const ref = useRef(null)
@@ -61,7 +61,7 @@ export default function ZoneMap({ highlight = null }) {
         ))}
       </div>
       <div style={{ fontSize: 12.5, color: '#9c9ca3', lineHeight: 1.5 }}>
-        We pick up on base too, as far as Hwy 172. Camp Johnson rides Zone 1, the rest of Lejeune Zone 2. Outside the colored area, we can&rsquo;t pick up.
+        Green is on base, with its own shuttle. Nothing past Hwy 172. Outside the colored area, we can&rsquo;t pick up.
       </div>
       <style>{`.zm-tip { font-weight: 700; font-size: 12px; }`}</style>
     </div>

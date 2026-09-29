@@ -469,7 +469,7 @@ export default function BookingForm({
           <p style={{ fontSize: 12.5, color: '#9c9ca3', lineHeight: 1.5, margin: 0 }}>
             <strong style={{ color: '#f5f5f7' }}>Your $10 also gets you a seat on the Brew Loop that night.</strong> Show your ticket when you board.
             {' '}Pickup only. We drop your group downtown at the train depot, a short walk to Oktoberfest. The ride home is not included.
-            Your whole group is picked up at one address. Groups of {DOOR_PICKUP_MIN_RIDERS} to {DOOR_PICKUP_MAX_RIDERS}, anywhere in the two zones, base included, out to Hwy 172.
+            Your whole group is picked up at one address. Groups of {DOOR_PICKUP_MIN_RIDERS} to {DOOR_PICKUP_MAX_RIDERS}, out to Hwy 172. On base? Pick a Zone 3 time; base has its own shuttle.
           </p>
         </Section>
       )}
