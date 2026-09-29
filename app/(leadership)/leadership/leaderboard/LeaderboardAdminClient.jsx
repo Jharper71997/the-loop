@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react'
 
-export default function LeaderboardAdminClient() {
+export default function LeaderboardAdminClient({ signupCode = '', leaderboardToken = '' }) {
   const [board, setBoard] = useState(null)
   const [roster, setRoster] = useState(null)
   const [error, setError] = useState(null)
@@ -149,8 +149,8 @@ export default function LeaderboardAdminClient() {
       <div className="card" style={{ marginTop: 14 }}>
         <div className="hud-heading">Share links</div>
         <div style={{ display: 'grid', gap: 10 }}>
-          <CopyableLine label="Signup (text this to anyone selling)" path={signupUrl} addCode />
-          <CopyableLine label="Public leaderboard" path={leaderboardUrl} addToken />
+          <CopyableLine label="Signup (text this to anyone selling)" path={signupCode ? `${signupUrl}?code=${encodeURIComponent(signupCode)}` : signupUrl} />
+          <CopyableLine label="Public leaderboard" path={leaderboardToken ? `${leaderboardUrl}?t=${encodeURIComponent(leaderboardToken)}` : leaderboardUrl} />
         </div>
         <div className="tiny muted" style={{ marginTop: 10 }}>
           Tokens come from <code>BARTENDER_SIGNUP_CODE</code> and <code>LEADERBOARD_TOKEN</code> env vars.
@@ -313,14 +313,12 @@ function HeaderRow({ cells, cols = 6 }) {
   )
 }
 
-function CopyableLine({ label, path, addCode = false, addToken = false }) {
+function CopyableLine({ label, path }) {
   const [copied, setCopied] = useState(false)
   const [origin, setOrigin] = useState('')
   useEffect(() => { setOrigin(window.location.origin) }, [])
 
-  let display = `${origin}${path}`
-  if (addCode) display += '?code=YOUR_SIGNUP_CODE'
-  if (addToken) display += '?t=YOUR_LEADERBOARD_TOKEN'
+  const display = `${origin}${path}`
 
   async function copy() {
     try {
