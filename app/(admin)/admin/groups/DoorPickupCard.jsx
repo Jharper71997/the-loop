@@ -88,6 +88,7 @@ function PickupGroup({ g }) {
       {!g.verified && <div style={{ color: RED, fontSize: 12.5 }}>Address not verified on the map. Check it before the run.</div>}
       {g.onBase && <div style={{ color: GOLD_INK, fontWeight: 700, fontSize: 12.5 }}>On base: check every adult's military or dependent ID before they board. Kids ride with their parent or guardian.</div>}
       {g.notes && <div className="muted" style={{ fontSize: 12.5 }}>Note: {g.notes}</div>}
+      {g.brewLoop > 0 && <div style={{ color: GOLD_INK, fontWeight: 700, fontSize: 12.5 }}>Brew Loop tonight: {g.brewLoop} riding. Take them to {g.brewLoopStop || 'Angry Ginger'} after Oktoberfest to board.</div>}
       {g.phone && (
         <div style={{ display: 'flex', gap: 6, margin: '8px 0 2px', flexWrap: 'wrap' }}>
           <a href={`sms:${g.phone}?&body=${encodeURIComponent(onMyWay)}`} style={pillGold}>On my way</a>

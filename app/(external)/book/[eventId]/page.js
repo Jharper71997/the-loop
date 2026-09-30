@@ -9,7 +9,7 @@ import { capacityForTicketType } from '@/lib/capacity'
 import { getBarByName } from '@/lib/bars'
 import { GOLD, INK, INK_DIM, INK_MUTE, MAX_W, eyebrow } from '@/lib/marketingTheme'
 import { TONES, grainOverlay, lightPool, photoScrim, litCard, litCardInner } from '@/lib/atmosphere'
-import { isDoorPickupEvent, findParty, reservedUnpaidSeats, DOOR_PICKUP_MIN_RIDERS } from '@/lib/doorPickup'
+import { isDoorPickupEvent, findParty, reservedUnpaidSeats, DOOR_PICKUP_MIN_RIDERS, findBrewLoopStop, brewLoopHolds, stopSeatsTaken, BREW_LOOP_STOP } from '@/lib/doorPickup'
 import BookingForm from './BookingForm'
 
 export const dynamic = 'force-dynamic'
@@ -203,6 +203,29 @@ export default async function EventBookingPage({ params, searchParams }) {
     }))
   }
 
+  // Oktoberfest groups riding the Brew Loop that night board at Ginger, so
+  // their seats come off Ginger here, and the pickup form shows what is left.
+  let brewLoopSeats = null
+  try {
+    if (doorPickup) {
+      const bl = await findBrewLoopStop(supabase, event.event_date)
+      if (bl) {
+        const cap = capacityForTicketType(bl.tt)
+        const taken = await stopSeatsTaken(supabase, bl.event.id, bl.tt.stop_index, pendingCutoff)
+          + await brewLoopHolds(supabase, event.event_date, pendingCutoff)
+        brewLoopSeats = { stop: bl.tt.name, left: Math.max(0, cap - taken) }
+      }
+    } else if (isBrewKind(event)) {
+      const ginger = ticketTypes.find(t => t.remaining != null && t.stop_index != null && BREW_LOOP_STOP.test(t.name || ''))
+      if (ginger) {
+        const held = await brewLoopHolds(supabase, event.event_date, pendingCutoff)
+        if (held) ticketTypes = ticketTypes.map(t => (t.id === ginger.id ? { ...t, remaining: Math.max(0, t.remaining - held) } : t))
+      }
+    }
+  } catch (err) {
+    console.error('[book/eventId] brew loop holds failed', err)
+  }
+
   // ?join=<code>: a friend paying their own seat in someone's group.
   let joinParty = null
   if (doorPickup && sp?.join) {
@@ -314,6 +337,7 @@ export default async function EventBookingPage({ params, searchParams }) {
               loopPass={event.kind === 'brew' && !doorPickup}
               doorPickup={doorPickup}
               joinParty={joinParty}
+              brewLoopSeats={brewLoopSeats}
             />
           </div>
 
@@ -429,4 +453,8 @@ function formatTime(hhmm) {
   const suffix = h >= 12 ? 'PM' : 'AM'
   const h12 = ((h + 11) % 12) + 1
   return `${h12}:${String(m).padStart(2, '0')} ${suffix}`
+}
+
+function isBrewKind(event) {
+  return !event.kind || event.kind === 'brew'
 }

@@ -17,6 +17,7 @@ import {
   DOOR_PICKUP_MIN_RIDERS, DOOR_PICKUP_MAX_RIDERS,
   isDoorPickupEvent, zoneOfTicketType, zipProblem, normalizeZip,
   geocodeAddress, pointProblem, milesBetween, DEPOT, mintJoinCode, findParty, reservedUnpaidSeats, BASE_ZONE,
+  findBrewLoopStop, brewLoopHolds, stopSeatsTaken, BREW_LOOP_STOP,
 } from '@/lib/doorPickup'
 
 function mintClaimToken() {
@@ -175,7 +176,9 @@ async function handleCheckout(req) {
     if (riders.length > DOOR_PICKUP_MAX_RIDERS || riders.some(r => r.ticket_type_id !== party.slotId)) {
       return Response.json({ error: 'one_slot_per_group' }, { status: 400 })
     }
-    const { join_code: _code, roster, ...rest } = party.metadata?.door_pickup || {}
+    // The organizer's order holds the group's Brew Loop seats; a joiner copying
+    // them would count them twice.
+    const { join_code: _code, roster, brew_loop: _bl, brew_loop_date: _bld, ...rest } = party.metadata?.door_pickup || {}
     doorPickupMeta = { ...rest, party_of: party.id, party_name: party.buyer_name || null }
     const seatToken = String(body.seat_token || '').trim()
     if (seatToken && riders.length === 1 && (roster || []).some(r => r.token === seatToken)) {
@@ -233,6 +236,35 @@ async function handleCheckout(req) {
       geo: geo ? { lat: geo.lat, lon: geo.lon, miles: Math.round(milesBetween(DEPOT, geo) * 10) / 10 } : null,
       join_code: mintJoinCode(),
       roster,
+    }
+
+    // How many of the group ride the Brew Loop that night. They board at
+    // Angry Ginger, so they take Ginger seats (lib/doorPickup.js brewLoopHolds).
+    const brewLoop = Math.floor(Number(body.brew_loop_riders) || 0)
+    if (brewLoop < 0 || brewLoop > riders.length + payLater.length) {
+      return Response.json({ error: 'brew_loop', message: 'Brew Loop riders can’t be more than your group.' }, { status: 400 })
+    }
+    if (brewLoop > 0) {
+      const bl = await findBrewLoopStop(supabase, event.event_date)
+      if (!bl) {
+        return Response.json({ error: 'brew_loop', message: 'There’s no Brew Loop that night. Set Brew Loop riders to 0.' }, { status: 400 })
+      }
+      const blCutoff = new Date(Date.now() - 15 * 60 * 1000).toISOString()
+      const cap = capacityForTicketType(bl.tt)
+      const taken = await stopSeatsTaken(supabase, bl.event.id, bl.tt.stop_index, blCutoff)
+        + await brewLoopHolds(supabase, event.event_date, blCutoff)
+      const left = Math.max(0, cap - taken)
+      if (brewLoop > left) {
+        return Response.json({
+          error: 'brew_loop',
+          message: left
+            ? `Only ${left} Brew Loop seat${left === 1 ? '' : 's'} left at ${bl.tt.name} that night. Lower your Brew Loop riders to ${left}.`
+            : `The Brew Loop is full at ${bl.tt.name} that night. Set Brew Loop riders to 0.`,
+        }, { status: 409 })
+      }
+      doorPickupMeta.brew_loop = brewLoop
+      doorPickupMeta.brew_loop_date = event.event_date
+      doorPickupMeta.brew_loop_stop = bl.tt.name
     }
   }
 
@@ -344,7 +376,12 @@ async function handleCheckout(req) {
       pendingQuery = pendingQuery.eq('ticket_type_id', tt.id)
     }
     const [{ count: paidCount }, { count: pendingCount }] = await Promise.all([paidQuery, pendingQuery])
-    const held = doorPickup ? await reservedUnpaidSeats(supabase, event.id, tt.id, pendingCutoff) : 0
+    const held = doorPickup
+      ? await reservedUnpaidSeats(supabase, event.id, tt.id, pendingCutoff)
+      // Oktoberfest groups riding the Brew Loop board at Ginger.
+      : (event.kind === 'brew' && tt.stop_index != null && BREW_LOOP_STOP.test(tt.name || ''))
+        ? await brewLoopHolds(supabase, event.event_date, pendingCutoff)
+        : 0
     return (paidCount || 0) + (pendingCount || 0) + held
   }
 

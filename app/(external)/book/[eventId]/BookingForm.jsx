@@ -38,6 +38,9 @@ export default function BookingForm({
   doorPickup = false,
   // Door pickup, joining someone's group: { code, slotId, organizer, street, city }.
   joinParty = null,
+  // Door pickup: { stop, left } Brew Loop seats that night. Anyone riding it
+  // is taken to that stop (Angry Ginger) and holds one of its seats.
+  brewLoopSeats = null,
 }) {
   // A walk-on ticket type carries no bar (stop_index null). When the rider picks
   // one we make them choose a pickup bar from the night's list so the driver and
@@ -85,6 +88,8 @@ export default function BookingForm({
   const [pickupAddress, setPickupAddress] = useState({ street: '', city: 'Jacksonville', zip: '', notes: '' })
   const [showZoneMap, setShowZoneMap] = useState(false)
   const [baseIdAck, setBaseIdAck] = useState(false)
+  // null = not answered yet. The organizer has to answer, even if it is 0.
+  const [brewLoopRiders, setBrewLoopRiders] = useState(null)
   const doorSlot = doorPickup ? ticketTypes.find(t => t.id === riders[0]?.ticket_type_id) : null
   const doorZone = doorSlot ? zoneOfTicketType(doorSlot) : null
   const zipError = doorPickup && pickupAddress.zip.trim().length >= 5
@@ -199,12 +204,13 @@ export default function BookingForm({
       if (organizer && riders.length < DOOR_PICKUP_MIN_RIDERS) return false
       if (doorZone === BASE_ZONE && !baseIdAck) return false
       if (!joinParty) {
+        if (brewLoopSeats && (brewLoopRiders == null || brewLoopRiders > riders.length || brewLoopRiders > brewLoopSeats.left)) return false
         if (!pickupAddress.street.trim() || !pickupAddress.city.trim()) return false
         if (zipProblem(pickupAddress.zip, doorZone)) return false
       }
     }
     return true
-  }, [buyer, riders, ticketTypes, stops, buyerOwesSig, buyerTypedName, oversellError, termsAccepted, doorPickup, joinParty, pickupAddress, doorZone, baseIdAck])
+  }, [buyer, riders, ticketTypes, stops, buyerOwesSig, buyerTypedName, oversellError, termsAccepted, doorPickup, joinParty, pickupAddress, doorZone, baseIdAck, brewLoopRiders, brewLoopSeats])
 
   async function onSubmit(e) {
     e.preventDefault()
@@ -278,7 +284,7 @@ export default function BookingForm({
           attribution: submittedAttribution,
           client_token: clientToken,
           ...(doorPickup && joinParty ? { join_code: joinParty.code, seat_token: joinParty.seat?.token || null } : {}),
-          ...(doorPickup && !joinParty ? { pickup_address: pickupAddress } : {}),
+          ...(doorPickup && !joinParty ? { pickup_address: pickupAddress, brew_loop_riders: brewLoopRiders || 0 } : {}),
           ...(doorPickup && doorZone === BASE_ZONE ? { base_id_ack: baseIdAck } : {}),
           terms_accepted: termsAccepted,
           age_confirmed: !!minAge && termsAccepted,
@@ -306,6 +312,8 @@ export default function BookingForm({
           // them to verify with their DoD ID, then back to buying.
           window.location.href = prefixLink('/verify', 'marines')
           return
+        } else if (json.error === 'brew_loop') {
+          message = json.message || 'Please check how many are riding the Brew Loop.'
         } else if (json.error === 'pickup_address') {
           message = json.message || 'Please check your pickup address.'
         } else if (json.error === 'group_size') {
@@ -458,6 +466,24 @@ export default function BookingForm({
             <li>On base? Pick a Zone 3 time. Base has its own shuttle.</li>
             <li>Your $10 also gets you a seat on the Brew Loop that night (21+). Show your ticket when you board.</li>
           </ul>
+          {brewLoopSeats && (
+            <label style={{ display: 'grid', gap: 7 }}>
+              <span style={{ fontSize: 15, color: '#f5f5f7', fontWeight: 700 }}>How many of your group are riding the Brew Loop that night?</span>
+              <span style={{ fontSize: 14, color: '#d2d2d8', lineHeight: 1.5, marginTop: -3 }}>
+                We save you seats. Anyone riding gets taken to {brewLoopSeats.stop} and boards the Brew Loop there. 21+ only.
+                {brewLoopSeats.left < DOOR_PICKUP_MAX_RIDERS && <> <strong style={{ color: ACCENT }}>{brewLoopSeats.left} seat{brewLoopSeats.left === 1 ? '' : 's'} left.</strong></>}
+              </span>
+              <select value={brewLoopRiders ?? ''} onChange={e => setBrewLoopRiders(e.target.value === '' ? null : Number(e.target.value))} style={input}>
+                <option value="">Choose</option>
+                {Array.from({ length: Math.min(riders.length, brewLoopSeats.left) + 1 }, (_, n) => (
+                  <option key={n} value={n}>{n === 0 ? 'None of us, just Oktoberfest' : `${n} of us`}</option>
+                ))}
+              </select>
+              {brewLoopRiders > riders.length && (
+                <span style={{ fontSize: 13, color: '#f87171' }}>That is more than your group. Pick {riders.length} or fewer.</span>
+              )}
+            </label>
+          )}
         </Section>
       )}
 
