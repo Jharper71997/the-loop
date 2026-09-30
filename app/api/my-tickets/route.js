@@ -5,6 +5,7 @@ import { contactHasSignedCurrent } from '@/lib/waiver'
 import { normalizePhone } from '@/lib/phone'
 import { appUrl } from '@/lib/stripe'
 import { getOrCreateReferralCode } from '@/lib/riderReferral'
+import { slotPickupTime } from '@/lib/doorPickup'
 
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
@@ -54,7 +55,7 @@ export async function POST(req) {
     id, status, total_cents, buyer_phone, buyer_name, party_size,
     paid_at, created_at, contact_id,
     event:events ( id, name, event_date, pickup_time, status, kind, group:groups ( id, schedule ) ),
-    order_items ( id, rider_first_name, rider_last_name, contact_id, rider_phone, voided_at, claim_token, claimed_at )
+    order_items ( id, rider_first_name, rider_last_name, contact_id, rider_phone, voided_at, claim_token, claimed_at, ticket_type:ticket_types ( name ) )
   `
   const [{ data: byBuyer }, { data: byRider }] = await Promise.all([
     sb.from('orders')
@@ -159,7 +160,7 @@ export async function POST(req) {
         id: o.event.id,
         name: o.event.name,
         event_date: o.event.event_date,
-        pickup_time: firstStop?.start_time || o.event.pickup_time,
+        pickup_time: slotPickupTime(activeItems[0]?.ticket_type?.name) || firstStop?.start_time || o.event.pickup_time,
         pickup_spot: firstStop?.name || null,
         status: o.event.status,
       } : null,

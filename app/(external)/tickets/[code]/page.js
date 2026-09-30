@@ -5,6 +5,7 @@ import { contactHasSignedCurrent } from '@/lib/waiver'
 import { appUrl } from '@/lib/stripe'
 import { brandFor, prefixLink } from '@/lib/businessConfig'
 import { getBar, getBarByName } from '@/lib/bars'
+import { slotPickupTime } from '@/lib/doorPickup'
 import TicketView from './TicketView'
 
 export const runtime = 'nodejs'
@@ -37,6 +38,7 @@ export default async function TicketPage({ params }) {
       voided_at,
       claim_token,
       claimed_at,
+      ticket_type:ticket_types ( name ),
       order:orders ( id, status, event:events ( id, name, event_date, pickup_time, kind, group:groups ( id, schedule ) ) )
     `)
     .eq('id', qr.order_item_id)
@@ -81,7 +83,9 @@ export default async function TicketPage({ params }) {
   // to Angry Ginger. The event-wide time is only true for stop 0, so anyone
   // else gets no time rather than a wrong one — TicketView already renders the
   // pickup bar without a time when this is null.
-  const pickupTime = pickupTimeFromStop
+  // Door pickup has no route; its time is the booked slot ("7:00 PM · Zone 2"),
+  // not event.pickup_time, which is only the day's first slot.
+  const pickupTime = slotPickupTime(item.ticket_type?.name) || pickupTimeFromStop
     || (effectivePickupIndex === 0 ? (event?.pickup_time || null) : null)
 
   // The whole route, not just the first stop. We were already loading
