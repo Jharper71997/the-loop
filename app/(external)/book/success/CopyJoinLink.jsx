@@ -25,9 +25,9 @@ export default function CopyJoinLink({ url, slot, friends = [] }) {
     }}>
       {friends.length > 0 && (
         <>
-          <div style={{ color: '#f0c24a', fontWeight: 800, fontSize: 17 }}>Text each friend their link</div>
+          <div style={{ color: '#f0c24a', fontWeight: 800, fontSize: 17 }}>We&apos;re texting your friends their links</div>
           <p style={{ color: '#d6d6dc', fontSize: 14.5, lineHeight: 1.55, margin: '8px 0 14px' }}>
-            Their seat is held. Each one pays their own $10 and signs their own waiver.
+            Each friend gets a text from Brew Loop with their own link. Their seat is held until they pay their $10 and sign their waiver. Want to give them a heads up yourself too?
           </p>
           <div style={{ display: 'grid', gap: 10, marginBottom: 22 }}>
             {friends.map(f => (

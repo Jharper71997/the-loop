@@ -320,6 +320,8 @@ export default function BookingForm({
           message = `A booking holds up to ${DOOR_PICKUP_MAX_RIDERS} riders.`
         } else if (json.error === 'seat_already_paid') {
           message = 'This seat is already paid for. You’re all set.'
+        } else if (json.error === 'duplicate_rider') {
+          message = `Each friend needs their own phone number. Groups need ${DOOR_PICKUP_MIN_RIDERS} different people.`
         } else if (json.error === 'pay_self_contact') {
           message = 'Add a first name and phone for each friend paying their own seat.'
         } else if (json.error === 'base_id_required') {

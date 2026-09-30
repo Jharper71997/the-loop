@@ -208,6 +208,15 @@ async function handleCheckout(req) {
         return Response.json({ error: 'pay_self_contact' }, { status: 400 })
       }
     }
+    // The 4 minimum counts PEOPLE. A friend paying their own seat must have a
+    // phone nobody else in the group has, or an organizer can list themself
+    // twice to clear the minimum (first real booking did exactly that, 9/30).
+    const seenPhones = new Set([buyer.phone, ...riders.map(r => r.phone)].map(p => normalizePhone(p)).filter(Boolean))
+    for (const r of payLater) {
+      const p = normalizePhone(r.phone)
+      if (seenPhones.has(p)) return Response.json({ error: 'duplicate_rider' }, { status: 400 })
+      seenPhones.add(p)
+    }
     const roster = payLater.map(r => ({
       token: mintJoinCode(),
       first_name: String(r.first_name).trim().slice(0, 60),

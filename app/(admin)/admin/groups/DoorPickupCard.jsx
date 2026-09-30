@@ -68,9 +68,28 @@ export default function DoorPickupCard({ ev, isTonight }) {
   )
 }
 
+// Sends through SimpleTexting from the Brew Loop number (api/admin/door-pickups/text),
+// so the rider sees one consistent sender and the thread lands in Messages.
+function SendButton({ orderId, kind, token, label, style, done }) {
+  const [state, setState] = useState(done ? 'sent' : 'idle')
+  async function send() {
+    if (state === 'sending') return
+    setState('sending')
+    try {
+      const res = await fetch('/api/admin/door-pickups/text', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ order_id: orderId, kind, token }),
+      })
+      const json = await res.json().catch(() => ({}))
+      if (!res.ok) { setState('idle'); alert(json.detail || json.error || 'Text failed'); return }
+      setState('sent')
+    } catch { setState('idle'); alert('Text failed. Check signal and try again.') }
+  }
+  const text = state === 'sending' ? 'Sending…' : state === 'sent' ? `${label} ✓` : label
+  return <button type="button" onClick={send} style={{ ...style, border: style.border || 0, cursor: 'pointer' }}>{text}</button>
+}
+
 function PickupGroup({ g }) {
-  const first = (g.organizer || '').split(' ')[0] || 'there'
-  const onMyWay = `Hi ${first}, this is your Brew Loop driver. I'm on my way to pick up your group for Oktoberfest. Please be ready out front.`
   return (
     <div style={{
       margin: '8px 0 0', padding: '10px 12px', borderRadius: 8, fontSize: 13.5, lineHeight: 1.5,
@@ -91,7 +110,7 @@ function PickupGroup({ g }) {
       {g.brewLoop > 0 && <div style={{ color: GOLD_INK, fontWeight: 700, fontSize: 12.5 }}>Brew Loop tonight: {g.brewLoop} riding. Take them to {g.brewLoopStop || 'Angry Ginger'} after Oktoberfest to board.</div>}
       {g.phone && (
         <div style={{ display: 'flex', gap: 6, margin: '8px 0 2px', flexWrap: 'wrap' }}>
-          <a href={`sms:${g.phone}?&body=${encodeURIComponent(onMyWay)}`} style={pillGold}>On my way</a>
+          <SendButton orderId={g.id} kind="on_my_way" label="On my way" style={pillGold} />
           <a href={`tel:${g.phone}`} style={pillPlain}>Call {g.phone}</a>
         </div>
       )}
@@ -105,7 +124,7 @@ function PickupGroup({ g }) {
             {!r.paid && (
               <span style={{ display: 'flex', gap: 6 }}>
                 <a href={r.link} style={pillGold}>Pay now</a>
-                <a href={`sms:${r.phone || ''}?&body=${encodeURIComponent(`Pay your $10 Oktoberfest seat before you board: ${r.link}`)}`} style={pillPlain}>Text link</a>
+                {r.phone && r.token && <SendButton orderId={g.id} kind="pay_link" token={r.token} label={r.texted ? 'Text link again' : 'Text link'} style={pillPlain} />}
               </span>
             )}
           </li>
