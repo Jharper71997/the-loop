@@ -200,6 +200,12 @@ async function handleCheckout(req) {
     if (riders.length + payLater.length < DOOR_PICKUP_MIN_RIDERS || riders.length + payLater.length > DOOR_PICKUP_MAX_RIDERS) {
       return Response.json({ error: 'group_size' }, { status: 400 })
     }
+    // The minimum is PAID seats: the organizer pays for at least 4 ($40) at
+    // checkout. Friends paying their own through a link are extras on top.
+    // Jacob 9/30: "It should cost 40 dollars ... minimum 4 people".
+    if (riders.length < DOOR_PICKUP_MIN_RIDERS) {
+      return Response.json({ error: 'min_paid' }, { status: 400 })
+    }
     if (new Set([...riders, ...payLater].map(r => r.ticket_type_id)).size !== 1) {
       return Response.json({ error: 'one_slot_per_group' }, { status: 400 })
     }

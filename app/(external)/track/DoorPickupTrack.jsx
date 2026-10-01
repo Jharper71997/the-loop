@@ -11,10 +11,12 @@ const INK_DIM = '#b8b8bf'
 const SURFACE = '#15151a'
 const LINE = 'rgba(255,255,255,0.08)'
 
+// Buses stage and drop at the downtown train depot (lib/doorPickup.js DEPOT),
+// a short walk to the fest. Same wording the booking page uses.
 const DROP = {
-  name: 'Jacksonville Oktoberfest',
-  place: 'Downtown Jacksonville, Riverwalk Crossing Park',
-  maps: 'https://www.google.com/maps/search/?api=1&query=' + encodeURIComponent('Riverwalk Crossing Park, Jacksonville, NC'),
+  name: 'Downtown Jacksonville train depot',
+  place: '402 Court St, a short walk to Oktoberfest at Riverwalk Crossing Park. Pickup only, the ride home is not included.',
+  maps: 'https://www.google.com/maps/search/?api=1&query=' + encodeURIComponent('402 Court St, Jacksonville, NC 28540'),
 }
 
 export default function DoorPickupTrack({ event, zones = [] }) {

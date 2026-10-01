@@ -83,7 +83,7 @@ export default function BookingForm({
       typed_name: '',
       pickup_stop_index: '',
     },
-    ...Array.from({ length: doorPickup && !joinParty ? DOOR_PICKUP_MIN_RIDERS - 1 : 0 }, () => newGuest(defaultTtId, true)),
+    ...Array.from({ length: doorPickup && !joinParty ? DOOR_PICKUP_MIN_RIDERS - 1 : 0 }, () => newGuest(defaultTtId)),
   ])
   const [pickupAddress, setPickupAddress] = useState({ street: '', city: 'Jacksonville', zip: '', notes: '' })
   const [showZoneMap, setShowZoneMap] = useState(false)
@@ -202,6 +202,7 @@ export default function BookingForm({
     if (doorPickup) {
       if (riders.length > DOOR_PICKUP_MAX_RIDERS) return false
       if (organizer && riders.length < DOOR_PICKUP_MIN_RIDERS) return false
+      if (organizer && riders.filter(r => !r.pay_self).length < DOOR_PICKUP_MIN_RIDERS) return false
       if (doorZone === BASE_ZONE && !baseIdAck) return false
       if (!joinParty) {
         if (brewLoopSeats && (brewLoopRiders == null || brewLoopRiders > riders.length || brewLoopRiders > brewLoopSeats.left)) return false
@@ -320,6 +321,8 @@ export default function BookingForm({
           message = `A booking holds up to ${DOOR_PICKUP_MAX_RIDERS} riders.`
         } else if (json.error === 'seat_already_paid') {
           message = 'This seat is already paid for. You’re all set.'
+        } else if (json.error === 'min_paid') {
+          message = `You pay for at least ${DOOR_PICKUP_MIN_RIDERS} seats. Only riders past ${DOOR_PICKUP_MIN_RIDERS} can pay their own.`
         } else if (json.error === 'duplicate_rider') {
           message = `Each friend needs their own phone number. Groups need ${DOOR_PICKUP_MIN_RIDERS} different people.`
         } else if (json.error === 'pay_self_contact') {
@@ -457,8 +460,8 @@ export default function BookingForm({
           )}
           <Field label="Anything the driver should know? (gate code, which building)" value={pickupAddress.notes} onChange={v => setPickupAddress(a => ({ ...a, notes: v }))} />
           <p style={{ fontSize: 15, color: '#f5f5f7', lineHeight: 1.55, margin: 0 }}>
-            <strong style={{ color: ACCENT }}>List everyone in your group, at least {DOOR_PICKUP_MIN_RIDERS}.</strong> For each friend,
-            pay for them now or send them a link to pay their own $10. Their seat is held for them either way.
+            <strong style={{ color: ACCENT }}>You book at least {DOOR_PICKUP_MIN_RIDERS} seats (${DOOR_PICKUP_MIN_RIDERS * 10}).</strong> Bigger group? Anyone past {DOOR_PICKUP_MIN_RIDERS}
+            can pay their own $10. We text them their link and hold their seat.
           </p>
           <ul style={{ fontSize: 15, color: '#f5f5f7', lineHeight: 1.5, margin: 0, padding: '14px 16px 14px 34px', background: 'rgba(212,163,51,0.10)', border: '1px solid rgba(212,163,51,0.35)', borderRadius: 12, display: 'grid', gap: 6 }}>
             <li><strong>Pickup within the hour.</strong> Other groups in your zone ride the same run, so we get to you sometime in the hour you choose, not exactly on the hour. Your driver texts you when they are on the way.</li>
@@ -603,7 +606,9 @@ export default function BookingForm({
                   />
                 ) : null}
 
-                {organizer && idx > 0 && (
+                {/* The first 4 seats are always paid at checkout ($40 minimum).
+                    Only a 5th rider and beyond can pay their own through a link. */}
+                {organizer && idx >= DOOR_PICKUP_MIN_RIDERS && (
                   <div style={{ display: 'grid', gap: 8 }}>
                     <RadioRow
                       name={`pay-${idx}`}
@@ -628,7 +633,7 @@ export default function BookingForm({
                     </Row>
                     <Field label="Phone" value={r.phone} type="tel" onChange={v => updateRider(idx, { phone: v })} />
                     <span style={{ fontSize: 14, color: '#d2d2d8', lineHeight: 1.5 }}>
-                      After you pay, you get their personal link to text them. They pay and sign their own waiver.
+                      After you pay, we text them their personal link. They pay and sign their own waiver.
                     </span>
                   </>
                 ) : (<>
