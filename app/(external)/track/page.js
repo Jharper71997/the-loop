@@ -1,5 +1,6 @@
-import { loadActiveTrackLoop } from '@/lib/trackLoop'
+import { loadActiveTrackLoop, loadDoorPickupTrack, findDoorPickupOn } from '@/lib/trackLoop'
 import TrackBody from '../_components/TrackBody'
+import DoorPickupTrack from './DoorPickupTrack'
 
 export const metadata = {
   title: 'Track the Loop',
@@ -8,7 +9,13 @@ export const metadata = {
 }
 export const dynamic = 'force-dynamic'
 
-export default async function TrackPage() {
+export default async function TrackPage({ searchParams }) {
+  // ?event=<id> for a door pickup (Oktoberfest) shows that ride, not a bar loop.
+  const { event } = (await searchParams) || {}
+  const door = await loadDoorPickupTrack(typeof event === 'string' ? event : null)
+  if (door) return <DoorPickupTrack event={door.event} zones={door.zones} />
+
   const data = await loadActiveTrackLoop('brew')
-  return <TrackBody data={data} business="brew" />
+  const doorSameDay = await findDoorPickupOn(data?.eventDate)
+  return <TrackBody data={data} business="brew" doorPickup={doorSameDay} />
 }

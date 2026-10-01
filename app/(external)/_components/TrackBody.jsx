@@ -19,7 +19,7 @@ const CENTERS = {
   marines: { lat: 34.6935, lng: -77.3464 },  // Camp Lejeune / New River, NC
 }
 
-export default function TrackBody({ data, business = 'brew' }) {
+export default function TrackBody({ data, business = 'brew', doorPickup = null }) {
   const fallbackCenter = CENTERS[business] || CENTERS.brew
   return (
     <main style={{ padding: '12px 12px 28px' }}>
@@ -35,6 +35,18 @@ export default function TrackBody({ data, business = 'brew' }) {
             <div style={{ color: INK_DIM, fontSize: 13, marginTop: 2 }}>{data.subtitle}</div>
           )}
         </header>
+
+        {doorPickup && (
+          <a
+            href={`/track?event=${doorPickup.id}`}
+            style={{
+              display: 'block', padding: '12px 14px', borderRadius: 14, textDecoration: 'none',
+              background: 'rgba(212,163,51,0.1)', border: '1px solid rgba(212,163,51,0.45)', color: INK,
+            }}
+          >
+            <strong style={{ color: GOLD }}>Riding to Oktoberfest?</strong> Your pickup isn&apos;t on this map. See your ride &rarr;
+          </a>
+        )}
 
         <TrackMap stops={data.stops} eventDate={data.eventDate} fallbackCenter={fallbackCenter} groupId={data.groupId || null} />
 
