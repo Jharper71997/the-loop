@@ -75,13 +75,14 @@ export default function BookingForm({
       ticket_type_id: defaultTtId,
       first_name: '', last_name: '', email: '', phone: '',
       same_as_buyer: true,
-      signed_self: true,
-      signed_by_buyer: false,
+      // Door pickup organizer signs the waiver once for the whole group.
+      signed_self: !(doorPickup && !joinParty),
+      signed_by_buyer: doorPickup && !joinParty,
       claim_link: false,
       typed_name: '',
       pickup_stop_index: '',
     },
-    ...Array.from({ length: doorPickup && !joinParty ? DOOR_PICKUP_MIN_RIDERS - 1 : 0 }, () => newGuest(defaultTtId)),
+    ...Array.from({ length: doorPickup && !joinParty ? DOOR_PICKUP_MIN_RIDERS - 1 : 0 }, () => newGroupRider(defaultTtId)),
   ])
   const [pickupAddress, setPickupAddress] = useState({ street: '', city: 'Jacksonville', zip: '', notes: '' })
   // Riders never pick a zone. The ZIP decides it (28544 also asks "on base?")
@@ -144,6 +145,14 @@ export default function BookingForm({
     })
   }
 
+  // Door pickup organizer: the group size drives the rider list.
+  function setGroupSize(n) {
+    const size = Math.max(DOOR_PICKUP_MIN_RIDERS, Math.min(DOOR_PICKUP_MAX_RIDERS, n))
+    setRiders(prev => size <= prev.length
+      ? prev.slice(0, size)
+      : [...prev, ...Array.from({ length: size - prev.length }, () => newGroupRider(prev[0].ticket_type_id))])
+  }
+
   function removeRider(idx) {
     setRiders(prev => prev.filter((_, i) => i !== idx))
   }
@@ -200,8 +209,8 @@ export default function BookingForm({
       if (walkOn && stops.length > 0 && (r.pickup_stop_index === '' || r.pickup_stop_index == null)) return false
       // claim_link riders skip name + contact + waiver — that's the whole point
       if (r.claim_link) continue
-      if (!r.same_as_buyer && (!r.first_name || !r.last_name)) return false
-      if (!r.same_as_buyer && !r.phone && !r.email) return false
+      if (!r.same_as_buyer && (!r.first_name.trim() || (!r.last_name.trim() && !organizer))) return false
+      if (!r.same_as_buyer && !r.phone && !r.email && !organizer) return false
       if (r.signed_self && !r.typed_name.trim()) return false
     }
     if (buyerOwesSig && !buyerTypedName.trim()) return false
@@ -489,7 +498,286 @@ export default function BookingForm({
             <li>Your whole group is picked up at one address. Groups of {DOOR_PICKUP_MIN_RIDERS} to {DOOR_PICKUP_MAX_RIDERS}, out to Hwy 172.</li>
             <li>Your $10 also gets you a seat on the Brew Loop that night (21+). Show your ticket when you board.</li>
           </ul>
-          {brewLoopSeats && (
+        </Section>
+      )}
+
+      {organizer ? (
+        <Section title="Your group">
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12 }}>
+            <span style={{ fontSize: 15, color: '#f5f5f7', fontWeight: 700 }}>How many in your group, counting you?</span>
+            <span style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+              <button type="button" aria-label="One fewer" onClick={() => setGroupSize(riders.length - 1)}
+                disabled={riders.length <= DOOR_PICKUP_MIN_RIDERS} style={{ ...btnGhost, width: 44, fontSize: 20, padding: '6px 0' }}>&minus;</button>
+              <strong style={{ fontSize: 22, color: ACCENT, minWidth: 28, textAlign: 'center' }}>{riders.length}</strong>
+              <button type="button" aria-label="One more" onClick={() => setGroupSize(riders.length + 1)}
+                disabled={riders.length >= DOOR_PICKUP_MAX_RIDERS} style={{ ...btnGhost, width: 44, fontSize: 20, padding: '6px 0' }}>+</button>
+            </span>
+          </div>
+          <span style={{ fontSize: 14, color: '#d2d2d8', lineHeight: 1.5 }}>
+            {DOOR_PICKUP_MIN_RIDERS} to {DOOR_PICKUP_MAX_RIDERS} people, kids count. Just their names. A phone is optional, skip it for kids.
+          </span>
+          <div style={{ fontSize: 14, color: '#d2d2d8' }}>
+            <strong style={{ color: '#f5f5f7' }}>1. You</strong> (from the info above)
+          </div>
+          {riders.slice(1).map((r, k) => {
+            const idx = k + 1
+            return (
+              <div key={idx} style={{ display: 'grid', gap: 8, paddingTop: 12, borderTop: '1px solid rgba(255,255,255,0.07)' }}>
+                <strong style={{ fontSize: 14, color: '#f5f5f7' }}>{idx + 1}.</strong>
+                <Row>
+                  <Field label="First name" value={r.first_name} onChange={v => updateRider(idx, { first_name: v })} />
+                  <Field label="Last name" value={r.last_name} onChange={v => updateRider(idx, { last_name: v })} />
+                </Row>
+                <Field label={r.pay_self ? 'Phone (we text them their link)' : 'Phone (optional)'} value={r.phone} type="tel" onChange={v => updateRider(idx, { phone: v })} />
+                {idx >= DOOR_PICKUP_MIN_RIDERS && (
+                  <CheckRow
+                    checked={!!r.pay_self}
+                    onChange={v => updateRider(idx, v
+                      ? { pay_self: true, signed_by_buyer: false }
+                      : { pay_self: false, signed_by_buyer: true })}
+                    label="They pay their own $10 (we text them a link)"
+                  />
+                )}
+              </div>
+            )
+          })}
+        </Section>
+      ) : (
+      <Section title={`Riders (${riders.length})`}>
+          <div style={{ display: 'grid', gap: 12 }}>
+            {riders.map((r, idx) => {
+              const tt = ticketTypes.find(t => t.id === r.ticket_type_id)
+              return (
+                /* No box. A rider is a passage of the section, marked by a
+                   gold rail and a rule above it - not a card inside a card. */
+                <div key={idx} style={{
+                  display: 'grid',
+                  gap: 12,
+                  paddingLeft: 16,
+                  paddingTop: idx === 0 ? 0 : 20,
+                  borderLeft: `2px solid ${idx === 0 ? 'rgba(212,163,51,0.55)' : 'rgba(255,255,255,0.10)'}`,
+                  borderTop: idx === 0 ? 0 : '1px solid rgba(255,255,255,0.07)',
+                  marginLeft: 2,
+                }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <strong style={{ color: ACCENT, fontSize: 12.5, letterSpacing: '0.2em', textTransform: 'uppercase', fontWeight: 800 }}>Rider {idx + 1}</strong>
+                    {idx > 0 && !(organizer && riders.length <= DOOR_PICKUP_MIN_RIDERS) && (
+                      <button type="button" onClick={() => removeRider(idx)} style={btnGhost}>Remove</button>
+                    )}
+                  </div>
+  
+                  {!doorPickup && (() => {
+                    const sel = ticketTypes.find(x => x.id === r.ticket_type_id)
+                    // A walk-on ticket is not tied to a stop, so for those this
+                    // select really is just the ticket and the bar is asked
+                    // separately below. For every normal ticket type it IS the
+                    // pickup bar, and has to say so.
+                    const walkOn = needsPickup(sel)
+                    const label = fareLabel || (walkOn ? 'Which ticket?' : 'Where should we pick you up?')
+                    const hint = fareLabel
+                      ? fareHint
+                      : (walkOn ? null : 'Pick the bar you’ll already be at. You can ride between every bar on the route from there, and the last loop brings you back to this one.')
+                    // One fare is not a choice. Rendering it as a dropdown of one
+                    // asks the rider to make a decision that does not exist.
+                    const onlyFare = ticketTypes.length === 1 ? ticketTypes[0] : null
+                    return (
+                      <label style={{ display: 'grid', gap: 7 }}>
+                        <span style={{ fontSize: 14, color: '#f5f5f7', fontWeight: 700 }}>
+                          {label}
+                        </span>
+                        {hint && (
+                          <span style={{ fontSize: 14, color: '#d2d2d8', lineHeight: 1.5, marginTop: -3 }}>
+                            {hint}
+                          </span>
+                        )}
+                        {onlyFare ? (
+                          <span style={{
+                            ...input, display: 'flex', alignItems: 'center',
+                            justifyContent: 'space-between', gap: 10,
+                          }}>
+                            <span style={{ fontWeight: 700 }}>{ticketLabel(onlyFare)}</span>
+                          </span>
+                        ) : (
+                          <select
+                            value={r.ticket_type_id}
+                            onChange={e => updateRider(idx, { ticket_type_id: e.target.value })}
+                            style={input}
+                          >
+                            {ticketTypes.map(t => (
+                              <option key={t.id} value={t.id} disabled={t.remaining === 0}>
+                                {ticketLabel(t)}
+                              </option>
+                            ))}
+                          </select>
+                        )}
+                        {sel && (
+                          <span style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: 14, color: '#d2d2d8', gap: 8 }}>
+                            <span>
+                              {!walkOn && sel.pickup_time ? (
+                                <>Be at <strong style={{ color: '#f5f5f7', fontWeight: 700 }}>{sel.name}</strong>{' '}
+                                for <strong style={{ color: ACCENT, fontWeight: 700 }}>{formatPickupTime(sel.pickup_time)}</strong>.</>
+                              ) : null}
+                            </span>
+                            <RemainingBadge remaining={sel.remaining} />
+                          </span>
+                        )}
+                      </label>
+                    )
+                  })()}
+  
+                  {needsPickup(ticketTypes.find(x => x.id === r.ticket_type_id)) && (
+                    <label style={{ display: 'grid', gap: 7 }}>
+                      <span style={{ fontSize: 14, color: '#f5f5f7', fontWeight: 700 }}>
+                        Where should we pick you up? <span style={{ color: ACCENT }}>*</span>
+                      </span>
+                      <span style={{ fontSize: 14, color: '#d2d2d8', lineHeight: 1.5, marginTop: -3 }}>
+                        Pick the bar you&rsquo;ll already be at. You can ride between every bar on the
+                        route from there, and the last loop brings you back to this one.
+                      </span>
+                      <select
+                        value={r.pickup_stop_index}
+                        onChange={e => updateRider(idx, { pickup_stop_index: e.target.value })}
+                        style={{ ...input, borderColor: r.pickup_stop_index === '' ? '#f87171' : BORDER }}
+                      >
+                        <option value="" disabled>Which bar should we pick you up at?</option>
+                        {stops.map(s => (
+                          <option key={s.index} value={s.index}>
+                            {s.name}{s.start_time ? ` — ${formatPickupTime(s.start_time)}` : ''}
+                          </option>
+                        ))}
+                      </select>
+                    </label>
+                  )}
+  
+                  {idx === 0 ? (
+                    <CheckRow
+                      checked={r.same_as_buyer}
+                      onChange={v => updateRider(idx, { same_as_buyer: v, claim_link: false })}
+                      label="This rider is me"
+                    />
+                  ) : null}
+  
+                  {/* The first 4 seats are always paid at checkout ($40 minimum).
+                      Only a 5th rider and beyond can pay their own through a link. */}
+                  {organizer && idx >= DOOR_PICKUP_MIN_RIDERS && (
+                    <div style={{ display: 'grid', gap: 8 }}>
+                      <RadioRow
+                        name={`pay-${idx}`}
+                        checked={!!r.pay_self}
+                        onChange={() => updateRider(idx, { pay_self: true, claim_link: false, signed_self: false, signed_by_buyer: false })}
+                        label="Send them a link to pay their own $10"
+                      />
+                      <RadioRow
+                        name={`pay-${idx}`}
+                        checked={!r.pay_self}
+                        onChange={() => updateRider(idx, { pay_self: false, claim_link: true })}
+                        label="I'll pay for them"
+                      />
+                    </div>
+                  )}
+  
+                  {r.pay_self ? (
+                    <>
+                      <Row>
+                        <Field label="First name" value={r.first_name} onChange={v => updateRider(idx, { first_name: v })} />
+                        <Field label="Last name" value={r.last_name} onChange={v => updateRider(idx, { last_name: v })} />
+                      </Row>
+                      <Field label="Phone" value={r.phone} type="tel" onChange={v => updateRider(idx, { phone: v })} />
+                      <span style={{ fontSize: 14, color: '#d2d2d8', lineHeight: 1.5 }}>
+                        After you pay, we text them their personal link. They pay and sign their own waiver.
+                      </span>
+                    </>
+                  ) : (<>
+                  {idx > 0 && (
+                    <CheckRow
+                      checked={!!r.claim_link}
+                      onChange={v => updateRider(idx, {
+                        claim_link: v,
+                        ...(v
+                          ? { same_as_buyer: false, signed_self: false, signed_by_buyer: false, typed_name: '' }
+                          : { signed_by_buyer: true }),
+                      })}
+                      label="I'll send this person a link to sign their own waiver"
+                      accentText={!!r.claim_link}
+                    />
+                  )}
+  
+                  {r.claim_link ? (
+                    <div style={{
+                      padding: 10,
+                      background: 'rgba(212,163,51,0.06)',
+                      border: `1px dashed ${ACCENT}`,
+                      borderRadius: 8,
+                      fontSize: 13.5,
+                      color: '#bbb',
+                    }}>
+                      Friend’s ticket — after payment we’ll give you a link to text them. They fill their info + sign on their own.
+                    </div>
+                  ) : (
+                    <>
+                      {!r.same_as_buyer && (
+                        <>
+                          <Row>
+                            <Field label="First name" value={r.first_name} onChange={v => updateRider(idx, { first_name: v })} />
+                            <Field label="Last name" value={r.last_name} onChange={v => updateRider(idx, { last_name: v })} />
+                          </Row>
+                          <Row>
+                            <Field label="Phone" value={r.phone} type="tel" onChange={v => updateRider(idx, { phone: v })} />
+                            <Field label="Email" value={r.email} type="email" onChange={v => updateRider(idx, { email: v })} />
+                          </Row>
+                        </>
+                      )}
+  
+                      <div style={{ display: 'grid', gap: 10, paddingTop: 14, marginTop: 4, borderTop: '1px solid rgba(255,255,255,0.07)' }}>
+                        <strong style={{ fontSize: 12.5, color: ACCENT, letterSpacing: '0.08em', textTransform: 'uppercase' }}>
+                          Waiver for this rider
+                        </strong>
+                        <RadioRow
+                          name={`sig-${idx}`}
+                          checked={r.signed_self}
+                          onChange={() => updateRider(idx, { signed_self: true, signed_by_buyer: false })}
+                          label="This rider signs themselves"
+                        />
+                        {idx > 0 && (
+                          <RadioRow
+                            name={`sig-${idx}`}
+                            checked={r.signed_by_buyer}
+                            onChange={() => updateRider(idx, { signed_self: false, signed_by_buyer: true })}
+                            label="I'm signing on their behalf"
+                          />
+                        )}
+  
+                        {r.signed_self && (
+                          <input
+                            placeholder="Type rider's full legal name"
+                            value={r.typed_name}
+                            onChange={e => updateRider(idx, { typed_name: e.target.value })}
+                            style={input}
+                          />
+                        )}
+                      </div>
+                    </>
+                  )}
+                  </>)}
+  
+                  <div style={{ fontSize: 13.5, color: '#d2d2d8', textAlign: 'right' }}>
+                    {r.pay_self ? 'Pays their own $10' : tt ? `$${(tt.price_cents / 100).toFixed(2)}` : ''}
+                  </div>
+                </div>
+              )
+            })}
+          </div>
+  
+          {!(doorPickup && riders.length >= DOOR_PICKUP_MAX_RIDERS) && !joinParty?.seat && (
+            <button type="button" onClick={addRider} style={{ ...btnGhost, marginTop: 4, width: '100%' }}>
+              + Add another rider
+            </button>
+          )}
+        </Section>
+      )}
+
+      {organizer && brewLoopSeats && (
+        <Section title="Brew Loop that night">
             <label style={{ display: 'grid', gap: 7 }}>
               <span style={{ fontSize: 15, color: '#f5f5f7', fontWeight: 700 }}>How many of your group are riding the Brew Loop that night?</span>
               <span style={{ fontSize: 14, color: '#d2d2d8', lineHeight: 1.5, marginTop: -3 }}>
@@ -506,241 +794,8 @@ export default function BookingForm({
                 <span style={{ fontSize: 13, color: '#f87171' }}>That is more than your group. Pick {riders.length} or fewer.</span>
               )}
             </label>
-          )}
         </Section>
       )}
-
-      <Section title={`Riders (${riders.length})`}>
-        <div style={{ display: 'grid', gap: 12 }}>
-          {riders.map((r, idx) => {
-            const tt = ticketTypes.find(t => t.id === r.ticket_type_id)
-            return (
-              /* No box. A rider is a passage of the section, marked by a
-                 gold rail and a rule above it - not a card inside a card. */
-              <div key={idx} style={{
-                display: 'grid',
-                gap: 12,
-                paddingLeft: 16,
-                paddingTop: idx === 0 ? 0 : 20,
-                borderLeft: `2px solid ${idx === 0 ? 'rgba(212,163,51,0.55)' : 'rgba(255,255,255,0.10)'}`,
-                borderTop: idx === 0 ? 0 : '1px solid rgba(255,255,255,0.07)',
-                marginLeft: 2,
-              }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                  <strong style={{ color: ACCENT, fontSize: 12.5, letterSpacing: '0.2em', textTransform: 'uppercase', fontWeight: 800 }}>Rider {idx + 1}</strong>
-                  {idx > 0 && !(organizer && riders.length <= DOOR_PICKUP_MIN_RIDERS) && (
-                    <button type="button" onClick={() => removeRider(idx)} style={btnGhost}>Remove</button>
-                  )}
-                </div>
-
-                {!doorPickup && (() => {
-                  const sel = ticketTypes.find(x => x.id === r.ticket_type_id)
-                  // A walk-on ticket is not tied to a stop, so for those this
-                  // select really is just the ticket and the bar is asked
-                  // separately below. For every normal ticket type it IS the
-                  // pickup bar, and has to say so.
-                  const walkOn = needsPickup(sel)
-                  const label = fareLabel || (walkOn ? 'Which ticket?' : 'Where should we pick you up?')
-                  const hint = fareLabel
-                    ? fareHint
-                    : (walkOn ? null : 'Pick the bar you’ll already be at. You can ride between every bar on the route from there, and the last loop brings you back to this one.')
-                  // One fare is not a choice. Rendering it as a dropdown of one
-                  // asks the rider to make a decision that does not exist.
-                  const onlyFare = ticketTypes.length === 1 ? ticketTypes[0] : null
-                  return (
-                    <label style={{ display: 'grid', gap: 7 }}>
-                      <span style={{ fontSize: 14, color: '#f5f5f7', fontWeight: 700 }}>
-                        {label}
-                      </span>
-                      {hint && (
-                        <span style={{ fontSize: 14, color: '#d2d2d8', lineHeight: 1.5, marginTop: -3 }}>
-                          {hint}
-                        </span>
-                      )}
-                      {onlyFare ? (
-                        <span style={{
-                          ...input, display: 'flex', alignItems: 'center',
-                          justifyContent: 'space-between', gap: 10,
-                        }}>
-                          <span style={{ fontWeight: 700 }}>{ticketLabel(onlyFare)}</span>
-                        </span>
-                      ) : (
-                        <select
-                          value={r.ticket_type_id}
-                          onChange={e => updateRider(idx, { ticket_type_id: e.target.value })}
-                          style={input}
-                        >
-                          {ticketTypes.map(t => (
-                            <option key={t.id} value={t.id} disabled={t.remaining === 0}>
-                              {ticketLabel(t)}
-                            </option>
-                          ))}
-                        </select>
-                      )}
-                      {sel && (
-                        <span style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: 14, color: '#d2d2d8', gap: 8 }}>
-                          <span>
-                            {!walkOn && sel.pickup_time ? (
-                              <>Be at <strong style={{ color: '#f5f5f7', fontWeight: 700 }}>{sel.name}</strong>{' '}
-                              for <strong style={{ color: ACCENT, fontWeight: 700 }}>{formatPickupTime(sel.pickup_time)}</strong>.</>
-                            ) : null}
-                          </span>
-                          <RemainingBadge remaining={sel.remaining} />
-                        </span>
-                      )}
-                    </label>
-                  )
-                })()}
-
-                {needsPickup(ticketTypes.find(x => x.id === r.ticket_type_id)) && (
-                  <label style={{ display: 'grid', gap: 7 }}>
-                    <span style={{ fontSize: 14, color: '#f5f5f7', fontWeight: 700 }}>
-                      Where should we pick you up? <span style={{ color: ACCENT }}>*</span>
-                    </span>
-                    <span style={{ fontSize: 14, color: '#d2d2d8', lineHeight: 1.5, marginTop: -3 }}>
-                      Pick the bar you&rsquo;ll already be at. You can ride between every bar on the
-                      route from there, and the last loop brings you back to this one.
-                    </span>
-                    <select
-                      value={r.pickup_stop_index}
-                      onChange={e => updateRider(idx, { pickup_stop_index: e.target.value })}
-                      style={{ ...input, borderColor: r.pickup_stop_index === '' ? '#f87171' : BORDER }}
-                    >
-                      <option value="" disabled>Which bar should we pick you up at?</option>
-                      {stops.map(s => (
-                        <option key={s.index} value={s.index}>
-                          {s.name}{s.start_time ? ` — ${formatPickupTime(s.start_time)}` : ''}
-                        </option>
-                      ))}
-                    </select>
-                  </label>
-                )}
-
-                {idx === 0 ? (
-                  <CheckRow
-                    checked={r.same_as_buyer}
-                    onChange={v => updateRider(idx, { same_as_buyer: v, claim_link: false })}
-                    label="This rider is me"
-                  />
-                ) : null}
-
-                {/* The first 4 seats are always paid at checkout ($40 minimum).
-                    Only a 5th rider and beyond can pay their own through a link. */}
-                {organizer && idx >= DOOR_PICKUP_MIN_RIDERS && (
-                  <div style={{ display: 'grid', gap: 8 }}>
-                    <RadioRow
-                      name={`pay-${idx}`}
-                      checked={!!r.pay_self}
-                      onChange={() => updateRider(idx, { pay_self: true, claim_link: false, signed_self: false, signed_by_buyer: false })}
-                      label="Send them a link to pay their own $10"
-                    />
-                    <RadioRow
-                      name={`pay-${idx}`}
-                      checked={!r.pay_self}
-                      onChange={() => updateRider(idx, { pay_self: false, claim_link: true })}
-                      label="I'll pay for them"
-                    />
-                  </div>
-                )}
-
-                {r.pay_self ? (
-                  <>
-                    <Row>
-                      <Field label="First name" value={r.first_name} onChange={v => updateRider(idx, { first_name: v })} />
-                      <Field label="Last name" value={r.last_name} onChange={v => updateRider(idx, { last_name: v })} />
-                    </Row>
-                    <Field label="Phone" value={r.phone} type="tel" onChange={v => updateRider(idx, { phone: v })} />
-                    <span style={{ fontSize: 14, color: '#d2d2d8', lineHeight: 1.5 }}>
-                      After you pay, we text them their personal link. They pay and sign their own waiver.
-                    </span>
-                  </>
-                ) : (<>
-                {idx > 0 && (
-                  <CheckRow
-                    checked={!!r.claim_link}
-                    onChange={v => updateRider(idx, {
-                      claim_link: v,
-                      ...(v
-                        ? { same_as_buyer: false, signed_self: false, signed_by_buyer: false, typed_name: '' }
-                        : { signed_by_buyer: true }),
-                    })}
-                    label="I'll send this person a link to sign their own waiver"
-                    accentText={!!r.claim_link}
-                  />
-                )}
-
-                {r.claim_link ? (
-                  <div style={{
-                    padding: 10,
-                    background: 'rgba(212,163,51,0.06)',
-                    border: `1px dashed ${ACCENT}`,
-                    borderRadius: 8,
-                    fontSize: 13.5,
-                    color: '#bbb',
-                  }}>
-                    Friend’s ticket — after payment we’ll give you a link to text them. They fill their info + sign on their own.
-                  </div>
-                ) : (
-                  <>
-                    {!r.same_as_buyer && (
-                      <>
-                        <Row>
-                          <Field label="First name" value={r.first_name} onChange={v => updateRider(idx, { first_name: v })} />
-                          <Field label="Last name" value={r.last_name} onChange={v => updateRider(idx, { last_name: v })} />
-                        </Row>
-                        <Row>
-                          <Field label="Phone" value={r.phone} type="tel" onChange={v => updateRider(idx, { phone: v })} />
-                          <Field label="Email" value={r.email} type="email" onChange={v => updateRider(idx, { email: v })} />
-                        </Row>
-                      </>
-                    )}
-
-                    <div style={{ display: 'grid', gap: 10, paddingTop: 14, marginTop: 4, borderTop: '1px solid rgba(255,255,255,0.07)' }}>
-                      <strong style={{ fontSize: 12.5, color: ACCENT, letterSpacing: '0.08em', textTransform: 'uppercase' }}>
-                        Waiver for this rider
-                      </strong>
-                      <RadioRow
-                        name={`sig-${idx}`}
-                        checked={r.signed_self}
-                        onChange={() => updateRider(idx, { signed_self: true, signed_by_buyer: false })}
-                        label="This rider signs themselves"
-                      />
-                      {idx > 0 && (
-                        <RadioRow
-                          name={`sig-${idx}`}
-                          checked={r.signed_by_buyer}
-                          onChange={() => updateRider(idx, { signed_self: false, signed_by_buyer: true })}
-                          label="I'm signing on their behalf"
-                        />
-                      )}
-
-                      {r.signed_self && (
-                        <input
-                          placeholder="Type rider's full legal name"
-                          value={r.typed_name}
-                          onChange={e => updateRider(idx, { typed_name: e.target.value })}
-                          style={input}
-                        />
-                      )}
-                    </div>
-                  </>
-                )}
-                </>)}
-
-                <div style={{ fontSize: 13.5, color: '#d2d2d8', textAlign: 'right' }}>
-                  {r.pay_self ? 'Pays their own $10' : tt ? `$${(tt.price_cents / 100).toFixed(2)}` : ''}
-                </div>
-              </div>
-            )
-          })}
-        </div>
-
-        {!(doorPickup && riders.length >= DOOR_PICKUP_MAX_RIDERS) && !joinParty?.seat && (
-          <button type="button" onClick={addRider} style={{ ...btnGhost, marginTop: 4, width: '100%' }}>
-            + Add another rider
-          </button>
-        )}
-      </Section>
 
       {addons.length > 0 && (
         <Section title="Add to your night">
@@ -803,7 +858,7 @@ export default function BookingForm({
         {buyerOwesSig && (
           <div style={{ marginTop: 8 }}>
             <label style={{ fontSize: 13, color: '#bbb' }}>
-              Type your full legal name to sign on behalf of any riders above:
+              {organizer ? 'Type your full legal name to sign the waiver for everyone in your group, including any kids:' : 'Type your full legal name to sign on behalf of any riders above:'}
             </label>
             <input
               value={buyerTypedName}
@@ -870,7 +925,9 @@ export default function BookingForm({
         >
           {minAge
             ? <>Every rider on this order is {minAge} or older and will bring a valid photo ID. I am 18 or older and agree to the </>
-            : <>I am 18 or older and agree to the </>}
+            : doorPickup
+              ? <>I agree to the </>
+              : <>I am 18 or older and agree to the </>}
           <PolicyLink href="/terms">Terms of Service</PolicyLink>,{' '}
           <PolicyLink href="/refunds">Refund Policy</PolicyLink> and{' '}
           <PolicyLink href="/privacy">Privacy Policy</PolicyLink>.
@@ -1045,6 +1102,11 @@ function newGuest(ticketTypeId, paySelf = false) {
     typed_name: '',
     pickup_stop_index: '',
   }
+}
+
+// A door pickup group member: the organizer signs for them, no claim link.
+function newGroupRider(ticketTypeId) {
+  return { ...newGuest(ticketTypeId), claim_link: false, signed_by_buyer: true }
 }
 
 function mintToken() {

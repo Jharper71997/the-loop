@@ -455,6 +455,12 @@ async function handleCheckout(req) {
         email: r.email,
         phone: r.phone,
       })
+      // Door pickup is all ages: a kid has no phone. The organizer signs for
+      // them, so their seat hangs off the organizer's contact and the item
+      // keeps the kid's own name.
+      if (!contact && doorPickup && r.signed_by_buyer && String(r.first_name || '').trim()) {
+        contact = buyerContact
+      }
       if (!contact) {
         return Response.json({ error: 'rider missing phone and email' }, { status: 400 })
       }
@@ -465,6 +471,7 @@ async function handleCheckout(req) {
   const waiverQueue = []
   for (const rc of riderContacts) {
     if (rc.claim) continue // friend will sign at /c/<token>
+    if (waiverQueue.some(w => w.contactId === rc.contact.id)) continue // kids on the organizer's contact
     const alreadySigned = await contactHasSignedCurrent(supabase, rc.contact.id)
     if (alreadySigned) continue
 
