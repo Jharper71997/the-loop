@@ -1,14 +1,12 @@
 'use client'
 
 import { useEffect, useMemo, useState } from 'react'
-import dynamic from 'next/dynamic'
 import { prefixLink } from '@/lib/businessConfig'
 import { captureAttribution } from '@/lib/attribution'
 import ConsentCheckbox, { PolicyLink, SmsConsentLabel } from '@/app/_components/legal/ConsentCheckbox'
-import { DOOR_PICKUP_MIN_RIDERS, DOOR_PICKUP_MAX_RIDERS, ZONES, zoneOfTicketType, zipProblem, BASE_ZONE, BASE_ID_TEXT } from '@/lib/doorPickup'
+import { DOOR_PICKUP_MIN_RIDERS, DOOR_PICKUP_MAX_RIDERS, zoneOfTicketType, zipProblem, zonesForZip, normalizeZip, BASE_ZONE, BASE_ID_TEXT } from '@/lib/doorPickup'
 
 // Leaflet touches window, and only door pickup riders who open it need it.
-const ZoneMap = dynamic(() => import('./ZoneMap'), { ssr: false })
 
 const ACCENT = '#d4a333'
 // Lifted (Jacob, 2026-09-29: too dark to read the details).
@@ -86,15 +84,24 @@ export default function BookingForm({
     ...Array.from({ length: doorPickup && !joinParty ? DOOR_PICKUP_MIN_RIDERS - 1 : 0 }, () => newGuest(defaultTtId)),
   ])
   const [pickupAddress, setPickupAddress] = useState({ street: '', city: 'Jacksonville', zip: '', notes: '' })
-  const [showZoneMap, setShowZoneMap] = useState(false)
+  // Riders never pick a zone. The ZIP decides it (28544 also asks "on base?")
+  // and only that zone's times are shown. slotPicked stops the default first
+  // ticket type from counting as a choice.
+  const [onBase, setOnBase] = useState(null)
+  const [slotPicked, setSlotPicked] = useState(false)
   const [baseIdAck, setBaseIdAck] = useState(false)
   // null = not answered yet. The organizer has to answer, even if it is 0.
   const [brewLoopRiders, setBrewLoopRiders] = useState(null)
   const doorSlot = doorPickup ? ticketTypes.find(t => t.id === riders[0]?.ticket_type_id) : null
   const doorZone = doorSlot ? zoneOfTicketType(doorSlot) : null
-  const zipError = doorPickup && pickupAddress.zip.trim().length >= 5
-    ? zipProblem(pickupAddress.zip, doorZone)
-    : null
+  const zipValid = !!normalizeZip(pickupAddress.zip)
+  const zipZones = doorPickup ? zonesForZip(pickupAddress.zip) : []
+  const riderZone = zipZones.length === 1 ? zipZones[0]
+    : zipZones.length > 1 && onBase != null
+      ? (onBase ? BASE_ZONE : zipZones.find(z => z !== BASE_ZONE))
+      : null
+  const riderSlots = riderZone ? ticketTypes.filter(t => zoneOfTicketType(t) === riderZone) : []
+  const slotReady = slotPicked && riderZone != null && doorZone === riderZone
 
   // One slot for the whole group.
   function setDoorSlot(ttId) {
@@ -207,11 +214,11 @@ export default function BookingForm({
       if (!joinParty) {
         if (brewLoopSeats && (brewLoopRiders == null || brewLoopRiders > riders.length || brewLoopRiders > brewLoopSeats.left)) return false
         if (!pickupAddress.street.trim() || !pickupAddress.city.trim()) return false
-        if (zipProblem(pickupAddress.zip, doorZone)) return false
+        if (!slotReady || zipProblem(pickupAddress.zip, doorZone)) return false
       }
     }
     return true
-  }, [buyer, riders, ticketTypes, stops, buyerOwesSig, buyerTypedName, oversellError, termsAccepted, doorPickup, joinParty, pickupAddress, doorZone, baseIdAck, brewLoopRiders, brewLoopSeats])
+  }, [buyer, riders, ticketTypes, stops, buyerOwesSig, buyerTypedName, oversellError, termsAccepted, doorPickup, joinParty, pickupAddress, doorZone, baseIdAck, brewLoopRiders, brewLoopSeats, slotReady])
 
   async function onSubmit(e) {
     e.preventDefault()
@@ -420,55 +427,66 @@ export default function BookingForm({
 
       {doorPickup && !joinParty && (
         <Section title="Pickup">
-          <label style={{ display: 'grid', gap: 7 }}>
-            <span style={{ fontSize: 15, color: '#f5f5f7', fontWeight: 700 }}>What hour should we pick you up?</span>
-            <span style={{ fontSize: 14, color: '#d2d2d8', lineHeight: 1.5, marginTop: -3 }}>
-              Each hour serves one zone of town. Pick an hour in the zone your address is in. We get to you sometime within that hour, and your driver texts you when they are on the way.
-            </span>
-            <button type="button" onClick={() => setShowZoneMap(v => !v)} style={{ ...btnGhost, justifySelf: 'start', borderColor: '#d4a333', color: '#f0c24a' }}>
-              {showZoneMap ? 'Hide the zone map' : 'Not sure which zone? See the map'}
-            </button>
-            {showZoneMap && <ZoneMap highlight={doorZone} />}
-            <select value={riders[0]?.ticket_type_id || ''} onChange={e => setDoorSlot(e.target.value)} style={input}>
-              {Object.entries(ZONES).map(([n, z]) => {
-                const slots = ticketTypes.filter(t => zoneOfTicketType(t) === Number(n))
-                if (!slots.length) return null
-                return (
-                  <optgroup key={n} label={`Zone ${n}: ${z.label} (${z.zips.join(', ')})`}>
-                    {slots.map(t => (
-                      <option key={t.id} value={t.id} disabled={t.remaining === 0}>{ticketLabel(t)}</option>
-                    ))}
-                  </optgroup>
-                )
-              })}
-            </select>
-            {doorSlot && (
-              <span style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: 14, color: '#d2d2d8', gap: 8 }}>
-                <span>Zone {doorZone}: {ZONES[doorZone]?.label} &middot; ZIP {ZONES[doorZone]?.zips.join(' or ')}</span>
-                <RemainingBadge remaining={doorSlot.remaining} />
-              </span>
-            )}
-          </label>
-          {doorZone === BASE_ZONE && <BaseIdNotice checked={baseIdAck} onChange={setBaseIdAck} />}
+          <span style={{ fontSize: 15, color: '#f5f5f7', fontWeight: 700 }}>Where should we pick you up?</span>
           <Field label="Street address" value={pickupAddress.street} onChange={v => setPickupAddress(a => ({ ...a, street: v }))} />
           <Row>
             <Field label="City" value={pickupAddress.city} onChange={v => setPickupAddress(a => ({ ...a, city: v }))} />
-            <Field label="ZIP" value={pickupAddress.zip} onChange={v => setPickupAddress(a => ({ ...a, zip: v }))} />
+            <Field label="ZIP" value={pickupAddress.zip} onChange={v => { setPickupAddress(a => ({ ...a, zip: v })); setOnBase(null) }} />
           </Row>
-          {zipError && (
-            <div style={{ fontSize: 13, color: '#f87171', lineHeight: 1.5 }}>{zipError}</div>
+          {zipValid && zipZones.length === 0 && (
+            <div style={{ fontSize: 15, color: '#f87171', lineHeight: 1.5, padding: '12px 14px', border: '1px solid rgba(248,113,113,0.4)', borderRadius: 12 }}>
+              Sorry, that address is outside our pickup area. We pick up in Jacksonville, on base, and out to Hwy 172 in Hubert.
+            </div>
           )}
+          {zipZones.length > 1 && (
+            <div style={{ display: 'grid', gap: 8 }}>
+              <span style={{ fontSize: 15, color: '#f5f5f7', fontWeight: 700 }}>Is this address on base?</span>
+              <div style={{ display: 'flex', gap: 8 }}>
+                {[['Yes', true], ['No', false]].map(([label, v]) => (
+                  <button key={label} type="button" onClick={() => setOnBase(v)}
+                    style={{ ...btnGhost, flex: 1, ...(onBase === v ? { borderColor: '#d4a333', color: '#f0c24a', background: 'rgba(212,163,51,0.12)' } : {}) }}>
+                    {label}
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
+          {riderZone != null && (
+            <div style={{ display: 'grid', gap: 8 }}>
+              <span style={{ fontSize: 15, color: '#f5f5f7', fontWeight: 700 }}>Pick your pickup time</span>
+              <span style={{ fontSize: 14, color: '#d2d2d8', lineHeight: 1.5, marginTop: -3 }}>
+                These are the times we come to your area. We get to you sometime within that hour, and your driver texts you when they are on the way.
+              </span>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(130px, 1fr))', gap: 8 }}>
+                {riderSlots.map(t => {
+                  const full = t.remaining === 0
+                  const on = slotReady && doorSlot?.id === t.id
+                  return (
+                    <button key={t.id} type="button" disabled={full}
+                      onClick={() => { setDoorSlot(t.id); setSlotPicked(true) }}
+                      style={{ ...btnGhost, display: 'grid', gap: 2, opacity: full ? 0.45 : 1, ...(on ? { borderColor: '#d4a333', color: '#f0c24a', background: 'rgba(212,163,51,0.12)' } : {}) }}>
+                      <strong>{t.name.replace(/\s*·\s*Zone\s*\d/i, '')}</strong>
+                      <span style={{ fontSize: 12 }}>{full ? 'Full' : Number.isFinite(t.remaining) && t.remaining <= 5 ? `${t.remaining} seats left` : 'Open'}</span>
+                    </button>
+                  )
+                })}
+              </div>
+              {riderSlots.length > 0 && riderSlots.every(t => t.remaining === 0) && (
+                <div style={{ fontSize: 14, color: '#f87171', lineHeight: 1.5 }}>Every time for your area is full.</div>
+              )}
+            </div>
+          )}
+          {riderZone === BASE_ZONE && <BaseIdNotice checked={baseIdAck} onChange={setBaseIdAck} />}
           <Field label="Anything the driver should know? (gate code, which building)" value={pickupAddress.notes} onChange={v => setPickupAddress(a => ({ ...a, notes: v }))} />
           <p style={{ fontSize: 15, color: '#f5f5f7', lineHeight: 1.55, margin: 0 }}>
             <strong style={{ color: ACCENT }}>You book at least {DOOR_PICKUP_MIN_RIDERS} seats (${DOOR_PICKUP_MIN_RIDERS * 10}).</strong> Bigger group? Anyone past {DOOR_PICKUP_MIN_RIDERS}
             can pay their own $10. We text them their link and hold their seat.
           </p>
           <ul style={{ fontSize: 15, color: '#f5f5f7', lineHeight: 1.5, margin: 0, padding: '14px 16px 14px 34px', background: 'rgba(212,163,51,0.10)', border: '1px solid rgba(212,163,51,0.35)', borderRadius: 12, display: 'grid', gap: 6 }}>
-            <li><strong>Pickup within the hour.</strong> Other groups in your zone ride the same run, so we get to you sometime in the hour you choose, not exactly on the hour. Your driver texts you when they are on the way.</li>
+            <li><strong>Pickup within the hour.</strong> Other groups near you ride the same run, so we get to you sometime in the hour you choose, not exactly on the hour. Your driver texts you when they are on the way.</li>
             <li><strong>Pickup only.</strong> We drop your group downtown at the train depot, a short walk to Oktoberfest. The ride home is not included.</li>
             <li><strong>Kids are welcome.</strong> The ride to Oktoberfest is all ages. Kids ride with their group and count as a seat, so list them with everyone else.</li>
             <li>Your whole group is picked up at one address. Groups of {DOOR_PICKUP_MIN_RIDERS} to {DOOR_PICKUP_MAX_RIDERS}, out to Hwy 172.</li>
-            <li>On base? Pick a Zone 3 time. Base has its own shuttle.</li>
             <li>Your $10 also gets you a seat on the Brew Loop that night (21+). Show your ticket when you board.</li>
           </ul>
           {brewLoopSeats && (
