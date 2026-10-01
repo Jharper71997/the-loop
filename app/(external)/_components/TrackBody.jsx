@@ -1,4 +1,4 @@
-import { BARS, SURF_BARS, MARINES_BARS } from '@/lib/bars'
+import { BARS, SURF_BARS, MARINES_BARS, matchBarByName } from '@/lib/bars'
 import { prefixLink } from '@/lib/businessConfig'
 import TrackMap from '../track/TrackMap'
 import CohortRoll from '../track/CohortRoll'
@@ -40,14 +40,24 @@ export default function TrackBody({ data, business = 'brew' }) {
 
         <CohortRoll />
 
-        <PartnerBars business={business} />
+        <PartnerBars business={business} stops={data.stops} />
       </div>
     </main>
   )
 }
 
-function PartnerBars({ business }) {
-  const bars = business === 'surf' ? SURF_BARS : business === 'marines' ? MARINES_BARS : BARS
+// Tonight's actual stops when the loop has a route; the full directory only
+// when there is no loop to show. It used to always list every partner bar
+// under "On the route", which named bars the shuttle was not going to.
+function PartnerBars({ business, stops = [] }) {
+  const all = business === 'surf' ? SURF_BARS : business === 'marines' ? MARINES_BARS : BARS
+  const onRoute = []
+  for (const s of stops) {
+    const bar = matchBarByName(all, s?.name)
+    if (bar && !onRoute.includes(bar)) onRoute.push(bar)
+  }
+  const tonight = onRoute.length > 0
+  const bars = tonight ? onRoute : all
   return (
     <section
       style={{
@@ -60,15 +70,12 @@ function PartnerBars({ business }) {
       <div style={{ padding: '12px 14px', borderBottom: `1px solid ${LINE}`, display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', gap: 10 }}>
         <div>
           <div style={{ color: GOLD, fontSize: 11, letterSpacing: '0.22em', textTransform: 'uppercase', fontWeight: 700 }}>
-            On the route
+            {tonight ? 'On the route' : 'Partner bars'}
           </div>
           <div style={{ color: INK, fontSize: 14, fontWeight: 600, marginTop: 2 }}>
-            All {bars.length} partner bars
+            {tonight ? `This loop's ${bars.length} bars` : `All ${bars.length} partner bars`}
           </div>
         </div>
-        <span style={{ color: INK_DIM, fontSize: 11, letterSpacing: '0.08em', textTransform: 'uppercase' }}>
-          Route rotates
-        </span>
       </div>
 
       <div
