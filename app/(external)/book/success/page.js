@@ -206,7 +206,10 @@ async function DoorPickupConfirmation({ order, door, firstName, groupLink, myTic
           </p>
         )}
         <p style={{ marginTop: 16, fontSize: 15, color: GOLD_HI, fontWeight: 700, textAlign: 'center' }}>
-          Your $10 also gets you a seat on the Brew Loop that night (21+). Show your ticket when you board.
+          Your $10 also gets you a seat on the Brew Loop that night. Show your ticket when you board.
+        </p>
+        <p style={{ ...subText, textAlign: 'center', marginTop: 6 }}>
+          Oktoberfest pickup is all ages. The Brew Loop bar ride that night is 21+.
         </p>
 
         {groupLink && (
