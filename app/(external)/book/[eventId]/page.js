@@ -378,7 +378,7 @@ export default async function EventBookingPage({ params, searchParams }) {
                     <li>Pickup only, the ride home is not included</li>
                     <li>Groups of 4 to 13, picked up at one address, anywhere in Jacksonville out to Hwy 172</li>
                     <li>On base? Every adult needs a military or dependent ID; kids ride with their parent or guardian</li>
-                    <li>All ages. Kids are welcome with their group</li>
+                    <li>Every rider needs a $10 seat, kids included</li>
                   </ul>
                 ) : (
                   <ul className="bk-facts">

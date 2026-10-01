@@ -494,7 +494,7 @@ export default function BookingForm({
           <ul style={{ fontSize: 15, color: '#f5f5f7', lineHeight: 1.5, margin: 0, padding: '14px 16px 14px 34px', background: 'rgba(212,163,51,0.10)', border: '1px solid rgba(212,163,51,0.35)', borderRadius: 12, display: 'grid', gap: 6 }}>
             <li><strong>Pickup within the hour.</strong> Other groups near you ride the same run, so we get to you sometime in the hour you choose, not exactly on the hour. Your driver texts you when they are on the way.</li>
             <li><strong>Pickup only.</strong> We drop your group downtown at the train depot, a short walk to Oktoberfest. The ride home is not included.</li>
-            <li><strong>Kids are welcome.</strong> The ride to Oktoberfest is all ages. Kids ride with their group and count as a seat, so list them with everyone else.</li>
+            <li><strong>Every rider needs a $10 seat, kids included.</strong> List them with everyone else.</li>
             <li>Your whole group is picked up at one address. Groups of {DOOR_PICKUP_MIN_RIDERS} to {DOOR_PICKUP_MAX_RIDERS}, out to Hwy 172.</li>
             <li>Your $10 also gets you a seat on the Brew Loop that night (21+). Show your ticket when you board.</li>
           </ul>

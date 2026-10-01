@@ -203,7 +203,7 @@ function DoorPickupCard({ loop, times }) {
         <ul style={{ margin: '14px 0 0', padding: 0, listStyle: 'none', display: 'grid', gap: 6, color: INK_DIM, fontSize: 14 }}>
           <li>Pickups every hour, {times.first} to {times.last}</li>
           <li>Groups of 4 or more, anywhere in Jacksonville or on base</li>
-          <li>All ages, kids welcome</li>
+          <li>Every rider needs a $10 seat, kids included</li>
           <li>On base pickups: military or dependent ID required for adults</li>
           <li>Pickup only, the ride home is not included</li>
         </ul>

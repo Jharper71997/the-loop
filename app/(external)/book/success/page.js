@@ -93,7 +93,7 @@ export default async function BookingSuccess({ searchParams }) {
             )}
             {door && (
               <p style={{ marginTop: 10, fontSize: 16 }}>
-                We pick you up sometime within the hour you chose, not exactly on the hour. Your driver texts you when they are on the way. Kids are welcome on the ride.
+                We pick you up sometime within the hour you chose, not exactly on the hour. Your driver texts you when they are on the way.
               </p>
             )}
           </div>
