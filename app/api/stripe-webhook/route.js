@@ -6,6 +6,8 @@ import { syncTtForEvent } from '@/lib/ticketTailorSync'
 import { stripe as stripeLib } from '@/lib/stripe'
 import { mapSubStatus } from '@/lib/loopPass'
 import { sendEmail } from '@/lib/email'
+import { sendSms } from '@/lib/sms'
+import { SMS_OPT_OUT_LINE } from '@/lib/legal'
 import { merchOrderHtml, merchOrderText } from '@/lib/emailTemplates'
 
 export const runtime = 'nodejs'
@@ -123,6 +125,42 @@ async function handlePassCheckout(supabase, session) {
     status: sub ? mapSubStatus(sub.status) : 'active',
     periodEnd: sub?.current_period_end || null,
   })
+
+  await sendPassWelcome(supabase, session, sub)
+}
+
+// New members kept booking the wrong way (or not at all) because nothing told
+// them how the pass works: a seat is only free when they book through checkout
+// with the same phone number as the pass. One text right after they join, in
+// Jacob's words. The subscription's metadata records that it went out, so a
+// Stripe retry of checkout.session.completed can never text them twice. If the
+// subscription could not be loaded there is nothing to guard with, so we skip
+// rather than risk a duplicate.
+const PASS_WELCOME_SMS =
+  "Hey, it's Jacob with the Jville Brew Loop. Thanks for joining the Loop Pass! " +
+  'To ride, just book your seat at jvillebrewloop.com/book with the same phone number you used for the pass. ' +
+  "It'll come up $0 at checkout. Pick the night and the stop you want.\n" +
+  SMS_OPT_OUT_LINE
+
+async function sendPassWelcome(supabase, session, sub) {
+  try {
+    if (!sub?.id || sub.metadata?.welcome_sms_sent) return
+    const contactId = session.metadata?.contact_id || sub.metadata?.contact_id || null
+    let phone = null
+    if (contactId) {
+      const { data } = await supabase.from('contacts').select('phone').eq('id', contactId).maybeSingle()
+      phone = data?.phone || null
+    }
+    phone = phone || session.customer_details?.phone || null
+    if (!phone) return
+    const res = await sendSms(phone, PASS_WELCOME_SMS)
+    if (res?.skipped) return
+    await stripeLib().subscriptions.update(sub.id, {
+      metadata: { welcome_sms_sent: new Date().toISOString() },
+    })
+  } catch (err) {
+    console.error('[stripe-webhook] pass welcome sms failed', err)
+  }
 }
 
 // customer.subscription.created/updated/deleted — keep the local pass mirror in
