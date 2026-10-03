@@ -67,6 +67,20 @@ const BASELINE = [
 ]
 
 const nextConfig = {
+  // The QR codes printed on the shuttle encode www.jvillebrewloop.com/home, the
+  // old Squarespace home page. After the 2026-08-25 cutover every unknown path
+  // falls to middleware, which sends it to the STAFF login, so riders scanning
+  // the bus hit a login screen. Config redirects run before middleware.
+  // Tagged so bus scans show up as their own source.
+  async redirects() {
+    return [
+      {
+        source: '/home',
+        destination: '/?utm_source=bus&utm_medium=qr&utm_campaign=shuttle',
+        permanent: false,
+      },
+    ]
+  },
   async headers() {
     return [
       // Everything except the widget. The negative lookahead keeps the two
