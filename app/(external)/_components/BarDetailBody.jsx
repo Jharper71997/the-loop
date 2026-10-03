@@ -215,7 +215,7 @@ export default function BarDetailBody({ bar, business = 'brew' }) {
 
       {isBrew && (
         <JsonLd nodes={[
-          { ...webPageNode({ path: `/bars/${bar.slug}`, name: `${bar.name}, Jacksonville NC`, description: bar.blurb }), about: barPlaceNode(bar), mentions: { '@id': BUSINESS_ID } },
+          { ...webPageNode({ path: `/bars/${bar.slug}`, name: `${bar.name}, Jacksonville NC`, description: `${bar.name}, a Jville Brew Loop partner bar in Jacksonville, NC.` }), about: barPlaceNode(bar), mentions: { '@id': BUSINESS_ID } },
           breadcrumbNode([{ name: 'Home', path: '/' }, { name: 'Partner Bars', path: '/bars' }, { name: bar.name, path: `/bars/${bar.slug}` }]),
           faq.length ? faqNode(faq) : null,
         ]} />

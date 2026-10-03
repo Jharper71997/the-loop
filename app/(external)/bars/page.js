@@ -8,6 +8,7 @@ import {
 } from '@/lib/marketingTheme'
 import { paperCard } from '@/lib/atmosphere'
 import { OG_IMAGES } from '@/lib/socialMeta'
+import { ROUTE_NOTES as BAR_ROUTE_NOTES } from '@/lib/seoPages'
 import JsonLd from '../_components/site/JsonLd'
 import { abs, barPlaceNode, breadcrumbNode } from '@/lib/jsonLd'
 
@@ -20,7 +21,7 @@ import { abs, barPlaceNode, breadcrumbNode } from '@/lib/jsonLd'
 export const metadata = {
   title: { absolute: 'Bars in Jacksonville, NC on the Brew Loop Bar Shuttle' },
   description:
-    `The ${PARTNER_BAR_COUNT} Jacksonville, NC bars on the Brew Loop bar-hop shuttle: ${PUBLIC_PARTNER_BARS.map(b => b.name).join(', ')}. One $20 seat, Friday and Saturday night.`,
+    `The ${PARTNER_BAR_COUNT} Jacksonville, NC bars on the Brew Loop bar-hop shuttle: ${PUBLIC_PARTNER_BARS.map(b => (BAR_ROUTE_NOTES[b.slug] ? `${b.name} (${BAR_ROUTE_NOTES[b.slug]})` : b.name)).join(', ')}. One $20 seat, Friday and Saturday night.`,
   alternates: { canonical: '/bars' },
   openGraph: {
     images: OG_IMAGES,

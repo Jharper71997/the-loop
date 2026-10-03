@@ -2,6 +2,7 @@ import { notFound } from 'next/navigation'
 import { BARS, getBar } from '@/lib/bars'
 import BarDetailBody from '../../_components/BarDetailBody'
 import { OG_IMAGES } from '@/lib/socialMeta'
+import { ROUTE_NOTES } from '@/lib/seoPages'
 
 export function generateStaticParams() {
   return BARS.map(b => ({ slug: b.slug }))
@@ -14,7 +15,10 @@ export async function generateMetadata({ params }) {
   // Tuned to how people actually search a bar: "<bar name> jacksonville nc".
   // Address in the description because "where is" is the most common follow-on.
   const title = `${bar.name}, Jacksonville NC | Brew Loop Partner Bar`
-  const desc = `${bar.name}${bar.address ? ` at ${bar.address}` : ''} is a partner bar on the Jville Brew Loop. ${bar.blurb} Ride the $20 Friday and Saturday bar shuttle there without driving.`
+  // No blurb here: several lib/bars.js blurbs carry unverified claims
+  // (karaoke nights, veteran-owned), and Jacob kept those out of metadata.
+  const fridayOnly = ROUTE_NOTES[bar.slug] === 'Fridays only'
+  const desc = `${bar.name}${bar.address ? ` at ${bar.address}` : ''} is a partner bar on the Jville Brew Loop${fridayOnly ? ', on Friday nights only' : ''}. Ride the $20 ${fridayOnly ? 'Friday night' : 'Friday and Saturday'} bar shuttle there without driving.`
   const url = `/bars/${bar.slug}`
   return {
     title: { absolute: title },
