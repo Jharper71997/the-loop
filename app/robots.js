@@ -1,10 +1,9 @@
 import { isLoopSite } from '@/lib/site'
+import { SITE_URL } from '@/lib/siteUrl'
 
-const BASE = (
-  process.env.APP_URL
-  || process.env.NEXT_PUBLIC_APP_URL
-  || (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : 'https://jvillebrewloop.com')
-).replace(/\/$/, '')
+// SITE_URL, not APP_URL: Brew prod's APP_URL is still the vercel.app host, which
+// made the live robots.txt and sitemap advertise the wrong domain. See lib/siteUrl.js.
+const BASE = SITE_URL
 
 // Keep staff consoles, private rider surfaces, and API routes out of the index.
 // The console sits at /loop on the combined host and /admin on the standalone

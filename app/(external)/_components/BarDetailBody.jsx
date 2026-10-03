@@ -4,6 +4,10 @@ import { PUBLIC_PARTNER_BARS } from '@/lib/bars'
 import PlaceholderArt from './PlaceholderArt'
 import { Band, Head } from './marketing/PageShell'
 import BarTiles from './marketing/BarTiles'
+import Faq from './marketing/Faq'
+import JsonLd from './site/JsonLd'
+import { barFaq, barGettingThere } from '@/lib/seoPages'
+import { barPlaceNode, breadcrumbNode, faqNode, webPageNode, BUSINESS_ID } from '@/lib/jsonLd'
 import { litCard, litCardInner, lightPool, grainOverlay } from '@/lib/atmosphere'
 import { GOLD, GOLD_HI, INK, INK_DIM, INK_MUTE, MAX_W, ON_PAPER_DIM, primaryCtaLg, ghostCta } from '@/lib/marketingTheme'
 
@@ -25,6 +29,12 @@ export default function BarDetailBody({ bar, business = 'brew' }) {
   const cfg = brandFor(business)
   const isBrew = business === 'brew'
   const others = isBrew ? PUBLIC_PARTNER_BARS.filter(b => b.slug !== bar.slug) : []
+  // Brew partner bars only: the questions people search about a specific bar
+  // (where is it, is it on the Loop, how do I get there without driving),
+  // answered from lib/bars.js + lib/riderInfo facts. Rendered AND emitted as
+  // FAQPage, so the markup always matches what is on the page.
+  const faq = isBrew && bar.address ? barFaq(bar) : []
+  const gettingThere = isBrew && bar.address ? barGettingThere(bar) : null
 
   return (
     <main className="site-main">
@@ -173,6 +183,24 @@ export default function BarDetailBody({ bar, business = 'brew' }) {
         </Band>
       )}
 
+      {gettingThere && (
+        <Band tone="void" light="right" strength={0.12} rule>
+          <Head kicker={gettingThere.kicker} title={gettingThere.title} />
+          <div style={{ maxWidth: 760, marginTop: 22 }}>
+            {gettingThere.body.map((para, i) => (
+              <p key={i} style={{ color: INK_DIM, fontSize: 'clamp(15px, 1.8vw, 17px)', lineHeight: 1.68, margin: i ? '14px 0 0' : 0 }}>{para}</p>
+            ))}
+          </div>
+        </Band>
+      )}
+
+      {faq.length > 0 && (
+        <Band tone="paper" light="right" strength={0.2} grain rule id="faq">
+          <Head kicker="FAQ" title={`${bar.name} and the Loop.`} tone="paper" />
+          <Faq items={faq} tone="paper" />
+        </Band>
+      )}
+
       {/* The rest of the route (Brew only — BarTiles links to /bars/[slug]) */}
       {others.length > 0 && (
         <Band tone="base" light="top-left" strength={0.1} grain rule>
@@ -183,6 +211,14 @@ export default function BarDetailBody({ bar, business = 'brew' }) {
           />
           <BarTiles bars={others} min={200} />
         </Band>
+      )}
+
+      {isBrew && (
+        <JsonLd nodes={[
+          { ...webPageNode({ path: `/bars/${bar.slug}`, name: `${bar.name}, Jacksonville NC`, description: bar.blurb }), about: barPlaceNode(bar), mentions: { '@id': BUSINESS_ID } },
+          breadcrumbNode([{ name: 'Home', path: '/' }, { name: 'Partner Bars', path: '/bars' }, { name: bar.name, path: `/bars/${bar.slug}` }]),
+          faq.length ? faqNode(faq) : null,
+        ]} />
       )}
 
       {/* Closer */}

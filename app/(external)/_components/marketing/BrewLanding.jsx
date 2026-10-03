@@ -83,7 +83,7 @@ export default function BrewLanding({ loops = [] }) {
       <LandingStyles />
       {/* Structured data: tells Google the Instagram and Facebook accounts are
           this same business. Rendered once, on the page that ranks. */}
-      <BrewJsonLd />
+      <BrewJsonLd faq={LANDING_FAQ} loops={loops} />
     </main>
   )
 }

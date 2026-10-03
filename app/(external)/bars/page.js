@@ -8,6 +8,8 @@ import {
 } from '@/lib/marketingTheme'
 import { paperCard } from '@/lib/atmosphere'
 import { OG_IMAGES } from '@/lib/socialMeta'
+import JsonLd from '../_components/site/JsonLd'
+import { abs, barPlaceNode, breadcrumbNode } from '@/lib/jsonLd'
 
 // Brew partner-bar index. (Surf/Marines keep their own /surfcity/bars +
 // /marines/bars redirects — only Brew gets this page.)
@@ -16,9 +18,9 @@ import { OG_IMAGES } from '@/lib/socialMeta'
 // somewhere that looks like a different website.
 
 export const metadata = {
-  title: 'Partner Bars',
+  title: { absolute: 'Bars in Jacksonville, NC on the Brew Loop Bar Shuttle' },
   description:
-    'The partner bars on the Jville Brew Loop. Ride the shuttle between Jacksonville’s best spots all night, nobody drives between stops.',
+    `The ${PARTNER_BAR_COUNT} Jacksonville, NC bars on the Brew Loop bar-hop shuttle: ${PUBLIC_PARTNER_BARS.map(b => b.name).join(', ')}. One $20 seat, Friday and Saturday night.`,
   alternates: { canonical: '/bars' },
   openGraph: {
     images: OG_IMAGES,
@@ -92,6 +94,17 @@ export default function BarsIndex() {
           </Link>
         </p>
       </Band>
+
+      <JsonLd nodes={[
+        breadcrumbNode([{ name: 'Home', path: '/' }, { name: 'Partner Bars', path: '/bars' }]),
+        {
+          '@type': 'ItemList',
+          name: 'Jville Brew Loop partner bars in Jacksonville, NC',
+          itemListElement: PUBLIC_PARTNER_BARS.map((b, i) => ({
+            '@type': 'ListItem', position: i + 1, url: abs(`/bars/${b.slug}`), item: barPlaceNode(b),
+          })),
+        },
+      ]} />
 
       <Closer
         title={<>See this weekend&rsquo;s<br /><span style={{ color: GOLD_HI }}>exact stops.</span></>}

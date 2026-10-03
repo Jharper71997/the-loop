@@ -12,6 +12,8 @@ import {
 } from '@/lib/marketingTheme'
 import { litCard, litCardInner } from '@/lib/atmosphere'
 import { OG_IMAGES } from '@/lib/socialMeta'
+import JsonLd from '../_components/site/JsonLd'
+import { breadcrumbNode, faqNode } from '@/lib/jsonLd'
 
 // The full "how it works" reference. The landing page pitches and shows the top
 // questions; this page is where a rider who wants the whole picture lands. Both
@@ -21,9 +23,9 @@ import { OG_IMAGES } from '@/lib/socialMeta'
 // ACCURACY: the Loop returns riders to their ORIGINAL PICKUP. Never "ride home."
 
 export const metadata = {
-  title: 'How It Works',
+  title: { absolute: 'How the Brew Loop Bar Shuttle Works | Jacksonville, NC' },
   description:
-    'How a night on the Jville Brew Loop actually runs: book a seat, get to your first bar, then hop the shuttle between Jacksonville’s best spots all night without anyone driving.',
+    'How a night on the Jville Brew Loop runs: book a $20 seat, get to your pickup bar, then ride the shuttle between Jacksonville, NC partner bars all night without anyone driving. Times, rules and FAQ.',
   alternates: { canonical: '/about' },
   openGraph: {
     images: OG_IMAGES,
@@ -160,6 +162,12 @@ export default function AboutPage() {
           {' '}or call <a href={`tel:${CONTACT.phone}`} style={{ color: GOLD_INK, fontWeight: 700, textDecoration: 'none' }}>{CONTACT.phoneDisplay}</a>.
         </p>
       </Band>
+
+      {/* The full FAQ as FAQPage: every question here is rendered above. */}
+      <JsonLd nodes={[
+        breadcrumbNode([{ name: 'Home', path: '/' }, { name: 'How It Works', path: '/about' }]),
+        faqNode(FAQ),
+      ]} />
 
       <Closer
         title={<>Grab a seat for<br /><span style={{ color: GOLD_HI }}>this weekend.</span></>}

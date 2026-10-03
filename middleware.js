@@ -29,6 +29,10 @@ const PUBLIC_PREFIXES = [
   '/sponsors',
   '/contact',
   '/api/contact',
+  // Search-landing pages (lib/seoPages.js) and their hub. Public marketing
+  // pages: without this every one of them 307s to the STAFF login, which is
+  // also what Googlebot would index.
+  '/jacksonville-nc',
   // Legal pages + the data request form (2026-09-25 compliance pass). Anyone
   // must be able to read the policies and ask for deletion without logging in.
   // '/privacy' also covers /privacy/request.

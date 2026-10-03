@@ -4,6 +4,7 @@
 import Link from 'next/link'
 import { brandFor } from '@/lib/businessConfig'
 import { PRIMARY_CTA, CONTACT } from './nav'
+import { LANDING_PAGES } from '@/lib/seoPages'
 import SocialLinks from './SocialLinks'
 import { INK, INK_DIM, INK_MUTE, LINE } from '@/lib/marketingTheme'
 import { LEGAL, LEGAL_LINKS } from '@/lib/legal'
@@ -41,6 +42,13 @@ export default function SiteFooter() {
               { href: '/merch', label: 'Merch' },
               { href: '/sponsors', label: 'Sponsors' },
             ]}
+          />
+
+          {/* Internal links to the search-landing pages, so every page on the
+              site passes them a crawlable link (lib/seoPages.js). */}
+          <FooterCol
+            title="Jacksonville nights"
+            links={LANDING_PAGES.map(p => ({ href: `/jacksonville-nc/${p.slug}`, label: p.shortLabel }))}
           />
 
           <FooterCol

@@ -3,9 +3,9 @@ import BrewLanding from './_components/marketing/BrewLanding'
 import { OG_IMAGES } from '@/lib/socialMeta'
 
 export const metadata = {
-  title: { absolute: 'Jville Brew Loop — Jacksonville’s weekend bar-hop shuttle' },
+  title: { absolute: 'Jville Brew Loop | Bar Hopping Shuttle in Jacksonville, NC' },
   description:
-    'The Brew Loop loops the best bars in Jacksonville all night so nobody has to be the one who drives. $20 flat, tracked live, back to your pickup. Book a seat.',
+    'Jacksonville, NC’s Friday and Saturday night bar shuttle. One $20 seat loops the partner bars all night and brings you back to your pickup, so nobody has to drive. Tracked live. Book a seat.',
   alternates: { canonical: '/' },
   openGraph: {
     images: OG_IMAGES,
