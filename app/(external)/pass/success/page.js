@@ -20,8 +20,8 @@ export default function PassSuccessPage() {
       </div>
       <h1 style={{ color: INK, fontSize: 30, margin: 0 }}>You’re on the Loop</h1>
       <p style={{ color: INK_DIM, fontSize: 16, marginTop: 12, lineHeight: 1.6 }}>
-        Your Loop Pass is active. We’ll text your pickup details before each weekend loop —
-        just hop on, no checkout needed.
+        Your Loop Pass is active. To ride, book your seat on the weekend loop with the same
+        phone number you used for your pass. Your seat comes up $0 at checkout.
       </p>
       <p style={{ color: INK_DIM, fontSize: 14, marginTop: 14, lineHeight: 1.6 }}>
         Your pass renews automatically until you cancel. Stripe emails your receipt.
@@ -34,7 +34,7 @@ export default function PassSuccessPage() {
           background: GOLD, color: '#0a0a0b', fontWeight: 700, textDecoration: 'none',
         }}
       >
-        See this weekend’s loop
+        Book your first ride
       </a>
     </main>
   )

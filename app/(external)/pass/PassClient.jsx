@@ -128,7 +128,7 @@ export default function PassClient({ plans = [] }) {
           <Field label="Last name" value={form.last_name} onChange={set('last_name')} autoComplete="family-name" />
         </Row>
         <Field label="Mobile number" value={form.phone} onChange={set('phone')} type="tel" autoComplete="tel" required
-          hint="We text your pass details and pickup info to this number. Msg & data rates may apply. Reply STOP to opt out." />
+          hint="Use this same number when you book a ride. That is how your seat comes up free. Msg & data rates may apply. Reply STOP to opt out." />
         <Field label="Email (optional)" value={form.email} onChange={set('email')} type="email" autoComplete="email" />
 
         <div style={{ padding: '14px 16px', borderRadius: 12, border: `1px solid ${LINE}`, background: CARD, display: 'grid', gap: 10 }}>
