@@ -137,7 +137,7 @@ async function handlePassCheckout(supabase, session) {
 // subscription could not be loaded there is nothing to guard with, so we skip
 // rather than risk a duplicate.
 const PASS_WELCOME_SMS =
-  "Hey, it's Jacob with the Jville Brew Loop. Thanks for joining the Loop Pass! " +
+  "Hey, it's the Jville Brew Loop. Thanks for joining the Loop Pass! " +
   'To ride, just book your seat at jvillebrewloop.com/book with the same phone number you used for the pass. ' +
   "It'll come up $0 at checkout. Pick the night and the stop you want.\n" +
   SMS_OPT_OUT_LINE
