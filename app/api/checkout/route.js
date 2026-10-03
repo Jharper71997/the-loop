@@ -1,6 +1,7 @@
 import { rateLimit, clientIp } from '@/lib/rateLimit'
 import { randomBytes } from 'crypto'
 import { cookies } from 'next/headers'
+import { after } from 'next/server'
 import { supabaseAdmin } from '@/lib/supabaseAdmin'
 import { createBookingCheckoutSession } from '@/lib/stripe'
 import { brandFor } from '@/lib/businessConfig'
@@ -818,11 +819,14 @@ async function handleCheckout(req) {
     } catch (err) {
       console.error('[checkout] free-order finalizeBooking failed', err)
     }
-    try {
-      await syncTtForEvent(supabase, event.id)
-    } catch (err) {
-      console.error('[checkout] free-order tt sync threw', err)
-    }
+    // After the response: the rider should not wait on Ticket Tailor.
+    after(async () => {
+      try {
+        await syncTtForEvent(supabase, event.id)
+      } catch (err) {
+        console.error('[checkout] free-order tt sync threw', err)
+      }
+    })
 
     return Response.json({ checkout_url: `${brandFor(event.kind).basePath}/book/success?order_id=${order.id}`, order_id: order.id, free: true })
   }
@@ -862,12 +866,16 @@ async function handleCheckout(req) {
   // Decrement TT's quantity_total now that the seat is pending in our DB —
   // closes the race where a Loop cart sits at Stripe Checkout while TT sells
   // the same seat. syncTtForEvent counts paid + fresh pending. Best-effort:
-  // never block the customer's checkout flow on a TT call.
-  try {
-    await syncTtForEvent(supabase, event.id)
-  } catch (err) {
-    console.error('[checkout] tt sync threw', err)
-  }
+  // never block the customer's checkout flow on a TT call. after() runs it
+  // the moment the response is sent, so the race window is the same but the
+  // rider is already on their way to Stripe instead of waiting on TT.
+  after(async () => {
+    try {
+      await syncTtForEvent(supabase, event.id)
+    } catch (err) {
+      console.error('[checkout] tt sync threw', err)
+    }
+  })
 
   return Response.json({ checkout_url: session.url, order_id: order.id })
 }

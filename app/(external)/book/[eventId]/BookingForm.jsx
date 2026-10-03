@@ -64,6 +64,57 @@ export default function BookingForm({
     first_name: joinParty?.seat?.first_name || '', last_name: joinParty?.seat?.last_name || '',
     email: '', phone: joinParty?.seat?.phone || '', sms_consent: false,
   })
+  // Remember me. A returning rider's name, phone and email come back from this
+  // phone's own storage, so a repeat booking at a bar is a couple of taps. Saved
+  // only when they hit Pay, never sent anywhere, and "Not you?" wipes it for a
+  // borrowed phone. SMS consent is never remembered: they opt in every time.
+  const [remembered, setRemembered] = useState(null)
+  useEffect(() => {
+    if (joinParty?.seat) return
+    const saved = loadRider()
+    if (!saved) return
+    setBuyer(b => ({
+      ...b,
+      first_name: b.first_name || saved.first_name || '',
+      last_name: b.last_name || saved.last_name || '',
+      phone: b.phone || saved.phone || '',
+      email: b.email || saved.email || '',
+    }))
+    setRemembered(saved.first_name || 'you')
+  }, [joinParty])
+  function forgetMe() {
+    forgetRider()
+    setRemembered(null)
+    setBuyer(b => ({ ...b, first_name: '', last_name: '', phone: '', email: '' }))
+    setRiders(prev => prev.map((r, i) => (i === 0 ? { ...r, typed_name: '' } : r)))
+    setBuyerTypedName('')
+  }
+  const buyerFullName = `${buyer.first_name} ${buyer.last_name}`.trim()
+
+  // Loop Pass preview. As soon as a full phone is typed, ask the server whether
+  // it holds a pass that covers this loop, so a member sees $0 now instead of
+  // finding out after Pay. Checkout re-verifies and is the only real gate.
+  const [passCheck, setPassCheck] = useState(null) // null | 'checking' | { covered, reason }
+  const buyerDigits = buyer.phone.replace(/\D/g, '').replace(/^1(?=\d{10}$)/, '')
+  useEffect(() => {
+    if (!loopPass || buyerDigits.length !== 10) { setPassCheck(null); return }
+    let cancelled = false
+    setPassCheck('checking')
+    const t = setTimeout(async () => {
+      try {
+        const res = await fetch('/api/loop-pass/check', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ phone: buyerDigits, event_id: eventId }),
+        })
+        const j = await res.json()
+        if (!cancelled) setPassCheck({ covered: !!j.covered, reason: j.reason || null })
+      } catch {
+        if (!cancelled) setPassCheck(null)
+      }
+    }, 450)
+    return () => { cancelled = true; clearTimeout(t) }
+  }, [loopPass, buyerDigits, eventId])
   // Organizer of a door pickup: must list at least 4 riders, and for each
   // friend chooses to pay for them or send them a link to pay their own.
   const organizer = doorPickup && !joinParty
@@ -130,9 +181,17 @@ export default function BookingForm({
   const addonCents = useMemo(() => (addons || []).reduce(
     (s, a) => s + (a.price_cents || 0) * (addonQty[a.id] || 0), 0), [addons, addonQty])
 
-  // What the buyer sees. A Loop Pass may cover some seats server-side, so the
-  // amount actually charged can be lower — the server is the source of truth.
-  const totalCents = ticketCents + addonCents
+  // What the buyer sees. When the pass check says the buyer's own seat is
+  // covered, that one seat comes off here too (rider 1, riding as the buyer,
+  // which is the only seat checkout will zero). The server is still the
+  // source of truth for what is charged.
+  const passCovered = !!(passCheck && passCheck !== 'checking' && passCheck.covered)
+  const passSeatCents = (() => {
+    const r0 = riders[0]
+    if (!passCovered || !r0 || !r0.same_as_buyer || r0.claim_link || r0.pay_self) return 0
+    return ticketTypes.find(t => t.id === r0.ticket_type_id)?.price_cents || 0
+  })()
+  const totalCents = ticketCents + addonCents - passSeatCents
 
   function updateRider(idx, patch) {
     setRiders(prev => prev.map((r, i) => (i === idx ? { ...r, ...patch } : r)))
@@ -234,6 +293,7 @@ export default function BookingForm({
     if (!formValid || submitting) return
     setSubmitting(true)
     setError(null)
+    saveRider(buyer)
 
     const ridersPayload = riders.map(r => {
       if (r.pay_self) {
@@ -398,14 +458,23 @@ export default function BookingForm({
         </div>
       )}
       <Section title="Your info">
+        {remembered && (
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 10, fontSize: 14, color: '#f5f5f7', marginTop: -4 }}>
+            <span>Welcome back{remembered !== 'you' ? `, ${remembered}` : ''}. We filled in your info.</span>
+            <button type="button" onClick={forgetMe} style={{ background: 'transparent', border: 0, color: '#d2d2d8', fontSize: 13.5, textDecoration: 'underline', cursor: 'pointer', padding: 4, flexShrink: 0 }}>
+              Not you?
+            </button>
+          </div>
+        )}
         <Row>
-          <Field label="First name" value={buyer.first_name} onChange={v => setBuyer(b => ({ ...b, first_name: v }))} />
-          <Field label="Last name" value={buyer.last_name} onChange={v => setBuyer(b => ({ ...b, last_name: v }))} />
+          <Field label="First name" value={buyer.first_name} autoComplete="given-name" name="given-name" onChange={v => setBuyer(b => ({ ...b, first_name: v }))} />
+          <Field label="Last name" value={buyer.last_name} autoComplete="family-name" name="family-name" onChange={v => setBuyer(b => ({ ...b, last_name: v }))} />
         </Row>
         <Row>
-          <Field label="Phone" value={buyer.phone} type="tel" onChange={v => setBuyer(b => ({ ...b, phone: v }))} />
-          <Field label="Email" value={buyer.email} type="email" onChange={v => setBuyer(b => ({ ...b, email: v }))} />
+          <Field label="Phone" value={buyer.phone} type="tel" autoComplete="tel" name="tel" inputMode="tel" onChange={v => setBuyer(b => ({ ...b, phone: v }))} />
+          <Field label="Email" value={buyer.email} type="email" autoComplete="email" name="email" inputMode="email" onChange={v => setBuyer(b => ({ ...b, email: v }))} />
         </Row>
+        {loopPass && passCheck && <PassStatus check={passCheck} />}
         <p style={{ fontSize: 13.5, color: '#d8d8de', lineHeight: 1.5, margin: '2px 0 0' }}>
           We text your booking confirmation and boarding pass to this phone. Reply STOP to any text to opt out.
         </p>
@@ -525,10 +594,10 @@ export default function BookingForm({
               <div key={idx} style={{ display: 'grid', gap: 8, paddingTop: 12, borderTop: '1px solid rgba(255,255,255,0.07)' }}>
                 <strong style={{ fontSize: 14, color: '#f5f5f7' }}>{idx + 1}.</strong>
                 <Row>
-                  <Field label="First name" value={r.first_name} onChange={v => updateRider(idx, { first_name: v })} />
-                  <Field label="Last name" value={r.last_name} onChange={v => updateRider(idx, { last_name: v })} />
+                  <Field label="First name" value={r.first_name} autoComplete="off" onChange={v => updateRider(idx, { first_name: v })} />
+                  <Field label="Last name" value={r.last_name} autoComplete="off" onChange={v => updateRider(idx, { last_name: v })} />
                 </Row>
-                <Field label={r.pay_self ? 'Phone (we text them their link)' : 'Phone (optional)'} value={r.phone} type="tel" onChange={v => updateRider(idx, { phone: v })} />
+                <Field label={r.pay_self ? 'Phone (we text them their link)' : 'Phone (optional)'} value={r.phone} type="tel" inputMode="tel" autoComplete="off" onChange={v => updateRider(idx, { phone: v })} />
                 {idx >= DOOR_PICKUP_MIN_RIDERS && (
                   <CheckRow
                     checked={!!r.pay_self}
@@ -679,10 +748,10 @@ export default function BookingForm({
                   {r.pay_self ? (
                     <>
                       <Row>
-                        <Field label="First name" value={r.first_name} onChange={v => updateRider(idx, { first_name: v })} />
-                        <Field label="Last name" value={r.last_name} onChange={v => updateRider(idx, { last_name: v })} />
+                        <Field label="First name" value={r.first_name} autoComplete="off" onChange={v => updateRider(idx, { first_name: v })} />
+                        <Field label="Last name" value={r.last_name} autoComplete="off" onChange={v => updateRider(idx, { last_name: v })} />
                       </Row>
-                      <Field label="Phone" value={r.phone} type="tel" onChange={v => updateRider(idx, { phone: v })} />
+                      <Field label="Phone" value={r.phone} type="tel" inputMode="tel" autoComplete="off" onChange={v => updateRider(idx, { phone: v })} />
                       <span style={{ fontSize: 14, color: '#d2d2d8', lineHeight: 1.5 }}>
                         After you pay, we text them their personal link. They pay and sign their own waiver.
                       </span>
@@ -718,12 +787,12 @@ export default function BookingForm({
                       {!r.same_as_buyer && (
                         <>
                           <Row>
-                            <Field label="First name" value={r.first_name} onChange={v => updateRider(idx, { first_name: v })} />
-                            <Field label="Last name" value={r.last_name} onChange={v => updateRider(idx, { last_name: v })} />
+                            <Field label="First name" value={r.first_name} autoComplete="off" onChange={v => updateRider(idx, { first_name: v })} />
+                            <Field label="Last name" value={r.last_name} autoComplete="off" onChange={v => updateRider(idx, { last_name: v })} />
                           </Row>
                           <Row>
-                            <Field label="Phone" value={r.phone} type="tel" onChange={v => updateRider(idx, { phone: v })} />
-                            <Field label="Email" value={r.email} type="email" onChange={v => updateRider(idx, { email: v })} />
+                            <Field label="Phone" value={r.phone} type="tel" inputMode="tel" autoComplete="off" onChange={v => updateRider(idx, { phone: v })} />
+                            <Field label="Email" value={r.email} type="email" inputMode="email" autoComplete="off" onChange={v => updateRider(idx, { email: v })} />
                           </Row>
                         </>
                       )}
@@ -748,12 +817,21 @@ export default function BookingForm({
                         )}
   
                         {r.signed_self && (
-                          <input
-                            placeholder="Type rider's full legal name"
-                            value={r.typed_name}
-                            onChange={e => updateRider(idx, { typed_name: e.target.value })}
-                            style={input}
-                          />
+                          <>
+                            {/* Rider 1 riding as the buyer already typed their
+                                name above. One tap signs with it. The tap is
+                                the signature, so it is never filled in for them. */}
+                            {r.same_as_buyer && buyerFullName && r.typed_name.trim() !== buyerFullName && (
+                              <SignAsButton name={buyerFullName} onSign={() => updateRider(idx, { typed_name: buyerFullName })} />
+                            )}
+                            <input
+                              placeholder="Type rider's full legal name"
+                              value={r.typed_name}
+                              autoComplete="off"
+                              onChange={e => updateRider(idx, { typed_name: e.target.value })}
+                              style={input}
+                            />
+                          </>
                         )}
                       </div>
                     </>
@@ -860,10 +938,16 @@ export default function BookingForm({
             <label style={{ fontSize: 13, color: '#bbb' }}>
               {organizer ? 'Type your full legal name to sign the waiver for everyone in your group, including any kids:' : 'Type your full legal name to sign on behalf of any riders above:'}
             </label>
+            {buyerFullName && buyerTypedName.trim() !== buyerFullName && (
+              <div style={{ marginTop: 8 }}>
+                <SignAsButton name={buyerFullName} onSign={() => setBuyerTypedName(buyerFullName)} />
+              </div>
+            )}
             <input
               value={buyerTypedName}
               onChange={e => setBuyerTypedName(e.target.value)}
               placeholder="Your full legal name"
+              autoComplete="off"
               style={{ ...input, marginTop: 6 }}
             />
             {buyerTypedName && (
@@ -985,16 +1069,21 @@ export default function BookingForm({
             transition: 'background 160ms ease, box-shadow 160ms ease, color 160ms ease',
           }}
         >
-          {submitting ? 'Loading…' : `Pay $${(totalCents / 100).toFixed(2)}`}
+          {submitting ? 'Loading…' : totalCents === 0 && passCovered ? 'Book my free seat' : `Pay $${(totalCents / 100).toFixed(2)}`}
         </button>
         {!formValid && !submitting && (
           <div style={{ fontSize: 13.5, color: '#bcbcc3', textAlign: 'center', lineHeight: 1.45 }}>
             Add your details, pick a pickup bar, sign the waiver, and agree to the Terms to continue.
           </div>
         )}
-        {loopPass && (
+        {loopPass && !passCovered && (
           <div style={{ fontSize: 13.5, color: '#c9c9cf', textAlign: 'center', lineHeight: 1.5 }}>
-            Loop Pass members: this total is before your pass. Your seat is removed on the next step.
+            Loop Pass members: enter the phone on your pass and your seat comes off here.
+          </div>
+        )}
+        {passSeatCents > 0 && (
+          <div style={{ fontSize: 13.5, color: ACCENT, textAlign: 'center', lineHeight: 1.5 }}>
+            Your Loop Pass covers your seat (${(passSeatCents / 100).toFixed(2)} off).
           </div>
         )}
         <div style={{ fontSize: 13, color: '#bcbcc3', textAlign: 'center', lineHeight: 1.5 }}>
@@ -1109,6 +1198,57 @@ function newGroupRider(ticketTypeId) {
   return { ...newGuest(ticketTypeId), claim_link: false, signed_by_buyer: true }
 }
 
+// Remember me (see BookingForm). This device only. Every access is wrapped:
+// private windows and blocked storage throw, and the form must work without it.
+const RIDER_KEY = 'bl_rider_v1'
+function loadRider() {
+  try {
+    const v = JSON.parse(localStorage.getItem(RIDER_KEY) || 'null')
+    return v && typeof v === 'object' && (v.first_name || v.phone || v.email) ? v : null
+  } catch { return null }
+}
+function saveRider(b) {
+  try {
+    localStorage.setItem(RIDER_KEY, JSON.stringify({
+      first_name: b.first_name.trim(), last_name: b.last_name.trim(),
+      phone: b.phone.trim(), email: b.email.trim(),
+    }))
+  } catch {}
+}
+function forgetRider() {
+  try { localStorage.removeItem(RIDER_KEY) } catch {}
+}
+
+function SignAsButton({ name, onSign }) {
+  return (
+    <button type="button" onClick={onSign} style={{ ...btnGhost, width: '100%', textAlign: 'left' }}>
+      Tap to sign as {name}
+    </button>
+  )
+}
+
+function PassStatus({ check }) {
+  const base = { fontSize: 14, lineHeight: 1.5, padding: '10px 12px', borderRadius: 10 }
+  if (check === 'checking') {
+    return <div style={{ ...base, color: '#d2d2d8', border: `1px solid ${BORDER}` }}>Checking for a Loop Pass…</div>
+  }
+  if (check.covered) {
+    return (
+      <div style={{ ...base, color: '#f5f5f7', background: 'rgba(212,163,51,0.12)', border: '1px solid rgba(212,163,51,0.45)' }}>
+        <strong style={{ color: ACCENT }}>Loop Pass found.</strong> Your seat is $0. Friends you add pay the regular fare.
+      </div>
+    )
+  }
+  const msg = {
+    already_booked: 'Your Loop Pass already has a seat on this loop. Friends you add pay the regular fare.',
+    period_ends_before_ride: 'Your Loop Pass renews before this date. Book this one after it renews and it will be $0.',
+    unpaid: 'Your last Loop Pass payment did not go through, so this seat is full price. Update your card at jvillebrewloop.com/pass/manage.',
+    verify_failed: 'We could not check your Loop Pass just now. It gets checked again when you continue.',
+  }[check.reason]
+  if (!msg) return null
+  return <div style={{ ...base, color: '#d2d2d8', border: `1px solid ${BORDER}` }}>{msg}</div>
+}
+
 function mintToken() {
   if (typeof crypto !== 'undefined' && crypto.randomUUID) return crypto.randomUUID()
   return `${Date.now().toString(36)}-${Math.random().toString(36).slice(2)}`
@@ -1150,11 +1290,16 @@ function Row({ children }) {
   return <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>{children}</div>
 }
 
-function Field({ label, value, onChange, type = 'text' }) {
+// autoComplete / name / inputMode are what let iPhone and Android autofill the
+// buyer's details in one tap and open the right keyboard. Every non-buyer field
+// passes autoComplete="off" so the browser doesn't drop the buyer's own name
+// into a friend's row.
+function Field({ label, value, onChange, type = 'text', autoComplete, name, inputMode }) {
   return (
     <label style={{ display: 'grid', gap: 7, fontSize: 14, color: '#d8d8de', fontWeight: 600 }}>
       {label}
-      <input type={type} value={value} onChange={e => onChange(e.target.value)} style={input} />
+      <input type={type} value={value} onChange={e => onChange(e.target.value)} style={input}
+        autoComplete={autoComplete} name={name} inputMode={inputMode} />
     </label>
   )
 }
